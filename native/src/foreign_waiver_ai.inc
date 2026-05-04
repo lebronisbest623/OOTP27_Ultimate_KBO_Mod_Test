@@ -1318,6 +1318,9 @@ static int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t to
     return found;
 }
 
+static void kbo_record_recent_foreign_offer_block(uint32_t player_id, uint32_t requester_team_id, uint32_t holder_team_id, uint32_t today);
+static int kbo_recent_foreign_offer_block_matches(uint32_t player_id, uint32_t today, uint32_t* out_requester_team_id, uint32_t* out_holder_team_id);
+
 static int kbo_enforce_foreign_waiver_signability(
     uintptr_t player_ptr,
     int32_t requesting_team_id,
@@ -1398,11 +1401,59 @@ static int kbo_enforce_foreign_waiver_signability(
             original_signability,
             today);
     }
+    kbo_record_recent_foreign_offer_block(player_id, team_id, holder_team_id, today);
     return 0; /* OOTP signability enum: 0 = Impossible. */
 }
 
 typedef int (__fastcall *OotpPlayerTeamSignabilityFn)(void* player, int32_t team_id, uint16_t year_hint);
 typedef void (__fastcall *OotpFaSubmitOfferProbeFn)(void* screen);
+
+static volatile LONG g_kbo_foreign_offer_block_player_id = 0;
+static volatile LONG g_kbo_foreign_offer_block_requester_team_id = 0;
+static volatile LONG g_kbo_foreign_offer_block_holder_team_id = 0;
+static volatile LONG g_kbo_foreign_offer_block_date = 0;
+static volatile LONG64 g_kbo_foreign_offer_block_tick = 0;
+
+static void kbo_record_recent_foreign_offer_block(uint32_t player_id, uint32_t requester_team_id, uint32_t holder_team_id, uint32_t today)
+{
+    InterlockedExchange(&g_kbo_foreign_offer_block_player_id, (LONG)player_id);
+    InterlockedExchange(&g_kbo_foreign_offer_block_requester_team_id, (LONG)requester_team_id);
+    InterlockedExchange(&g_kbo_foreign_offer_block_holder_team_id, (LONG)holder_team_id);
+    InterlockedExchange(&g_kbo_foreign_offer_block_date, (LONG)today);
+    InterlockedExchange64(&g_kbo_foreign_offer_block_tick, (LONG64)GetTickCount64());
+}
+
+static int kbo_recent_foreign_offer_block_matches(uint32_t player_id, uint32_t today, uint32_t* out_requester_team_id, uint32_t* out_holder_team_id)
+{
+    if (player_id == 0u || today == 0u) {
+        return 0;
+    }
+
+    LONG cached_player = InterlockedCompareExchange(&g_kbo_foreign_offer_block_player_id, 0, 0);
+    LONG cached_date = InterlockedCompareExchange(&g_kbo_foreign_offer_block_date, 0, 0);
+    LONG64 cached_tick = InterlockedCompareExchange64(&g_kbo_foreign_offer_block_tick, 0, 0);
+    if ((uint32_t)cached_player != player_id || (uint32_t)cached_date != today) {
+        return 0;
+    }
+
+    ULONGLONG now = GetTickCount64();
+    if (cached_tick <= 0 || now < (ULONGLONG)cached_tick || now - (ULONGLONG)cached_tick > 120000ull) {
+        return 0;
+    }
+
+    LONG requester = InterlockedCompareExchange(&g_kbo_foreign_offer_block_requester_team_id, 0, 0);
+    LONG holder = InterlockedCompareExchange(&g_kbo_foreign_offer_block_holder_team_id, 0, 0);
+    if (requester <= 0 || holder <= 0 || requester == holder) {
+        return 0;
+    }
+    if (out_requester_team_id != NULL) {
+        *out_requester_team_id = (uint32_t)requester;
+    }
+    if (out_holder_team_id != NULL) {
+        *out_holder_team_id = (uint32_t)holder;
+    }
+    return 1;
+}
 
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr,
@@ -1426,6 +1477,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
         uint32_t player_id = *(uint32_t*)(screen_ptr + 0xb8u);
         uint32_t today = 0;
         uint32_t holder_team_id = 0;
+        uint32_t requester_team_id = 0;
         if (player_id != 0u
             && kbo_get_foreign_waiver_current_yyyymmdd(&today)
             && kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)) {
@@ -1438,6 +1490,20 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                     player_id,
                     holder_team_id,
                     today);
+            }
+            if (kbo_recent_foreign_offer_block_matches(player_id, today, &requester_team_id, &holder_team_id)) {
+                static LONG submit_block_log_count = 0;
+                LONG block_slot = InterlockedIncrement(&submit_block_log_count);
+                if (block_slot <= 200) {
+                    append_logf(
+                        "foreign reserve submit-offer blocked: screen=%p player=%u requester_team=%u holder_team=%u today=%u",
+                        (void*)screen_ptr,
+                        player_id,
+                        requester_team_id,
+                        holder_team_id,
+                        today);
+                }
+                return;
             }
         }
     }
