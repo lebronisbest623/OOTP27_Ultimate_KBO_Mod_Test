@@ -1403,7 +1403,7 @@ static int kbo_enforce_foreign_waiver_signability(
 
 typedef int (__fastcall *OotpPlayerTeamSignabilityFn)(void* player, int32_t team_id, uint16_t year_hint);
 
-static int kbo_signability_callsite_uses_score_divisor(uintptr_t return_address)
+static int kbo_signability_callsite_uses_ai_offer_score(uintptr_t return_address)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL || return_address <= (uintptr_t)exe) {
@@ -1427,18 +1427,18 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     }
     int enforced_signability = kbo_enforce_foreign_waiver_signability(player_ptr, team_id, year_hint, original_signability);
     void* return_address = __builtin_return_address(0);
-    if (enforced_signability == 0 && kbo_signability_callsite_uses_score_divisor((uintptr_t)return_address)) {
-        static LONG score_divisor_log_count = 0;
-        LONG slot = InterlockedIncrement(&score_divisor_log_count);
+    if (enforced_signability == 0 && kbo_signability_callsite_uses_ai_offer_score((uintptr_t)return_address)) {
+        static LONG ai_offer_score_log_count = 0;
+        LONG slot = InterlockedIncrement(&ai_offer_score_log_count);
         if (slot <= 200) {
             append_logf(
-                "foreign reserve signability: blocked AI score divisor caller=%p player=%p team=%d original=%d",
+                "foreign reserve signability: blocked AI offer score caller=%p player=%p team=%d original=%d",
                 return_address,
                 (void*)player_ptr,
                 team_id,
                 original_signability);
         }
-        return 1000000;
+        return 0x7fffffff;
     }
     return enforced_signability;
 }
