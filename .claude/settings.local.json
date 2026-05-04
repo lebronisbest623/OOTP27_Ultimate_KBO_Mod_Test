@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native\\\\src\\\\hotkey_window\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"Created\")",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(cd C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native; & .\\\\build.ps1 2>&1 | Where-Object { $_ -match \"error:\" })",
+      "Bash(powershell -NonInteractive -Command \"& '.\\\\build.ps1'\")",
+      "Bash(mingw32-make)",
+      "PowerShell($lines = \\(Get-Content \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\"\\).Count; Write-Host \"Total lines: $lines\")",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"pid=4296\" | Select-Object -First 10 | ForEach-Object { $_.Line })",
+      "Bash(python3 *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\")",
+      "Bash(Select-Object -Last 20)",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"pid=14116\" | Select-Object -First 20 | ForEach-Object { $_.Line })",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"nation_id_scan\" | ForEach-Object { $_.Line })",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"nation_id_scan: offset\" | ForEach-Object { $_.Line })",
+      "PowerShell(cd C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native; $Gcc = \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\mingw64\\\\bin\\\\gcc.exe\"; & $Gcc -shared -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -o \"bin\\\\KBOFix.dll\" \"KBOFix.c\" -lgdi32 -lmsimg32 -lole32 -luuid -lwindowscodecs 2>&1 | Where-Object { $_ -match \"error:\" })",
+      "PowerShell(Test-Path \"C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native\\\\bin\\\\KBOFix.dll\" ; \\(Get-Item \"C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native\\\\bin\\\\KBOFix.dll\"\\).LastWriteTime)",
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"nation_id_scan\" | Select-Object -Last 30 | ForEach-Object { $_.Line })"
+    ]
+  },
+  "disabledMcpjsonServers": [
+    "ootp-storyline",
+    "blender"
+  ]
+}
