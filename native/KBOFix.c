@@ -26,6 +26,7 @@
 #define OOTP27_UI_OPERATOR_NEW_RVA 0x0278894Cu
 #define OOTP27_PLAYER_TEAM_SIGNABILITY_RVA 0x0085C340u
 #define OOTP27_AI_FA_SIGNABILITY_RANDOM_FALLBACK_RVA 0x00AF1D83u
+#define OOTP27_FA_SUBMIT_OFFER_PROBE_RVA 0x017A64B0u
 #define OOTP27_MESSAGE_OBJECT_SIZE 0xA8u
 #define OOTP27_MESSAGE_OBJECT_ID_OFFSET 0x8Cu
 #define OOTP27_MESSAGE_SAVE_PATH_OFFSET 0x1A58u
@@ -169,6 +170,8 @@ __declspec(noinline) void ootp_kbo_military_status_update_wrapper(
     uintptr_t player_ptr, uintptr_t original_func_ptr);
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr, int32_t team_id, uint16_t year_hint, uintptr_t original_func_ptr);
+__declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
+    uintptr_t screen_ptr, uintptr_t original_func_ptr);
 
 static int memory_range_readable(const void* address, SIZE_T size);
 static uintptr_t get_ootp_global_database(void);

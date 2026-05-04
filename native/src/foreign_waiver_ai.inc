@@ -1402,6 +1402,7 @@ static int kbo_enforce_foreign_waiver_signability(
 }
 
 typedef int (__fastcall *OotpPlayerTeamSignabilityFn)(void* player, int32_t team_id, uint16_t year_hint);
+typedef void (__fastcall *OotpFaSubmitOfferProbeFn)(void* screen);
 
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr,
@@ -1415,6 +1416,36 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
         original_signability = original_func((void*)player_ptr, team_id, year_hint);
     }
     return kbo_enforce_foreign_waiver_signability(player_ptr, team_id, year_hint, original_signability);
+}
+
+__declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
+    uintptr_t screen_ptr,
+    uintptr_t original_func_ptr)
+{
+    if (screen_ptr != 0 && memory_range_readable((void*)screen_ptr, 0xc0)) {
+        uint32_t player_id = *(uint32_t*)(screen_ptr + 0xb8u);
+        uint32_t today = 0;
+        uint32_t holder_team_id = 0;
+        if (player_id != 0u
+            && kbo_get_foreign_waiver_current_yyyymmdd(&today)
+            && kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)) {
+            static LONG probe_log_count = 0;
+            LONG slot = InterlockedIncrement(&probe_log_count);
+            if (slot <= 200) {
+                append_logf(
+                    "foreign reserve submit-offer probe: screen=%p player=%u holder_team=%u today=%u",
+                    (void*)screen_ptr,
+                    player_id,
+                    holder_team_id,
+                    today);
+            }
+        }
+    }
+
+    OotpFaSubmitOfferProbeFn original_func = (OotpFaSubmitOfferProbeFn)original_func_ptr;
+    if (original_func != NULL) {
+        original_func((void*)screen_ptr);
+    }
 }
 
 static int kbo_append_foreign_waiver_cmd_line(const char* line)
