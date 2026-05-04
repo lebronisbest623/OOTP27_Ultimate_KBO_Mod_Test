@@ -1296,7 +1296,7 @@ static int kbo_enforce_foreign_waiver_signability(
     if (!kbo_foreign_waiver_ai_enabled() || !kbo_fix_enabled()) {
         return original_signability;
     }
-    if (requesting_team_id <= 0 || player_ptr == 0 || !kbo_player_pointer_plausible(player_ptr)) {
+    if (player_ptr == 0 || !kbo_player_pointer_plausible(player_ptr)) {
         return original_signability;
     }
 
@@ -1324,6 +1324,20 @@ static int kbo_enforce_foreign_waiver_signability(
     uint32_t holder_team_id = 0;
     if (!kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)) {
         return original_signability;
+    }
+
+    if (requesting_team_id <= 0) {
+        static LONG generic_block_log_count = 0;
+        LONG slot = InterlockedIncrement(&generic_block_log_count);
+        if (slot <= 200) {
+            append_logf(
+                "foreign reserve signability: blocked generic request player=%u holder_team=%u original=%d forced=0 today=%u",
+                player_id,
+                holder_team_id,
+                original_signability,
+                today);
+        }
+        return 0; /* OOTP signability enum: 0 = Impossible. */
     }
 
     uint32_t team_id = (uint32_t)requesting_team_id;
