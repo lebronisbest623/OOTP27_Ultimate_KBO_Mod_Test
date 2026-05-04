@@ -25,6 +25,7 @@
 #define OOTP27_SQL_EXEC_RVA 0x0122FDD0u
 #define OOTP27_UI_OPERATOR_NEW_RVA 0x0278894Cu
 #define OOTP27_PLAYER_TEAM_SIGNABILITY_RVA 0x0085C340u
+#define OOTP27_PLAYER_SIGNABILITY_BLOCK_849320_RVA 0x00849320u
 #define OOTP27_AI_FA_SIGNABILITY_RANDOM_FALLBACK_RVA 0x00AF1D83u
 #define OOTP27_FA_SUBMIT_OFFER_PROBE_RVA 0x017A64B0u
 #define OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_RVA 0x00AF220Bu
@@ -171,6 +172,8 @@ __declspec(noinline) void ootp_kbo_military_status_update_wrapper(
     uintptr_t player_ptr, uintptr_t original_func_ptr);
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr, int32_t team_id, uint16_t year_hint, uintptr_t original_func_ptr);
+__declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
+    uintptr_t player_ptr, int32_t team_id, int32_t flag, uintptr_t original_func_ptr);
 __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
     uintptr_t screen_ptr, uintptr_t original_func_ptr);
 __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
@@ -204,7 +207,8 @@ static int kbo_enforce_foreign_waiver_signability(
     uintptr_t player_ptr,
     int32_t requesting_team_id,
     uint16_t year_hint,
-    int original_signability);
+    int original_signability,
+    uintptr_t caller_rva);
 static int start_kbo_custom_event_monitor(void);
 static int kbo_schedule_foreign_priority_custom_events(const char* source);
 

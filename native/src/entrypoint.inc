@@ -19,6 +19,7 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
     install_kbo_military_service_entry_patch();
     install_kbo_military_status_update_patch();
     install_kbo_player_team_signability_patch();
+    install_kbo_player_offer_eligibility_patch();
     install_kbo_ai_fa_signability_random_fallback_patch();
     install_kbo_fa_submit_offer_probe_patch();
     install_kbo_ai_fa_status_candidate_insert_patch();
