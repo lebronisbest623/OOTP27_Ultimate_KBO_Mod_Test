@@ -1403,17 +1403,6 @@ static int kbo_enforce_foreign_waiver_signability(
 
 typedef int (__fastcall *OotpPlayerTeamSignabilityFn)(void* player, int32_t team_id, uint16_t year_hint);
 
-static int kbo_signability_callsite_uses_ai_offer_score(uintptr_t return_address)
-{
-    HMODULE exe = GetModuleHandleA(NULL);
-    if (exe == NULL || return_address <= (uintptr_t)exe) {
-        return 0;
-    }
-
-    uintptr_t rva = return_address - (uintptr_t)exe;
-    return rva == 0x00D852FAu;
-}
-
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr,
     int32_t team_id,
@@ -1425,22 +1414,7 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     if (original_func != NULL) {
         original_signability = original_func((void*)player_ptr, team_id, year_hint);
     }
-    int enforced_signability = kbo_enforce_foreign_waiver_signability(player_ptr, team_id, year_hint, original_signability);
-    void* return_address = __builtin_return_address(0);
-    if (enforced_signability == 0 && kbo_signability_callsite_uses_ai_offer_score((uintptr_t)return_address)) {
-        static LONG ai_offer_score_log_count = 0;
-        LONG slot = InterlockedIncrement(&ai_offer_score_log_count);
-        if (slot <= 200) {
-            append_logf(
-                "foreign reserve signability: blocked AI offer score caller=%p player=%p team=%d original=%d",
-                return_address,
-                (void*)player_ptr,
-                team_id,
-                original_signability);
-        }
-        return 0x7fffffff;
-    }
-    return enforced_signability;
+    return kbo_enforce_foreign_waiver_signability(player_ptr, team_id, year_hint, original_signability);
 }
 
 static int kbo_append_foreign_waiver_cmd_line(const char* line)
