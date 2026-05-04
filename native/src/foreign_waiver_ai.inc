@@ -1448,6 +1448,59 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
     }
 }
 
+__declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
+    uintptr_t frame_ptr,
+    uintptr_t player_ptr,
+    int32_t insert_index,
+    uintptr_t candidate_array)
+{
+    if (frame_ptr == 0 || player_ptr == 0 || insert_index < 0) {
+        return insert_index;
+    }
+    if (!memory_range_readable((void*)player_ptr, OOTP27_PLAYER_ID_OFFSET + sizeof(uint32_t))) {
+        return insert_index;
+    }
+
+    uint32_t player_id = *(uint32_t*)(player_ptr + OOTP27_PLAYER_ID_OFFSET);
+    uint32_t today = 0;
+    uint32_t holder_team_id = 0;
+    uint32_t requester_team_id = 0;
+    uintptr_t team_ptr = *(uintptr_t*)(frame_ptr + 0x140u);
+    if (team_ptr != 0 && memory_range_readable((void*)(team_ptr + 0x4450u), sizeof(uint32_t))) {
+        requester_team_id = *(uint32_t*)(team_ptr + 0x4450u);
+    }
+
+    if (player_id != 0u
+        && requester_team_id != 0u
+        && kbo_get_foreign_waiver_current_yyyymmdd(&today)
+        && kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)
+        && holder_team_id != 0u
+        && holder_team_id != requester_team_id) {
+        static LONG block_log_count = 0;
+        LONG slot = InterlockedIncrement(&block_log_count);
+        if (slot <= 300) {
+            append_logf(
+                "foreign reserve AI FA status candidate blocked player=%u requester_team=%u holder_team=%u index=%d today=%u",
+                player_id,
+                requester_team_id,
+                holder_team_id,
+                insert_index,
+                today);
+        }
+        return insert_index;
+    }
+
+    if (candidate_array == 0) {
+        return insert_index;
+    }
+    if (!memory_range_readable((void*)(candidate_array + ((uintptr_t)insert_index * sizeof(uintptr_t))), sizeof(uintptr_t))) {
+        return insert_index;
+    }
+    *(uintptr_t*)(candidate_array + ((uintptr_t)insert_index * sizeof(uintptr_t))) = player_ptr;
+    *(int32_t*)(frame_ptr - 0x2c) = insert_index + 1;
+    return insert_index + 1;
+}
+
 static int kbo_append_foreign_waiver_cmd_line(const char* line)
 {
     if (line == NULL || line[0] == '\0') {
