@@ -6,6 +6,7 @@ static uint32_t read_u32_leading_number_from_file(const char* filename);
 static int get_kbo_foreign_waiver_cmd_path(char* out, size_t out_size);
 static int get_kbo_foreign_waiver_decisions_path(char* out, size_t out_size);
 static int kbo_load_foreign_waiver_rights(void);
+static int kbo_persist_foreign_waiver_rights(void);
 static void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd);
 static int parse_u32_from_csv_field(const char** cursor, uint32_t* out_value);
 
@@ -760,6 +761,7 @@ static int kbo_load_foreign_waiver_rights(void)
     InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
 
     char* cursor = raw;
+    int deduped = 0;
     while (*cursor != '\0') {
         char* next = strchr(cursor, '\n');
         if (next == NULL) {
@@ -791,7 +793,26 @@ static int kbo_load_foreign_waiver_rights(void)
                         while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
                             Sleep(0);
                         }
-                        if (g_kbo_foreign_waiver_rights_count < KBO_FOREIGN_WAIVER_RIGHTS_MAX) {
+                        int existing_index = -1;
+                        for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
+                            if (g_kbo_foreign_waiver_rights[i].player_id == player_id) {
+                                existing_index = i;
+                                break;
+                            }
+                        }
+                        if (existing_index >= 0) {
+                            KboForeignWaiverRetention* existing = &g_kbo_foreign_waiver_rights[existing_index];
+                            if (retained_on >= existing->retained_on_yyyymmdd) {
+                                *existing = (KboForeignWaiverRetention){
+                                    player_id,
+                                    team_id,
+                                    league_id,
+                                    retained_on,
+                                    expires_on
+                                };
+                            }
+                            deduped++;
+                        } else if (g_kbo_foreign_waiver_rights_count < KBO_FOREIGN_WAIVER_RIGHTS_MAX) {
                             g_kbo_foreign_waiver_rights[g_kbo_foreign_waiver_rights_count++] = (KboForeignWaiverRetention){
                                 player_id,
                                 team_id,
@@ -810,7 +831,10 @@ static int kbo_load_foreign_waiver_rights(void)
         }
         cursor = next + 1;
     }
-    append_logf("foreign reserve rights: loaded=%d", g_kbo_foreign_waiver_rights_count);
+    append_logf("foreign reserve rights: loaded=%d deduped=%d", g_kbo_foreign_waiver_rights_count, deduped);
+    if (deduped > 0) {
+        kbo_persist_foreign_waiver_rights();
+    }
     return 1;
 }
 
@@ -1210,7 +1234,15 @@ static int kbo_set_foreign_waiver_right(
         Sleep(0);
     }
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
-        if (g_kbo_foreign_waiver_rights[i].team_id == team_id && g_kbo_foreign_waiver_rights[i].player_id == player_id) {
+        if (g_kbo_foreign_waiver_rights[i].player_id == player_id) {
+            if (g_kbo_foreign_waiver_rights[i].team_id != team_id) {
+                append_logf(
+                    "foreign reserve rights: reassigned exclusive holder player=%u old_team=%u new_team=%u",
+                    player_id,
+                    g_kbo_foreign_waiver_rights[i].team_id,
+                    team_id);
+            }
+            g_kbo_foreign_waiver_rights[i].team_id = team_id;
             g_kbo_foreign_waiver_rights[i].league_id = league_id;
             g_kbo_foreign_waiver_rights[i].retained_on_yyyymmdd = retained_on;
             g_kbo_foreign_waiver_rights[i].expires_on_yyyymmdd = expires_on;
@@ -1371,6 +1403,17 @@ static int kbo_enforce_foreign_waiver_signability(
 
 typedef int (__fastcall *OotpPlayerTeamSignabilityFn)(void* player, int32_t team_id, uint16_t year_hint);
 
+static int kbo_signability_callsite_uses_score_divisor(uintptr_t return_address)
+{
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL || return_address <= (uintptr_t)exe) {
+        return 0;
+    }
+
+    uintptr_t rva = return_address - (uintptr_t)exe;
+    return rva == 0x00D852FAu;
+}
+
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr,
     int32_t team_id,
@@ -1382,7 +1425,22 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     if (original_func != NULL) {
         original_signability = original_func((void*)player_ptr, team_id, year_hint);
     }
-    return kbo_enforce_foreign_waiver_signability(player_ptr, team_id, year_hint, original_signability);
+    int enforced_signability = kbo_enforce_foreign_waiver_signability(player_ptr, team_id, year_hint, original_signability);
+    void* return_address = __builtin_return_address(0);
+    if (enforced_signability == 0 && kbo_signability_callsite_uses_score_divisor((uintptr_t)return_address)) {
+        static LONG score_divisor_log_count = 0;
+        LONG slot = InterlockedIncrement(&score_divisor_log_count);
+        if (slot <= 200) {
+            append_logf(
+                "foreign reserve signability: blocked AI score divisor caller=%p player=%p team=%d original=%d",
+                return_address,
+                (void*)player_ptr,
+                team_id,
+                original_signability);
+        }
+        return 1000000;
+    }
+    return enforced_signability;
 }
 
 static int kbo_append_foreign_waiver_cmd_line(const char* line)
