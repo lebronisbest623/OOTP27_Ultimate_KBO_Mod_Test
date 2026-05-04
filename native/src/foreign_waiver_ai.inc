@@ -1286,131 +1286,6 @@ static int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t to
     return found;
 }
 
-static int kbo_find_active_foreign_waiver_record(
-    uint32_t player_id,
-    uint32_t today_yyyymmdd,
-    KboForeignWaiverRetention* out_record)
-{
-    if (out_record != NULL) {
-        memset(out_record, 0, sizeof(*out_record));
-    }
-    if (player_id == 0u || today_yyyymmdd == 0u || out_record == NULL) {
-        return 0;
-    }
-
-    int found = 0;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
-    for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
-        KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
-        if (rec->player_id == player_id && kbo_is_foreign_waiver_right_active(rec, today_yyyymmdd)) {
-            *out_record = *rec;
-            found = rec->team_id != 0u;
-            break;
-        }
-    }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
-    return found;
-}
-
-static void kbo_enforce_foreign_waiver_rights_against_ai_signings(const char* source)
-{
-    if (!kbo_foreign_waiver_ai_enabled() || !kbo_fix_enabled()) {
-        return;
-    }
-
-    static LONG rights_loaded = 0;
-    if (InterlockedCompareExchange(&rights_loaded, 1, 0) == 0) {
-        kbo_load_foreign_waiver_rights();
-    }
-
-    uint32_t today = 0u;
-    if (!kbo_get_foreign_waiver_current_yyyymmdd(&today)) {
-        return;
-    }
-    kbo_prune_expired_foreign_waiver_rights(today);
-
-    uintptr_t player_vector = 0;
-    int32_t player_count = 0;
-    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        return;
-    }
-
-    int checked = 0;
-    int restored = 0;
-    for (int32_t i = 0; i < player_count; i++) {
-        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
-        if (!kbo_player_pointer_plausible(player_ptr)) {
-            continue;
-        }
-
-        uint8_t* player = (uint8_t*)player_ptr;
-        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
-        if (player_id == 0u) {
-            continue;
-        }
-
-        KboForeignWaiverRetention right = {0};
-        if (!kbo_find_active_foreign_waiver_record(player_id, today, &right)) {
-            continue;
-        }
-        checked++;
-
-        uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-        uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-        int changed = 0;
-
-        if (current_team_id != 0u && current_team_id != right.team_id) {
-            uint8_t* unauthorized_team = find_kbo_team_by_numeric_id_any_league(current_team_id, 1);
-            if (unauthorized_team != NULL) {
-                kbo_remove_player_id_from_known_team_roster_arrays(unauthorized_team, player_id);
-            }
-            *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) = 0u;
-            *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) = 0u;
-            changed = 1;
-        }
-
-        if (active_team_id != right.team_id) {
-            *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = right.team_id;
-            changed = 1;
-        }
-        if (*(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET) != right.league_id) {
-            *(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET) = right.league_id;
-            changed = 1;
-        }
-        if (player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] != 1u) {
-            player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = 1u;
-            changed = 1;
-        }
-        if (player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] != 1u) {
-            player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 1u;
-            changed = 1;
-        }
-
-        uint8_t* holder_team = find_kbo_team_by_numeric_id_any_league(right.team_id, 1);
-        if (holder_team != NULL) {
-            kbo_add_player_id_to_team_fixed_array(holder_team, OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET, player_id);
-        }
-
-        if (changed) {
-            restored++;
-            append_logf(
-                "foreign reserve rights: restored exclusive rights source=%s player=%u holder_team=%u removed_current_team=%u active_was=%u today=%u",
-                source != NULL ? source : "",
-                player_id,
-                right.team_id,
-                current_team_id,
-                active_team_id,
-                today);
-        }
-    }
-
-    if (restored > 0) {
-        append_logf("foreign reserve rights: ai signing enforcement checked=%d restored=%d", checked, restored);
-    }
-}
-
 static int kbo_enforce_foreign_waiver_signability(
     uintptr_t player_ptr,
     int32_t requesting_team_id,
@@ -2801,7 +2676,6 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
         tick++;
         process_foreign_waiver_commands();
         run_foreign_waiver_ai_core_once();
-        kbo_enforce_foreign_waiver_rights_against_ai_signings("foreign_waiver_scanner");
         if ((tick % 6u) == 0u) {
             write_foreign_waiver_candidates("foreign_waiver_scanner");
         }
