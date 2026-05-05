@@ -654,6 +654,31 @@ static int kbo_get_legacy_asian_games_roster_csv_path(char* out, size_t out_size
     return out[0] != '\0';
 }
 
+static void kbo_clear_asian_games_roster_memory(const char* source)
+{
+    memset(g_kbo_asian_games_roster, 0, sizeof(g_kbo_asian_games_roster));
+    g_kbo_asian_games_roster_count = 0;
+    g_kbo_asian_games_roster_year = 0;
+    g_kbo_asian_games_roster_save_path[0] = '\0';
+    append_logf("KBO Asian Games roster memory cleared source=%s", source != NULL ? source : "");
+}
+
+static void kbo_clear_asian_games_roster_if_save_changed(const char* source)
+{
+    char path[MAX_PATH] = {0};
+    if (!kbo_get_asian_games_roster_csv_path(path, sizeof(path))) {
+        if (g_kbo_asian_games_roster_count > 0 || g_kbo_asian_games_roster_save_path[0] != '\0') {
+            kbo_clear_asian_games_roster_memory(source);
+        }
+        return;
+    }
+
+    if (g_kbo_asian_games_roster_save_path[0] != '\0'
+            && _stricmp(g_kbo_asian_games_roster_save_path, path) != 0) {
+        kbo_clear_asian_games_roster_memory(source);
+    }
+}
+
 static int kbo_save_asian_games_roster_csv(const char* source)
 {
     char path[MAX_PATH] = {0};
@@ -710,31 +735,29 @@ static int kbo_save_asian_games_roster_csv(const char* source)
     }
 
     CloseHandle(file);
+    if (ok) {
+        snprintf(g_kbo_asian_games_roster_save_path, sizeof(g_kbo_asian_games_roster_save_path), "%s", path);
+    }
     append_logf("KBO Asian Games roster csv save source=%s ok=%d year=%u count=%ld path=%s", source != NULL ? source : "", ok, g_kbo_asian_games_roster_year, roster_count, path);
     return ok;
 }
 
 static int kbo_load_asian_games_roster_csv(const char* source)
 {
+    kbo_clear_asian_games_roster_if_save_changed(source);
+
     char path[MAX_PATH] = {0};
     if (!kbo_get_asian_games_roster_csv_path(path, sizeof(path))) {
+        kbo_clear_asian_games_roster_memory(source);
         return 0;
     }
 
     HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         DWORD scoped_error = GetLastError();
-        char legacy_path[MAX_PATH] = {0};
-        if (!kbo_get_legacy_asian_games_roster_csv_path(legacy_path, sizeof(legacy_path))) {
-            append_logf("KBO Asian Games roster csv load skipped source=%s reason=open_failed gle=%lu path=%s", source != NULL ? source : "", scoped_error, path);
-            return 0;
-        }
-        file = CreateFileA(legacy_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (file == INVALID_HANDLE_VALUE) {
-            append_logf("KBO Asian Games roster csv load skipped source=%s reason=open_failed gle=%lu path=%s legacy=%s", source != NULL ? source : "", scoped_error, path, legacy_path);
-            return 0;
-        }
-        snprintf(path, sizeof(path), "%s", legacy_path);
+        kbo_clear_asian_games_roster_memory(source);
+        append_logf("KBO Asian Games roster csv load skipped source=%s reason=open_failed gle=%lu path=%s", source != NULL ? source : "", scoped_error, path);
+        return 0;
     }
 
     DWORD size = GetFileSize(file, NULL);
@@ -816,6 +839,7 @@ static int kbo_load_asian_games_roster_csv(const char* source)
     memcpy(g_kbo_asian_games_roster, loaded, sizeof(KboAsianGamesRosterEntry) * (size_t)loaded_count);
     g_kbo_asian_games_roster_count = loaded_count;
     g_kbo_asian_games_roster_year = loaded_year;
+    snprintf(g_kbo_asian_games_roster_save_path, sizeof(g_kbo_asian_games_roster_save_path), "%s", path);
     append_logf("KBO Asian Games roster csv load source=%s year=%u count=%d path=%s", source != NULL ? source : "", loaded_year, loaded_count, path);
     return loaded_count;
 }
@@ -2301,6 +2325,7 @@ static int kbo_emit_asian_games_replacement_news(
 
 static int kbo_handle_asian_games_selection_event(uint32_t event_yyyymmdd, const char* source)
 {
+    kbo_clear_asian_games_roster_if_save_changed(source);
     if (event_yyyymmdd == 0u || g_kbo_asian_games_last_selection_fired_date == event_yyyymmdd) {
         return 0;
     }
@@ -2329,6 +2354,7 @@ static int kbo_handle_asian_games_selection_event(uint32_t event_yyyymmdd, const
 
 static int kbo_handle_asian_games_departure_event(uint32_t event_yyyymmdd, const char* source)
 {
+    kbo_clear_asian_games_roster_if_save_changed(source);
     if (event_yyyymmdd == 0u || g_kbo_asian_games_last_departure_fired_date == event_yyyymmdd) {
         return 0;
     }
@@ -2357,6 +2383,7 @@ static int kbo_handle_asian_games_departure_event(uint32_t event_yyyymmdd, const
 
 static int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const char* source)
 {
+    kbo_clear_asian_games_roster_if_save_changed(source);
     if (event_yyyymmdd == 0u || g_kbo_asian_games_last_final_fired_date == event_yyyymmdd) {
         return 0;
     }

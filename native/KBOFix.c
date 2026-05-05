@@ -30,9 +30,12 @@
 #define OOTP27_PLAYER_SIGNABILITY_BLOCK_849320_RVA 0x00849320u
 #define OOTP27_AI_FA_SIGNABILITY_RANDOM_FALLBACK_RVA 0x00AF1D83u
 #define OOTP27_FA_SUBMIT_OFFER_PROBE_RVA 0x017A64B0u
+#define OOTP27_FA_SIGNING_BRANCH_PATCH_OFFSET 0x27u
 #define OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_RVA 0x00AF220Bu
-#define OOTP27_ACTIVE_FOREIGN_HITTER_COUNT_RVA 0x00A32C50u
-#define OOTP27_ACTIVE_FOREIGN_PITCHER_COUNT_RVA 0x00A32CE0u
+#define OOTP27_ACTIVE_FOREIGN_HITTER_COUNT_RVA 0x00A32B30u
+#define OOTP27_ACTIVE_FOREIGN_PITCHER_COUNT_RVA 0x00A32BC0u
+#define OOTP27_SECONDARY_FOREIGN_HITTER_COUNT_RVA 0x00A32C50u
+#define OOTP27_SECONDARY_FOREIGN_PITCHER_COUNT_RVA 0x00A32CE0u
 #define OOTP27_CALLUP_FOREIGN_HITTER_LIMIT_BRANCH_RVA 0x01079A85u
 #define OOTP27_CALLUP_FOREIGN_PITCHER_LIMIT_BRANCH_RVA 0x01079B72u
 #define OOTP27_CALLUP_FOREIGN_TOTAL_LIMIT_BRANCH_RVA 0x01079C22u
@@ -237,6 +240,7 @@ static LONG g_military_days_tick_log_count     = 0;
 static KboAsianGamesRosterEntry g_kbo_asian_games_roster[KBO_ASIAN_GAMES_ROSTER_SIZE];
 static LONG g_kbo_asian_games_roster_count = 0;
 static uint32_t g_kbo_asian_games_roster_year = 0;
+static char g_kbo_asian_games_roster_save_path[MAX_PATH] = {0};
 static KboAllstarTeamRow g_allstar_team_rows[OOTP27_KBO_MAX_ALLSTAR_TEAM_ROWS];
 static int g_allstar_team_row_count = 0;
 static LONG g_allstar_team_rules_loaded = 0;
@@ -256,6 +260,8 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     uintptr_t player_ptr, int32_t team_id, int32_t flag, uintptr_t original_func_ptr);
 __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
     uintptr_t screen_ptr, uintptr_t original_func_ptr);
+__declspec(noinline) void ootp_kbo_fa_signing_branch_wrapper(
+    uintptr_t player_ptr, uintptr_t team_ptr);
 __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     uintptr_t frame_ptr, uintptr_t player_ptr, int32_t insert_index, uintptr_t candidate_array);
 __declspec(noinline) int32_t ootp_kbo_active_foreign_hitter_count_wrapper(
@@ -268,7 +274,6 @@ __declspec(noinline) uint8_t ootp_kbo_callup_foreign_pitcher_limit_allows_wrappe
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit);
 __declspec(noinline) uint8_t ootp_kbo_callup_foreign_total_limit_allows_wrapper(
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit);
-
 static int memory_range_readable(const void* address, SIZE_T size);
 static uintptr_t get_ootp_global_database(void);
 static int kbo_player_pointer_plausible(uintptr_t player_ptr);
@@ -311,7 +316,10 @@ static int insert_kbo_roster_transaction_sql(
     const char* team_text,
     const char* source);
 static void start_kbo_foreign_waiver_scanner_thread(void);
+static void start_kbo_foreign_injury_replacement_thread(void);
+static void start_kbo_fa_requalification_thread(void);
 static void kbo_flush_pending_foreign_priority_events(const char* source);
+static int kbo_get_current_yyyymmdd(uint32_t* out_date);
 static int kbo_enforce_foreign_waiver_signability(
     uintptr_t player_ptr,
     int32_t requesting_team_id,
@@ -337,6 +345,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
 #include "src/build_verify.inc"
 #include "src/runtime_memory.inc"
 #include "src/team.inc"
+#include "src/fa_requalification.inc"
 #include "src/military_service_loan.inc"
 #include "src/foreign_waiver_ai.inc"
 #include "src/custom_events.inc"

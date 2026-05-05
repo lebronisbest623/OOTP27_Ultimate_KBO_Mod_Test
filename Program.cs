@@ -28,6 +28,9 @@ if (exePath is null)
 }
 
 EnsureKboLeagueIdConfig();
+EnsureBundledKboDataFile("foreign_injury_replacements_seed.csv", "Foreign injury replacement seed");
+EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
+EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
 
 var existing = Process.GetProcesses()
     .Select(TryDescribe)
@@ -323,6 +326,48 @@ static void EnsureKboLeagueIdConfig()
 
     Console.WriteLine("kbo_league_id.txt not found in launcher directory. Set it manually at:");
     Console.WriteLine(localPath);
+}
+
+static void EnsureBundledKboDataFile(string fileName, string label)
+{
+    var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    var localDir = Path.Combine(local, "OOTP-KBO");
+    var localPath = Path.Combine(localDir, fileName);
+
+    Directory.CreateDirectory(localDir);
+
+    var candidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, fileName),
+        Path.Combine(Environment.CurrentDirectory, fileName),
+        Path.Combine(AppContext.BaseDirectory, "native", fileName)
+    };
+
+    foreach (var candidate in candidates)
+    {
+        if (!File.Exists(candidate))
+        {
+            continue;
+        }
+
+        try
+        {
+            var shouldCopy = !File.Exists(localPath)
+                || File.GetLastWriteTimeUtc(candidate) > File.GetLastWriteTimeUtc(localPath)
+                || new FileInfo(candidate).Length != new FileInfo(localPath).Length;
+            if (shouldCopy)
+            {
+                File.Copy(candidate, localPath, overwrite: true);
+                Console.WriteLine($"{label}: seeded {localPath}");
+            }
+            return;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to seed {fileName} from {candidate}: {ex.Message}");
+            return;
+        }
+    }
 }
 
 static void Log(string path, string message)

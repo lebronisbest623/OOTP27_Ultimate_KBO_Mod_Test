@@ -30,6 +30,36 @@ static int kbo_hub_read_style_int(const char* path, const char* key, int default
     return result;
 }
 
+static const char* kbo_hub_foreign_slot_code_for_player(uint8_t* player)
+{
+    if (player != NULL && memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        uint8_t replacement_slot_type = 0u;
+        if (kbo_foreign_replacement_player_seed_matches_loaded(player, &replacement_slot_type)) {
+            return "REPL";
+        }
+
+        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+        if (player_id != 0u) {
+            int is_replacement = 0;
+            kbo_ensure_foreign_injury_replacements_loaded();
+            kbo_lock_foreign_injury_replacements();
+            for (int i = 0; i < g_kbo_foreign_injury_replacement_count; i++) {
+                KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[i];
+                if (rec->replacement_player_id == player_id
+                        && kbo_foreign_injury_status_uses_slot(rec->status)) {
+                    is_replacement = 1;
+                    break;
+                }
+            }
+            kbo_unlock_foreign_injury_replacements();
+            if (is_replacement) {
+                return "REPL";
+            }
+        }
+    }
+    return kbo_player_is_asian_quota_candidate(player) ? "AQ" : "REG";
+}
+
 static void kbo_hub_load_skin_metrics(void)
 {
     if (InterlockedCompareExchange(&g_kbo_hub_skin_metrics_loaded, 1, 0) != 0) {
@@ -324,7 +354,9 @@ static int kbo_hub_estimate_visible_edit_lines(void)
         return 1;
     }
 
-    HFONT font = (g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY || g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS) ? g_kbo_hub_font_mono : g_kbo_hub_font_body;
+    HFONT font = (g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS)
+        ? g_kbo_hub_font_mono : g_kbo_hub_font_body;
     HGDIOBJ old = NULL;
     if (font != NULL) {
         old = SelectObject(hdc, font);
@@ -845,6 +877,57 @@ static void kbo_hub_copy_team_display_name_by_id(uint32_t team_id, char* out, si
     }
 }
 
+static void kbo_hub_copy_team_abbrev_by_id(uint32_t team_id, char* out, size_t out_size, const char* fallback)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    uint32_t parent_team_id = 0u;
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
+    if (team != NULL && memory_range_readable(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+        parent_team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET);
+    }
+    if (parent_team_id != 0u && parent_team_id != team_id) {
+        char parent_abbrev[16] = {0};
+        kbo_hub_copy_team_abbrev_by_id(parent_team_id, parent_abbrev, sizeof(parent_abbrev), fallback);
+        if (parent_abbrev[0] != '\0' && strcmp(parent_abbrev, "-") != 0) {
+            snprintf(out, out_size, "%s2", parent_abbrev);
+            return;
+        }
+    }
+
+    char name[96] = {0};
+    kbo_hub_copy_team_display_name_by_id(team_id, name, sizeof(name), fallback);
+    if (kbo_ascii_contains_ignore_case(name, "Lotte"))      { snprintf(out, out_size, "LOT");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Doosan"))     { snprintf(out, out_size, "DOO");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Samsung"))    { snprintf(out, out_size, "SAM");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "KIA"))        { snprintf(out, out_size, "KIA");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "SSG"))        { snprintf(out, out_size, "SSG");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Hanwha"))     { snprintf(out, out_size, "HAN");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Kiwoom"))     { snprintf(out, out_size, "KIW");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Nexen"))      { snprintf(out, out_size, "NEX");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Heroes"))     { snprintf(out, out_size, "KIW");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Dinos"))      { snprintf(out, out_size, "NC");   return; }
+    if (kbo_ascii_contains_ignore_case(name, "NC"))         { snprintf(out, out_size, "NC");   return; }
+    if (kbo_ascii_contains_ignore_case(name, "Wiz"))        { snprintf(out, out_size, "KT");   return; }
+    if (kbo_ascii_contains_ignore_case(name, "KT"))         { snprintf(out, out_size, "KT");   return; }
+    if (kbo_ascii_contains_ignore_case(name, "Twins"))      { snprintf(out, out_size, "LG");   return; }
+    if (kbo_ascii_contains_ignore_case(name, "LG"))         { snprintf(out, out_size, "LG");   return; }
+    if (kbo_ascii_contains_ignore_case(name, "Sangmu"))     { snprintf(out, out_size, "SANG"); return; }
+    if (kbo_ascii_contains_ignore_case(name, "Police"))     { snprintf(out, out_size, "KPB");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Ulsan"))      { snprintf(out, out_size, "ULS");  return; }
+
+    if (fallback != NULL && fallback[0] != '\0' && strlen(fallback) <= 6u) {
+        snprintf(out, out_size, "%s", fallback);
+    } else if (team_id != 0u) {
+        snprintf(out, out_size, "T%u", team_id);
+    } else {
+        snprintf(out, out_size, "-");
+    }
+}
+
 static void kbo_hub_sanitize_logo_prefix(const char* name, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
@@ -935,7 +1018,7 @@ static int kbo_hub_find_best_logo_file(
     out[0] = '\0';
 
     char pattern[MAX_PATH];
-    snprintf(pattern, sizeof(pattern), "%s\\%s*.png", directory, search_prefix);
+    snprintf(pattern, sizeof(pattern), "%s\\%s*.*", directory, search_prefix);
 
     WIN32_FIND_DATAA find_data;
     HANDLE find = FindFirstFileA(pattern, &find_data);
@@ -949,7 +1032,14 @@ static int kbo_hub_find_best_logo_file(
         if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
             continue;
         }
+        size_t name_len = strlen(find_data.cFileName);
+        int is_png = name_len >= 4 && ascii_equals_ignore_case(find_data.cFileName + name_len - 4, ".png");
+        int is_oi  = name_len >= 3 && ascii_equals_ignore_case(find_data.cFileName + name_len - 3, ".oi");
+        if (!is_png && !is_oi) {
+            continue;
+        }
         int score = kbo_hub_logo_filename_score(find_data.cFileName, year);
+        if (is_png) { score += 50; }
         if (score > best_score) {
             best_score = score;
             snprintf(best_path, sizeof(best_path), "%s\\%s", directory, find_data.cFileName);
@@ -962,6 +1052,51 @@ static int kbo_hub_find_best_logo_file(
     }
     snprintf(out, out_size, "%s", best_path);
     return 1;
+}
+
+static int kbo_hub_get_league_logo_path(uint32_t league_id, uint32_t year, char* out, size_t out_size)
+{
+    (void)league_id;
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    const char* league_logo = "2024~ KBO.png";
+    if      (year >= 1982 && year <= 1999) { league_logo = "1982~1999 KBO.png"; }
+    else if (year >= 2000 && year <= 2011) { league_logo = "2000~2011 KBO.png"; }
+    else if (year >= 2012 && year <= 2023) { league_logo = "2012~2023 KBO.png"; }
+
+    kbo_hub_logo_asset_path(league_logo, out, out_size);
+    return out[0] != '\0' && GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES;
+}
+
+static int kbo_hub_get_team_logo_path(uint32_t team_id, uint32_t year, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    char team_name[96] = {0};
+    char prefix[96] = {0};
+    kbo_hub_copy_team_display_name_by_id(team_id, team_name, sizeof(team_name), NULL);
+    kbo_hub_sanitize_logo_prefix(team_name, prefix, sizeof(prefix));
+    if (prefix[0] == '\0') {
+        return 0;
+    }
+
+    if (kbo_hub_find_best_logo_file(
+            "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Out of the Park Baseball 27\\data\\logos",
+            prefix, year, out, out_size)) {
+        return 1;
+    }
+
+    char cap_prefix[112] = {0};
+    snprintf(cap_prefix, sizeof(cap_prefix), "caps_%s", prefix);
+    return kbo_hub_find_best_logo_file(
+        "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Out of the Park Baseball 27\\data\\ballcaps",
+        cap_prefix, year, out, out_size);
 }
 
 static void kbo_hub_ensure_header_logos(uint32_t league_id, uint32_t team_id, uint32_t year)
@@ -979,33 +1114,10 @@ static void kbo_hub_ensure_header_logos(uint32_t league_id, uint32_t team_id, ui
     g_kbo_hub_logo_cache_year      = year;
 
     char path[MAX_PATH] = {0};
-    const char* league_logo = "2024~ KBO.png";
-    if      (year >= 1982 && year <= 1999) { league_logo = "1982~1999 KBO.png"; }
-    else if (year >= 2000 && year <= 2011) { league_logo = "2000~2011 KBO.png"; }
-    else if (year >= 2012 && year <= 2023) { league_logo = "2012~2023 KBO.png"; }
-    kbo_hub_logo_asset_path(league_logo, path, sizeof(path));
+    kbo_hub_get_league_logo_path(league_id, year, path, sizeof(path));
     g_kbo_hub_asset_selected_league_logo = kbo_hub_load_png_hbitmap_wic(path);
 
-    char team_name[96] = {0};
-    char prefix[96] = {0};
-    kbo_hub_copy_team_display_name_by_id(team_id, team_name, sizeof(team_name), NULL);
-    kbo_hub_sanitize_logo_prefix(team_name, prefix, sizeof(prefix));
-    if (prefix[0] == '\0') {
-        return;
-    }
-
-    if (kbo_hub_find_best_logo_file(
-            "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Out of the Park Baseball 27\\data\\logos",
-            prefix, year, path, sizeof(path))) {
-        g_kbo_hub_asset_selected_team_logo = kbo_hub_load_png_hbitmap_wic(path);
-        return;
-    }
-
-    char cap_prefix[112] = {0};
-    snprintf(cap_prefix, sizeof(cap_prefix), "caps_%s", prefix);
-    if (kbo_hub_find_best_logo_file(
-            "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Out of the Park Baseball 27\\data\\ballcaps",
-            cap_prefix, year, path, sizeof(path))) {
+    if (kbo_hub_get_team_logo_path(team_id, year, path, sizeof(path))) {
         g_kbo_hub_asset_selected_team_logo = kbo_hub_load_png_hbitmap_wic(path);
     }
 }

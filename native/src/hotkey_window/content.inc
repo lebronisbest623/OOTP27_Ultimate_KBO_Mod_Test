@@ -129,7 +129,7 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
     uintptr_t player_vector = 0;
     int32_t   player_count  = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        kbo_window_text_appendf(&buffer, "Player vector was not available.\r\n");
+        kbo_window_text_appendf(&buffer, "\r\n");
         return;
     }
 
@@ -145,6 +145,7 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
         }
 
         uint8_t* player = (uint8_t*)player_ptr;
+        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
         uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
         uint32_t loan_team_id    = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
         const char* service_fallback = NULL;
@@ -162,6 +163,11 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
         }
 
         uint32_t original_team_id = *(uint32_t*)(player + 0x5cu);
+        int active_service_index = find_active_kbo_military_loan_index(player_id);
+        if (active_service_index >= 0
+                && g_active_military_loans[active_service_index].original_team_id != 0u) {
+            original_team_id = g_active_military_loans[active_service_index].original_team_id;
+        }
         if (g_kbo_hub_selected_team_id != 0 && original_team_id != g_kbo_hub_selected_team_id) {
             continue;
         }
@@ -189,7 +195,7 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
     }
 
     if (rendered == 0) {
-        kbo_window_text_appendf(&buffer, "No Sangmu / Police assignments found in the current save.\r\n");
+        kbo_window_text_appendf(&buffer, "\r\n");
     }
 }
 
@@ -255,7 +261,7 @@ static void kbo_build_foreign_rights_window_text(char* out, size_t out_size)
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        kbo_window_text_appendf(&buffer, "Player vector was not available.\r\n");
+        kbo_window_text_appendf(&buffer, "\r\n");
         return;
     }
 
@@ -315,7 +321,95 @@ static void kbo_build_foreign_rights_window_text(char* out, size_t out_size)
     }
 
     if (rendered == 0) {
-        kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xed\x98\x84\xec\x9e\xac \xec\x84\xa0\xed\x83\x9d\xed\x95\x9c \xed\x8c\x80\xec\x9d\x98 \xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c \xed\x9b\x84\xeb\xb3\xb4\xea\xb0\x80 \xec\x97\x86\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.", "No reserve-rights candidates found for the selected team."));
+        kbo_window_text_appendf(&buffer, "\r\n");
+    }
+}
+
+static void kbo_build_foreign_injury_replacement_hub_text(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    KboWindowTextBuffer buffer;
+    buffer.data     = out;
+    buffer.capacity = out_size;
+    buffer.length   = 0;
+
+    uint32_t selected_team_id = g_kbo_hub_selected_team_id;
+    char selected_team_name[96] = {0};
+    kbo_hub_copy_team_display_name_by_id(selected_team_id, selected_team_name, sizeof(selected_team_name), NULL);
+    kbo_foreign_injury_replacement_scan_once("hotkey_text");
+
+    int open_count = 0;
+    int pending_count = 0;
+    int closed_count = 0;
+    kbo_count_foreign_injury_replacements_for_team(selected_team_id, &open_count, &pending_count, &closed_count);
+
+    uint32_t team_foreign = 0u;
+    uint32_t team_asian = 0u;
+    uint32_t team_non_asian = 0u;
+    kbo_count_team_asian_quota_probe(selected_team_id, &team_foreign, &team_asian, &team_non_asian);
+    uint32_t team_effective = kbo_effective_foreign_count_with_asian_quota(team_asian, team_non_asian);
+
+    kbo_window_text_appendf(&buffer, "FOREIGN INJURY REPLACEMENT\r\n");
+    kbo_window_text_appendf(&buffer, "Team: %s (%u)\r\n", selected_team_name, selected_team_id);
+    kbo_window_text_appendf(&buffer, "Open: %d / Decision due: %d / Closed: %d\r\n", open_count, pending_count, closed_count);
+    kbo_window_text_appendf(
+        &buffer,
+        "Raw foreign: %u / Asian: %u / Non-Asian: %u / Effective foreign: %u\r\n\r\n",
+        team_foreign,
+        team_asian,
+        team_non_asian,
+        team_effective);
+    kbo_window_text_appendf(&buffer, "  SLOT          INJURED PLAYER            ID          REPLACEMENT              ID          DAYS  STATUS\r\n");
+    kbo_window_text_appendf(&buffer, "--------------------------------------------------------------------------------------------------------\r\n");
+
+    int rendered = 0;
+    kbo_ensure_foreign_injury_replacements_loaded();
+    kbo_lock_foreign_injury_replacements();
+    for (int i = 0; i < g_kbo_foreign_injury_replacement_count && rendered < 500; i++) {
+        KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[i];
+        if (selected_team_id != 0u && rec->team_id != selected_team_id) {
+            continue;
+        }
+
+        char player_name[64] = {0};
+        char replacement_name[64] = {0};
+        int days_left = 0;
+        uint8_t* player = kbo_find_player_by_id(rec->injured_player_id, NULL, NULL);
+        if (player != NULL && memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+            kbo_hub_copy_player_display_name(player, player_name, sizeof(player_name));
+            days_left = (int)*(int16_t*)(player + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
+        } else {
+            snprintf(player_name, sizeof(player_name), "Player #%u", rec->injured_player_id);
+        }
+        uint8_t* replacement = kbo_find_player_by_id(rec->replacement_player_id, NULL, NULL);
+        if (replacement != NULL && memory_range_readable(replacement, OOTP27_PLAYER_SCAN_BYTES)) {
+            kbo_hub_copy_player_display_name(replacement, replacement_name, sizeof(replacement_name));
+        } else if (rec->replacement_player_id != 0u) {
+            snprintf(replacement_name, sizeof(replacement_name), "Player #%u", rec->replacement_player_id);
+        } else {
+            snprintf(replacement_name, sizeof(replacement_name), "-");
+        }
+
+        kbo_window_text_appendf(
+            &buffer,
+            "  %-13.13s %-24.24s %-11u %-24.24s %-11u %-5d %s\r\n",
+            kbo_foreign_injury_slot_label(rec->slot_type),
+            player_name,
+            rec->injured_player_id,
+            replacement_name,
+            rec->replacement_player_id,
+            days_left,
+            kbo_foreign_injury_status_label(rec->status));
+        rendered++;
+    }
+    kbo_unlock_foreign_injury_replacements();
+
+    if (rendered == 0) {
+        kbo_window_text_appendf(&buffer, "\r\n");
     }
 }
 
@@ -345,7 +439,7 @@ static void kbo_build_mod_info_hub_text(char* out, size_t out_size)
             "  This mod is not an official OOTP Developments product."));
 }
 
-static void kbo_build_asian_quota_hub_text(char* out, size_t out_size)
+static void kbo_build_foreign_policy_hub_text(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return;
@@ -363,8 +457,13 @@ static void kbo_build_asian_quota_hub_text(char* out, size_t out_size)
     uint32_t team_non_asian = 0u;
     kbo_count_team_asian_quota_probe(g_kbo_hub_selected_team_id, &team_foreign, &team_asian, &team_non_asian);
     uint32_t team_effective = kbo_effective_foreign_count_with_asian_quota(team_asian, team_non_asian);
-    kbo_window_text_appendf(&buffer, "ASIAN QUOTA CANDIDATES\r\n");
-    kbo_window_text_appendf(&buffer, "Configured nation IDs: %d\r\n\r\n", configured_nations);
+    kbo_window_text_appendf(&buffer, "KBO FOREIGN PLAYER POLICY\r\n");
+    kbo_window_text_appendf(
+        &buffer,
+        "Policy: %s / Base effective limit: %u / Asian-quota nation IDs: %d\r\n\r\n",
+        kbo_custom_foreign_policy_enabled() ? "Custom KBO layer" : "OOTP fallback",
+        KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT,
+        configured_nations);
     kbo_window_text_appendf(
         &buffer,
         "Raw foreign: %u / Asian: %u / Non-Asian: %u / Effective foreign: %u\r\n\r\n",
@@ -372,13 +471,13 @@ static void kbo_build_asian_quota_hub_text(char* out, size_t out_size)
         team_asian,
         team_non_asian,
         team_effective);
-    kbo_window_text_appendf(&buffer, "  PLAYER                   ID          TEAM       ACTIVE     NAT     STATUS\r\n");
-    kbo_window_text_appendf(&buffer, "----------------------------------------------------------------------------\r\n");
+    kbo_window_text_appendf(&buffer, "  SLOT  PLAYER                   ID          TEAM       ACTIVE     NAT     STATUS\r\n");
+    kbo_window_text_appendf(&buffer, "----------------------------------------------------------------------------------\r\n");
 
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        kbo_window_text_appendf(&buffer, "Player vector was not available.\r\n");
+        kbo_window_text_appendf(&buffer, "\r\n");
         return;
     }
 
@@ -395,8 +494,8 @@ static void kbo_build_asian_quota_hub_text(char* out, size_t out_size)
         uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
         uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
         if (player_id == 0u
-                || current_team_id != g_kbo_hub_selected_team_id
-                || !kbo_player_is_asian_quota_candidate(player)) {
+                || !kbo_player_is_foreign_for_kbo_rights(player)
+                || !kbo_player_current_assignment_matches_team_or_affiliate(player, g_kbo_hub_selected_team_id)) {
             continue;
         }
 
@@ -415,7 +514,8 @@ static void kbo_build_asian_quota_hub_text(char* out, size_t out_size)
 
         kbo_window_text_appendf(
             &buffer,
-            "  %-24.24s %-11u %-10u %-10u %-7u %s\r\n",
+            "  %-5.5s %-24.24s %-11u %-10u %-10u %-7u %s\r\n",
+            kbo_hub_foreign_slot_code_for_player(player),
             player_name,
             player_id,
             current_team_id,
@@ -426,8 +526,9 @@ static void kbo_build_asian_quota_hub_text(char* out, size_t out_size)
     }
 
     if (rendered == 0) {
-        kbo_window_text_appendf(&buffer, "No Asian-quota candidates found for the selected team.\r\n");
+        kbo_window_text_appendf(&buffer, "\r\n");
     }
+
 }
 
 static void kbo_build_asian_games_hub_text(char* out, size_t out_size)
@@ -441,6 +542,8 @@ static void kbo_build_asian_games_hub_text(char* out, size_t out_size)
     buffer.data     = out;
     buffer.capacity = out_size;
     buffer.length   = 0;
+
+    kbo_clear_asian_games_roster_if_save_changed("hotkey_text");
 
     LONG roster_count = g_kbo_asian_games_roster_count;
     if (roster_count <= 0) {
@@ -471,7 +574,7 @@ static void kbo_build_asian_games_hub_text(char* out, size_t out_size)
         exempted);
 
     if (roster_count == 0) {
-        kbo_window_text_appendf(&buffer, "No Asian Games roster CSV is available yet.\r\n");
+        kbo_window_text_appendf(&buffer, "\r\n");
         kbo_window_text_appendf(&buffer, "Advance through the roster-selection event, then refresh this panel.\r\n");
         return;
     }
@@ -544,12 +647,11 @@ static void kbo_build_hub_window_text(char* out, size_t out_size)
     switch (g_kbo_hub_selected_view) {
     case KBO_HUB_VIEW_MILITARY: kbo_build_military_service_window_text(out, out_size); return;
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: kbo_build_foreign_rights_window_text(out, out_size); return;
-    case KBO_HUB_VIEW_ASIAN_QUOTA: kbo_build_asian_quota_hub_text(out, out_size);       return;
+    case KBO_HUB_VIEW_ASIAN_QUOTA: kbo_build_foreign_policy_hub_text(out, out_size);    return;
     case KBO_HUB_VIEW_ASIAN_GAMES: kbo_build_asian_games_hub_text(out, out_size);       return;
     case KBO_HUB_VIEW_MOD_INFO: kbo_build_mod_info_hub_text(out, out_size);            return;
     case KBO_HUB_VIEW_SETTINGS: kbo_build_settings_hub_text(out, out_size);            return;
-    case KBO_HUB_VIEW_OVERVIEW:
-    default:                    kbo_build_overview_hub_text(out, out_size);             return;
+    default:                    kbo_build_mod_info_hub_text(out, out_size);             return;
     }
 }
 

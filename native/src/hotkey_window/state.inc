@@ -55,6 +55,7 @@ static RECT g_kbo_hub_foreign_skip_rect = {0, 0, 0, 0};
 static uint32_t g_kbo_hub_selected_league_id = 0;
 static uint32_t g_kbo_hub_selected_team_id = 0;
 static uint32_t g_kbo_hub_selected_foreign_player_id = 0;
+static int g_kbo_hub_open_dropdown = 0;
 static LONG g_kbo_hub_skin_metrics_loaded = 0;
 static LONG g_kbo_hub_skin_assets_loaded = 0;
 static int g_kbo_hub_skin_article_gap_x = 16;
@@ -83,16 +84,17 @@ static uint32_t g_kbo_hub_logo_cache_year = 0;
 #define KBO_HUB_CONTROL_FOREIGN_LIST    41
 #define KBO_HUB_CONTROL_FOREIGN_KEEP    42
 #define KBO_HUB_CONTROL_FOREIGN_RELEASE 43
+#define KBO_HUB_FIXED_CLIENT_WIDTH      1280
+#define KBO_HUB_FIXED_CLIENT_HEIGHT     720
 
 static HHOOK     g_kbo_game_getmsg_hook      = NULL;
-#define KBO_HUB_VIEW_OVERVIEW  0
-#define KBO_HUB_VIEW_MILITARY  1
+#define KBO_HUB_VIEW_MOD_INFO    0
+#define KBO_HUB_VIEW_MILITARY    1
 #define KBO_HUB_VIEW_FOREIGN_RIGHTS 2
 #define KBO_HUB_VIEW_ASIAN_QUOTA 3
 #define KBO_HUB_VIEW_ASIAN_GAMES 4
-#define KBO_HUB_VIEW_MOD_INFO    5
-#define KBO_HUB_VIEW_SETTINGS    6
-#define KBO_HUB_NAV_COUNT        7
+#define KBO_HUB_VIEW_SETTINGS    5
+#define KBO_HUB_NAV_COUNT        6
 #define KBO_HUB_LANG_KO 0
 #define KBO_HUB_LANG_EN 1
 
@@ -208,12 +210,11 @@ static void kbo_hub_save_language_setting(void)
 static const char* kbo_hub_nav_label(int index)
 {
     switch (index) {
-    case KBO_HUB_VIEW_OVERVIEW:       return kbo_hub_text("\xed\x99\x88",      "HOME");
+    case KBO_HUB_VIEW_MOD_INFO:       return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
     case KBO_HUB_VIEW_MILITARY:       return kbo_hub_text("\xea\xb5\xb0\xeb\xb3\xb5\xeb\xac\xb4",  "SERVICE");
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c",  "RIGHTS");
-    case KBO_HUB_VIEW_ASIAN_QUOTA:    return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x84\xec\xbf\xbc\xed\x84\xb0", "ASIAN");
-    case KBO_HUB_VIEW_ASIAN_GAMES:    return kbo_hub_text("AGAMES", "AGAMES");
-    case KBO_HUB_VIEW_MOD_INFO:       return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
+    case KBO_HUB_VIEW_ASIAN_QUOTA:    return kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8", "FOREIGN");
+    case KBO_HUB_VIEW_ASIAN_GAMES:    return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84", "AGAMES");
     case KBO_HUB_VIEW_SETTINGS:       return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",    "SETTINGS");
     default:                          return "";
     }

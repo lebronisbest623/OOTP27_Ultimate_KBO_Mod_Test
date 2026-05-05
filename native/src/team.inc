@@ -274,6 +274,18 @@ static int kbo_lookup_name_id(uint32_t name_id, char* out, size_t out_size)
     return 1;
 }
 
+static int kbo_player_uses_eastern_name_order(uint8_t* player)
+{
+    if (player == NULL || !memory_range_readable(player + OOTP27_PLAYER_NATION_ID_OFFSET, sizeof(uint32_t))) {
+        return 0;
+    }
+    uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+    return nation_id == 42u
+        || nation_id == 43u
+        || nation_id == 98u
+        || nation_id == OOTP27_KBO_KOREA_NATION_ID;
+}
+
 static void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
@@ -302,7 +314,11 @@ static void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_
     if (has_family && has_given) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-truncation"
-        snprintf(out, out_size, "%s %s", family, given);
+        if (kbo_player_uses_eastern_name_order(player)) {
+            snprintf(out, out_size, "%s %s", family, given);
+        } else {
+            snprintf(out, out_size, "%s %s", given, family);
+        }
 #pragma GCC diagnostic pop
     } else if (has_given) {
         snprintf(out, out_size, "%s", given);
@@ -456,6 +472,60 @@ static uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int all
     }
 
     return NULL;
+}
+
+static uint32_t kbo_org_team_id_for_team_id(uint32_t team_id)
+{
+    if (team_id == 0u) {
+        return 0u;
+    }
+
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
+    if (team != NULL && memory_range_readable(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+        uint32_t parent_team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET);
+        if (parent_team_id != 0u) {
+            return parent_team_id;
+        }
+    }
+    return team_id;
+}
+
+static int kbo_team_id_matches_org_or_affiliate(uint32_t team_id, uint32_t org_team_id)
+{
+    if (team_id == 0u || org_team_id == 0u) {
+        return 0;
+    }
+    if (team_id == org_team_id) {
+        return 1;
+    }
+    return kbo_org_team_id_for_team_id(team_id) == org_team_id;
+}
+
+static int kbo_player_current_assignment_matches_team_or_affiliate(uint8_t* player, uint32_t team_id)
+{
+    if (player == NULL || team_id == 0u || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    if (current_team_id == 0u) {
+        return 0;
+    }
+    if (kbo_team_id_matches_org_or_affiliate(current_team_id, team_id)) {
+        return 1;
+    }
+
+    uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    if (active_team_id != 0u && kbo_team_id_matches_org_or_affiliate(active_team_id, team_id)) {
+        return 1;
+    }
+
+    uint32_t loan_team_id = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+    if (loan_team_id != 0u && kbo_team_id_matches_org_or_affiliate(loan_team_id, team_id)) {
+        return 1;
+    }
+
+    return 0;
 }
 
 /* Roster array helpers */

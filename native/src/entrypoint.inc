@@ -36,11 +36,25 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
     install_kbo_player_offer_eligibility_patch();
     install_kbo_ai_fa_signability_random_fallback_patch();
     install_kbo_fa_submit_offer_probe_patch();
+    if (read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
+        install_kbo_fa_signing_branch_patch();
+    } else {
+        append_log_line("KBO FA requalification signing hook disabled: enable_fa_requalification.txt is off");
+    }
     install_kbo_ai_fa_status_candidate_insert_patch();
-    install_kbo_active_foreign_hitter_count_patch();
-    install_kbo_active_foreign_pitcher_count_patch();
-    install_kbo_callup_foreign_limit_branch_patches();
+    install_kbo_foreign_count_patches();
+    if (read_kbo_localappdata_flag_file("enable_kbo_callup_foreign_limit_patch.txt")) {
+        install_kbo_callup_foreign_limit_branch_patches();
+    } else {
+        append_log_line("KBO callup foreign limit branch patches disabled: custom foreign policy is org-level");
+    }
     start_kbo_foreign_waiver_scanner_thread();
+    start_kbo_foreign_injury_replacement_thread();
+    if (read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
+        start_kbo_fa_requalification_thread();
+    } else {
+        append_log_line("KBO FA requalification thread disabled: enable_fa_requalification.txt is off");
+    }
     start_kbo_custom_event_monitor();
     start_kbo_military_days_tick_thread();
     return 0;

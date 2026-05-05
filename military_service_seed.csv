@@ -1,0 +1,14 @@
+# source_key,service_team,original_team,service_start_yyyymmdd,total_days,comment
+# Use an OOTP source key such as lahman/player import id when available.
+# player_id also works, but it is save-specific and should only be used as a fallback.
+# service_team: SANG or KPB. original_team: team CSV id such as SSG, LG, KIA.
+# Example:
+# honggd01,SANG,SSG,20240301,545,Hong Gil-dong
+jeong-000jun,SANG,10,20250328,545,180 days left on 2026-03-28
+kim---019hye,SANG,8,20250328,545,180 days left on 2026-03-28
+jung--000eun,SANG,2,20250328,545,180 days left on 2026-03-28
+kang--004seo,SANG,6,20250328,545,180 days left on 2026-03-28
+kim---002hoj,SANG,8,20250328,545,180 days left on 2026-03-28
+jeong-001dae,SANG,6,20250328,545,180 days left on 2026-03-28
+kim---000doo,SANG,3,20250328,545,180 days left on 2026-03-28
+jeon--000ui-,SANG,9,20250328,545,180 days left on 2026-03-28
