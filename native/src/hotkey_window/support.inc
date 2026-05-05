@@ -620,11 +620,33 @@ static int kbo_queue_hotkey_window_toggle(void)
 typedef int (__fastcall *OotpGlobalHandleCallbackFn)(void* sender, intptr_t callback_id, uintptr_t value);
 typedef void* (__fastcall *OotpOperatorNewFn)(size_t size);
 typedef void (__fastcall *OotpPlayerPageCtorFn)(void* page, uint32_t player_id, int show_history, int add_to_history);
+typedef void* (__fastcall *OotpPlayerProfilePageCtorFn)(void* page, uint32_t player_id, int show_history, int add_to_history);
 typedef void (__fastcall *OotpUiOpenPageFn)(void* ui_context, void* page, int flags);
 typedef int (__fastcall *OotpUiCurrentModeFn)(void* ui_state, int index);
 typedef void* (__fastcall *OotpUiCurrentPageFn)(void* ui_state, int index);
+typedef int (__fastcall *OotpPageHandleCallbackFn)(void* page, void* sender, intptr_t callback_id, uintptr_t value);
+typedef int (__fastcall *OotpGlobalHandleCallbackOriginalFn)(uintptr_t sender, intptr_t callback_id, uintptr_t value);
 
-static void* kbo_get_ootp_current_ui_context(HMODULE exe)
+__declspec(noinline) int ootp_kbo_global_handle_callback_probe_wrapper(
+    uintptr_t sender, intptr_t callback_id, uintptr_t value, uintptr_t original_func_ptr)
+{
+    OotpGlobalHandleCallbackOriginalFn original =
+        (OotpGlobalHandleCallbackOriginalFn)original_func_ptr;
+    int should_log = (callback_id == KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU
+        || callback_id == KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE);
+    if (should_log) {
+        append_logf("KBO player profile callback probe enter sender=%p callback=%lld value=%p",
+            (void*)sender, (long long)callback_id, (void*)value);
+    }
+    int result = original(sender, callback_id, value);
+    if (should_log) {
+        append_logf("KBO player profile callback probe leave sender=%p callback=%lld value=%p result=%d",
+            (void*)sender, (long long)callback_id, (void*)value, result);
+    }
+    return result;
+}
+
+static void* kbo_get_ootp_ui_slot_pointer(HMODULE exe, uintptr_t slot_offset, const char* label)
 {
     if (exe == NULL) {
         return NULL;
@@ -666,52 +688,310 @@ static void* kbo_get_ootp_current_ui_context(HMODULE exe)
         return NULL;
     }
 
-    uintptr_t context_slot = slot + ((uintptr_t)(uint32_t)sub_index * 0x40u) + 0x38u;
+    uintptr_t context_slot = slot + ((uintptr_t)(uint32_t)sub_index * 0x40u) + slot_offset;
     if (!memory_range_readable((void*)context_slot, sizeof(uintptr_t))) {
-        append_logf("KBO player profile ui context probe: context slot unreadable slot=%p sub=%d addr=%p",
-            (void*)slot, (int)sub_index, (void*)context_slot);
+        append_logf("KBO player profile ui %s probe: slot unreadable slot=%p sub=%d addr=%p",
+            label != NULL ? label : "ptr", (void*)slot, (int)sub_index, (void*)context_slot);
         return NULL;
     }
 
     uintptr_t context = *(uintptr_t*)context_slot;
     if (context == 0 || !memory_range_readable((void*)context, 0x18u)) {
-        append_logf("KBO player profile ui context probe: context invalid root=%p index=%d sub=%d context=%p",
-            (void*)root, (int)index, (int)sub_index, (void*)context);
+        append_logf("KBO player profile ui %s probe: invalid root=%p index=%d sub=%d ptr=%p",
+            label != NULL ? label : "ptr", (void*)root, (int)index, (int)sub_index, (void*)context);
         return NULL;
     }
 
-    append_logf("KBO player profile ui context probe: root=%p index=%d sub=%d context=%p",
-        (void*)root, (int)index, (int)sub_index, (void*)context);
+    append_logf("KBO player profile ui %s probe: root=%p index=%d sub=%d ptr=%p",
+        label != NULL ? label : "ptr", (void*)root, (int)index, (int)sub_index, (void*)context);
     return (void*)context;
 }
 
-static int kbo_open_ootp_player_profile_direct(HMODULE exe, uint32_t player_id)
+static void kbo_log_ootp_ui_slot_candidates(HMODULE exe)
 {
-    void* context = kbo_get_ootp_current_ui_context(exe);
-    if (context == NULL) {
+    if (exe == NULL) {
+        return;
+    }
+
+    uintptr_t root_addr = (uintptr_t)exe + OOTP27_UI_CONTEXT_ROOT_RVA;
+    uintptr_t active_index_addr = (uintptr_t)exe + OOTP27_UI_CONTEXT_ACTIVE_INDEX_RVA;
+    uintptr_t fallback_index_addr = (uintptr_t)exe + OOTP27_UI_CONTEXT_FALLBACK_INDEX_RVA;
+    if (!memory_range_readable((void*)root_addr, sizeof(uintptr_t))
+        || !memory_range_readable((void*)active_index_addr, sizeof(int32_t))
+        || !memory_range_readable((void*)fallback_index_addr, sizeof(int16_t))) {
+        append_log_line("KBO player profile ui slot candidates: globals unreadable");
+        return;
+    }
+
+    uintptr_t root = *(uintptr_t*)root_addr;
+    int32_t index = *(int32_t*)active_index_addr;
+    if (index == -1) {
+        index = (int32_t)*(int16_t*)fallback_index_addr;
+    }
+    if (root == 0 || index < 0 || index > 64 || !memory_range_readable((void*)root, 0x20u)) {
+        append_logf("KBO player profile ui slot candidates: invalid root=%p index=%d",
+            (void*)root, (int)index);
+        return;
+    }
+
+    uintptr_t slot = root + ((uintptr_t)(uint32_t)index * 0x558u);
+    if (!memory_range_readable((void*)slot, 0x558u)) {
+        append_logf("KBO player profile ui slot candidates: slot unreadable root=%p index=%d slot=%p",
+            (void*)root, (int)index, (void*)slot);
+        return;
+    }
+
+    int32_t sub_index = *(int32_t*)(slot + 0x548u);
+    if (sub_index < 0 || sub_index > 64) {
+        append_logf("KBO player profile ui slot candidates: invalid sub_index=%d root=%p index=%d slot=%p",
+            (int)sub_index, (void*)root, (int)index, (void*)slot);
+        return;
+    }
+
+    uintptr_t subslot = slot + ((uintptr_t)(uint32_t)sub_index * 0x40u);
+    append_logf("KBO player profile ui slot candidates: root=%p index=%d slot=%p sub=%d subslot=%p",
+        (void*)root, (int)index, (void*)slot, (int)sub_index, (void*)subslot);
+
+    for (uintptr_t off = 0; off <= 0x58u; off += sizeof(uintptr_t)) {
+        uintptr_t addr = subslot + off;
+        if (!memory_range_readable((void*)addr, sizeof(uintptr_t))) {
+            append_logf("KBO player profile ui slot candidate off=0x%02Ix addr=%p unreadable",
+                (size_t)off, (void*)addr);
+            continue;
+        }
+
+        uintptr_t ptr = *(uintptr_t*)addr;
+        uintptr_t vtbl = 0;
+        uintptr_t p10 = 0;
+        int32_t p0c = 0;
+        int readable = (ptr != 0 && memory_range_readable((void*)ptr, 0x18u));
+        if (readable) {
+            vtbl = *(uintptr_t*)ptr;
+            p0c = *(int32_t*)(ptr + 0x0cu);
+            p10 = *(uintptr_t*)(ptr + 0x10u);
+        }
+
+        append_logf("KBO player profile ui slot candidate off=0x%02Ix ptr=%p readable=%d vtbl=%p field0c=%d field10=%p",
+            (size_t)off, (void*)ptr, readable, (void*)vtbl, p0c, (void*)p10);
+    }
+}
+
+static void* kbo_get_ootp_current_ui_context(HMODULE exe)
+{
+    return kbo_get_ootp_ui_slot_pointer(exe, 0x38u, "page");
+}
+
+static void* kbo_get_ootp_current_ui_opener(HMODULE exe)
+{
+    return kbo_get_ootp_ui_slot_pointer(exe, 0x30u, "opener");
+}
+
+static void kbo_log_ootp_ui_open_target(const char* label, void* target)
+{
+    if (target == NULL || !memory_range_readable(target, 0x18u)) {
+        append_logf("KBO player profile %s target invalid target=%p",
+            label != NULL ? label : "open", target);
+        return;
+    }
+
+    uintptr_t base = (uintptr_t)target;
+    uintptr_t vtbl = *(uintptr_t*)base;
+    int32_t field0c = *(int32_t*)(base + 0x0cu);
+    uintptr_t field10 = *(uintptr_t*)(base + 0x10u);
+    append_logf("KBO player profile %s target=%p vtbl=%p field0c=%d field10=%p",
+        label != NULL ? label : "open", target, (void*)vtbl, field0c, (void*)field10);
+}
+
+static void kbo_log_ootp_callback_sender_candidate(const char* label, const char* field, void* sender)
+{
+    if (sender == NULL || !memory_range_readable(sender, 0x130u)) {
+        append_logf("KBO player profile %s %s sender invalid sender=%p",
+            label != NULL ? label : "page",
+            field != NULL ? field : "candidate",
+            sender);
+        return;
+    }
+
+    uintptr_t base = (uintptr_t)sender;
+    append_logf("KBO player profile %s %s sender=%p vtbl=%p s048=%p s050=%p s058=%p s060=%p s068=%lld s070=%p s0f8=%p s100=%p s104=%u s108=%p s110=%p s118=%p s120=%p s128=%p",
+        label != NULL ? label : "page",
+        field != NULL ? field : "candidate",
+        sender,
+        (void*)*(uintptr_t*)base,
+        (void*)*(uintptr_t*)(base + 0x048u),
+        (void*)*(uintptr_t*)(base + 0x050u),
+        (void*)*(uintptr_t*)(base + 0x058u),
+        (void*)*(uintptr_t*)(base + 0x060u),
+        (long long)*(int64_t*)(base + 0x068u),
+        (void*)*(uintptr_t*)(base + 0x070u),
+        (void*)*(uintptr_t*)(base + 0x0f8u),
+        (void*)*(uintptr_t*)(base + 0x100u),
+        *(uint32_t*)(base + 0x104u),
+        (void*)*(uintptr_t*)(base + 0x108u),
+        (void*)*(uintptr_t*)(base + 0x110u),
+        (void*)*(uintptr_t*)(base + 0x118u),
+        (void*)*(uintptr_t*)(base + 0x120u),
+        (void*)*(uintptr_t*)(base + 0x128u));
+}
+
+static void kbo_log_ootp_page_callback_candidates(const char* label, void* page)
+{
+    if (page == NULL || !memory_range_readable(page, 0x130u)) {
+        append_logf("KBO player profile %s callback candidates invalid page=%p",
+            label != NULL ? label : "page", page);
+        return;
+    }
+
+    uintptr_t base = (uintptr_t)page;
+    uintptr_t vtbl = *(uintptr_t*)base;
+    append_logf("KBO player profile %s callback candidates page=%p vtbl=%p f0f8=%p f100=%p f108=%p f110=%p f118=%p f120=%p f128=%p",
+        label != NULL ? label : "page",
+        page,
+        (void*)vtbl,
+        (void*)*(uintptr_t*)(base + 0x0f8u),
+        (void*)*(uintptr_t*)(base + 0x100u),
+        (void*)*(uintptr_t*)(base + 0x108u),
+        (void*)*(uintptr_t*)(base + 0x110u),
+        (void*)*(uintptr_t*)(base + 0x118u),
+        (void*)*(uintptr_t*)(base + 0x120u),
+        (void*)*(uintptr_t*)(base + 0x128u));
+
+    kbo_log_ootp_callback_sender_candidate(label, "f0f8", (void*)*(uintptr_t*)(base + 0x0f8u));
+    kbo_log_ootp_callback_sender_candidate(label, "f100", (void*)*(uintptr_t*)(base + 0x100u));
+    kbo_log_ootp_callback_sender_candidate(label, "f108", (void*)*(uintptr_t*)(base + 0x108u));
+}
+
+static int kbo_open_ootp_player_profile_direct_with_target(HMODULE exe, uint32_t player_id, void* open_target, const char* label)
+{
+    if (open_target == NULL) {
         return 0;
     }
 
     OotpOperatorNewFn ootp_new = (OotpOperatorNewFn)((uintptr_t)exe + OOTP27_UI_OPERATOR_NEW_RVA);
-    OotpPlayerPageCtorFn player_page_ctor =
-        (OotpPlayerPageCtorFn)((uintptr_t)exe + OOTP27_PLAYER_PAGE_CTOR_RVA);
+    OotpPlayerProfilePageCtorFn player_profile_page_ctor =
+        (OotpPlayerProfilePageCtorFn)((uintptr_t)exe + OOTP27_PLAYER_PROFILE_PAGE_CTOR_RVA);
     OotpUiOpenPageFn open_page = (OotpUiOpenPageFn)((uintptr_t)exe + OOTP27_UI_OPEN_PAGE_RVA);
 
-    void* page = ootp_new(0x1a8u);
+    void* page = ootp_new(0x938u);
     if (page == NULL) {
         append_logf("KBO player profile direct open failed: allocation player=%u", player_id);
         return 0;
     }
 
-    append_logf("KBO player profile direct open: constructing player=%u page=%p context=%p",
-        player_id, page, context);
-    player_page_ctor(page, player_id, 1, 1);
-    append_logf("KBO player profile direct open: installing player=%u page=%p context=%p",
-        player_id, page, context);
-    open_page(context, page, 0);
-    append_logf("KBO player profile direct open: installed player=%u page=%p context=%p",
-        player_id, page, context);
+    kbo_log_ootp_ui_open_target(label, open_target);
+    append_logf("KBO player profile direct open %s: constructing profile player=%u page=%p target=%p",
+        label != NULL ? label : "experiment", player_id, page, open_target);
+    player_profile_page_ctor(page, player_id, 1, 1);
+    kbo_log_ootp_ui_open_target("new page", page);
+    append_logf("KBO player profile direct open %s: installing profile player=%u page=%p target=%p flags=0",
+        label != NULL ? label : "experiment", player_id, page, open_target);
+    open_page(open_target, page, 0);
+    append_logf("KBO player profile direct open %s: installed profile player=%u page=%p target=%p flags=0",
+        label != NULL ? label : "experiment", player_id, page, open_target);
     return 1;
+}
+
+static int kbo_open_ootp_player_profile_direct_v2(HMODULE exe, uint32_t player_id)
+{
+    void* opener = kbo_get_ootp_current_ui_opener(exe);
+    return kbo_open_ootp_player_profile_direct_with_target(exe, player_id, opener, "v2");
+}
+
+static int kbo_open_ootp_player_profile_direct_v3(HMODULE exe, uint32_t player_id)
+{
+    void* page_target = kbo_get_ootp_current_ui_context(exe);
+    return kbo_open_ootp_player_profile_direct_with_target(exe, player_id, page_target, "v3");
+}
+
+static int kbo_try_player_profile_page_callback_v4(HMODULE exe, uint32_t player_id)
+{
+    if (exe == NULL || player_id == 0u) {
+        return 0;
+    }
+
+    if (InterlockedCompareExchange(&g_kbo_player_profile_direct_attempted, 1, 0) != 0) {
+        append_logf("KBO player profile page callback v4 skipped: one-shot already used player=%u",
+            player_id);
+        return 0;
+    }
+
+    void* page = kbo_get_ootp_current_ui_context(exe);
+    if (page == NULL) {
+        append_logf("KBO player profile page callback v4 skipped: no current page player=%u",
+            player_id);
+        return 0;
+    }
+
+    kbo_log_ootp_ui_open_target("v4 current page", page);
+    append_logf("KBO player profile page callback v4: dispatching current-page callback player=%u page=%p callback=-0x3ed",
+        player_id, page);
+
+    OotpPageHandleCallbackFn page_handle_callback =
+        (OotpPageHandleCallbackFn)((uintptr_t)exe + OOTP27_PAGE_HANDLE_CALLBACK_RVA);
+    int result = page_handle_callback(page, page, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU, (uintptr_t)player_id);
+    append_logf("KBO player profile page callback v4: result=%d player=%u page=%p",
+        result, player_id, page);
+    return result != 0;
+}
+
+static int kbo_try_player_profile_global_open_v5(HMODULE exe, uint32_t player_id)
+{
+    if (exe == NULL || player_id == 0u) {
+        return 0;
+    }
+
+    if (InterlockedCompareExchange(&g_kbo_player_profile_direct_attempted, 1, 0) != 0) {
+        append_logf("KBO player profile global open v5 skipped: one-shot already used player=%u",
+            player_id);
+        return 0;
+    }
+
+    OotpGlobalHandleCallbackFn global_handle_callback =
+        (OotpGlobalHandleCallbackFn)((uintptr_t)exe + OOTP27_GLOBAL_HANDLE_CALLBACK_RVA);
+    append_logf("KBO player profile global open v5: dispatching callback player=%u sender=NULL callback=-0x3ee",
+        player_id);
+    int result = global_handle_callback(NULL, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_GLOBAL_OPEN, (uintptr_t)player_id);
+    append_logf("KBO player profile global open v5: result=%d player=%u sender=NULL callback=-0x3ee",
+        result, player_id);
+    return result != 0;
+}
+
+static int kbo_try_player_profile_global_open_v6(HMODULE exe, uint32_t player_id)
+{
+    if (exe == NULL || player_id == 0u) {
+        return 0;
+    }
+
+    ULONGLONG now = GetTickCount64();
+    if (now - g_kbo_player_profile_global_open_v6_last_ms < 500u) {
+        append_logf("KBO player profile global open v6 skipped: cooldown player=%u elapsed_ms=%llu",
+            player_id, (unsigned long long)(now - g_kbo_player_profile_global_open_v6_last_ms));
+        return 0;
+    }
+    g_kbo_player_profile_global_open_v6_last_ms = now;
+
+    void* page = kbo_get_ootp_current_ui_context(exe);
+    if (page == NULL || !memory_range_readable(page, 0x100u)) {
+        append_logf("KBO player profile global open v6 skipped: current page invalid player=%u page=%p",
+            player_id, page);
+        return 0;
+    }
+
+    void* sender = (void*)*(uintptr_t*)((uintptr_t)page + 0x0f8u);
+    if (sender == NULL || !memory_range_readable(sender, 0x108u)) {
+        append_logf("KBO player profile global open v6 skipped: sender invalid player=%u page=%p sender=%p",
+            player_id, page, sender);
+        return 0;
+    }
+
+    OotpGlobalHandleCallbackFn global_handle_callback =
+        (OotpGlobalHandleCallbackFn)((uintptr_t)exe + OOTP27_GLOBAL_HANDLE_CALLBACK_RVA);
+    append_logf("KBO player profile global open v6: dispatching callback player=%u page=%p sender=%p callback=-0x3ee sender104=%u",
+        player_id, page, sender, *(uint32_t*)((uintptr_t)sender + 0x104u));
+    int result = global_handle_callback(sender, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_GLOBAL_OPEN, (uintptr_t)player_id);
+    append_logf("KBO player profile global open v6: result=%d player=%u page=%p sender=%p callback=-0x3ee",
+        result, player_id, page, sender);
+    return result != 0;
 }
 
 static void kbo_log_ootp_player_profile_probe(HMODULE exe, uint32_t player_id)
@@ -736,7 +1016,9 @@ static void kbo_log_ootp_player_profile_probe(HMODULE exe, uint32_t player_id)
     }
 
     void* context = kbo_get_ootp_current_ui_context(exe);
-    append_logf("KBO player profile probe: player=%u ui_state=%p mode0=%d page0=%p mode3=%d page3=%p context=%p normal_callback=-0x3ed old_callback=-0x3f2",
+    kbo_log_ootp_ui_slot_candidates(exe);
+    kbo_log_ootp_page_callback_candidates("current page", context);
+    append_logf("KBO player profile probe: player=%u ui_state=%p mode0=%d page0=%p mode3=%d page3=%p context=%p menu_callback=-0x3ed global_open_callback=-0x3ee old_callback=-0x3f2",
         player_id, (void*)ui_state, mode0, page0, mode3, page3, context);
 }
 
@@ -751,22 +1033,34 @@ static int kbo_open_ootp_player_profile_now(uint32_t player_id)
         return 0;
     }
 
-    append_logf("KBO player profile direct open disabled: unsafe after crash player=%u", player_id);
     kbo_log_ootp_player_profile_probe(exe, player_id);
-
-    OotpGlobalHandleCallbackFn handle_callback =
-        (OotpGlobalHandleCallbackFn)((uintptr_t)exe + OOTP27_GLOBAL_HANDLE_CALLBACK_RVA);
-    append_logf("KBO player profile open: direct path unavailable, calling menu callback player=%u rva=0x%x callback=%d",
-        player_id, OOTP27_GLOBAL_HANDLE_CALLBACK_RVA, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU);
-    int result = handle_callback(NULL, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU, (uintptr_t)player_id);
-    append_logf("KBO player profile open: menu callback result=%d player=%u", result, player_id);
-    if (result == 0) {
-        append_logf("KBO player profile open: falling back to legacy callback player=%u callback=%d",
-            player_id, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE);
-        result = handle_callback(NULL, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE, (uintptr_t)player_id);
-        append_logf("KBO player profile open: legacy callback result=%d player=%u", result, player_id);
+    if (read_kbo_localappdata_flag_file("enable_player_profile_page_callback_v4.txt")) {
+        return kbo_try_player_profile_page_callback_v4(exe, player_id);
     }
-    return result != 0;
+
+    if (read_kbo_localappdata_flag_file("enable_player_profile_global_open_v6.txt")) {
+        return kbo_try_player_profile_global_open_v6(exe, player_id);
+    }
+
+    if (read_kbo_localappdata_flag_file("enable_player_profile_global_open_v5.txt")) {
+        return kbo_try_player_profile_global_open_v5(exe, player_id);
+    }
+
+    if (read_kbo_localappdata_flag_file("enable_player_profile_direct_open_v3.txt")) {
+        append_logf("KBO player profile direct open v3 disabled: open_page returned but broke OOTP input player=%u",
+            player_id);
+        return 0;
+    }
+
+    if (read_kbo_localappdata_flag_file("enable_player_profile_direct_open_v2.txt")) {
+        append_logf("KBO player profile direct open v2 disabled: opener candidate was invalid player=%u",
+            player_id);
+        return 0;
+    }
+
+    append_logf("KBO player profile open disabled: direct page install and raw callback dispatch are unsafe player=%u",
+        player_id);
+    return 0;
 }
 
 static int kbo_open_ootp_player_profile_async(uint32_t player_id)

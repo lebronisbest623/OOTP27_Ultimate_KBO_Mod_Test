@@ -115,9 +115,12 @@ static const char* kbo_hub_text(const char* ko, const char* en)
 
 #define KBO_WM_OPEN_PLAYER_PROFILE (WM_APP + 0x4b1u)
 #define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU (-0x3ed)
+#define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_GLOBAL_OPEN (-0x3ee)
 #define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE (-0x3f2)
 
 static DWORD g_kbo_game_thread_id = 0;
+static LONG g_kbo_player_profile_direct_attempted = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v6_last_ms = 0;
 
 static void kbo_try_install_game_getmsg_hook(void);
 

@@ -9,29 +9,56 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
         return 0;
     }
 
-    start_kbo_hotkey_window_thread((HINSTANCE)parameter);
+    int diagnostic_minimal_runtime = read_kbo_localappdata_flag_file("enable_kbo_diagnostic_minimal_runtime.txt");
+    if (diagnostic_minimal_runtime) {
+        append_log_line("KBO diagnostic minimal runtime enabled: F2 hub and runtime patches disabled");
+    } else {
+        start_kbo_hotkey_window_thread((HINSTANCE)parameter);
+    }
 
     if (!verify_ootp_build()) {
         append_log_line("KBOFix: build verification failed; no patches installed");
         return 0;
     }
 
+    if (diagnostic_minimal_runtime) {
+        append_log_line("KBO diagnostic minimal runtime: build verified, no runtime patches installed");
+        return 0;
+    }
+
     load_allstar_team_rules_once();
-    force_kbo_allstar_flags_for_configured_league("startup");
-    start_kbo_allstar_force_retry_thread();
     install_kbo_military_service_entry_patch();
     install_kbo_military_status_update_patch();
-    install_single_division_allstar_patch();
-    install_allstar_team_setup_single_division_patch();
-    install_allstar_voting_begin_prepare_patch();
-    install_allstar_candidate_team_split_patch();
-    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
-        force_kbo_allstar_flags_for_configured_league("startup_allstar_events_enabled");
-        install_allstar_events_prepare_patch();
+    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
+        force_kbo_allstar_flags_for_configured_league("startup");
+        start_kbo_allstar_force_retry_thread();
+        install_single_division_allstar_patch();
+        install_allstar_team_setup_single_division_patch();
+        install_allstar_candidate_team_split_patch();
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_voting_hook.txt")) {
+            install_allstar_voting_begin_prepare_patch();
+        } else {
+            append_log_line("KBO all-star voting begin prepare hook disabled: enable_single_division_allstar_voting_hook.txt is off");
+        }
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
+            force_kbo_allstar_flags_for_configured_league("startup_allstar_events_enabled");
+            install_allstar_events_prepare_patch();
+        } else {
+            append_log_line("KBO all-star events prepare hook disabled: enable_single_division_allstar_events.txt is off");
+        }
     } else {
-        append_log_line("KBO all-star events prepare hook disabled: enable_single_division_allstar_events.txt is off");
+        append_log_line("KBO single-division all-star runtime patches disabled: enable_single_division_allstar_runtime_patches.txt is off");
     }
-    install_allstar_settings_ui_patch();
+    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
+        install_allstar_settings_ui_patch();
+    } else {
+        append_log_line("KBO all-star settings UI patch disabled: enable_single_division_allstar_settings_patch.txt is off");
+    }
+    if (read_kbo_localappdata_flag_file("enable_player_profile_callback_probe.txt")) {
+        append_log_line("KBO player profile callback probe disabled: unsafe prologue hook caused OOTP crash");
+    } else {
+        append_log_line("KBO player profile callback probe disabled: enable_player_profile_callback_probe.txt is off");
+    }
     if (read_kbo_localappdata_flag_file("enable_kbo_fa_signability_hooks.txt")) {
         install_kbo_player_team_signability_patch();
         install_kbo_player_offer_eligibility_patch();
@@ -45,7 +72,11 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
     } else {
         append_log_line("KBO FA requalification signing hook disabled: enable_fa_requalification.txt is off");
     }
-    install_kbo_ai_fa_status_candidate_insert_patch();
+    if (read_kbo_localappdata_flag_file("enable_kbo_ai_fa_status_candidate_insert_hook.txt")) {
+        install_kbo_ai_fa_status_candidate_insert_patch();
+    } else {
+        append_log_line("KBO AI FA status candidate insert hook disabled: enable_kbo_ai_fa_status_candidate_insert_hook.txt is off");
+    }
     install_kbo_foreign_count_patches();
     if (read_kbo_localappdata_flag_file("enable_kbo_callup_foreign_limit_patch.txt")) {
         install_kbo_callup_foreign_limit_branch_patches();

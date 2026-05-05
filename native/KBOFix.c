@@ -30,6 +30,7 @@
 #define OOTP27_PLAYER_PAGE_CTOR_RVA 0x01374630u
 #define OOTP27_PLAYER_PROFILE_PAGE_CTOR_RVA 0x017BC980u
 #define OOTP27_UI_OPEN_PAGE_RVA 0x005DF750u
+#define OOTP27_PAGE_HANDLE_CALLBACK_RVA 0x00F21B90u
 #define OOTP27_UI_CURRENT_MODE_RVA 0x005DF630u
 #define OOTP27_UI_CURRENT_PAGE_RVA 0x005DF5E0u
 #define OOTP27_UI_CONTEXT_ROOT_RVA 0x031EEEA0u
@@ -268,6 +269,8 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr, int32_t team_id, uint16_t year_hint, uintptr_t original_func_ptr);
 __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     uintptr_t player_ptr, int32_t team_id, int32_t flag, uintptr_t original_func_ptr);
+__declspec(noinline) int ootp_kbo_global_handle_callback_probe_wrapper(
+    uintptr_t sender, intptr_t callback_id, uintptr_t value, uintptr_t original_func_ptr);
 __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
     uintptr_t screen_ptr, uintptr_t original_func_ptr);
 __declspec(noinline) void ootp_kbo_fa_signing_branch_wrapper(
@@ -352,6 +355,61 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
  * Single-translation-unit build: feature areas split into source fragments.
  */
 #include "src/core.inc"
+
+static void kbo_perf_probe_record(
+    const char* name,
+    volatile LONG* total_calls,
+    volatile LONG* last_calls,
+    volatile LONG* total_ms,
+    volatile LONG* max_ms,
+    volatile LONG* last_tick,
+    DWORD elapsed_ms)
+{
+    LONG total = InterlockedIncrement(total_calls);
+    if (elapsed_ms > 0u) {
+        LONG elapsed = elapsed_ms > 0x7fffffffu ? 0x7fffffff : (LONG)elapsed_ms;
+        InterlockedExchangeAdd(total_ms, elapsed);
+        LONG old_max = *max_ms;
+        while (elapsed > old_max
+                && InterlockedCompareExchange(max_ms, elapsed, old_max) != old_max) {
+            old_max = *max_ms;
+        }
+    }
+
+    DWORD now = GetTickCount();
+    LONG now_tick = (LONG)now;
+    LONG previous_tick = *last_tick;
+    if (previous_tick == 0) {
+        if (InterlockedCompareExchange(last_tick, now_tick, 0) == 0) {
+            return;
+        }
+        previous_tick = *last_tick;
+    }
+
+    DWORD window_ms = now - (DWORD)previous_tick;
+    if (window_ms < 1000u) {
+        return;
+    }
+    if (InterlockedCompareExchange(last_tick, now_tick, previous_tick) != previous_tick) {
+        return;
+    }
+
+    LONG previous_calls = InterlockedExchange(last_calls, total);
+    LONG delta_calls = total - previous_calls;
+    LONG delta_ms = InterlockedExchange(total_ms, 0);
+    LONG window_max_ms = InterlockedExchange(max_ms, 0);
+    if (delta_calls >= 50 || delta_ms >= 20 || window_max_ms >= 10) {
+        append_logf(
+            "KBO perf hook=%s total=%ld delta=%ld elapsed_ms=%ld max_ms=%ld window_ms=%lu",
+            name != NULL ? name : "",
+            total,
+            delta_calls,
+            delta_ms,
+            window_max_ms,
+            (unsigned long)window_ms);
+    }
+}
+
 #include "src/build_verify.inc"
 #include "src/runtime_memory.inc"
 #include "src/team.inc"

@@ -126,14 +126,7 @@ static int kbo_allstar_league_context_enabled(uintptr_t league_ptr)
         return 1;
     }
 
-    append_logf(
-        "KBO all-star context accepted by year fallback league=%p year=%u configured=%u ids=%u/%u source=single_division_allstar",
-        (void*)league_ptr,
-        year,
-        configured_league_id,
-        primary_league_id,
-        fallback_league_id);
-    return 1;
+    return 0;
 }
 
 static int kbo_allstar_team_matches_league(uint8_t* team, uint32_t primary_league_id, uint32_t fallback_league_id)
@@ -837,6 +830,21 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
     void* right_team_vector,
     uintptr_t vector_push_back_ptr)
 {
+    static volatile LONG perf_total = 0;
+    static volatile LONG perf_last = 0;
+    static volatile LONG perf_ms = 0;
+    static volatile LONG perf_max = 0;
+    static volatile LONG perf_tick = 0;
+    DWORD perf_start = GetTickCount();
+    kbo_perf_probe_record(
+        "allstar_candidate_team_split_enter",
+        &perf_total,
+        &perf_last,
+        &perf_ms,
+        &perf_max,
+        &perf_tick,
+        0);
+
     if (!kbo_allstar_league_context_enabled(league_ptr)) {
         return 0;
     }
@@ -1020,6 +1028,20 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
             used_csv_split ? "csv" : "fallback_alternating");
     }
 
+    static volatile LONG perf_success_total = 0;
+    static volatile LONG perf_success_last = 0;
+    static volatile LONG perf_success_ms = 0;
+    static volatile LONG perf_success_max = 0;
+    static volatile LONG perf_success_tick = 0;
+    kbo_perf_probe_record(
+        "allstar_candidate_team_split_success",
+        &perf_success_total,
+        &perf_success_last,
+        &perf_success_ms,
+        &perf_success_max,
+        &perf_success_tick,
+        GetTickCount() - perf_start);
+
     return 1;
 }
 
@@ -1122,7 +1144,21 @@ static void start_kbo_allstar_force_retry_thread(void)
 
 __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr)
 {
+    static volatile LONG perf_total = 0;
+    static volatile LONG perf_last = 0;
+    static volatile LONG perf_ms = 0;
+    static volatile LONG perf_max = 0;
+    static volatile LONG perf_tick = 0;
+    DWORD perf_start = GetTickCount();
     enable_kbo_allstar_flags(league_ptr, "make_allstar_game_events");
+    kbo_perf_probe_record(
+        "allstar_events_prepare",
+        &perf_total,
+        &perf_last,
+        &perf_ms,
+        &perf_max,
+        &perf_tick,
+        GetTickCount() - perf_start);
 }
 
 __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league_ptr, uintptr_t allstar_team_setup_ptr)
