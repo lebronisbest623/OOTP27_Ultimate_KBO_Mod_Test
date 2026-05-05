@@ -55,6 +55,7 @@ if (args.Length == 0)
         DllPath = defaultDll,
         EnableMilitaryDraftPool = true,
         EnableForeignWaiverAi = true,
+        EnableSingleDivisionAllstarEvents = true,
         AttachExisting = existing.Count > 0,
     };
 }
@@ -93,6 +94,10 @@ if (options.EnableMilitaryDraftPool is not null)
 if (options.EnableForeignWaiverAi is not null)
 {
     WriteKboForeignWaiverAiFlag(options.EnableForeignWaiverAi.Value);
+}
+if (options.EnableSingleDivisionAllstarEvents is not null)
+{
+    WriteKboSingleDivisionAllstarEventsFlag(options.EnableSingleDivisionAllstarEvents.Value);
 }
 
 if (options.AttachPid is not null || options.AttachExisting)
@@ -271,6 +276,11 @@ static void WriteKboMilitaryDraftPoolFlag(bool enabled)
 static void WriteKboForeignWaiverAiFlag(bool enabled)
 {
     WriteKboFlag("enable_foreign_waiver_ai.txt", "Foreign waiver AI flag", enabled);
+}
+
+static void WriteKboSingleDivisionAllstarEventsFlag(bool enabled)
+{
+    WriteKboFlag("enable_single_division_allstar_events.txt", "Single-division all-star events flag", enabled);
 }
 
 static void EnsureKboLeagueIdConfig()
@@ -615,6 +625,7 @@ record LauncherOptions(
     bool AttachExisting,
     bool? EnableMilitaryDraftPool,
     bool? EnableForeignWaiverAi,
+    bool? EnableSingleDivisionAllstarEvents,
     bool DryRun,
     bool AllowSecondInstance,
     bool ShowHelp,
@@ -628,6 +639,7 @@ record LauncherOptions(
         var attachExisting = false;
         bool? enableMilitaryDraftPool = null;
         bool? enableForeignWaiverAi = null;
+        bool? enableSingleDivisionAllstarEvents = null;
         var dryRun = false;
         var allowSecondInstance = false;
         var showHelp = false;
@@ -668,6 +680,12 @@ record LauncherOptions(
                 case "--disable-foreign-waiver-ai":
                     enableForeignWaiverAi = false;
                     break;
+                case "--enable-single-division-allstar-events":
+                    enableSingleDivisionAllstarEvents = true;
+                    break;
+                case "--disable-single-division-allstar-events":
+                    enableSingleDivisionAllstarEvents = false;
+                    break;
                 case "--dry-run":
                     dryRun = true;
                     break;
@@ -694,6 +712,7 @@ record LauncherOptions(
             attachExisting,
             enableMilitaryDraftPool,
             enableForeignWaiverAi,
+            enableSingleDivisionAllstarEvents,
             dryRun,
             allowSecondInstance,
             showHelp,
@@ -721,6 +740,10 @@ record LauncherOptions(
                                        Disable the military draft pool flag.
           --enable-foreign-waiver-ai    Enable foreign waiver assistant log.
           --disable-foreign-waiver-ai   Disable foreign waiver assistant log.
+          --enable-single-division-allstar-events
+                                       Enable single-division all-star event creation.
+          --disable-single-division-allstar-events
+                                       Disable single-division all-star event creation.
           --dry-run                    Resolve paths and detect existing process without launching.
           --allow-second-instance      Launch even if an OOTP process is already running.
           --                           Pass remaining arguments to OOTP.

@@ -17,13 +17,20 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
     }
 
     load_allstar_team_rules_once();
+    force_kbo_allstar_flags_for_configured_league("startup");
+    start_kbo_allstar_force_retry_thread();
     install_kbo_military_service_entry_patch();
     install_kbo_military_status_update_patch();
     install_single_division_allstar_patch();
     install_allstar_team_setup_single_division_patch();
     install_allstar_voting_begin_prepare_patch();
     install_allstar_candidate_team_split_patch();
-    append_log_line("KBO all-star events prepare hook disabled: protects base schedule/custom events");
+    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
+        force_kbo_allstar_flags_for_configured_league("startup_allstar_events_enabled");
+        install_allstar_events_prepare_patch();
+    } else {
+        append_log_line("KBO all-star events prepare hook disabled: enable_single_division_allstar_events.txt is off");
+    }
     install_allstar_settings_ui_patch();
     install_kbo_player_team_signability_patch();
     install_kbo_player_offer_eligibility_patch();

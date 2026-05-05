@@ -293,6 +293,23 @@ static int create_kbo_native_live_news(
     uint32_t league_id,
     uint32_t message_type,
     const char* title);
+static int insert_kbo_player_history_sql(
+    uint32_t player_id,
+    uint32_t year,
+    uint32_t month,
+    uint32_t day,
+    const char* text,
+    const char* source);
+static int insert_kbo_roster_transaction_sql(
+    uint32_t league_id,
+    uint32_t team_id,
+    uint32_t year,
+    uint32_t month,
+    uint32_t day,
+    uint32_t transaction_type,
+    const char* league_text,
+    const char* team_text,
+    const char* source);
 static void start_kbo_foreign_waiver_scanner_thread(void);
 static void kbo_flush_pending_foreign_priority_events(const char* source);
 static int kbo_enforce_foreign_waiver_signability(

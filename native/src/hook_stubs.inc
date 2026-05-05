@@ -277,6 +277,8 @@ static uint8_t* build_kbo_callup_foreign_limit_branch_stub(
 
 static uint8_t* build_allstar_settings_enable_stub(void* return_address, void* checkbox_set_bool_address, uint32_t game_flag_offset)
 {
+    (void)game_flag_offset;
+
     uint8_t code[64] = {
         0x48, 0x83, 0xEC, 0x20,                         // sub rsp, 0x20
         0x49, 0x8B, 0xCD,                               // mov rcx, r13
@@ -284,7 +286,8 @@ static uint8_t* build_allstar_settings_enable_stub(void* return_address, void* c
         0,0,0,0,0,0,0,0,
         0xFF, 0xD0,                                     // call rax
         0x48, 0x83, 0xC4, 0x20,                         // add rsp, 0x20
-        0x41, 0x0F, 0xB6, 0x95, 0,0,0,0,                // movzx edx, byte ptr [r13 + game_flag_offset]
+        0xBA, 0x01, 0x00, 0x00, 0x00,                   // mov edx, 1
+        0x90, 0x90, 0x90,                               // pad original movzx length
         0x48, 0x8B, 0xCF,                               // mov rcx, rdi
         0x48, 0xB8,                                     // mov rax, checkbox_set_bool_address
         0,0,0,0,0,0,0,0,
@@ -295,7 +298,6 @@ static uint8_t* build_allstar_settings_enable_stub(void* return_address, void* c
     };
 
     write_u64(&code[9], (uint64_t)(uintptr_t)&ootp_kbo_enable_allstar_setting);
-    write_u32(&code[27], game_flag_offset);
     write_u64(&code[36], (uint64_t)(uintptr_t)checkbox_set_bool_address);
     write_u64(&code[48], (uint64_t)(uintptr_t)return_address);
 

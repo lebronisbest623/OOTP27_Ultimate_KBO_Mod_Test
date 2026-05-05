@@ -26,6 +26,8 @@ static const char g_kbo_asian_games_final_event_title[] =
     "[KBO] Asian Games Final";
 
 static int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* source);
+static void kbo_copy_asian_games_team_link(uint32_t team_id, char* out, size_t out_size);
+static void kbo_copy_asian_games_player_link(KboAsianGamesRosterEntry* entry, char* out, size_t out_size);
 
 static int kbo_custom_event_name_is_open(const char* name)
 {
@@ -1571,6 +1573,64 @@ static int kbo_asian_games_replace_unavailable_players(uint32_t event_yyyymmdd, 
     return replacements;
 }
 
+static void kbo_record_asian_games_restricted_reason(
+    KboAsianGamesRosterEntry* entry,
+    uint32_t event_yyyymmdd,
+    uint32_t league_id,
+    uint32_t team_id,
+    const char* source)
+{
+    if (entry == NULL || entry->player_id == 0u || event_yyyymmdd == 0u || league_id == 0u || team_id == 0u) {
+        return;
+    }
+
+    uint32_t year = event_yyyymmdd / 10000u;
+    uint32_t month = (event_yyyymmdd / 100u) % 100u;
+    uint32_t day = event_yyyymmdd % 100u;
+
+    char player_link[128] = {0};
+    char team_link[128] = {0};
+    kbo_copy_asian_games_player_link(entry, player_link, sizeof(player_link));
+    kbo_copy_asian_games_team_link(team_id, team_link, sizeof(team_link));
+
+    char league_text[512] = {0};
+    char team_text[512] = {0};
+    char history_text[512] = {0};
+    snprintf(
+        league_text,
+        sizeof(league_text),
+        "%s: Placed %s on the restricted list for Asian Games national team duty.",
+        team_link[0] != '\0' ? team_link : "KBO club",
+        player_link[0] != '\0' ? player_link : "a player");
+    snprintf(
+        team_text,
+        sizeof(team_text),
+        "Placed %s on the restricted list for Asian Games national team duty.",
+        player_link[0] != '\0' ? player_link : "a player");
+    snprintf(
+        history_text,
+        sizeof(history_text),
+        "Placed on the restricted list for Asian Games national team duty.");
+
+    insert_kbo_roster_transaction_sql(
+        league_id,
+        team_id,
+        year,
+        month,
+        day,
+        0u,
+        league_text,
+        team_text,
+        source);
+    insert_kbo_player_history_sql(
+        entry->player_id,
+        year,
+        month,
+        day,
+        history_text,
+        source);
+}
+
 static int kbo_asian_games_depart_selected_players(uint32_t event_yyyymmdd, const char* source)
 {
     LONG roster_count = g_kbo_asian_games_roster_count;
@@ -1645,8 +1705,14 @@ static int kbo_asian_games_depart_selected_players(uint32_t event_yyyymmdd, cons
         int added_restricted = kbo_add_player_id_to_team_fixed_array(team, OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET, entry->player_id);
         player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = 1u;
         player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 1u;
-        player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] = 1u;
+        player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] = 0u;
         kbo_set_military_days_left(player, days_left);
+        kbo_record_asian_games_restricted_reason(
+            entry,
+            event_yyyymmdd,
+            current_league_id,
+            current_team_id,
+            source);
         entry->departed = 1u;
         departed++;
 
@@ -1781,6 +1847,27 @@ static int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, co
         no_team);
     kbo_save_asian_games_roster_csv(source);
     return returned;
+}
+
+static int kbo_asian_games_roster_already_finalized(const char* source)
+{
+    LONG roster_count = g_kbo_asian_games_roster_count;
+    if (roster_count <= 0 || roster_count > KBO_ASIAN_GAMES_ROSTER_SIZE) {
+        kbo_load_asian_games_roster_csv(source);
+        roster_count = g_kbo_asian_games_roster_count;
+    }
+    if (roster_count <= 0 || roster_count > KBO_ASIAN_GAMES_ROSTER_SIZE) {
+        return 0;
+    }
+
+    int finalized = 0;
+    for (LONG i = 0; i < roster_count; i++) {
+        KboAsianGamesRosterEntry* entry = &g_kbo_asian_games_roster[i];
+        if (entry->player_id != 0u && entry->returned != 0u) {
+            finalized++;
+        }
+    }
+    return finalized > 0 && finalized == roster_count;
 }
 
 static void kbo_copy_asian_games_team_name(uint32_t team_id, char* out, size_t out_size)
@@ -2274,7 +2361,8 @@ static int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const cha
         return 0;
     }
     int returned = kbo_asian_games_finalize_selected_players(event_yyyymmdd, source);
-    if (returned <= 0) {
+    int already_finalized = returned <= 0 ? kbo_asian_games_roster_already_finalized(source) : 0;
+    if (returned <= 0 && !already_finalized) {
         append_logf(
             "KBO Asian Games final deferred source=%s date=%u returned=%d",
             source != NULL ? source : "",
@@ -2289,10 +2377,11 @@ static int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const cha
         "Korea has won the Asian Games baseball title.",
         source);
     append_logf(
-        "KBO Asian Games final reached source=%s date=%u returned=%d",
+        "KBO Asian Games final reached source=%s date=%u returned=%d already_finalized=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
-        returned);
+        returned,
+        already_finalized);
     return 1;
 }
 

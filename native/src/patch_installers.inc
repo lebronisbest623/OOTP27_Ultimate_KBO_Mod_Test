@@ -889,24 +889,38 @@ static int install_single_division_allstar_patch(void)
     }
     ok |= roster_ok;
 
-    OotpBuildInfo build = read_ootp_build_info();
-    if (!build.ok || build.timestamp != 0x69F75E6Bu) {
+    const uint8_t schedule_context_may[] = {
+        0x41, 0x80, 0xBD, 0xF0, 0x45, 0x00, 0x00, 0x00,
+        0x74, 0x7F,
+        0x41, 0xC6, 0x85, 0xF0, 0x45, 0x00, 0x00, 0x01,
+        0x41, 0x0F, 0xB6, 0x85, 0x22, 0x01, 0x00, 0x00
+    };
+    const uint8_t schedule_expected[2] = {0x74, 0x7F};
+    const uint8_t schedule_patch[2] = {0x90, 0x90};
+    int schedule_ok = kbo_patch_static_pattern(
+        "KBO all-star schedule day import gate",
+        schedule_context_may,
+        sizeof(schedule_context_may),
+        8,
+        schedule_expected,
+        schedule_patch,
+        sizeof(schedule_expected));
+    if (!schedule_ok) {
         uint8_t* schedule_day_gate = (uint8_t*)((uintptr_t)exe + OOTP27_IMPORT_SCHEDULE_ALLSTAR_DAY_GATE_RVA);
-        const uint8_t schedule_expected[2] = {0x74, 0x7F};
-        const uint8_t schedule_patch[2] = {0x90, 0x90};
         if (memory_range_readable(schedule_day_gate, sizeof(schedule_expected))) {
-            ok |= patch_static_bytes(
+            schedule_ok = patch_static_bytes(
                 "KBO all-star schedule day import gate",
                 schedule_day_gate,
                 schedule_expected,
                 schedule_patch,
                 sizeof(schedule_expected));
         } else {
-            append_log_line("KBO all-star schedule day import gate skipped: old RVA unreadable");
+            append_log_line("KBO all-star schedule day import gate skipped: fallback RVA unreadable");
         }
     } else {
-        append_log_line("KBO all-star schedule day import gate skipped: May build old gate signature absent");
+        ok |= schedule_ok;
     }
+    ok |= schedule_ok;
 
     return ok;
 }
@@ -1327,5 +1341,45 @@ static int install_allstar_settings_ui_patch(void)
         }
     }
 
-    return ok_value || ok_disable;
+    const uint8_t one_division_warning_context_may[] = {
+        0x41, 0x80, 0xBD, 0xF0, 0x45, 0x00, 0x00, 0x00,
+        0x0F, 0x84, 0x2A, 0x15, 0x00, 0x00,
+        0x66, 0x83, 0xBB, 0xFA, 0x03, 0x00, 0x00, 0x01,
+        0x0F, 0x8C
+    };
+    const uint8_t one_division_warning_expected_may[6] = {
+        0x0F, 0x8C, 0x87, 0x0B, 0x00, 0x00
+    };
+    const uint8_t one_division_warning_patch_may[6] = {
+        0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+    };
+    int ok_warning = kbo_patch_static_pattern(
+        "KBO all-star settings one-division warning gate",
+        one_division_warning_context_may,
+        sizeof(one_division_warning_context_may),
+        22,
+        one_division_warning_expected_may,
+        one_division_warning_patch_may,
+        sizeof(one_division_warning_expected_may));
+    if (!ok_warning) {
+        uint8_t* warning_gate = (uint8_t*)((uintptr_t)exe + 0x01545BB8u);
+        const uint8_t expected_warning_gate[14] = {
+            0x66, 0x83, 0xBB, 0xFA, 0x03, 0x00, 0x00, 0x01,
+            0x0F, 0x8C, 0x87, 0x0B, 0x00, 0x00
+        };
+        const uint8_t patch_warning_gate[14] = {
+            0x66, 0x83, 0xBB, 0xFA, 0x03, 0x00, 0x00, 0x01,
+            0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+        };
+        if (memory_range_readable(warning_gate, sizeof(expected_warning_gate))) {
+            ok_warning = patch_static_bytes(
+                "KBO all-star settings one-division warning gate",
+                warning_gate,
+                expected_warning_gate,
+                patch_warning_gate,
+                sizeof(expected_warning_gate));
+        }
+    }
+
+    return ok_value || ok_disable || ok_warning;
 }

@@ -1120,7 +1120,7 @@ static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint
     snprintf(
         out,
         out_size,
-        "The 20-day KBO foreign player reserve-rights decision period has ended. Decisions recorded: retain=%d, skip=%d. AI clubs: retain=%d, skip=%d. User club: retain=%d, skip=%d. Active stored reserve-right records: %d. Full five-year exclusive negotiation enforcement will be added in a later phase.",
+        "The 20-day KBO foreign player reserve-rights decision period has ended. Decisions recorded: retain=%d, skip=%d. AI clubs: retain=%d, skip=%d. User club: retain=%d, skip=%d. Active stored reserve-right records: %d. Retained players are protected by five-year exclusive negotiation rights.",
         retained,
         skipped,
         ai_retained,
@@ -1256,6 +1256,10 @@ static int kbo_has_active_foreign_waiver_right(uint32_t team_id, uint32_t player
     if (team_id == 0u || player_id == 0u || today_yyyymmdd == 0u) {
         return 0;
     }
+    static volatile LONG rights_loaded = 0;
+    if (InterlockedCompareExchange(&rights_loaded, 1, 0) == 0) {
+        kbo_load_foreign_waiver_rights();
+    }
     int result = 0;
     while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
         Sleep(0);
@@ -1278,6 +1282,11 @@ static int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t to
     }
     if (player_id == 0u || today_yyyymmdd == 0u) {
         return 0;
+    }
+
+    static volatile LONG rights_loaded = 0;
+    if (InterlockedCompareExchange(&rights_loaded, 1, 0) == 0) {
+        kbo_load_foreign_waiver_rights();
     }
 
     int found = 0;
@@ -1710,17 +1719,19 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                     holder_team_id,
                     today);
             }
-            if (kbo_recent_foreign_offer_block_matches(player_id, today, &requester_team_id, &holder_team_id)) {
+            int recent_block = kbo_recent_foreign_offer_block_matches(player_id, today, &requester_team_id, &holder_team_id);
+            if (!recent_block || requester_team_id != holder_team_id) {
                 static LONG submit_block_log_count = 0;
                 LONG block_slot = InterlockedIncrement(&submit_block_log_count);
                 if (block_slot <= 200) {
                     append_logf(
-                        "foreign reserve submit-offer blocked: screen=%p player=%u requester_team=%u holder_team=%u today=%u",
+                        "foreign reserve submit-offer blocked: screen=%p player=%u requester_team=%u holder_team=%u today=%u reason=%s",
                         (void*)screen_ptr,
                         player_id,
                         requester_team_id,
                         holder_team_id,
-                        today);
+                        today,
+                        recent_block ? "recent_block" : "active_right");
                 }
                 return;
             }
