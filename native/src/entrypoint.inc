@@ -32,10 +32,14 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
         append_log_line("KBO all-star events prepare hook disabled: enable_single_division_allstar_events.txt is off");
     }
     install_allstar_settings_ui_patch();
-    install_kbo_player_team_signability_patch();
-    install_kbo_player_offer_eligibility_patch();
-    install_kbo_ai_fa_signability_random_fallback_patch();
-    install_kbo_fa_submit_offer_probe_patch();
+    if (read_kbo_localappdata_flag_file("enable_kbo_fa_signability_hooks.txt")) {
+        install_kbo_player_team_signability_patch();
+        install_kbo_player_offer_eligibility_patch();
+        install_kbo_ai_fa_signability_random_fallback_patch();
+        install_kbo_fa_submit_offer_probe_patch();
+    } else {
+        append_log_line("KBO FA signability/offer hooks disabled: enable_kbo_fa_signability_hooks.txt is off");
+    }
     if (read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
         install_kbo_fa_signing_branch_patch();
     } else {

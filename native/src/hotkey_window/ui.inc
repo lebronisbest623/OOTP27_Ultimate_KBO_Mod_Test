@@ -514,9 +514,14 @@ static void kbo_html_append_escaped(KboWindowTextBuffer* buffer, const char* tex
 
 static void kbo_webview_append_player_name_cell(KboWindowTextBuffer* buffer, const char* player_name, uint32_t player_id)
 {
-    (void)player_id;
     kbo_window_text_appendf(buffer, "<td class='pname'>");
+    if (player_id != 0u) {
+        kbo_window_text_appendf(buffer, "<a title='Open player profile' href='kbo://player/%u'>", player_id);
+    }
     kbo_html_append_escaped(buffer, player_name != NULL && player_name[0] != '\0' ? player_name : "Unknown player");
+    if (player_id != 0u) {
+        kbo_window_text_appendf(buffer, "</a>");
+    }
     kbo_window_text_appendf(buffer, "</td>");
 }
 
@@ -1001,7 +1006,7 @@ static WCHAR* kbo_build_webview_hub_html(void)
         kbo_html_append_escaped(&buffer, kpb_name);
         kbo_window_text_appendf(&buffer, ": %d serving / %d due soon / %d ready.</div></div><div class='help'><span>Original club</span><span>F5 refresh</span></div></div>",
             kpb_count, kpb_due_60, kpb_due_now);
-        kbo_window_text_appendf(&buffer, "<section class='tablewrap'><table><thead><tr><th></th><th>PLAYER</th><th>SERVICE TEAM</th><th>ORIGINAL CLUB</th><th>DAYS</th></tr></thead><tbody>");
+        kbo_window_text_appendf(&buffer, "<section class='tablewrap'><table><thead><tr><th></th><th>PLAYER</th><th>SERVICE TEAM</th><th>ORIGINAL CLUB</th><th>RETURN DATE</th></tr></thead><tbody>");
 
         uintptr_t player_vector = 0;
         int32_t player_count = 0;
@@ -1039,13 +1044,17 @@ static WCHAR* kbo_build_webview_hub_html(void)
                     continue;
                 }
 
-                int32_t days_left = kbo_military_days_left(player);
                 char player_name[96] = {0};
                 char service_team_name[64] = {0};
                 char original_team_name[64] = {0};
+                char return_date[16] = {0};
                 kbo_hub_copy_player_display_name(player, player_name, sizeof(player_name));
                 kbo_hub_copy_team_display_name_by_id(service_team_id,  service_team_name,  sizeof(service_team_name),  service_fallback);
                 kbo_hub_copy_team_display_name_by_id(original_team_id, original_team_name, sizeof(original_team_name), NULL);
+                kbo_military_format_yyyymmdd(
+                    kbo_military_effective_return_yyyymmdd(player),
+                    return_date,
+                    sizeof(return_date));
 
                 kbo_window_text_appendf(&buffer, "<tr><td class='sel'>%s</td>", service_code);
                 kbo_webview_append_player_name_cell(&buffer, player_name, player_id);
@@ -1053,7 +1062,7 @@ static WCHAR* kbo_build_webview_hub_html(void)
                 kbo_html_append_escaped(&buffer, service_team_name);
                 kbo_window_text_appendf(&buffer, "</td><td>");
                 kbo_html_append_escaped(&buffer, original_team_name);
-                kbo_window_text_appendf(&buffer, "</td><td>%d</td></tr>", days_left);
+                kbo_window_text_appendf(&buffer, "</td><td>%s</td></tr>", return_date);
                 rendered++;
             }
             if (rendered == 0) {
@@ -1340,6 +1349,14 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
             g_kbo_hub_open_dropdown = 0;
         }
         kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "player/", 7) == 0) {
+        uint32_t player_id = (uint32_t)strtoul(cmd + 7, NULL, 10);
+        if (player_id != 0u) {
+            append_logf("KBO WebView player link clicked player=%u", player_id);
+            kbo_open_ootp_player_profile_async(player_id);
+        }
         return 1;
     }
     if (strncmp(cmd, "setleague/", 10) == 0) {

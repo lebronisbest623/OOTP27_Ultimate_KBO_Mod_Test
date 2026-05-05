@@ -28,7 +28,7 @@ static int kbo_hub_count_service_players(uint32_t service_team_id, int* out_due_
         if (current_team_id != service_team_id && loan_team_id != service_team_id) {
             continue;
         }
-        int32_t days_left = kbo_military_days_left(player);
+        int32_t days_left = kbo_military_effective_days_left(player);
         if (days_left <= 0) { due_now++; }
         if (days_left > 0 && days_left <= 60) { due_60++; }
         count++;
@@ -134,7 +134,7 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
     }
 
     kbo_window_text_appendf(&buffer, "CURRENT SERVICE LIST\r\n");
-    kbo_window_text_appendf(&buffer, "PLAYER                   SERVICE TEAM              ORIGINAL CLUB             DAYS LEFT  STATUS\r\n");
+    kbo_window_text_appendf(&buffer, "PLAYER                   SERVICE TEAM              ORIGINAL CLUB             RETURN DATE  STATUS\r\n");
     kbo_window_text_appendf(&buffer, "------------------------------------------------------------------------------------------------\r\n");
 
     int rendered = 0;
@@ -172,7 +172,7 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
             continue;
         }
 
-        int32_t days_left     = kbo_military_days_left(player);
+        int32_t days_left     = kbo_military_effective_days_left(player);
         uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
         uint8_t loan_active     = player[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET];
         const char* status = days_left <= 0 ? "Ready to return" : (days_left <= 60 ? "Returning soon" : "Serving");
@@ -182,15 +182,20 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
         char player_name[64]       = {0};
         char service_team_name[64] = {0};
         char original_team_name[64] = {0};
+        char return_date[16] = {0};
         kbo_hub_copy_player_display_name(player, player_name, sizeof(player_name));
         kbo_hub_copy_team_display_name_by_id(service_team_id,  service_team_name,  sizeof(service_team_name),  service_fallback);
         kbo_hub_copy_team_display_name_by_id(original_team_id, original_team_name, sizeof(original_team_name), NULL);
+        kbo_military_format_yyyymmdd(
+            kbo_military_effective_return_yyyymmdd(player),
+            return_date,
+            sizeof(return_date));
 
         kbo_window_text_appendf(
             &buffer,
-            "%-24.24s %-25.25s %-25.25s %9d  %s\r\n",
+            "%-24.24s %-25.25s %-25.25s %-11.11s  %s\r\n",
             player_name, service_team_name, original_team_name,
-            days_left, status);
+            return_date, status);
         rendered++;
     }
 

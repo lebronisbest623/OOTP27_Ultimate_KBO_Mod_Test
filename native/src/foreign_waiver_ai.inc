@@ -484,6 +484,16 @@ static int kbo_open_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t toda
 
 static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_serial)
 {
+    static uint32_t last_checked_yyyymmdd = 0u;
+    static uint32_t last_checked_result = 0u;
+    if (today_yyyymmdd != 0u
+            && today_yyyymmdd == last_checked_yyyymmdd
+            && last_checked_result != 1u) {
+        return 0;
+    }
+    last_checked_yyyymmdd = today_yyyymmdd;
+    last_checked_result = 0u;
+
     append_logf(
         "foreign waiver auto: evaluate season-end check today=%u serial=%u prev_marker=%u",
         today_yyyymmdd, today_serial,
@@ -503,7 +513,6 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
     uint32_t season_end_yyyymmdd = kbo_detect_offseason_starts_event(today_yyyymmdd, configured_league_id);
     if (season_end_yyyymmdd == 0u) {
         append_logf("foreign waiver auto: no Offseason starts event found today=%u", today_yyyymmdd);
-        g_kbo_foreign_waiver_last_seen_yyyymmdd = 0u;
         return 0;
     }
     if (today_yyyymmdd < season_end_yyyymmdd) {
@@ -526,10 +535,12 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
         "foreign waiver auto: season-end marker confirmed season_end=%u today=%u",
         season_end_yyyymmdd,
         today_yyyymmdd);
-    return kbo_open_foreign_waiver_window(
+    int opened = kbo_open_foreign_waiver_window(
         today_yyyymmdd,
         today_serial,
         "offseason_starts_event");
+    last_checked_result = opened ? 1u : 2u;
+    return opened;
 }
 
 static int kbo_parse_yyyymmdd(const char* date_text, uint32_t* out_date)
@@ -1507,6 +1518,151 @@ static void kbo_log_foreign_signability_block_callsite(
         today);
 }
 
+static int kbo_team_id_is_military_service_team(uint32_t team_id)
+{
+    if (team_id == 0u) {
+        return 0;
+    }
+
+    static uint32_t cached_sang_id = 0u;
+    static uint32_t cached_kpb_id = 0u;
+    if (cached_sang_id == 0u) {
+        uint8_t* sang = find_kbo_team_by_csv_id_any_league("SANG", 0);
+        if (sang != NULL && memory_range_readable(sang + OOTP27_KBO_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+            cached_sang_id = *(uint32_t*)(sang + OOTP27_KBO_TEAM_ID_OFFSET);
+        }
+    }
+    if (cached_kpb_id == 0u) {
+        uint8_t* kpb = find_kbo_team_by_csv_id_any_league("KPB", 0);
+        if (kpb != NULL && memory_range_readable(kpb + OOTP27_KBO_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+            cached_kpb_id = *(uint32_t*)(kpb + OOTP27_KBO_TEAM_ID_OFFSET);
+        }
+    }
+
+    return team_id == cached_sang_id || (cached_kpb_id != 0u && team_id == cached_kpb_id);
+}
+
+static int kbo_fast_block_fa_candidate_before_original(
+    uintptr_t player_ptr,
+    int32_t requesting_team_id,
+    const char* context,
+    uint32_t* out_player_id)
+{
+    if (out_player_id != NULL) {
+        *out_player_id = 0u;
+    }
+    if (!kbo_fix_enabled() || requesting_team_id <= 0) {
+        return 0;
+    }
+
+    uint32_t requester_team_id = (uint32_t)requesting_team_id;
+    if (kbo_team_id_is_military_service_team(requester_team_id)) {
+        uint32_t player_id = 0u;
+        if (player_ptr != 0
+                && memory_range_readable((void*)(player_ptr + OOTP27_PLAYER_ID_OFFSET), sizeof(uint32_t))) {
+            player_id = *(uint32_t*)(player_ptr + OOTP27_PLAYER_ID_OFFSET);
+        }
+        if (out_player_id != NULL) {
+            *out_player_id = player_id;
+        }
+        static volatile LONG military_fast_block_log_count = 0;
+        LONG slot = InterlockedIncrement(&military_fast_block_log_count);
+        if (slot <= 120) {
+            append_logf(
+                "FA fast-block source=%s reason=military_service_team player=%u requester_team=%u",
+                context != NULL ? context : "",
+                player_id,
+                requester_team_id);
+        }
+        return 1;
+    }
+
+    if (player_ptr == 0 || !kbo_player_pointer_plausible(player_ptr)
+            || !memory_range_readable((void*)(player_ptr + OOTP27_PLAYER_ID_OFFSET), sizeof(uint32_t))) {
+        return 0;
+    }
+
+    uint8_t* player = (uint8_t*)player_ptr;
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    if (out_player_id != NULL) {
+        *out_player_id = player_id;
+    }
+    if (player_id == 0u) {
+        return 0;
+    }
+
+    uint32_t today = 0u;
+    if (!kbo_get_foreign_waiver_current_yyyymmdd(&today)) {
+        return 0;
+    }
+
+    if (kbo_foreign_waiver_ai_enabled()) {
+        static LONG load_attempted = 0;
+        if (InterlockedCompareExchange(&load_attempted, 1, 0) == 0) {
+            kbo_load_foreign_waiver_rights();
+        }
+        kbo_prune_expired_foreign_waiver_rights(today);
+
+        uint32_t holder_team_id = 0u;
+        if (kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)
+                && holder_team_id != 0u
+                && holder_team_id != requester_team_id) {
+            kbo_sync_active_foreign_waiver_right_to_memory(player, player_id, holder_team_id, today);
+            kbo_record_recent_foreign_offer_block(player_id, requester_team_id, holder_team_id, today);
+
+            static volatile LONG rights_fast_block_log_count = 0;
+            LONG slot = InterlockedIncrement(&rights_fast_block_log_count);
+            if (slot <= 200) {
+                append_logf(
+                    "FA fast-block source=%s reason=foreign_reserve player=%u requester_team=%u holder_team=%u today=%u",
+                    context != NULL ? context : "",
+                    player_id,
+                    requester_team_id,
+                    holder_team_id,
+                    today);
+            }
+            return 1;
+        }
+    }
+
+    if (kbo_custom_foreign_policy_enabled() && kbo_player_is_foreign_for_kbo_rights(player)) {
+        uint32_t effective_before = 0u;
+        uint32_t effective_after = 0u;
+        uint32_t effective_limit = KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT;
+        uint8_t slot_type = 0u;
+        uint32_t injured_player_id = 0u;
+        int allowed = kbo_custom_foreign_policy_team_allows_candidate(
+            requester_team_id,
+            player,
+            &effective_before,
+            &effective_after,
+            &effective_limit,
+            &slot_type,
+            &injured_player_id);
+        if (!allowed) {
+            kbo_record_recent_custom_foreign_policy_block(player_id, requester_team_id, today);
+            static volatile LONG custom_fast_block_log_count = 0;
+            LONG slot = InterlockedIncrement(&custom_fast_block_log_count);
+            if (slot <= 200) {
+                append_logf(
+                    "FA fast-block source=%s reason=custom_foreign_policy player=%u requester_team=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u",
+                    context != NULL ? context : "",
+                    player_id,
+                    requester_team_id,
+                    effective_before,
+                    effective_after,
+                    effective_limit,
+                    slot_type != 0u ? kbo_foreign_injury_slot_label(slot_type) : "none",
+                    injured_player_id,
+                    today);
+            }
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 static int kbo_enforce_foreign_waiver_signability(
     uintptr_t player_ptr,
     int32_t requesting_team_id,
@@ -1530,6 +1686,20 @@ static int kbo_enforce_foreign_waiver_signability(
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     if (player_id == 0u) {
         return original_signability;
+    }
+
+    if (requesting_team_id > 0 && kbo_team_id_is_military_service_team((uint32_t)requesting_team_id)) {
+        static volatile LONG military_team_signability_log_count = 0;
+        LONG slot = InterlockedIncrement(&military_team_signability_log_count);
+        if (slot <= 200) {
+            append_logf(
+                "military service team FA signability blocked player=%u requester_team=%d original=%d caller_rva=0x%llx",
+                player_id,
+                requesting_team_id,
+                original_signability,
+                (unsigned long long)caller_rva);
+        }
+        return 0; /* OOTP signability enum: 0 = Impossible. */
     }
 
     kbo_log_asian_quota_signability_probe(player, player_id, requesting_team_id, original_signability, caller_rva);
@@ -1817,6 +1987,10 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uint16_t year_hint,
     uintptr_t original_func_ptr)
 {
+    if (kbo_fast_block_fa_candidate_before_original(player_ptr, team_id, "signability", NULL)) {
+        return 0; /* OOTP signability enum: 0 = Impossible. */
+    }
+
     OotpPlayerTeamSignabilityFn original_func = (OotpPlayerTeamSignabilityFn)original_func_ptr;
     int original_signability = 0;
     if (original_func != NULL) {
@@ -1837,6 +2011,10 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     int32_t flag,
     uintptr_t original_func_ptr)
 {
+    if (kbo_fast_block_fa_candidate_before_original(player_ptr, team_id, "offer_eligibility", NULL)) {
+        return 0;
+    }
+
     typedef uint8_t (__fastcall *OriginalOfferEligibilityFn)(void*, int32_t, int32_t);
     OriginalOfferEligibilityFn original_func = (OriginalOfferEligibilityFn)original_func_ptr;
 
@@ -1853,6 +2031,20 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     uint8_t* player = (uint8_t*)player_ptr;
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     kbo_log_asian_quota_offer_probe(player, player_id, team_id, original_result, flag);
+
+    if (kbo_team_id_is_military_service_team((uint32_t)team_id)) {
+        static volatile LONG military_team_offer_log_count = 0;
+        LONG slot = InterlockedIncrement(&military_team_offer_log_count);
+        if (slot <= 120) {
+            append_logf(
+                "military service team FA offer eligibility blocked player=%u requester_team=%d original=%u flag=%d",
+                player_id,
+                team_id,
+                (uint32_t)original_result,
+                flag);
+        }
+        return 0;
+    }
 
     uint32_t today = 0u;
     uint32_t holder_team_id = 0u;
@@ -2064,6 +2256,21 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     uintptr_t team_ptr = *(uintptr_t*)(frame_ptr + 0x140u);
     if (team_ptr != 0 && memory_range_readable((void*)(team_ptr + 0x4450u), sizeof(uint32_t))) {
         requester_team_id = *(uint32_t*)(team_ptr + 0x4450u);
+    }
+
+    if (player_id != 0u
+        && requester_team_id != 0u
+        && kbo_team_id_is_military_service_team(requester_team_id)) {
+        static LONG military_ai_block_log_count = 0;
+        LONG slot = InterlockedIncrement(&military_ai_block_log_count);
+        if (slot <= 300) {
+            append_logf(
+                "military service team AI FA status candidate blocked player=%u requester_team=%u index=%d",
+                player_id,
+                requester_team_id,
+                insert_index);
+        }
+        return insert_index;
     }
 
     if (player_id != 0u
@@ -5456,11 +5663,6 @@ static void run_foreign_waiver_ai_core_once(void)
     }
 
     if (!kbo_is_foreign_waiver_negotiation_window_open()) {
-        append_logf(
-            "foreign waiver auto: window check -> CLOSED (auto window: %u~%u)",
-            g_kbo_foreign_waiver_window_start_serial,
-            g_kbo_foreign_waiver_window_end_serial);
-        append_log_line("foreign waiver auto: negotiation window is closed");
         return;
     }
     append_logf(
@@ -6006,7 +6208,10 @@ static void audit_foreign_roster_state(const char* source, int write_snapshot)
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        append_log_line("foreign roster audit: no player vector");
+        static volatile LONG no_vector_log_count = 0;
+        if (InterlockedIncrement(&no_vector_log_count) <= 5) {
+            append_log_line("foreign roster audit: no player vector");
+        }
         return;
     }
 
@@ -6202,7 +6407,10 @@ static void write_foreign_waiver_candidates(const char* source)
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        append_log_line("foreign waiver scanner: no player vector");
+        static volatile LONG no_vector_log_count = 0;
+        if (InterlockedIncrement(&no_vector_log_count) <= 5) {
+            append_log_line("foreign waiver scanner: no player vector");
+        }
         return;
     }
 
@@ -6497,11 +6705,14 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
     for (;;) {
         Sleep(5000);
         tick++;
-        audit_foreign_roster_state("foreign_roster_pre_tick", 0);
         process_foreign_waiver_commands();
+        if (!kbo_is_foreign_waiver_negotiation_window_open()) {
+            continue;
+        }
+        audit_foreign_roster_state("foreign_roster_pre_tick", 0);
         run_foreign_waiver_ai_core_once();
-        audit_foreign_roster_state("foreign_roster_post_tick", (tick % 6u) == 0u);
         if ((tick % 6u) == 0u) {
+            audit_foreign_roster_state("foreign_roster_post_tick", 1);
             write_foreign_waiver_candidates("foreign_waiver_scanner");
         }
     }

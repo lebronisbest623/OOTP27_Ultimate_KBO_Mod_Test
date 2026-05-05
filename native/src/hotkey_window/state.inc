@@ -113,6 +113,14 @@ static const char* kbo_hub_text(const char* ko, const char* en)
     return g_kbo_hub_language == KBO_HUB_LANG_EN ? en : ko;
 }
 
+#define KBO_WM_OPEN_PLAYER_PROFILE (WM_APP + 0x4b1u)
+#define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU (-0x3ed)
+#define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE (-0x3f2)
+
+static DWORD g_kbo_game_thread_id = 0;
+
+static void kbo_try_install_game_getmsg_hook(void);
+
 static int kbo_hub_get_team_vector(uintptr_t* out_vector, int32_t* out_count)
 {
     if (out_vector == NULL || out_count == NULL) {
@@ -260,10 +268,59 @@ static void kbo_hub_trim_ascii(char* text)
 
 static uint32_t  g_kbo_league_ptr_cache_id  = 0;
 static uintptr_t g_kbo_league_ptr_cache_ptr = 0;
+#define KBO_LEAGUE_PTR_MISS_CACHE_MAX 32
+static uint32_t  g_kbo_league_ptr_miss_cache_ids[KBO_LEAGUE_PTR_MISS_CACHE_MAX] = {0};
+static ULONGLONG g_kbo_league_ptr_miss_cache_until_ms[KBO_LEAGUE_PTR_MISS_CACHE_MAX] = {0};
+
+static int kbo_league_ptr_recent_miss(uint32_t league_id, ULONGLONG now_ms)
+{
+    for (int i = 0; i < KBO_LEAGUE_PTR_MISS_CACHE_MAX; i++) {
+        if (g_kbo_league_ptr_miss_cache_ids[i] == league_id
+                && now_ms < g_kbo_league_ptr_miss_cache_until_ms[i]) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void kbo_remember_league_ptr_miss(uint32_t league_id, ULONGLONG now_ms)
+{
+    int slot = -1;
+    for (int i = 0; i < KBO_LEAGUE_PTR_MISS_CACHE_MAX; i++) {
+        if (g_kbo_league_ptr_miss_cache_ids[i] == league_id) {
+            slot = i;
+            break;
+        }
+        if (slot < 0 && (g_kbo_league_ptr_miss_cache_ids[i] == 0u
+                || now_ms >= g_kbo_league_ptr_miss_cache_until_ms[i])) {
+            slot = i;
+        }
+    }
+    if (slot < 0) {
+        slot = (int)(league_id % KBO_LEAGUE_PTR_MISS_CACHE_MAX);
+    }
+    g_kbo_league_ptr_miss_cache_ids[slot] = league_id;
+    g_kbo_league_ptr_miss_cache_until_ms[slot] = now_ms + 3000u;
+}
+
+static void kbo_forget_league_ptr_miss(uint32_t league_id)
+{
+    for (int i = 0; i < KBO_LEAGUE_PTR_MISS_CACHE_MAX; i++) {
+        if (g_kbo_league_ptr_miss_cache_ids[i] == league_id) {
+            g_kbo_league_ptr_miss_cache_ids[i] = 0;
+            g_kbo_league_ptr_miss_cache_until_ms[i] = 0;
+        }
+    }
+}
 
 static uintptr_t kbo_find_league_ptr(uint32_t league_id)
 {
     if (league_id == 0) {
+        return 0;
+    }
+
+    ULONGLONG now_ms = GetTickCount64();
+    if (kbo_league_ptr_recent_miss(league_id, now_ms)) {
         return 0;
     }
 
@@ -280,11 +337,9 @@ static uintptr_t kbo_find_league_ptr(uint32_t league_id)
 
     uintptr_t global = get_ootp_global_database();
     if (global == 0) {
-        append_logf("KBO: league search id=%u - failed to get global database", league_id);
+        kbo_remember_league_ptr_miss(league_id, now_ms);
         return 0;
     }
-
-    append_logf("KBO: league search id=%u - scanning from global=%p", league_id, (void*)global);
 
     /* Try multiple possible offsets for league vector in global DB. */
     static const uint32_t league_vec_offsets[] = {
@@ -296,7 +351,7 @@ static uintptr_t kbo_find_league_ptr(uint32_t league_id)
     int32_t   team_count  = 0;
     /* Get team vector to use for filtering (we'll skip this in our search) */
     if (kbo_hub_get_team_vector(&team_vector, &team_count)) {
-        append_logf("KBO: league search id=%u - team_vector=%p for reference", league_id, (void*)team_vector);
+        (void)team_count;
     }
 
     for (size_t i = 0; i < sizeof(league_vec_offsets) / sizeof(league_vec_offsets[0]); i++) {
@@ -320,9 +375,6 @@ static uintptr_t kbo_find_league_ptr(uint32_t league_id)
             continue;
         }
         
-        append_logf("KBO: league search id=%u - trying offset 0x%x: vec=%p count=%d", 
-            league_id, vec_off, (void*)candidate_vec, candidate_count);
-        
         /* Scan all entries in this vector for matching league ID */
         for (int32_t j = 0; j < candidate_count; j++) {
             uintptr_t league_candidate = *(uintptr_t*)(candidate_vec + (uintptr_t)j * sizeof(uintptr_t));
@@ -340,12 +392,13 @@ static uintptr_t kbo_find_league_ptr(uint32_t league_id)
                     league_id, (void*)league_candidate, cand_year, vec_off, j);
                 g_kbo_league_ptr_cache_id  = league_id;
                 g_kbo_league_ptr_cache_ptr = league_candidate;
+                kbo_forget_league_ptr_miss(league_id);
                 return league_candidate;
             }
         }
     }
-    
-    append_logf("KBO: league search id=%u - FAILED to find in any vector", league_id);
+
+    kbo_remember_league_ptr_miss(league_id, now_ms);
     return 0;
 }
 

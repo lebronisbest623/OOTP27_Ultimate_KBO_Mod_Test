@@ -617,6 +617,188 @@ static int kbo_queue_hotkey_window_toggle(void)
     return 1;
 }
 
+typedef int (__fastcall *OotpGlobalHandleCallbackFn)(void* sender, intptr_t callback_id, uintptr_t value);
+typedef void* (__fastcall *OotpOperatorNewFn)(size_t size);
+typedef void (__fastcall *OotpPlayerPageCtorFn)(void* page, uint32_t player_id, int show_history, int add_to_history);
+typedef void (__fastcall *OotpUiOpenPageFn)(void* ui_context, void* page, int flags);
+typedef int (__fastcall *OotpUiCurrentModeFn)(void* ui_state, int index);
+typedef void* (__fastcall *OotpUiCurrentPageFn)(void* ui_state, int index);
+
+static void* kbo_get_ootp_current_ui_context(HMODULE exe)
+{
+    if (exe == NULL) {
+        return NULL;
+    }
+
+    uintptr_t root_addr = (uintptr_t)exe + OOTP27_UI_CONTEXT_ROOT_RVA;
+    uintptr_t active_addr = (uintptr_t)exe + OOTP27_UI_CONTEXT_ACTIVE_INDEX_RVA;
+    uintptr_t fallback_addr = (uintptr_t)exe + OOTP27_UI_CONTEXT_FALLBACK_INDEX_RVA;
+    if (!memory_range_readable((void*)root_addr, sizeof(uintptr_t))
+            || !memory_range_readable((void*)active_addr, sizeof(int32_t))
+            || !memory_range_readable((void*)fallback_addr, sizeof(int16_t))) {
+        append_logf("KBO player profile ui context probe: globals unreadable root=0x%x active=0x%x fallback=0x%x",
+            OOTP27_UI_CONTEXT_ROOT_RVA, OOTP27_UI_CONTEXT_ACTIVE_INDEX_RVA, OOTP27_UI_CONTEXT_FALLBACK_INDEX_RVA);
+        return NULL;
+    }
+
+    uintptr_t root = *(uintptr_t*)root_addr;
+    int32_t index = *(int32_t*)active_addr;
+    if (index == -1) {
+        index = (int32_t)(*(int16_t*)fallback_addr);
+    }
+    if (root == 0 || index < 0 || index > 64) {
+        append_logf("KBO player profile ui context probe: invalid root=%p index=%d",
+            (void*)root, (int)index);
+        return NULL;
+    }
+
+    uintptr_t slot = root + ((uintptr_t)(uint32_t)index * 0x558u);
+    if (!memory_range_readable((void*)(slot + 0x548u), sizeof(int32_t))) {
+        append_logf("KBO player profile ui context probe: slot unreadable root=%p index=%d slot=%p",
+            (void*)root, (int)index, (void*)slot);
+        return NULL;
+    }
+
+    int32_t sub_index = *(int32_t*)(slot + 0x548u);
+    if (sub_index < 0 || sub_index > 64) {
+        append_logf("KBO player profile ui context probe: invalid sub_index=%d root=%p index=%d",
+            (int)sub_index, (void*)root, (int)index);
+        return NULL;
+    }
+
+    uintptr_t context_slot = slot + ((uintptr_t)(uint32_t)sub_index * 0x40u) + 0x38u;
+    if (!memory_range_readable((void*)context_slot, sizeof(uintptr_t))) {
+        append_logf("KBO player profile ui context probe: context slot unreadable slot=%p sub=%d addr=%p",
+            (void*)slot, (int)sub_index, (void*)context_slot);
+        return NULL;
+    }
+
+    uintptr_t context = *(uintptr_t*)context_slot;
+    if (context == 0 || !memory_range_readable((void*)context, 0x18u)) {
+        append_logf("KBO player profile ui context probe: context invalid root=%p index=%d sub=%d context=%p",
+            (void*)root, (int)index, (int)sub_index, (void*)context);
+        return NULL;
+    }
+
+    append_logf("KBO player profile ui context probe: root=%p index=%d sub=%d context=%p",
+        (void*)root, (int)index, (int)sub_index, (void*)context);
+    return (void*)context;
+}
+
+static int kbo_open_ootp_player_profile_direct(HMODULE exe, uint32_t player_id)
+{
+    void* context = kbo_get_ootp_current_ui_context(exe);
+    if (context == NULL) {
+        return 0;
+    }
+
+    OotpOperatorNewFn ootp_new = (OotpOperatorNewFn)((uintptr_t)exe + OOTP27_UI_OPERATOR_NEW_RVA);
+    OotpPlayerPageCtorFn player_page_ctor =
+        (OotpPlayerPageCtorFn)((uintptr_t)exe + OOTP27_PLAYER_PAGE_CTOR_RVA);
+    OotpUiOpenPageFn open_page = (OotpUiOpenPageFn)((uintptr_t)exe + OOTP27_UI_OPEN_PAGE_RVA);
+
+    void* page = ootp_new(0x1a8u);
+    if (page == NULL) {
+        append_logf("KBO player profile direct open failed: allocation player=%u", player_id);
+        return 0;
+    }
+
+    append_logf("KBO player profile direct open: constructing player=%u page=%p context=%p",
+        player_id, page, context);
+    player_page_ctor(page, player_id, 1, 1);
+    append_logf("KBO player profile direct open: installing player=%u page=%p context=%p",
+        player_id, page, context);
+    open_page(context, page, 0);
+    append_logf("KBO player profile direct open: installed player=%u page=%p context=%p",
+        player_id, page, context);
+    return 1;
+}
+
+static void kbo_log_ootp_player_profile_probe(HMODULE exe, uint32_t player_id)
+{
+    if (exe == NULL) {
+        return;
+    }
+
+    uintptr_t ui_state = (uintptr_t)exe + OOTP27_UI_CONTEXT_ROOT_RVA - 0x1610u;
+    OotpUiCurrentModeFn current_mode = (OotpUiCurrentModeFn)((uintptr_t)exe + OOTP27_UI_CURRENT_MODE_RVA);
+    OotpUiCurrentPageFn current_page = (OotpUiCurrentPageFn)((uintptr_t)exe + OOTP27_UI_CURRENT_PAGE_RVA);
+    int mode0 = -1;
+    int mode3 = -1;
+    void* page0 = NULL;
+    void* page3 = NULL;
+
+    if (memory_range_readable((void*)ui_state, 0x40u)) {
+        mode0 = current_mode((void*)ui_state, 0);
+        mode3 = current_mode((void*)ui_state, 3);
+        page0 = current_page((void*)ui_state, 0);
+        page3 = current_page((void*)ui_state, 3);
+    }
+
+    void* context = kbo_get_ootp_current_ui_context(exe);
+    append_logf("KBO player profile probe: player=%u ui_state=%p mode0=%d page0=%p mode3=%d page3=%p context=%p normal_callback=-0x3ed old_callback=-0x3f2",
+        player_id, (void*)ui_state, mode0, page0, mode3, page3, context);
+}
+
+static int kbo_open_ootp_player_profile_now(uint32_t player_id)
+{
+    if (player_id == 0u) {
+        return 0;
+    }
+
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        return 0;
+    }
+
+    append_logf("KBO player profile direct open disabled: unsafe after crash player=%u", player_id);
+    kbo_log_ootp_player_profile_probe(exe, player_id);
+
+    OotpGlobalHandleCallbackFn handle_callback =
+        (OotpGlobalHandleCallbackFn)((uintptr_t)exe + OOTP27_GLOBAL_HANDLE_CALLBACK_RVA);
+    append_logf("KBO player profile open: direct path unavailable, calling menu callback player=%u rva=0x%x callback=%d",
+        player_id, OOTP27_GLOBAL_HANDLE_CALLBACK_RVA, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU);
+    int result = handle_callback(NULL, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU, (uintptr_t)player_id);
+    append_logf("KBO player profile open: menu callback result=%d player=%u", result, player_id);
+    if (result == 0) {
+        append_logf("KBO player profile open: falling back to legacy callback player=%u callback=%d",
+            player_id, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE);
+        result = handle_callback(NULL, KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE, (uintptr_t)player_id);
+        append_logf("KBO player profile open: legacy callback result=%d player=%u", result, player_id);
+    }
+    return result != 0;
+}
+
+static int kbo_open_ootp_player_profile_async(uint32_t player_id)
+{
+    if (player_id == 0u) {
+        return 0;
+    }
+
+    kbo_try_install_game_getmsg_hook();
+    if (g_kbo_game_thread_id == 0) {
+        HWND game_hwnd = kbo_find_ootp_main_window();
+        if (game_hwnd != NULL) {
+            g_kbo_game_thread_id = GetWindowThreadProcessId(game_hwnd, NULL);
+        }
+    }
+
+    if (g_kbo_game_thread_id == 0) {
+        append_logf("KBO player profile open failed: no game thread player=%u", player_id);
+        return 0;
+    }
+
+    if (!PostThreadMessageA(g_kbo_game_thread_id, KBO_WM_OPEN_PLAYER_PROFILE, (WPARAM)player_id, 0)) {
+        append_logf("KBO player profile open failed: PostThreadMessage player=%u thread=%lu error=%lu",
+            player_id, (unsigned long)g_kbo_game_thread_id, GetLastError());
+        return 0;
+    }
+
+    append_logf("KBO player profile open queued player=%u thread=%lu",
+        player_id, (unsigned long)g_kbo_game_thread_id);
+    return 1;
+}
+
 static LRESULT CALLBACK kbo_hotkey_keyboard_proc(int code, WPARAM wparam, LPARAM lparam)
 {
     if (code == HC_ACTION && (wparam == WM_KEYDOWN || wparam == WM_SYSKEYDOWN) && lparam != 0) {
@@ -1124,6 +1306,17 @@ static void kbo_hub_ensure_header_logos(uint32_t league_id, uint32_t team_id, ui
 
 static LRESULT CALLBACK kbo_game_getmsg_hook_proc(int code, WPARAM wparam, LPARAM lparam)
 {
+    if (code == HC_ACTION && lparam != 0 && wparam == PM_REMOVE) {
+        MSG* msg = (MSG*)lparam;
+        if (msg->message == KBO_WM_OPEN_PLAYER_PROFILE) {
+            uint32_t player_id = (uint32_t)msg->wParam;
+            kbo_open_ootp_player_profile_now(player_id);
+            msg->message = WM_NULL;
+            msg->wParam = 0;
+            msg->lParam = 0;
+            return 1;
+        }
+    }
     return CallNextHookEx(g_kbo_game_getmsg_hook, code, wparam, lparam);
 }
 
@@ -1140,6 +1333,7 @@ static void kbo_try_install_game_getmsg_hook(void)
     if (game_thread_id == 0) {
         return;
     }
+    g_kbo_game_thread_id = game_thread_id;
     g_kbo_game_getmsg_hook = SetWindowsHookExA(
         WH_GETMESSAGE, kbo_game_getmsg_hook_proc, NULL, game_thread_id);
     if (g_kbo_game_getmsg_hook != NULL) {

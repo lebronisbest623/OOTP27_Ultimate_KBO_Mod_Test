@@ -1,6 +1,8 @@
 typedef void (__fastcall *OotpMilitaryServiceEntryFn)(void* player);
 
 static int32_t kbo_military_days_left(uint8_t* player);
+static int32_t kbo_military_effective_days_left(uint8_t* player);
+static uint32_t kbo_military_effective_return_yyyymmdd(uint8_t* player);
 static void    kbo_set_military_days_left(uint8_t* player, int32_t days_left);
 static int     find_active_kbo_military_loan_index(uint32_t player_id);
 static void    register_active_kbo_military_loan(
@@ -57,9 +59,30 @@ typedef struct KboMilitaryServiceSeed {
     char service_team_code[KBO_MILITARY_SERVICE_TEAM_BYTES];
     char original_team_code[KBO_MILITARY_SERVICE_TEAM_BYTES];
     uint32_t service_start_yyyymmdd;
+    uint32_t service_return_yyyymmdd;
     int32_t service_total_days;
-    int32_t days_left_override;
 } KboMilitaryServiceSeed;
+
+typedef struct KboMilitaryDraftCandidate {
+    uint32_t player_id;
+    uint32_t original_team_id;
+    uint32_t original_league_id;
+    uint16_t entry_year;
+    uint8_t selected;
+    uintptr_t player_ptr;
+} KboMilitaryDraftCandidate;
+
+typedef struct KboMilitarySelectionNewsEntry {
+    uint32_t player_id;
+    uint32_t original_team_id;
+    int32_t score;
+    uintptr_t player_ptr;
+} KboMilitarySelectionNewsEntry;
+
+typedef struct KboMilitaryReturnHistoryKey {
+    uint32_t player_id;
+    uint32_t history_yyyymmdd;
+} KboMilitaryReturnHistoryKey;
 
 static KboMilitaryServiceSeed g_kbo_military_service_seeds[KBO_MILITARY_SERVICE_SEED_MAX];
 static int g_kbo_military_service_seed_count = 0;
@@ -67,6 +90,10 @@ static LONG g_kbo_military_service_seed_lock = 0;
 static LONG g_kbo_military_service_seed_loaded = 0;
 static ULONGLONG g_kbo_military_service_seed_last_resolve_tick = 0;
 static char g_kbo_military_service_seed_loaded_key[MAX_PATH * 3];
+static KboMilitaryDraftCandidate g_kbo_military_draft_candidates[OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS];
+static LONG g_kbo_military_draft_candidate_count = 0;
+static KboMilitaryReturnHistoryKey g_kbo_military_return_history_keys[OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS];
+static LONG g_kbo_military_return_history_key_count = 0;
 
 static void kbo_lock_military_service_seeds(void)
 {
@@ -78,6 +105,125 @@ static void kbo_lock_military_service_seeds(void)
 static void kbo_unlock_military_service_seeds(void)
 {
     InterlockedExchange(&g_kbo_military_service_seed_lock, 0);
+}
+
+static int kbo_find_military_draft_candidate_index(uint32_t player_id, uint16_t entry_year)
+{
+    if (player_id == 0u || entry_year == 0u) {
+        return -1;
+    }
+    LONG count = g_kbo_military_draft_candidate_count;
+    if (count < 0) { count = 0; }
+    if (count > OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS) { count = OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS; }
+    for (LONG i = 0; i < count; i++) {
+        KboMilitaryDraftCandidate* candidate = &g_kbo_military_draft_candidates[i];
+        if (candidate->player_id == player_id && candidate->entry_year == entry_year) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+static int kbo_queue_military_draft_candidate(
+    uintptr_t player_ptr,
+    uint32_t player_id,
+    uint16_t entry_year,
+    uint32_t original_team_id,
+    uint32_t original_league_id,
+    const char* source)
+{
+    if (player_ptr == 0 || player_id == 0u || entry_year == 0u || original_team_id == 0u) {
+        return 0;
+    }
+
+    int existing = kbo_find_military_draft_candidate_index(player_id, entry_year);
+    if (existing >= 0) {
+        KboMilitaryDraftCandidate* candidate = &g_kbo_military_draft_candidates[existing];
+        candidate->player_ptr = player_ptr;
+        if (original_team_id != 0u) {
+            candidate->original_team_id = original_team_id;
+        }
+        if (original_league_id != 0u) {
+            candidate->original_league_id = original_league_id;
+        }
+        append_logf(
+            "KBO military draft candidate refreshed source=%s player_id=%u year=%u original_team=%u original_league=%u selected=%u player=%p",
+            source != NULL ? source : "",
+            player_id,
+            entry_year,
+            candidate->original_team_id,
+            candidate->original_league_id,
+            (uint32_t)candidate->selected,
+            (void*)player_ptr);
+        return 1;
+    }
+
+    LONG slot = InterlockedIncrement(&g_kbo_military_draft_candidate_count) - 1;
+    if (slot < 0 || slot >= OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS) {
+        InterlockedDecrement(&g_kbo_military_draft_candidate_count);
+        return 0;
+    }
+
+    KboMilitaryDraftCandidate* candidate = &g_kbo_military_draft_candidates[slot];
+    memset(candidate, 0, sizeof(*candidate));
+    candidate->player_id = player_id;
+    candidate->player_ptr = player_ptr;
+    candidate->entry_year = entry_year;
+    candidate->original_team_id = original_team_id;
+    candidate->original_league_id = original_league_id;
+    append_logf(
+        "KBO military draft candidate queued source=%s slot=%ld player_id=%u year=%u original_team=%u original_league=%u player=%p",
+        source != NULL ? source : "",
+        slot,
+        player_id,
+        entry_year,
+        original_team_id,
+        original_league_id,
+        (void*)player_ptr);
+    return 1;
+}
+
+static int kbo_count_military_draft_candidates_for_year(uint16_t entry_year)
+{
+    if (entry_year == 0u) {
+        return 0;
+    }
+    LONG count = g_kbo_military_draft_candidate_count;
+    if (count < 0) { count = 0; }
+    if (count > OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS) { count = OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS; }
+    int queued = 0;
+    for (LONG i = 0; i < count; i++) {
+        KboMilitaryDraftCandidate* candidate = &g_kbo_military_draft_candidates[i];
+        if (candidate->player_id != 0u && candidate->entry_year == entry_year && candidate->selected == 0u) {
+            queued++;
+        }
+    }
+    return queued;
+}
+
+static int kbo_mark_military_return_history_once(uint32_t player_id, uint32_t history_yyyymmdd)
+{
+    if (player_id == 0u || history_yyyymmdd == 0u) {
+        return 0;
+    }
+    LONG count = g_kbo_military_return_history_key_count;
+    if (count < 0) { count = 0; }
+    if (count > OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS) { count = OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS; }
+    for (LONG i = 0; i < count; i++) {
+        KboMilitaryReturnHistoryKey* key = &g_kbo_military_return_history_keys[i];
+        if (key->player_id == player_id && key->history_yyyymmdd == history_yyyymmdd) {
+            return 0;
+        }
+    }
+
+    LONG slot = InterlockedIncrement(&g_kbo_military_return_history_key_count) - 1;
+    if (slot < 0 || slot >= OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS) {
+        InterlockedDecrement(&g_kbo_military_return_history_key_count);
+        return 0;
+    }
+    g_kbo_military_return_history_keys[slot].player_id = player_id;
+    g_kbo_military_return_history_keys[slot].history_yyyymmdd = history_yyyymmdd;
+    return 1;
 }
 
 static void kbo_military_trim_csv_token_in_place(char* text)
@@ -168,6 +314,72 @@ static uint32_t kbo_military_yyyymmdd_to_serial(uint32_t yyyymmdd)
     return kbo_date_serial(yyyymmdd / 10000u, (yyyymmdd / 100u) % 100u, yyyymmdd % 100u);
 }
 
+static uint32_t kbo_military_days_in_month(uint32_t year, uint32_t month)
+{
+    static const uint8_t days_by_month[12] = {
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+    };
+    if (month < 1u || month > 12u) {
+        return 0u;
+    }
+    if (month == 2u && kbo_is_leap_year(year)) {
+        return 29u;
+    }
+    return days_by_month[month - 1u];
+}
+
+static uint32_t kbo_military_serial_to_yyyymmdd(uint32_t serial)
+{
+    if (serial == 0u) {
+        return 0u;
+    }
+
+    uint32_t year = serial / 366u + 1u;
+    while (kbo_date_serial(year + 1u, 1u, 1u) <= serial) {
+        year++;
+    }
+    while (year > 1u && kbo_date_serial(year, 1u, 1u) > serial) {
+        year--;
+    }
+
+    uint32_t month = 1u;
+    while (month < 12u) {
+        uint32_t next_month_serial = month == 12u
+            ? kbo_date_serial(year + 1u, 1u, 1u)
+            : kbo_date_serial(year, month + 1u, 1u);
+        if (next_month_serial > serial) {
+            break;
+        }
+        month++;
+    }
+
+    uint32_t month_start = kbo_date_serial(year, month, 1u);
+    uint32_t day = serial >= month_start ? (serial - month_start + 1u) : 1u;
+    uint32_t month_days = kbo_military_days_in_month(year, month);
+    if (month_days != 0u && day > month_days) {
+        day = month_days;
+    }
+    return year * 10000u + month * 100u + day;
+}
+
+static uint32_t kbo_military_yyyymmdd_add_days(uint32_t yyyymmdd, int32_t days)
+{
+    uint32_t serial = kbo_military_yyyymmdd_to_serial(yyyymmdd);
+    if (serial == 0u || days < 0) {
+        return 0u;
+    }
+    return kbo_military_serial_to_yyyymmdd(serial + (uint32_t)days);
+}
+
+static int32_t kbo_military_days_left_from_return_serial(uint32_t return_serial, uint32_t today_serial)
+{
+    if (return_serial == 0u || today_serial == 0u || return_serial <= today_serial) {
+        return 0;
+    }
+    uint32_t diff = return_serial - today_serial;
+    return diff > 32767u ? 32767 : (int32_t)diff;
+}
+
 static int kbo_get_save_military_service_seed_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size < 2) {
@@ -245,10 +457,10 @@ static int kbo_parse_military_service_seed_line(const char* line, KboMilitarySer
         return 0;
     }
 
-    char* fields[6] = {0};
+    char* fields[8] = {0};
     int field_count = 0;
     fields[field_count++] = p;
-    for (char* q = p; *q != '\0' && field_count < 6; q++) {
+    for (char* q = p; *q != '\0' && field_count < 8; q++) {
         if (*q == ',') {
             *q = '\0';
             fields[field_count++] = q + 1;
@@ -272,10 +484,14 @@ static int kbo_parse_military_service_seed_line(const char* line, KboMilitarySer
     if (field_count == 3
             && fields[1][0] >= '0' && fields[1][0] <= '9'
             && fields[2][0] >= '0' && fields[2][0] <= '9') {
+        uint32_t today_serial = kbo_current_date_serial();
+        uint32_t days_left = (uint32_t)strtoul(fields[2], NULL, 10);
         snprintf(out->service_team_code, sizeof(out->service_team_code), "SANG");
         snprintf(out->original_team_code, sizeof(out->original_team_code), "%s", fields[1]);
         out->service_total_days = KBO_MILITARY_SERVICE_DAYS;
-        out->days_left_override = (int32_t)strtol(fields[2], NULL, 10);
+        out->service_return_yyyymmdd = today_serial != 0u
+            ? kbo_military_serial_to_yyyymmdd(today_serial + days_left)
+            : 0u;
         return out->key[0] != '\0' || out->player_id != 0u;
     }
 
@@ -288,10 +504,28 @@ static int kbo_parse_military_service_seed_line(const char* line, KboMilitarySer
     if (field_count > 2 && fields[2][0] != '\0') {
         snprintf(out->original_team_code, sizeof(out->original_team_code), "%s", fields[2]);
     }
-    out->service_start_yyyymmdd = field_count > 3 ? kbo_military_parse_yyyymmdd(fields[3]) : 0u;
-    out->service_total_days = field_count > 4 && fields[4][0] != '\0'
-        ? (int32_t)strtol(fields[4], NULL, 10)
-        : KBO_MILITARY_SERVICE_DAYS;
+
+    uint32_t numeric_field4 = 0u;
+    int field4_is_numeric = field_count > 4
+        && fields[4][0] != '\0'
+        && kbo_military_parse_u32_full_token(fields[4], &numeric_field4);
+    int looks_like_old_start_total = field_count > 5
+        && field4_is_numeric
+        && kbo_military_parse_yyyymmdd(fields[3]) != 0u;
+
+    if (looks_like_old_start_total) {
+        out->service_start_yyyymmdd = kbo_military_parse_yyyymmdd(fields[3]);
+        out->service_total_days = (int32_t)numeric_field4;
+        out->service_return_yyyymmdd = kbo_military_yyyymmdd_add_days(
+            out->service_start_yyyymmdd,
+            out->service_total_days > 0 ? out->service_total_days : KBO_MILITARY_SERVICE_DAYS);
+    } else {
+        out->service_return_yyyymmdd = field_count > 3 ? kbo_military_parse_yyyymmdd(fields[3]) : 0u;
+        out->service_total_days = KBO_MILITARY_SERVICE_DAYS;
+        if (field_count > 4 && field4_is_numeric) {
+            out->player_id = numeric_field4;
+        }
+    }
     if (out->service_total_days <= 0) {
         out->service_total_days = KBO_MILITARY_SERVICE_DAYS;
     }
@@ -320,11 +554,11 @@ static int kbo_add_military_service_seed_locked(const KboMilitaryServiceSeed* se
             if (seed->service_start_yyyymmdd != 0u) {
                 existing->service_start_yyyymmdd = seed->service_start_yyyymmdd;
             }
+            if (seed->service_return_yyyymmdd != 0u) {
+                existing->service_return_yyyymmdd = seed->service_return_yyyymmdd;
+            }
             if (seed->service_total_days > 0) {
                 existing->service_total_days = seed->service_total_days;
-            }
-            if (seed->days_left_override > 0) {
-                existing->days_left_override = seed->days_left_override;
             }
             return 1;
         }
@@ -381,20 +615,24 @@ static int kbo_persist_military_service_resolved_cache_locked(void)
         append_logf("KBO military service resolved cache persist failed path=%s gle=%lu", path, (unsigned long)GetLastError());
         return 0;
     }
-    fprintf(fp, "source_key,service_team,original_team,service_start_yyyymmdd,total_days,player_id,days_left\n");
+    fprintf(fp, "source_key,service_team,original_team,service_return_yyyymmdd,player_id\n");
     for (int i = 0; i < g_kbo_military_service_seed_count; i++) {
         KboMilitaryServiceSeed* seed = &g_kbo_military_service_seeds[i];
         if (seed->player_id == 0u || seed->key[0] == '\0') {
             continue;
         }
-        fprintf(fp, "%s,%s,%s,%u,%d,%u,%d\n",
+        uint32_t return_yyyymmdd = seed->service_return_yyyymmdd;
+        if (return_yyyymmdd == 0u && seed->service_start_yyyymmdd != 0u) {
+            return_yyyymmdd = kbo_military_yyyymmdd_add_days(
+                seed->service_start_yyyymmdd,
+                seed->service_total_days > 0 ? seed->service_total_days : KBO_MILITARY_SERVICE_DAYS);
+        }
+        fprintf(fp, "%s,%s,%s,%u,%u\n",
             seed->key,
             seed->service_team_code[0] != '\0' ? seed->service_team_code : "SANG",
             seed->original_team_code,
-            seed->service_start_yyyymmdd,
-            seed->service_total_days > 0 ? seed->service_total_days : KBO_MILITARY_SERVICE_DAYS,
-            seed->player_id,
-            seed->days_left_override);
+            return_yyyymmdd,
+            seed->player_id);
     }
     fclose(fp);
     return 1;
@@ -824,16 +1062,17 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
             loan->service_total_days = seed->service_total_days > 0
                 ? seed->service_total_days
                 : KBO_MILITARY_SERVICE_DAYS;
-            if (seed->days_left_override > 0 && today_serial != 0u) {
-                int32_t elapsed = loan->service_total_days - seed->days_left_override;
-                loan->service_start_date_serial = elapsed > 0 ? today_serial - (uint32_t)elapsed : today_serial;
-                kbo_set_military_days_left(player, seed->days_left_override);
+            uint32_t return_serial = kbo_military_yyyymmdd_to_serial(seed->service_return_yyyymmdd);
+            if (return_serial == 0u && loan->service_start_date_serial != 0u) {
+                return_serial = loan->service_start_date_serial + (uint32_t)loan->service_total_days;
             }
-            if (today_serial != 0u && loan->service_start_date_serial != 0u
-                    && today_serial >= loan->service_start_date_serial
-                    && seed->days_left_override <= 0) {
-                int32_t days_left = loan->service_total_days - (int32_t)(today_serial - loan->service_start_date_serial);
-                kbo_set_military_days_left(player, days_left > 0 ? days_left : 0);
+            if (return_serial != 0u) {
+                loan->service_return_date_serial = return_serial;
+            }
+            if (today_serial != 0u && loan->service_return_date_serial != 0u) {
+                kbo_set_military_days_left(
+                    player,
+                    kbo_military_days_left_from_return_serial(loan->service_return_date_serial, today_serial));
             }
             player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET] = 1;
             clear_kbo_military_unavailable_flags(player);
@@ -904,6 +1143,13 @@ static void register_active_kbo_military_loan(
         if (loan->service_total_days <= 0) {
             loan->service_total_days = KBO_MILITARY_SERVICE_DAYS;
         }
+        if (loan->service_return_date_serial == 0 && today != 0u) {
+            if (current_days_left > 0) {
+                loan->service_return_date_serial = today + (uint32_t)current_days_left;
+            } else if (loan->service_start_date_serial != 0u) {
+                loan->service_return_date_serial = loan->service_start_date_serial + (uint32_t)loan->service_total_days;
+            }
+        }
         if (player_ptr != 0 && kbo_player_pointer_plausible(player_ptr)
                 && current_days_left > KBO_MILITARY_SERVICE_DAYS) {
             kbo_set_military_days_left((uint8_t*)player_ptr, KBO_MILITARY_SERVICE_DAYS);
@@ -926,8 +1172,16 @@ static void register_active_kbo_military_loan(
     loan->service_league_id      = service_league_id;
     loan->service_start_date_serial = kbo_current_date_serial();
     loan->service_total_days     = KBO_MILITARY_SERVICE_DAYS;
+    int32_t current_days_left = (player_ptr != 0 && kbo_player_pointer_plausible(player_ptr))
+        ? kbo_military_days_left((uint8_t*)player_ptr)
+        : KBO_MILITARY_SERVICE_DAYS;
+    loan->service_return_date_serial = loan->service_start_date_serial != 0u
+        ? loan->service_start_date_serial + (uint32_t)(current_days_left > 0 ? current_days_left : KBO_MILITARY_SERVICE_DAYS)
+        : 0u;
     if (player_ptr != 0 && kbo_player_pointer_plausible(player_ptr)) {
-        kbo_set_military_days_left((uint8_t*)player_ptr, KBO_MILITARY_SERVICE_DAYS);
+        kbo_set_military_days_left(
+            (uint8_t*)player_ptr,
+            current_days_left > 0 ? current_days_left : KBO_MILITARY_SERVICE_DAYS);
     }
 }
 
@@ -958,6 +1212,222 @@ static int32_t kbo_military_days_left(uint8_t* player)
         return 0;
     }
     return (int32_t)(*(int16_t*)(player + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET));
+}
+
+static int32_t kbo_military_effective_days_left(uint8_t* player)
+{
+    if (player == NULL || !kbo_player_pointer_plausible((uintptr_t)player)) {
+        return 0;
+    }
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    int active_index = find_active_kbo_military_loan_index(player_id);
+    if (active_index >= 0) {
+        KboMilitaryActiveLoan* loan = &g_active_military_loans[active_index];
+        uint32_t today_serial = kbo_current_date_serial();
+        if (loan->service_return_date_serial != 0u && today_serial != 0u) {
+            return kbo_military_days_left_from_return_serial(
+                loan->service_return_date_serial,
+                today_serial);
+        }
+    }
+    return kbo_military_days_left(player);
+}
+
+static uint32_t kbo_military_effective_return_yyyymmdd(uint8_t* player)
+{
+    if (player == NULL || !kbo_player_pointer_plausible((uintptr_t)player)) {
+        return 0u;
+    }
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    int active_index = find_active_kbo_military_loan_index(player_id);
+    if (active_index >= 0) {
+        KboMilitaryActiveLoan* loan = &g_active_military_loans[active_index];
+        if (loan->service_return_date_serial != 0u) {
+            return kbo_military_serial_to_yyyymmdd(loan->service_return_date_serial);
+        }
+    }
+
+    uint32_t today_serial = kbo_current_date_serial();
+    int32_t days_left = kbo_military_days_left(player);
+    if (today_serial == 0u || days_left <= 0) {
+        return 0u;
+    }
+    return kbo_military_serial_to_yyyymmdd(today_serial + (uint32_t)days_left);
+}
+
+static void kbo_military_format_yyyymmdd(uint32_t yyyymmdd, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    if (yyyymmdd == 0u) {
+        snprintf(out, out_size, "-");
+        return;
+    }
+    snprintf(
+        out,
+        out_size,
+        "%04u-%02u-%02u",
+        yyyymmdd / 10000u,
+        (yyyymmdd / 100u) % 100u,
+        yyyymmdd % 100u);
+}
+
+static void kbo_military_copy_team_history_name(uint8_t* team, char* out, size_t out_size, const char* fallback)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    if (team != NULL) {
+        char city[64] = {0};
+        char nickname[64] = {0};
+        char full_name[96] = {0};
+        copy_ootp_string_object_text(team, 0x28u, nickname, sizeof(nickname));
+        copy_ootp_string_object_text(team, 0x40u, full_name, sizeof(full_name));
+        copy_ootp_string_object_text(team, 0x10u, city, sizeof(city));
+        if (full_name[0] != '\0') {
+            snprintf(out, out_size, "%s", full_name);
+            return;
+        }
+        if (city[0] != '\0' && nickname[0] != '\0') {
+            snprintf(out, out_size, "%s %s", city, nickname);
+            return;
+        }
+        if (nickname[0] != '\0') {
+            snprintf(out, out_size, "%s", nickname);
+            return;
+        }
+    }
+    snprintf(out, out_size, "%s", fallback != NULL ? fallback : "his original club");
+}
+
+static void kbo_military_copy_team_link(uint32_t team_id, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    if (team_id == 0u) {
+        return;
+    }
+
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 0);
+    char team_name[96] = {0};
+    kbo_military_copy_team_history_name(team, team_name, sizeof(team_name), NULL);
+    if (team_name[0] == '\0' || ascii_equals_ignore_case(team_name, "his original club")) {
+        snprintf(team_name, sizeof(team_name), "Team #%u", team_id);
+    }
+    snprintf(out, out_size, "<%s:team#%u>", team_name, team_id);
+}
+
+static void kbo_military_copy_player_link(uint32_t player_id, uintptr_t player_ptr, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    if (player_id == 0u) {
+        return;
+    }
+
+    if (!kbo_player_pointer_plausible(player_ptr)) {
+        player_ptr = (uintptr_t)kbo_military_find_player_by_id(player_id);
+    }
+
+    char player_name[64] = {0};
+    if (kbo_player_pointer_plausible(player_ptr)) {
+        kbo_copy_player_display_name((uint8_t*)player_ptr, player_name, sizeof(player_name));
+    }
+    if (player_name[0] == '\0') {
+        snprintf(player_name, sizeof(player_name), "Player #%u", player_id);
+    }
+
+    snprintf(out, out_size, "<%s:player#%u>", player_name, player_id);
+}
+
+static int kbo_emit_military_selection_news(
+    uint32_t event_yyyymmdd,
+    KboMilitarySelectionNewsEntry* entries,
+    int entry_count,
+    const char* source)
+{
+    if (event_yyyymmdd == 0u || entries == NULL || entry_count <= 0) {
+        return 0;
+    }
+
+    uint32_t league_id = kbo_resolve_kbo_league_id();
+    if (league_id == 0u) {
+        append_logf(
+            "KBO military selection news skipped source=%s date=%u reason=league_id_unavailable count=%d",
+            source != NULL ? source : "",
+            event_yyyymmdd,
+            entry_count);
+        return 0;
+    }
+
+    char title[160] = {0};
+    snprintf(
+        title,
+        sizeof(title),
+        "Sangmu Selects %d Player%s for Military Service",
+        entry_count,
+        entry_count == 1 ? "" : "s");
+
+    char body[8192] = {0};
+    int len = snprintf(
+        body,
+        sizeof(body),
+        "Sangmu completed its annual military-service selection, adding %d player%s from the offseason military-service pool. The group will report to the service club while their original KBO clubs retain their rights until the scheduled return date.\n\nSelected players:\n",
+        entry_count,
+        entry_count == 1 ? "" : "s");
+    if (len < 0) {
+        body[0] = '\0';
+    }
+    size_t used = strlen(body);
+
+    for (int i = 0; i < entry_count && used + 180u < sizeof(body); i++) {
+        char player_link[96] = {0};
+        char team_link[128] = {0};
+        kbo_military_copy_player_link(entries[i].player_id, entries[i].player_ptr, player_link, sizeof(player_link));
+        kbo_military_copy_team_link(entries[i].original_team_id, team_link, sizeof(team_link));
+        len = snprintf(
+            body + used,
+            sizeof(body) - used,
+            "%d. %s%s%s\n",
+            i + 1,
+            player_link[0] != '\0' ? player_link : "Selected player",
+            team_link[0] != '\0' ? ", " : "",
+            team_link);
+        if (len <= 0) {
+            break;
+        }
+        used += (size_t)len;
+    }
+
+    if (used + 220u < sizeof(body)) {
+        snprintf(
+            body + used,
+            sizeof(body) - used,
+            "\nThe selections were made from players newly marked for military service after the season, with player value and service-club roster space considered before the final list was posted.");
+    }
+
+    int created = create_kbo_native_live_news_with_body(
+        event_yyyymmdd / 10000u,
+        (event_yyyymmdd / 100u) % 100u,
+        event_yyyymmdd % 100u,
+        league_id,
+        OOTP27_EVENT_TYPE_CUSTOM_EVENT,
+        title,
+        body);
+    append_logf(
+        "KBO military selection news source=%s date=%u league_id=%u count=%d created=%d",
+        source != NULL ? source : "",
+        event_yyyymmdd,
+        league_id,
+        entry_count,
+        created);
+    return created;
 }
 
 static void kbo_set_military_days_left(uint8_t* player, int32_t days_left)
@@ -1093,7 +1563,7 @@ static int return_completed_kbo_military_loan_player(
         return 0;
     }
 
-    int32_t days_left = kbo_military_days_left(player);
+    int32_t days_left = kbo_military_effective_days_left(player);
     if (days_left > 0) {
         clear_kbo_military_unavailable_flags(player);
         return 0;
@@ -1135,12 +1605,50 @@ static int return_completed_kbo_military_loan_player(
 
     char history_date[16] = {0};
     uint32_t year = 0;
-    if (!kbo_current_year_relaxed(&year) || year == 0) { year = 2001; }
+    uint32_t month = 1;
+    uint32_t day = 1;
+    if (!kbo_current_date_is_valid(&year, &month, &day)) {
+        if (!kbo_current_year_relaxed(&year) || year == 0) { year = 2001; }
+    }
     kbo_current_history_date(history_date, sizeof(history_date), year, "military_service_return");
-    append_special_player_history_csv(
-        player_id, (uint16_t)year, history_date,
-        "military_service_return",
-        "Returned to his original KBO organization after military service assignment.");
+    char service_team_name[96] = {0};
+    char original_team_name[96] = {0};
+    char history_text[256] = {0};
+    uint8_t* service_team = find_kbo_team_by_numeric_id_any_league(service_team_id, 0);
+    kbo_military_copy_team_history_name(
+        service_team,
+        service_team_name,
+        sizeof(service_team_name),
+        service_team_id == sang_id ? "Sangmu Baseball Team" : "Korean Police Baseball Team");
+    kbo_military_copy_team_history_name(
+        original_team,
+        original_team_name,
+        sizeof(original_team_name),
+        "his original KBO organization");
+    snprintf(
+        history_text,
+        sizeof(history_text),
+        "Completed military service with %s and returned to %s.",
+        service_team_name,
+        original_team_name);
+    uint32_t history_yyyymmdd = year * 10000u + month * 100u + day;
+    int history_inserted = 0;
+    int history_skipped_duplicate = 0;
+    if (kbo_mark_military_return_history_once(player_id, history_yyyymmdd)) {
+        append_special_player_history_csv(
+            player_id, (uint16_t)year, history_date,
+            "military_service_return",
+            history_text);
+        history_inserted = insert_kbo_player_history_sql(
+            player_id,
+            year,
+            month,
+            day,
+            history_text,
+            "military_service_return");
+    } else {
+        history_skipped_duplicate = 1;
+    }
 
     LONG log_index = InterlockedIncrement(&g_military_loan_return_log_count);
     if (log_index <= 120) {
@@ -1148,7 +1656,7 @@ static int return_completed_kbo_military_loan_player(
             "KBO military assignment returned #%ld source=%s player_id=%u"
             " service_team=%u original_team=%u"
             " current_team=%u current_league=%u org_team=%u days_left=%d"
-            " native_loan_before=%d native_loan_cleared=%d"
+            " native_loan_before=%d native_loan_cleared=%d history_inserted=%d history_duplicate=%d"
             " old_restricted=%u old_secondary=%u old_injury=%u"
             " old_mil_exempt=%u mil_exempt=%u old_mil_active=%u mil_active=%u"
             " pre_change=%d register=%d attach=%d player=%p vector_off=0x%x",
@@ -1163,6 +1671,8 @@ static int return_completed_kbo_military_loan_player(
             days_left,
             native_loan_before,
             native_loan_cleared,
+            history_inserted,
+            history_skipped_duplicate,
             (uint32_t)old_restricted,
             (uint32_t)old_secondary,
             (uint32_t)old_injury_active,
@@ -1230,12 +1740,6 @@ static int tick_kbo_military_service_days(const char* source)
             continue;
         }
 
-        int32_t days_left = kbo_military_days_left(player);
-        if (days_left <= 0) {
-            returned += return_completed_kbo_military_loan_player(player, source, vector_offset, 0);
-            continue;
-        }
-
         tracked++;
         uint32_t player_id        = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
         uint32_t original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
@@ -1268,28 +1772,40 @@ static int tick_kbo_military_service_days(const char* source)
         }
 
         if (active_index < 0) {
+            int32_t days_left = kbo_military_days_left(player);
+            if (days_left <= 0) {
+                returned += return_completed_kbo_military_loan_player(player, source, vector_offset, 0);
+                continue;
+            }
             clear_kbo_military_unavailable_flags(player);
             continue;
         }
 
         KboMilitaryActiveLoan* loan = &g_active_military_loans[active_index];
         loan->player_ptr = player_ptr;
-        if (loan->service_start_date_serial == 0
-                || loan->service_start_date_serial > today_serial) {
-            loan->service_start_date_serial = today_serial;
-            loan->service_total_days        = KBO_MILITARY_SERVICE_DAYS;
-            clear_kbo_military_unavailable_flags(player);
-            continue;
-        }
         if (loan->service_total_days <= 0) {
             loan->service_total_days = KBO_MILITARY_SERVICE_DAYS;
         }
+        if (loan->service_start_date_serial == 0
+                || loan->service_start_date_serial > today_serial) {
+            loan->service_start_date_serial = today_serial;
+        }
+        if (loan->service_return_date_serial == 0u) {
+            int32_t stored_days_left = kbo_military_days_left(player);
+            loan->service_return_date_serial = today_serial + (uint32_t)(
+                stored_days_left > 0 ? stored_days_left : loan->service_total_days);
+        }
 
-        uint32_t elapsed_days    = today_serial - loan->service_start_date_serial;
-        int32_t  managed_days_left = loan->service_total_days - (int32_t)elapsed_days;
+        int32_t days_left = kbo_military_effective_days_left(player);
+        int32_t stored_days_left = kbo_military_days_left(player);
+        int32_t managed_days_left = kbo_military_days_left_from_return_serial(
+            loan->service_return_date_serial,
+            today_serial);
         if (managed_days_left != days_left) {
+            days_left = managed_days_left;
+        }
+        if (stored_days_left != managed_days_left) {
             kbo_set_military_days_left(player, managed_days_left);
-            days_left = kbo_military_days_left(player);
             managed++;
         }
         if (days_left <= 0) {
@@ -1320,9 +1836,17 @@ static DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
 {
     (void)parameter;
     append_log_line("KBO military service day tick thread started");
+    uint32_t last_tick_date_serial = 0u;
     for (;;) {
-        Sleep(2000);
+        Sleep(10000);
+        uint32_t current_date_serial = kbo_current_date_serial();
+        if (current_date_serial != 0u && current_date_serial == last_tick_date_serial) {
+            continue;
+        }
         tick_kbo_military_service_days("military_days_tick");
+        if (current_date_serial != 0u) {
+            last_tick_date_serial = current_date_serial;
+        }
     }
     return 0;
 }
@@ -1330,6 +1854,10 @@ static DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
 static void start_kbo_military_days_tick_thread(void)
 {
     if (!kbo_fix_enabled()) {
+        return;
+    }
+    if (!read_kbo_localappdata_flag_file("enable_military_days_tick.txt")) {
+        append_log_line("KBO military service day tick thread disabled: enable_military_days_tick.txt is off");
         return;
     }
     if (InterlockedCompareExchange(&g_military_days_tick_started, 1, 0) != 0) {
@@ -1343,6 +1871,237 @@ static void start_kbo_military_days_tick_thread(void)
         InterlockedExchange(&g_military_days_tick_started, 0);
         append_log_line("KBO military service day tick thread failed to start");
     }
+}
+
+static int kbo_count_players_on_team_with_military_days(uint32_t team_id)
+{
+    if (team_id == 0u) {
+        return 0;
+    }
+    uintptr_t player_vector = 0;
+    int32_t player_count = 0;
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        return 0;
+    }
+    int count = 0;
+    for (int32_t i = 0; i < player_count; i++) {
+        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if (!kbo_player_pointer_plausible(player_ptr)) {
+            continue;
+        }
+        uint8_t* player = (uint8_t*)player_ptr;
+        if (*(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) == team_id
+                && kbo_military_effective_days_left(player) > 0) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static int16_t kbo_military_read_player_i16(uint8_t* player, uint32_t offset)
+{
+    if (player == NULL || offset + sizeof(int16_t) > OOTP27_PLAYER_SCAN_BYTES
+            || !memory_range_readable(player + offset, sizeof(int16_t))) {
+        return 0;
+    }
+    return *(int16_t*)(player + offset);
+}
+
+static int kbo_military_draft_candidate_score(uint8_t* player)
+{
+    if (player == NULL || !kbo_player_pointer_plausible((uintptr_t)player)) {
+        return INT32_MIN;
+    }
+    int32_t overall = kbo_military_read_player_i16(player, OOTP27_PLAYER_OVERALL_VALUE_OFFSET);
+    int32_t talent = kbo_military_read_player_i16(player, OOTP27_PLAYER_TALENT_VALUE_OFFSET);
+    int32_t ratings = kbo_military_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
+    int32_t career = kbo_military_read_player_i16(player, OOTP27_PLAYER_CAREER_VALUE_OFFSET);
+    int score = talent * 55 + overall * 25 + ratings * 10 + career * 10;
+
+    uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
+    if (age >= 21 && age <= 26) {
+        score += 300 - (int)(age - 21u) * 20;
+    } else if (age < 21) {
+        score += 120 - (int)(21u - age) * 10;
+    } else {
+        score += 120 - (int)(age - 26u) * 15;
+    }
+    score += (int)(*(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET) % 97u);
+    return score;
+}
+
+static int kbo_route_queued_military_draft_candidates(
+    uint16_t entry_year,
+    KboMilitarySelectionNewsEntry* news_entries,
+    int max_news_entries,
+    const char* source)
+{
+    if (entry_year == 0u) {
+        return 0;
+    }
+    uint8_t* sang = find_kbo_team_by_csv_id_any_league("SANG", 0);
+    if (sang == NULL || !memory_range_readable(sang, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        append_logf("KBO military selection skipped source=%s year=%u reason=no_sang", source != NULL ? source : "", entry_year);
+        return 0;
+    }
+    uint32_t sang_id = *(uint32_t*)(sang + OOTP27_KBO_TEAM_ID_OFFSET);
+    uint32_t sang_league_id = *(uint32_t*)(sang + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+    if (sang_id == 0u || sang_league_id == 0u) {
+        append_logf("KBO military selection skipped source=%s year=%u reason=bad_sang_ids team=%u league=%u", source != NULL ? source : "", entry_year, sang_id, sang_league_id);
+        return 0;
+    }
+
+    enum { KBO_MILITARY_SANG_CAPACITY = 35, KBO_MILITARY_SANG_ANNUAL_INTAKE = 18 };
+    int on_roster = kbo_count_players_on_team_with_military_days(sang_id);
+    int slots = KBO_MILITARY_SANG_CAPACITY - on_roster;
+    if (slots > KBO_MILITARY_SANG_ANNUAL_INTAKE) {
+        slots = KBO_MILITARY_SANG_ANNUAL_INTAKE;
+    }
+    if (slots <= 0) {
+        append_logf("KBO military selection skipped source=%s year=%u reason=sang_full active=%d", source != NULL ? source : "", entry_year, on_roster);
+        return 0;
+    }
+
+    int routed = 0;
+    int considered = 0;
+    for (;;) {
+        int best_index = -1;
+        int best_score = INT32_MIN;
+        LONG count = g_kbo_military_draft_candidate_count;
+        if (count < 0) { count = 0; }
+        if (count > OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS) { count = OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS; }
+        for (LONG i = 0; i < count; i++) {
+            KboMilitaryDraftCandidate* candidate = &g_kbo_military_draft_candidates[i];
+            if (candidate->player_id == 0u || candidate->entry_year != entry_year || candidate->selected != 0u) {
+                continue;
+            }
+            considered++;
+            uintptr_t player_ptr = candidate->player_ptr;
+            if (!kbo_player_pointer_plausible(player_ptr)) {
+                player_ptr = (uintptr_t)kbo_military_find_player_by_id(candidate->player_id);
+                candidate->player_ptr = player_ptr;
+            }
+            if (!kbo_player_pointer_plausible(player_ptr)) {
+                continue;
+            }
+            uint8_t* player = (uint8_t*)player_ptr;
+            if (player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET] == 0u
+                    || kbo_military_effective_days_left(player) <= 0
+                    || *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) == sang_id) {
+                continue;
+            }
+            int score = kbo_military_draft_candidate_score(player);
+            if (score > best_score) {
+                best_score = score;
+                best_index = (int)i;
+            }
+        }
+        if (best_index < 0 || routed >= slots) {
+            break;
+        }
+
+        KboMilitaryDraftCandidate* candidate = &g_kbo_military_draft_candidates[best_index];
+        uint8_t* player = (uint8_t*)candidate->player_ptr;
+        uint32_t original_team_id = candidate->original_team_id != 0u
+            ? candidate->original_team_id
+            : *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+        uint32_t original_league_id = candidate->original_league_id != 0u
+            ? candidate->original_league_id
+            : *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+        int called_pre_change = 0;
+        int called_register = 0;
+        int called_attach = 0;
+        kbo_assign_player_to_team_internal(
+            player,
+            sang,
+            sang_league_id,
+            0,
+            &called_pre_change,
+            &called_register,
+            &called_attach);
+        *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = original_team_id;
+        *(uint32_t*)(player + 0x5c) = original_team_id;
+        if (original_league_id != 0u) {
+            *(uint32_t*)(player + 0x4c) = original_league_id;
+        }
+        register_active_kbo_military_loan(
+            candidate->player_id,
+            (uintptr_t)player,
+            original_team_id,
+            original_league_id,
+            sang_id,
+            sang_league_id);
+        clear_kbo_military_unavailable_flags(player);
+        candidate->selected = 1u;
+        if (news_entries != NULL && routed < max_news_entries) {
+            KboMilitarySelectionNewsEntry* news_entry = &news_entries[routed];
+            news_entry->player_id = candidate->player_id;
+            news_entry->original_team_id = original_team_id;
+            news_entry->score = best_score;
+            news_entry->player_ptr = (uintptr_t)player;
+        }
+        routed++;
+        append_logf(
+            "KBO military selection drafted source=%s year=%u player_id=%u original_team=%u service_team=%u score=%d pre=%d register=%d attach=%d",
+            source != NULL ? source : "",
+            entry_year,
+            candidate->player_id,
+            original_team_id,
+            sang_id,
+            best_score,
+            called_pre_change,
+            called_register,
+            called_attach);
+    }
+
+    append_logf(
+        "KBO military selection processed source=%s year=%u queued=%d considered=%d routed=%d active_before=%d slots=%d",
+        source != NULL ? source : "",
+        entry_year,
+        kbo_count_military_draft_candidates_for_year(entry_year),
+        considered,
+        routed,
+        on_roster,
+        slots);
+    return routed;
+}
+
+static int run_kbo_custom_military_event(
+    uintptr_t event_ptr,
+    const char* event_name,
+    uint32_t event_year,
+    uint32_t event_month,
+    uint32_t event_day,
+    const char* source)
+{
+    (void)event_ptr;
+    int returned = tick_kbo_military_service_days("military_selection_event");
+    KboMilitarySelectionNewsEntry news_entries[24] = {0};
+    int routed = kbo_route_queued_military_draft_candidates(
+        (uint16_t)event_year,
+        news_entries,
+        (int)(sizeof(news_entries) / sizeof(news_entries[0])),
+        source);
+    uint32_t event_yyyymmdd =
+        event_year * 10000u + event_month * 100u + event_day;
+    int news_created = 0;
+    if (routed > 0) {
+        news_created = kbo_emit_military_selection_news(
+            event_yyyymmdd,
+            news_entries,
+            routed,
+            source);
+    }
+    append_logf(
+        "KBO military selection reached source=%s event=%s year=%u routed=%d returned=%d news=%d queued_left=%d",
+        source != NULL ? source : "",
+        event_name != NULL ? event_name : "",
+        event_year,
+        routed,
+        returned,
+        news_created,
+        kbo_count_military_draft_candidates_for_year((uint16_t)event_year));
+    return 1;
 }
 
 /* ---- Hook wrappers ---- */
@@ -1377,7 +2136,7 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
             cur_league  = *(uint32_t*)(p + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
             loan_team   = *(uint32_t*)(p + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
             loan_league = *(uint32_t*)(p + OOTP27_PLAYER_LOAN_LEAGUE_ID_OFFSET);
-            days_left   = kbo_military_days_left(p);
+            days_left   = kbo_military_effective_days_left(p);
             restricted  = p[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET];
             secondary   = p[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET];
             inj_active  = p[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
@@ -1400,7 +2159,7 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
     if (kbo_player_pointer_plausible(player_ptr)) {
         uint8_t* player = (uint8_t*)player_ptr;
         if (player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET] != 0
-                && kbo_military_days_left(player) > 0) {
+                && kbo_military_effective_days_left(player) > 0) {
             uint32_t cur_year = 0;
             uint32_t cur_month = 0;
             uint32_t cur_day   = 0;
@@ -1413,7 +2172,22 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
                 (void*)player_ptr,
                 *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
                 cur_year, cur_year, cur_month, cur_day,
-                kbo_military_days_left(player));
+                kbo_military_effective_days_left(player));
+            uint32_t original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+            uint32_t original_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+            uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+            if (active_team_id != 0u) {
+                original_team_id = active_team_id;
+            }
+            if (original_team_id != 0u && cur_year >= 1982u && cur_year <= 2300u) {
+                kbo_queue_military_draft_candidate(
+                    player_ptr,
+                    *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
+                    (uint16_t)cur_year,
+                    original_team_id,
+                    original_league_id,
+                    "military_service_entry_wrapper");
+            }
         }
     }
 }

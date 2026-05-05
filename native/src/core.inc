@@ -399,6 +399,15 @@ static int insert_kbo_player_history_sql(
         sizeof(create_sql),
         "CREATE TABLE IF NOT EXISTS player_history (history_id INTEGER PRIMARY KEY AUTOINCREMENT, player_id INTEGER, history_date VARCHAR(8), history_text TEXT, season INTEGER);");
 
+    char delete_sql[2600] = {0};
+    snprintf(
+        delete_sql,
+        sizeof(delete_sql),
+        "DELETE FROM player_history WHERE player_id=%u AND history_date='%s' AND history_text='%s';",
+        player_id,
+        history_date,
+        escaped_text);
+
     char insert_sql[2600] = {0};
     snprintf(
         insert_sql,
@@ -410,13 +419,15 @@ static int insert_kbo_player_history_sql(
         year);
 
     int create_result = sql_exec((void*)database, create_sql);
+    int delete_result = sql_exec((void*)database, delete_sql);
     int insert_result = sql_exec((void*)database, insert_sql);
     append_logf(
-        "player history sql insert source=%s player=%u date=%s create=%d insert=%d",
+        "player history sql insert source=%s player=%u date=%s create=%d delete=%d insert=%d",
         source != NULL ? source : "",
         player_id,
         history_date,
         create_result,
+        delete_result,
         insert_result);
     return insert_result != 0;
 }
