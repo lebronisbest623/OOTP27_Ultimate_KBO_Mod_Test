@@ -114,6 +114,8 @@ static int kbo_format_history_date(char* out, size_t out_size, uint32_t year, ui
     return 1;
 }
 
+static int write_kbo_message_body_file(uint32_t message_id, const char* title, const char* body, const char* source);
+
 static int kbo_sql_escape_literal(char* out, size_t out_size, const char* in)
 {
     if (out == NULL || out_size == 0) {
@@ -189,7 +191,7 @@ static int insert_kbo_league_news_sql(
         return 0;
     }
 
-    OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_RVA);
+    OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
     if (!memory_range_readable((void*)sql_exec, 16)) {
         append_logf("league news sql skipped source=%s title=%s reason=sql_exec_unreadable fn=%p", source != NULL ? source : "", title, (void*)sql_exec);
         return 0;
@@ -205,11 +207,22 @@ static int insert_kbo_league_news_sql(
         return 0;
     }
 
+    uint32_t message_id = 8000000u
+        + ((year % 100u) * 10000u)
+        + (month * 100u)
+        + day;
+    if (title != NULL && strstr(title, "Depart") != NULL) {
+        message_id += 100000u;
+    } else if (title != NULL && strstr(title, "Return") != NULL) {
+        message_id += 200000u;
+    }
+
     char delete_sql[1400] = {0};
     snprintf(
         delete_sql,
         sizeof(delete_sql),
-        "DELETE FROM messages WHERE subject='%s' AND date='%s' AND league_id_0=%u AND sender_type=9001;",
+        "DELETE FROM messages WHERE message_id=%u OR (subject='%s' AND date='%s' AND league_id_0=%u AND sender_type=9001);",
+        message_id,
         escaped_title,
         news_date,
         league_id);
@@ -219,7 +232,8 @@ static int insert_kbo_league_news_sql(
         insert_sql,
         sizeof(insert_sql),
         "INSERT INTO messages(message_id, subject, player_id_0, player_id_1, player_id_2, player_id_3, player_id_4, team_id_0, team_id_1, team_id_2, team_id_3, team_id_4, league_id_0, league_id_1, importance, message_type, hype, sender_type, sender_id, recipient_id, trade_id, date, deleted, notify, ongoing_story_id, text_is_modified, body) "
-        "SELECT COALESCE(MAX(message_id),0)+1, '%s', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, %u, 0, 3, %u, 0, 9001, %u, 0, 0, '%s', 0, 1, 0, 1, '%s' FROM messages;",
+        "VALUES(%u, '%s', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, %u, 0, 3, %u, 0, 9001, %u, 0, 0, '%s', 0, 1, 0, 1, '%s');",
+        message_id,
         escaped_title,
         league_id,
         message_type,
@@ -229,17 +243,117 @@ static int insert_kbo_league_news_sql(
 
     int delete_result = sql_exec((void*)database, delete_sql);
     int insert_result = sql_exec((void*)database, insert_sql);
+    int body_file = 0;
+    if (insert_result != 0) {
+        body_file = write_kbo_message_body_file(message_id, title, body, source);
+    }
     append_logf(
-        "league news sql insert source=%s title=%s date=%s league_id=%u type=%u delete_result=%d insert_result=%d db=%p",
+        "league news sql insert source=%s title=%s date=%s league_id=%u type=%u message_id=%u delete_result=%d insert_result=%d body_file=%d db=%p",
         source != NULL ? source : "",
         title,
         news_date,
         league_id,
         message_type,
+        message_id,
         delete_result,
         insert_result,
+        body_file,
         (void*)database);
 
+    return insert_result != 0;
+}
+
+static int insert_kbo_league_news_table_sql(
+    uint32_t year,
+    uint32_t month,
+    uint32_t day,
+    uint32_t league_id,
+    const char* title,
+    const char* body,
+    const char* source)
+{
+    if (title == NULL || title[0] == '\0' || league_id == 0
+            || year < 1800 || year > 2300 || month < 1 || month > 12 || day < 1 || day > 31) {
+        return 0;
+    }
+
+    HMODULE exe = GetModuleHandleA(NULL);
+    uintptr_t global = get_ootp_global_database();
+    if (exe == NULL || global == 0
+            || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
+        append_logf("league_news table sql skipped source=%s title=%s reason=no_exe_or_global", source != NULL ? source : "", title);
+        return 0;
+    }
+
+    uintptr_t database = *(uintptr_t*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET);
+    if (database == 0 || !memory_range_readable((void*)database, 0x10)) {
+        append_logf("league_news table sql skipped source=%s title=%s reason=no_database db=%p", source != NULL ? source : "", title, (void*)database);
+        return 0;
+    }
+
+    OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
+    if (!memory_range_readable((void*)sql_exec, 16)) {
+        append_logf("league_news table sql skipped source=%s title=%s reason=exec_unreadable fn=%p", source != NULL ? source : "", title, (void*)sql_exec);
+        return 0;
+    }
+
+    char escaped_text[8192] = {0};
+    char escaped_title[512] = {0};
+    char escaped_body[7600] = {0};
+    char news_date[16] = {0};
+    if (!kbo_sql_escape_literal(escaped_title, sizeof(escaped_title), title)
+            || !kbo_sql_escape_literal(escaped_body, sizeof(escaped_body), body != NULL ? body : "")
+            || !kbo_format_history_date(news_date, sizeof(news_date), year, month, day)) {
+        append_logf("league_news table sql skipped source=%s title=%s reason=escape_or_date_failed", source != NULL ? source : "", title);
+        return 0;
+    }
+
+    snprintf(
+        escaped_text,
+        sizeof(escaped_text),
+        "%s%s%s",
+        escaped_title,
+        escaped_body[0] != '\0' ? "\n\n" : "",
+        escaped_body);
+
+    const char* create_sql =
+        "CREATE TABLE IF NOT EXISTS league_news (news_id INTEGER PRIMARY KEY AUTOINCREMENT, league_id INTEGER, news_date VARCHAR(8), news_text TEXT, season INTEGER);"
+        "CREATE INDEX IF NOT EXISTS league_news_league_id ON league_news(league_id);"
+        "CREATE INDEX IF NOT EXISTS league_news_date ON league_news(news_date);";
+
+    char delete_sql[9200] = {0};
+    snprintf(
+        delete_sql,
+        sizeof(delete_sql),
+        "DELETE FROM league_news WHERE league_id=%u AND news_date='%s' AND news_text='%s';",
+        league_id,
+        news_date,
+        escaped_text);
+
+    char insert_sql[10000] = {0};
+    snprintf(
+        insert_sql,
+        sizeof(insert_sql),
+        "INSERT INTO league_news(league_id, news_date, news_text, season) VALUES(%u, '%s', '%s', %u);",
+        league_id,
+        news_date,
+        escaped_text,
+        year);
+
+    int create_result = sql_exec((void*)database, create_sql);
+    int delete_result = sql_exec((void*)database, delete_sql);
+    int insert_result = sql_exec((void*)database, insert_sql);
+    append_logf(
+        "league_news table sql insert source=%s title=%s date=%s league_id=%u create=%d delete=%d insert=%d db=%p exec=%p",
+        source != NULL ? source : "",
+        title,
+        news_date,
+        league_id,
+        create_result,
+        delete_result,
+        insert_result,
+        (void*)database,
+        (void*)sql_exec);
     return insert_result != 0;
 }
 
@@ -320,34 +434,121 @@ static int find_recent_ootp27_save_with_messages(char* out, size_t out_size)
     return 1;
 }
 
+static int kbo_get_current_save_path(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    uintptr_t global = get_ootp_global_database();
+    if (global != 0 && memory_range_readable((void*)(global + OOTP27_MESSAGE_SAVE_PATH_OFFSET), 0x20)) {
+        copy_ootp_string_object_text((uint8_t*)global, OOTP27_MESSAGE_SAVE_PATH_OFFSET, out, out_size);
+    }
+
+    if (!kbo_path_looks_like_absolute_save_path(out)) {
+        char fallback_save_path[MAX_PATH] = {0};
+        if (find_recent_ootp27_save_with_messages(fallback_save_path, sizeof(fallback_save_path))) {
+            snprintf(out, out_size, "%s", fallback_save_path);
+        } else {
+            out[0] = '\0';
+        }
+    }
+
+    return out[0] != '\0';
+}
+
+static void kbo_sanitize_path_component(const char* text, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (text == NULL || text[0] == '\0') {
+        snprintf(out, out_size, "unknown_save");
+        return;
+    }
+
+    size_t used = 0;
+    for (const char* p = text; *p != '\0' && used + 1u < out_size; p++) {
+        char ch = *p;
+        if ((ch >= 'A' && ch <= 'Z')
+                || (ch >= 'a' && ch <= 'z')
+                || (ch >= '0' && ch <= '9')
+                || ch == '-' || ch == '_' || ch == '.') {
+            out[used++] = ch;
+        } else {
+            out[used++] = '_';
+        }
+    }
+    out[used] = '\0';
+    if (out[0] == '\0') {
+        snprintf(out, out_size, "unknown_save");
+    }
+}
+
+static int kbo_get_save_scoped_data_dir(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    char local_app_data[MAX_PATH] = {0};
+    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
+    if (got == 0 || got >= sizeof(local_app_data)) {
+        return 0;
+    }
+
+    char root_dir[MAX_PATH] = {0};
+    snprintf(root_dir, sizeof(root_dir), "%s\\OOTP-KBO", local_app_data);
+    CreateDirectoryA(root_dir, NULL);
+
+    char saves_dir[MAX_PATH] = {0};
+    snprintf(saves_dir, sizeof(saves_dir), "%s\\saves", root_dir);
+    CreateDirectoryA(saves_dir, NULL);
+
+    char save_path[MAX_PATH] = {0};
+    char save_name[96] = {0};
+    if (kbo_get_current_save_path(save_path, sizeof(save_path))) {
+        const char* base = strrchr(save_path, '\\');
+        const char* slash = strrchr(save_path, '/');
+        if (slash != NULL && (base == NULL || slash > base)) {
+            base = slash;
+        }
+        kbo_sanitize_path_component(base != NULL ? base + 1 : save_path, save_name, sizeof(save_name));
+    } else {
+        snprintf(save_name, sizeof(save_name), "unknown_save");
+    }
+
+    snprintf(out, out_size, "%s\\%s", saves_dir, save_name);
+    CreateDirectoryA(out, NULL);
+    return out[0] != '\0';
+}
+
+static int kbo_get_save_scoped_data_file(const char* file_name, char* out, size_t out_size)
+{
+    if (file_name == NULL || file_name[0] == '\0' || out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    char dir[MAX_PATH] = {0};
+    if (!kbo_get_save_scoped_data_dir(dir, sizeof(dir))) {
+        return 0;
+    }
+    snprintf(out, out_size, "%s\\%s", dir, file_name);
+    return out[0] != '\0';
+}
+
 static int write_kbo_message_body_file(uint32_t message_id, const char* title, const char* body, const char* source)
 {
     if (message_id == 0 || title == NULL || title[0] == '\0') {
         return 0;
     }
 
-    uintptr_t global = get_ootp_global_database();
     char save_path[MAX_PATH] = {0};
-    if (global != 0 && memory_range_readable((void*)(global + OOTP27_MESSAGE_SAVE_PATH_OFFSET), 0x20)) {
-        copy_ootp_string_object_text((uint8_t*)global, OOTP27_MESSAGE_SAVE_PATH_OFFSET, save_path, sizeof(save_path));
-    }
-
-    if (!kbo_path_looks_like_absolute_save_path(save_path)) {
-        char fallback_save_path[MAX_PATH] = {0};
-        if (find_recent_ootp27_save_with_messages(fallback_save_path, sizeof(fallback_save_path))) {
-            append_logf(
-                "league news body file save path fallback source=%s title=%s old=%s new=%s",
-                source != NULL ? source : "",
-                title,
-                save_path,
-                fallback_save_path);
-            snprintf(save_path, sizeof(save_path), "%s", fallback_save_path);
-        } else {
-            save_path[0] = '\0';
-        }
-    }
-
-    if (save_path[0] == '\0') {
+    if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
         append_logf("league news body file skipped source=%s title=%s reason=no_save_path", source != NULL ? source : "", title);
         return 0;
     }
@@ -502,6 +703,9 @@ static int create_kbo_real_add_news(
     int body_ok = assign_kbo_news_pointer_string(news, 0x98u, body != NULL ? body : "");
     uint32_t result = real_add((void*)manager, news, 0);
     uint32_t message_id = kbo_read_news_u32(news, OOTP27_MESSAGE_OBJECT_ID_OFFSET);
+    if (message_id == 0 && result != 0) {
+        message_id = result;
+    }
     int body_file_ok = 0;
     if (result != 0 && message_id != 0) {
         body_file_ok = write_kbo_message_body_file(message_id, title, body, source);
@@ -1243,27 +1447,43 @@ static int create_kbo_native_live_news_with_body(
 
     int event_created = 0;
     int native_created = 0;
+    int league_news_created = insert_kbo_league_news_table_sql(
+        year,
+        month,
+        day,
+        league_id,
+        title,
+        body,
+        "native_live_news");
     append_logf(
         "native live news create_news_item skipped title=%s reason=unsafe_rva_call_disabled",
         title);
 
-    int sql_created = 0;
-    append_logf(
-        "league news sql skipped source=%s title=%s reason=unsafe_sql_exec_disabled",
-        "native_live_news",
-        title);
-    int real_created = 0;
-    append_logf(
-        "league news real_add skipped source=%s title=%s reason=unsafe_operator_new_rva_disabled",
-        "native_live_news",
-        title);
+    int sql_created = insert_kbo_league_news_sql(
+        year,
+        month,
+        day,
+        league_id,
+        message_type,
+        title,
+        body,
+        "native_live_news");
+    int real_created = create_kbo_real_add_news(
+        year,
+        month,
+        day,
+        league_id,
+        message_type,
+        title,
+        body,
+        "native_live_news");
     int core_created = 0;
     append_logf(
         "core message news skipped source=%s title=%s reason=unsafe_rva_call_disabled",
         "native_live_news",
         title);
     append_logf(
-        "native live news result title=%s date=%04u-%02u-%02u league_id=%u type=%u event=%d sql=%d real=%d native=%d core=%d",
+        "native live news result title=%s date=%04u-%02u-%02u league_id=%u type=%u event=%d league_news=%d sql=%d real=%d native=%d core=%d",
         title,
         year,
         month,
@@ -1271,11 +1491,15 @@ static int create_kbo_native_live_news_with_body(
         league_id,
         message_type,
         event_created,
+        league_news_created,
         sql_created,
         real_created,
         native_created,
         core_created);
-    return event_created || sql_created || real_created || native_created || core_created;
+    if (real_created) {
+        return 2;
+    }
+    return event_created || league_news_created || sql_created || native_created || core_created;
 }
 
 static int create_kbo_native_live_news(

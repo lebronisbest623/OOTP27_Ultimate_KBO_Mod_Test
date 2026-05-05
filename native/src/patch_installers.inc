@@ -579,3 +579,753 @@ static int install_kbo_ai_fa_status_candidate_insert_patch(void)
         &ootp_kbo_ai_fa_status_candidate_insert_wrapper);
     return 1;
 }
+
+static int install_kbo_active_foreign_count_patch(
+    const char* label,
+    uint32_t target_rva,
+    uint8_t* (*build_stub)(void*))
+{
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        append_logf("GetModuleHandleA(NULL) failed for %s", label);
+        return 0;
+    }
+
+    char host[MAX_PATH] = {0};
+    GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
+    if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
+        append_logf("host is not ootp27.exe, skipping %s host=%s", label, host);
+        return 0;
+    }
+
+    uint8_t* target = (uint8_t*)((uintptr_t)exe + target_rva);
+    const size_t stolen_len = 20;
+    const uint8_t expected[20] = {
+        0x48, 0x89, 0x5C, 0x24, 0x08,
+        0x48, 0x89, 0x6C, 0x24, 0x10,
+        0x48, 0x89, 0x74, 0x24, 0x18,
+        0x57,
+        0x48, 0x83, 0xEC, 0x20
+    };
+
+    if (!memory_range_readable(target, sizeof(expected))) {
+        append_logf("%s target unreadable target=%p", label, target);
+        return 0;
+    }
+    if (is_rax_absolute_jump_patch(target)) {
+        append_logf("%s already installed target=%p", label, target);
+        return 1;
+    }
+    if (memcmp(target, expected, sizeof(expected)) != 0) {
+        log_patch_bytes_mismatch(label, target, sizeof(expected));
+        return 0;
+    }
+
+    uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
+    if (trampoline == NULL) {
+        append_logf("failed to allocate %s trampoline", label);
+        return 0;
+    }
+
+    uint8_t* stub = build_stub(trampoline);
+    if (stub == NULL) {
+        append_logf("failed to allocate %s detour stub", label);
+        return 0;
+    }
+
+    uint8_t patch[20] = {
+        0x48, 0xB8,
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xE0,
+        0x90, 0x90, 0x90, 0x90,
+        0x90, 0x90, 0x90, 0x90
+    };
+    write_u64(&patch[2], (uint64_t)(uintptr_t)stub);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        return 0;
+    }
+
+    memcpy(target, patch, sizeof(patch));
+    FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+
+    DWORD ignored = 0;
+    VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+
+    append_logf("installed %s target=%p stub=%p trampoline=%p", label, target, stub, trampoline);
+    return 1;
+}
+
+static int install_kbo_active_foreign_hitter_count_patch(void)
+{
+    return install_kbo_active_foreign_count_patch(
+        "KBO active foreign hitter count patch",
+        OOTP27_ACTIVE_FOREIGN_HITTER_COUNT_RVA,
+        build_kbo_active_foreign_hitter_count_detour_stub);
+}
+
+static int install_kbo_active_foreign_pitcher_count_patch(void)
+{
+    return install_kbo_active_foreign_count_patch(
+        "KBO active foreign pitcher count patch",
+        OOTP27_ACTIVE_FOREIGN_PITCHER_COUNT_RVA,
+        build_kbo_active_foreign_pitcher_count_detour_stub);
+}
+
+static int install_kbo_callup_foreign_limit_branch_patch(
+    const char* label,
+    uint32_t target_rva,
+    uint32_t allow_rva,
+    const uint8_t* expected,
+    void* wrapper,
+    int total_check)
+{
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        append_logf("GetModuleHandleA(NULL) failed for %s", label);
+        return 0;
+    }
+
+    char host[MAX_PATH] = {0};
+    GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
+    if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
+        append_logf("host is not ootp27.exe, skipping %s host=%s", label, host);
+        return 0;
+    }
+
+    uint8_t* target = (uint8_t*)((uintptr_t)exe + target_rva);
+    const size_t patch_len = 13;
+    if (!memory_range_readable(target, patch_len)) {
+        append_logf("%s target unreadable target=%p", label, target);
+        return 0;
+    }
+    if (is_rax_absolute_jump_patch(target)) {
+        append_logf("%s already installed target=%p", label, target);
+        return 1;
+    }
+    if (memcmp(target, expected, patch_len) != 0) {
+        log_patch_bytes_mismatch(label, target, patch_len);
+        return 0;
+    }
+
+    uint8_t* stub = build_kbo_callup_foreign_limit_branch_stub(
+        (uint8_t*)((uintptr_t)exe + allow_rva),
+        target + patch_len,
+        (uint8_t*)((uintptr_t)exe + 0x0107B2B4u),
+        wrapper,
+        total_check);
+    if (stub == NULL) {
+        append_logf("failed to allocate %s stub", label);
+        return 0;
+    }
+
+    uint8_t patch[13] = {
+        0x48, 0xB8,
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xE0,
+        0x90
+    };
+    write_u64(&patch[2], (uint64_t)(uintptr_t)stub);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        return 0;
+    }
+    memcpy(target, patch, sizeof(patch));
+    FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+    DWORD ignored = 0;
+    VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+
+    append_logf("installed %s target=%p stub=%p", label, target, stub);
+    return 1;
+}
+
+static int install_kbo_callup_foreign_limit_branch_patches(void)
+{
+    const uint8_t hitter_expected[13] = {
+        0x3B, 0xC2, 0x7C, 0x8F, 0x45, 0x84, 0xE4,
+        0x0F, 0x85, 0x1D, 0x18, 0x00, 0x00
+    };
+    const uint8_t pitcher_expected[13] = {
+        0x3B, 0xC2, 0x7C, 0x52, 0x45, 0x84, 0xE4,
+        0x0F, 0x85, 0x35, 0x17, 0x00, 0x00
+    };
+    const uint8_t total_expected[13] = {
+        0x3B, 0xD1, 0x7C, 0x52, 0x45, 0x84, 0xE4,
+        0x0F, 0x85, 0x85, 0x16, 0x00, 0x00
+    };
+
+    int ok = 1;
+    ok &= install_kbo_callup_foreign_limit_branch_patch(
+        "KBO callup foreign hitter limit branch patch",
+        OOTP27_CALLUP_FOREIGN_HITTER_LIMIT_BRANCH_RVA,
+        0x01079B18u,
+        hitter_expected,
+        &ootp_kbo_callup_foreign_hitter_limit_allows_wrapper,
+        0);
+    ok &= install_kbo_callup_foreign_limit_branch_patch(
+        "KBO callup foreign pitcher limit branch patch",
+        OOTP27_CALLUP_FOREIGN_PITCHER_LIMIT_BRANCH_RVA,
+        0x01079BC8u,
+        pitcher_expected,
+        &ootp_kbo_callup_foreign_pitcher_limit_allows_wrapper,
+        0);
+    ok &= install_kbo_callup_foreign_limit_branch_patch(
+        "KBO callup foreign total limit branch patch",
+        OOTP27_CALLUP_FOREIGN_TOTAL_LIMIT_BRANCH_RVA,
+        0x01079C78u,
+        total_expected,
+        &ootp_kbo_callup_foreign_total_limit_allows_wrapper,
+        1);
+    return ok;
+}
+
+static HMODULE kbo_allstar_get_host_exe(const char* label)
+{
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        append_logf("GetModuleHandleA(NULL) failed for %s", label);
+        return NULL;
+    }
+
+    char host[MAX_PATH] = {0};
+    GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
+    if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
+        append_logf("host is not ootp27.exe, skipping %s host=%s", label, host);
+        return NULL;
+    }
+
+    if (!kbo_fix_enabled()) {
+        append_logf("%s skipped: opt-in disabled", label);
+        return NULL;
+    }
+
+    return exe;
+}
+
+static int kbo_patch_static_pattern(
+    const char* label,
+    const uint8_t* pattern,
+    size_t pattern_size,
+    size_t patch_offset,
+    const uint8_t* expected,
+    const uint8_t* patch,
+    size_t patch_size)
+{
+    uint8_t* base = find_ootp_executable_pattern(pattern, pattern_size);
+    if (base == NULL) {
+        return 0;
+    }
+    return patch_static_bytes(label, base + patch_offset, expected, patch, patch_size);
+}
+
+static int install_single_division_allstar_patch(void)
+{
+    HMODULE exe = kbo_allstar_get_host_exe("KBO single-division all-star patch");
+    if (exe == NULL) {
+        return 0;
+    }
+
+    int ok = 0;
+
+    const uint8_t prep_context_may[] = {
+        0xF6, 0x42, 0x4C, 0x01,
+        0x0F, 0x84, 0xC0, 0x00, 0x00, 0x00
+    };
+    const uint8_t prep_expected[6] = {
+        0x0F, 0x84, 0xC0, 0x00, 0x00, 0x00
+    };
+    const uint8_t prep_patch[6] = {
+        0xE9, 0xC1, 0x00, 0x00, 0x00, 0x90
+    };
+    ok |= kbo_patch_static_pattern(
+        "KBO single-division all-star prep gate",
+        prep_context_may,
+        sizeof(prep_context_may),
+        4,
+        prep_expected,
+        prep_patch,
+        sizeof(prep_expected));
+    if (!ok) {
+        uint8_t* prep_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_PREP_SINGLE_DIVISION_GATE_RVA);
+        if (memory_range_readable(prep_gate, sizeof(prep_expected))) {
+            ok |= patch_static_bytes(
+                "KBO single-division all-star prep gate",
+                prep_gate,
+                prep_expected,
+                prep_patch,
+                sizeof(prep_expected));
+        }
+    }
+
+    const uint8_t roster_context_may[] = {
+        0x41, 0x8B, 0x46, 0x4C,
+        0xA8, 0x01,
+        0x74, 0x0D
+    };
+    const uint8_t roster_expected[2] = {0x74, 0x0D};
+    const uint8_t roster_patch[2] = {0xEB, 0x0D};
+    int roster_ok = kbo_patch_static_pattern(
+        "KBO single-division all-star roster gate",
+        roster_context_may,
+        sizeof(roster_context_may),
+        6,
+        roster_expected,
+        roster_patch,
+        sizeof(roster_expected));
+    if (!roster_ok) {
+        uint8_t* roster_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_ROSTER_SINGLE_DIVISION_GATE_RVA);
+        if (memory_range_readable(roster_gate, sizeof(roster_expected))) {
+            roster_ok = patch_static_bytes(
+                "KBO single-division all-star roster gate",
+                roster_gate,
+                roster_expected,
+                roster_patch,
+                sizeof(roster_expected));
+        }
+    }
+    ok |= roster_ok;
+
+    OotpBuildInfo build = read_ootp_build_info();
+    if (!build.ok || build.timestamp != 0x69F75E6Bu) {
+        uint8_t* schedule_day_gate = (uint8_t*)((uintptr_t)exe + OOTP27_IMPORT_SCHEDULE_ALLSTAR_DAY_GATE_RVA);
+        const uint8_t schedule_expected[2] = {0x74, 0x7F};
+        const uint8_t schedule_patch[2] = {0x90, 0x90};
+        if (memory_range_readable(schedule_day_gate, sizeof(schedule_expected))) {
+            ok |= patch_static_bytes(
+                "KBO all-star schedule day import gate",
+                schedule_day_gate,
+                schedule_expected,
+                schedule_patch,
+                sizeof(schedule_expected));
+        } else {
+            append_log_line("KBO all-star schedule day import gate skipped: old RVA unreadable");
+        }
+    } else {
+        append_log_line("KBO all-star schedule day import gate skipped: May build old gate signature absent");
+    }
+
+    return ok;
+}
+
+static int install_allstar_team_setup_single_division_patch(void)
+{
+    HMODULE exe = kbo_allstar_get_host_exe("KBO all-star team setup single-division patch");
+    if (exe == NULL) {
+        return 0;
+    }
+
+    const uint8_t context_may[] = {
+        0xF6, 0x41, 0x4C, 0x01,
+        0x0F, 0x85, 0x74, 0x02, 0x00, 0x00
+    };
+    const uint8_t expected[6] = {
+        0x0F, 0x85, 0x74, 0x02, 0x00, 0x00
+    };
+    const uint8_t patch[6] = {
+        0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+    };
+    int ok = kbo_patch_static_pattern(
+        "KBO all-star team setup single-division bail gate",
+        context_may,
+        sizeof(context_may),
+        4,
+        expected,
+        patch,
+        sizeof(expected));
+    if (ok) {
+        return 1;
+    }
+
+    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_TEAM_SETUP_SINGLE_DIVISION_BAIL_RVA);
+    if (!memory_range_readable(target, sizeof(expected))) {
+        append_logf("KBO all-star team setup single-division bail gate target unreadable target=%p", target);
+        return 0;
+    }
+
+    return patch_static_bytes(
+        "KBO all-star team setup single-division bail gate",
+        target,
+        expected,
+        patch,
+        sizeof(expected));
+}
+
+static int install_allstar_candidate_team_split_patch(void)
+{
+    HMODULE exe = kbo_allstar_get_host_exe("KBO all-star candidate team split patch");
+    if (exe == NULL) {
+        return 0;
+    }
+
+    KboAllstarLayout layout = kbo_get_allstar_layout();
+    const uint8_t may_expected[27] = {
+        0x45, 0x39, 0xAE, 0x44, 0x4A, 0x00, 0x00,
+        0x7E, 0x0C,
+        0x49, 0x8B, 0x86, 0x38, 0x4A, 0x00, 0x00,
+        0x4C, 0x8B, 0x30,
+        0xEB, 0x03,
+        0x4D, 0x8B, 0xF5,
+        0x45, 0x8B, 0xFD
+    };
+    const uint8_t april_expected[27] = {
+        0x45, 0x39, 0xAE, 0x3C, 0x4A, 0x00, 0x00,
+        0x7E, 0x0C,
+        0x49, 0x8B, 0x86, 0x30, 0x4A, 0x00, 0x00,
+        0x4C, 0x8B, 0x30,
+        0xEB, 0x03,
+        0x4D, 0x8B, 0xF5,
+        0x45, 0x8B, 0xFD
+    };
+
+    uint8_t* target = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
+    const uint8_t* expected = may_expected;
+    if (target == NULL) {
+        target = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
+        expected = april_expected;
+    }
+    if (target == NULL) {
+        target = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_SITE_RVA);
+        expected = april_expected;
+    }
+
+    if (!memory_range_readable(target, sizeof(april_expected))) {
+        append_logf("KBO all-star candidate team split hook target unreadable target=%p", target);
+        return 0;
+    }
+
+    int ok = 0;
+    if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
+        append_logf("KBO all-star candidate team split hook already installed target=%p", target);
+        ok = 1;
+    } else if (memcmp(target, expected, sizeof(april_expected)) != 0) {
+        log_patch_bytes_mismatch("KBO all-star candidate team split hook", target, sizeof(april_expected));
+    } else {
+        void* return_address = target + sizeof(april_expected);
+        void* seeded_address = target + (OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_DONE_RVA - OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_SITE_RVA);
+        void* vector_push_back_address = resolve_relative_call_target(target + 0xA5);
+        if (vector_push_back_address == NULL) {
+            OotpBuildInfo info = read_ootp_build_info();
+            uint32_t vector_rva = (info.ok && info.timestamp == 0x69F75E6Bu) ? 0x01CBAA40u : OOTP27_VECTOR_PUSH_BACK_RVA;
+            vector_push_back_address = (void*)((uintptr_t)exe + vector_rva);
+        }
+
+        uint8_t* stub = build_allstar_candidate_team_split_stub(
+            return_address,
+            seeded_address,
+            vector_push_back_address,
+            layout.subleague_array_offset,
+            layout.subleague_count_offset);
+        if (stub == NULL) {
+            append_log_line("failed to allocate KBO all-star candidate team split hook stub");
+        } else {
+            uint8_t patch[27] = {
+                0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+                0,0,0,0,0,0,0,0,
+                0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+            };
+            write_u64(&patch[6], (uint64_t)(uintptr_t)stub);
+
+            DWORD old_protect = 0;
+            if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+                append_logf("VirtualProtect failed for KBO all-star candidate team split hook error=%lu", GetLastError());
+            } else {
+                memcpy(target, patch, sizeof(patch));
+                FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+                DWORD ignored = 0;
+                VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+                append_logf(
+                    "installed KBO all-star candidate team split hook target=%p stub=%p return=%p seeded=%p vector_push=%p helper=%p",
+                    target,
+                    stub,
+                    return_address,
+                    seeded_address,
+                    vector_push_back_address,
+                    &ootp_kbo_seed_single_division_allstar_candidate_teams);
+                ok = 1;
+            }
+        }
+    }
+
+    return ok;
+}
+
+static int install_allstar_voting_begin_prepare_patch(void)
+{
+    HMODULE exe = kbo_allstar_get_host_exe("KBO all-star voting begin prepare patch");
+    if (exe == NULL) {
+        return 0;
+    }
+
+    KboAllstarLayout layout = kbo_get_allstar_layout();
+    const uint8_t may_expected[16] = {
+        0x8D, 0x53, 0xE4,
+        0x80, 0xBE, 0xF0, 0x45, 0x00, 0x00, 0x00,
+        0x0F, 0x84, 0xF3, 0x01, 0x00, 0x00
+    };
+    const uint8_t april_expected[16] = {
+        0x8D, 0x53, 0xE4,
+        0x80, 0xBE, 0xE8, 0x45, 0x00, 0x00, 0x00,
+        0x0F, 0x84, 0xF3, 0x01, 0x00, 0x00
+    };
+
+    uint8_t* target = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
+    const uint8_t* expected = may_expected;
+    if (target == NULL) {
+        target = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
+        expected = april_expected;
+    }
+    if (target == NULL) {
+        target = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_VOTING_BEGIN_PREP_SITE_RVA);
+        expected = april_expected;
+    }
+
+    if (!memory_range_readable(target, sizeof(april_expected))) {
+        append_logf("KBO all-star voting begin prepare hook target unreadable target=%p", target);
+        return 0;
+    }
+
+    int ok = 0;
+    if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
+        append_logf("KBO all-star voting begin prepare hook already installed target=%p", target);
+        ok = 1;
+    } else if (memcmp(target, expected, sizeof(april_expected)) != 0) {
+        log_patch_bytes_mismatch("KBO all-star voting begin prepare hook", target, sizeof(april_expected));
+    } else {
+        void* return_address = target + sizeof(april_expected);
+        void* no_game_address = target + (OOTP27_ALLSTAR_VOTING_BEGIN_NO_GAME_RVA - OOTP27_ALLSTAR_VOTING_BEGIN_PREP_SITE_RVA);
+        uint8_t* stub = build_allstar_voting_begin_prepare_stub(return_address, no_game_address, NULL, layout.game_flag_offset);
+        if (stub == NULL) {
+            append_log_line("failed to allocate KBO all-star voting begin prepare hook stub");
+        } else {
+            uint8_t patch[16] = {
+                0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+                0,0,0,0,0,0,0,0,
+                0x90, 0x90
+            };
+            write_u64(&patch[6], (uint64_t)(uintptr_t)stub);
+
+            DWORD old_protect = 0;
+            if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+                append_logf("VirtualProtect failed for KBO all-star voting begin prepare hook error=%lu", GetLastError());
+            } else {
+                memcpy(target, patch, sizeof(patch));
+                FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+                DWORD ignored = 0;
+                VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+                append_logf(
+                    "installed KBO all-star voting begin prepare hook target=%p stub=%p return=%p no_game=%p helper=%p",
+                    target,
+                    stub,
+                    return_address,
+                    no_game_address,
+                    &ootp_kbo_prepare_allstar_voting_begin);
+                ok = 1;
+            }
+        }
+    }
+
+    return ok;
+}
+
+static int install_allstar_events_prepare_patch(void)
+{
+    HMODULE exe = kbo_allstar_get_host_exe("KBO all-star events prepare patch");
+    if (exe == NULL) {
+        return 0;
+    }
+
+    KboAllstarLayout layout = kbo_get_allstar_layout();
+    const uint8_t may_expected[19] = {
+        0x41, 0x80, 0xBC, 0x24, 0xF0, 0x45, 0x00, 0x00, 0x00,
+        0x74, 0x08,
+        0x49, 0x8B, 0xCC,
+        0xE8, 0xB9, 0x55, 0xFF, 0xFF
+    };
+    const uint8_t april_expected[19] = {
+        0x41, 0x80, 0xBC, 0x24, 0xE8, 0x45, 0x00, 0x00, 0x00,
+        0x74, 0x08,
+        0x49, 0x8B, 0xCC,
+        0xE8, 0x89, 0x55, 0xFF, 0xFF
+    };
+
+    uint8_t* target = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
+    const uint8_t* expected = may_expected;
+    if (target == NULL) {
+        target = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
+        expected = april_expected;
+    }
+    if (target == NULL) {
+        target = (uint8_t*)((uintptr_t)exe + OOTP27_MAKE_ALLSTAR_EVENTS_PREP_SITE_RVA);
+        expected = april_expected;
+    }
+
+    if (!memory_range_readable(target, sizeof(april_expected))) {
+        append_logf("KBO all-star events prepare hook target unreadable target=%p", target);
+        return 0;
+    }
+
+    int ok = 0;
+    if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
+        append_logf("KBO all-star events prepare hook already installed target=%p", target);
+        ok = 1;
+    } else if (memcmp(target, expected, sizeof(april_expected)) != 0) {
+        log_patch_bytes_mismatch("KBO all-star events prepare hook", target, sizeof(april_expected));
+    } else {
+        void* return_address = target + sizeof(april_expected);
+        void* allstar_prep_address = resolve_relative_call_target(target + 14);
+        if (allstar_prep_address == NULL) {
+            append_log_line("KBO all-star events prepare hook skipped: prep call target unresolved");
+            return 0;
+        }
+
+        uint8_t* stub = build_allstar_events_prepare_stub(return_address, allstar_prep_address, layout.game_flag_offset);
+        if (stub == NULL) {
+            append_log_line("failed to allocate KBO all-star events prepare hook stub");
+        } else {
+            uint8_t patch[19] = {
+                0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+                0,0,0,0,0,0,0,0,
+                0x90, 0x90, 0x90, 0x90, 0x90
+            };
+            write_u64(&patch[6], (uint64_t)(uintptr_t)stub);
+
+            DWORD old_protect = 0;
+            if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+                append_logf("VirtualProtect failed for KBO all-star events prepare hook error=%lu", GetLastError());
+            } else {
+                memcpy(target, patch, sizeof(patch));
+                FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+                DWORD ignored = 0;
+                VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+                append_logf(
+                    "installed KBO all-star events prepare hook target=%p stub=%p return=%p prep=%p helper=%p",
+                    target,
+                    stub,
+                    return_address,
+                    allstar_prep_address,
+                    &ootp_kbo_prepare_allstar_events);
+                ok = 1;
+            }
+        }
+    }
+
+    return ok;
+}
+
+static int install_allstar_settings_ui_patch(void)
+{
+    HMODULE exe = kbo_allstar_get_host_exe("KBO all-star settings UI patch");
+    if (exe == NULL) {
+        return 0;
+    }
+
+    KboAllstarLayout layout = kbo_get_allstar_layout();
+    const uint8_t may_expected[16] = {
+        0x41, 0x0F, 0xB6, 0x95, 0xF0, 0x45, 0x00, 0x00,
+        0x48, 0x8B, 0xCF,
+        0xE8, 0x7C, 0xBC, 0x92, 0x00
+    };
+    const uint8_t april_expected[16] = {
+        0x41, 0x0F, 0xB6, 0x95, 0xE8, 0x45, 0x00, 0x00,
+        0x48, 0x8B, 0xCF,
+        0xE8, 0xB9, 0x60, 0x93, 0x00
+    };
+
+    uint8_t* value_site = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
+    const uint8_t* expected = may_expected;
+    if (value_site == NULL) {
+        value_site = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
+        expected = april_expected;
+    }
+    if (value_site == NULL) {
+        value_site = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_SETTINGS_ENABLE_VALUE_SITE_RVA);
+        expected = april_expected;
+    }
+
+    int ok_value = 0;
+    if (!memory_range_readable(value_site, sizeof(april_expected))) {
+        append_logf("KBO all-star settings value hook target unreadable target=%p", value_site);
+    } else if (is_rip_absolute_jump_patch(value_site) || is_rax_absolute_jump_patch(value_site)) {
+        append_logf("KBO all-star settings value hook already installed target=%p", value_site);
+        ok_value = 1;
+    } else if (memcmp(value_site, expected, sizeof(april_expected)) != 0) {
+        log_patch_bytes_mismatch("KBO all-star settings value hook", value_site, sizeof(april_expected));
+    } else {
+        void* return_address = value_site + sizeof(april_expected);
+        void* checkbox_set_bool_address = resolve_relative_call_target(value_site + 11);
+        if (checkbox_set_bool_address == NULL) {
+            OotpBuildInfo info = read_ootp_build_info();
+            uint32_t checkbox_rva = (info.ok && info.timestamp == 0x69F75E6Bu) ? 0x01E717D0u : OOTP27_UI_CHECKBOX_SET_BOOL_RVA;
+            checkbox_set_bool_address = (void*)((uintptr_t)exe + checkbox_rva);
+        }
+
+        uint8_t* stub = build_allstar_settings_enable_stub(return_address, checkbox_set_bool_address, layout.game_flag_offset);
+        if (stub == NULL) {
+            append_log_line("failed to allocate KBO all-star settings value hook stub");
+        } else {
+            uint8_t patch[16] = {
+                0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+                0,0,0,0,0,0,0,0,
+                0x90, 0x90
+            };
+            write_u64(&patch[6], (uint64_t)(uintptr_t)stub);
+
+            DWORD old_protect = 0;
+            if (!VirtualProtect(value_site, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+                append_logf("VirtualProtect failed for KBO all-star settings value hook error=%lu", GetLastError());
+            } else {
+                memcpy(value_site, patch, sizeof(patch));
+                FlushInstructionCache(GetCurrentProcess(), value_site, sizeof(patch));
+                DWORD ignored = 0;
+                VirtualProtect(value_site, sizeof(patch), old_protect, &ignored);
+                append_logf(
+                    "installed KBO all-star settings value hook target=%p stub=%p return=%p checkbox_set_bool=%p helper=%p",
+                    value_site,
+                    stub,
+                    return_address,
+                    checkbox_set_bool_address,
+                    &ootp_kbo_enable_allstar_setting);
+                ok_value = 1;
+            }
+        }
+    }
+
+    const uint8_t disable_context_may[] = {
+        0x41, 0x80, 0xBD, 0xF0, 0x45, 0x00, 0x00, 0x00,
+        0x0F, 0x84, 0x2A, 0x15, 0x00, 0x00
+    };
+    const uint8_t disable_expected_may[6] = {
+        0x0F, 0x84, 0x2A, 0x15, 0x00, 0x00
+    };
+    const uint8_t disable_patch_may[6] = {
+        0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+    };
+    int ok_disable = kbo_patch_static_pattern(
+        "KBO all-star settings single-division disable gate",
+        disable_context_may,
+        sizeof(disable_context_may),
+        8,
+        disable_expected_may,
+        disable_patch_may,
+        sizeof(disable_expected_may));
+    if (!ok_disable) {
+        uint8_t* disable_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_SETTINGS_SINGLE_DIVISION_DISABLE_RVA);
+        const uint8_t expected_disable_gate[2] = {0x74, 0x44};
+        const uint8_t patch_disable_gate[2] = {0xEB, 0x44};
+        if (memory_range_readable(disable_gate, sizeof(expected_disable_gate))) {
+            ok_disable = patch_static_bytes(
+                "KBO all-star settings single-division disable gate",
+                disable_gate,
+                expected_disable_gate,
+                patch_disable_gate,
+                sizeof(expected_disable_gate));
+        }
+    }
+
+    return ok_value || ok_disable;
+}

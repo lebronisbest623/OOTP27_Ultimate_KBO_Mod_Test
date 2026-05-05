@@ -5,6 +5,13 @@ static void write_u64(uint8_t* dst, uint64_t value)
     }
 }
 
+static void write_u32(uint8_t* dst, uint32_t value)
+{
+    for (int i = 0; i < 4; i++) {
+        dst[i] = (uint8_t)((value >> (i * 8)) & 0xffu);
+    }
+}
+
 static int is_r11_absolute_jump_patch(const uint8_t* target)
 {
     return target[0] == 0x49
@@ -68,4 +75,15 @@ static int patch_static_bytes(const char* label, uint8_t* target, const uint8_t*
 
     append_logf("installed %s target=%p", label, target);
     return 1;
+}
+
+static void* resolve_relative_call_target(uint8_t* call_site)
+{
+    if (call_site == NULL || !memory_range_readable(call_site, 5) || call_site[0] != 0xE8) {
+        return NULL;
+    }
+
+    int32_t rel = 0;
+    memcpy(&rel, call_site + 1, sizeof(rel));
+    return call_site + 5 + rel;
 }

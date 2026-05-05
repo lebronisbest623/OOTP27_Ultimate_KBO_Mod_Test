@@ -723,61 +723,7 @@ static int kbo_hub_append_unique_name_fragment(char fragments[][48], int* count,
 
 static void kbo_hub_copy_player_display_name(uint8_t* player, char* out, size_t out_size)
 {
-    if (out == NULL || out_size == 0) {
-        return;
-    }
-    out[0] = '\0';
-
-    uint32_t player_id = 0;
-    if (player != NULL && memory_range_readable(player + OOTP27_PLAYER_ID_OFFSET, sizeof(uint32_t))) {
-        player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
-    }
-
-    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
-        snprintf(out, out_size, player_id != 0 ? "Player #%u" : "Unknown player", player_id);
-        return;
-    }
-
-    char fragments[3][48] = {{0}};
-    int fragment_count = 0;
-    char text[48] = {0};
-
-    static const uint32_t likely_raw_name_offsets[] = {
-        0x08u, 0x10u, 0x18u, 0x20u, 0x28u, 0x30u
-    };
-    for (size_t i = 0; i < sizeof(likely_raw_name_offsets) / sizeof(likely_raw_name_offsets[0]); i++) {
-        text[0] = '\0';
-        if (kbo_hub_copy_raw_pointer_string(player, likely_raw_name_offsets[i], text, sizeof(text))) {
-            kbo_hub_append_unique_name_fragment(fragments, &fragment_count, text);
-        }
-    }
-
-    for (uint32_t offset = 0x00u; offset < 0x180u && fragment_count < 2; offset += 0x08u) {
-        text[0] = '\0';
-        if (kbo_hub_copy_raw_pointer_string(player, offset, text, sizeof(text))) {
-            kbo_hub_append_unique_name_fragment(fragments, &fragment_count, text);
-        }
-    }
-
-    for (uint32_t offset = 0x00u; offset < 0x180u && fragment_count < 2; offset += 0x08u) {
-        text[0] = '\0';
-        if (copy_ootp_string_object_text(player, offset, text, sizeof(text))) {
-            kbo_hub_append_unique_name_fragment(fragments, &fragment_count, text);
-        }
-    }
-
-    if (fragment_count >= 2) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-        snprintf(out, out_size, "%s %s", fragments[0], fragments[1]);
-#pragma GCC diagnostic pop
-    } else if (fragment_count == 1) {
-        snprintf(out, out_size, "%s", fragments[0]);
-    } else if (player_id != 0) {
-        snprintf(out, out_size, "Player #%u", player_id);
-    } else {
-        snprintf(out, out_size, "Unknown player");
-    }
+    kbo_copy_player_display_name(player, out, out_size);
 }
 
 static int kbo_hub_team_name_candidate_score(const char* text)

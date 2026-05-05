@@ -345,6 +345,176 @@ static void kbo_build_mod_info_hub_text(char* out, size_t out_size)
             "  This mod is not an official OOTP Developments product."));
 }
 
+static void kbo_build_asian_quota_hub_text(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    KboWindowTextBuffer buffer;
+    buffer.data     = out;
+    buffer.capacity = out_size;
+    buffer.length   = 0;
+
+    int configured_nations = kbo_load_asian_quota_nation_ids_once();
+    uint32_t team_foreign = 0u;
+    uint32_t team_asian = 0u;
+    uint32_t team_non_asian = 0u;
+    kbo_count_team_asian_quota_probe(g_kbo_hub_selected_team_id, &team_foreign, &team_asian, &team_non_asian);
+    uint32_t team_effective = kbo_effective_foreign_count_with_asian_quota(team_asian, team_non_asian);
+    kbo_window_text_appendf(&buffer, "ASIAN QUOTA CANDIDATES\r\n");
+    kbo_window_text_appendf(&buffer, "Configured nation IDs: %d\r\n\r\n", configured_nations);
+    kbo_window_text_appendf(
+        &buffer,
+        "Raw foreign: %u / Asian: %u / Non-Asian: %u / Effective foreign: %u\r\n\r\n",
+        team_foreign,
+        team_asian,
+        team_non_asian,
+        team_effective);
+    kbo_window_text_appendf(&buffer, "  PLAYER                   ID          TEAM       ACTIVE     NAT     STATUS\r\n");
+    kbo_window_text_appendf(&buffer, "----------------------------------------------------------------------------\r\n");
+
+    uintptr_t player_vector = 0;
+    int32_t player_count = 0;
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        kbo_window_text_appendf(&buffer, "Player vector was not available.\r\n");
+        return;
+    }
+
+    int rendered = 0;
+    for (int32_t i = 0; i < player_count && rendered < 500; i++) {
+        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if (!kbo_player_pointer_plausible(player_ptr)) {
+            continue;
+        }
+
+        uint8_t* player = (uint8_t*)player_ptr;
+        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+        uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+        uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+        uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+        if (player_id == 0u
+                || current_team_id != g_kbo_hub_selected_team_id
+                || !kbo_player_is_asian_quota_candidate(player)) {
+            continue;
+        }
+
+        char player_name[64] = {0};
+        char flags[64] = {0};
+        kbo_hub_copy_player_display_name(player, player_name, sizeof(player_name));
+        snprintf(flags, sizeof(flags), "%s%s%s%s%s",
+            player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] ? "Restricted " : "",
+            player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] ? "SecRestricted " : "",
+            player[OOTP27_PLAYER_DFA_FLAG_OFFSET] ? "DFA " : "",
+            player[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET] ? "Loan " : "",
+            player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] ? "Injured " : "");
+        if (flags[0] == '\0') {
+            snprintf(flags, sizeof(flags), "Active");
+        }
+
+        kbo_window_text_appendf(
+            &buffer,
+            "  %-24.24s %-11u %-10u %-10u %-7u %s\r\n",
+            player_name,
+            player_id,
+            current_team_id,
+            active_team_id,
+            nation_id,
+            flags);
+        rendered++;
+    }
+
+    if (rendered == 0) {
+        kbo_window_text_appendf(&buffer, "No Asian-quota candidates found for the selected team.\r\n");
+    }
+}
+
+static void kbo_build_asian_games_hub_text(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    KboWindowTextBuffer buffer;
+    buffer.data     = out;
+    buffer.capacity = out_size;
+    buffer.length   = 0;
+
+    LONG roster_count = g_kbo_asian_games_roster_count;
+    if (roster_count <= 0) {
+        kbo_load_asian_games_roster_csv("hotkey_text");
+        roster_count = g_kbo_asian_games_roster_count;
+    }
+    if (roster_count < 0 || roster_count > KBO_ASIAN_GAMES_ROSTER_SIZE) {
+        roster_count = 0;
+    }
+
+    int departed = 0;
+    int returned = 0;
+    int exempted = 0;
+    for (LONG i = 0; i < roster_count; i++) {
+        if (g_kbo_asian_games_roster[i].departed) { departed++; }
+        if (g_kbo_asian_games_roster[i].returned) { returned++; }
+        if (g_kbo_asian_games_roster[i].exempted) { exempted++; }
+    }
+
+    kbo_window_text_appendf(&buffer, "ASIAN GAMES ROSTER\r\n");
+    kbo_window_text_appendf(
+        &buffer,
+        "Year: %u / Selected: %ld / Departed: %d / Returned: %d / Exempted: %d\r\n\r\n",
+        g_kbo_asian_games_roster_year,
+        roster_count,
+        departed,
+        returned,
+        exempted);
+
+    if (roster_count == 0) {
+        kbo_window_text_appendf(&buffer, "No Asian Games roster CSV is available yet.\r\n");
+        kbo_window_text_appendf(&buffer, "Advance through the roster-selection event, then refresh this panel.\r\n");
+        return;
+    }
+
+    kbo_window_text_appendf(&buffer, "  #  PLAYER                   ID          TEAM       LG         AGE ROLE WC  STATUS\r\n");
+    kbo_window_text_appendf(&buffer, "----------------------------------------------------------------------------------------\r\n");
+
+    for (LONG i = 0; i < roster_count; i++) {
+        KboAsianGamesRosterEntry* entry = &g_kbo_asian_games_roster[i];
+        uintptr_t player_ptr = entry->player_ptr;
+        if (!kbo_player_pointer_plausible(player_ptr)) {
+            player_ptr = (uintptr_t)kbo_find_player_by_id(entry->player_id, NULL, NULL);
+        }
+
+        char player_name[64] = {0};
+        if (kbo_player_pointer_plausible(player_ptr)) {
+            kbo_hub_copy_player_display_name((uint8_t*)player_ptr, player_name, sizeof(player_name));
+        } else {
+            snprintf(player_name, sizeof(player_name), "Player #%u", entry->player_id);
+        }
+
+        const char* status = "Selected";
+        if (entry->returned) {
+            status = entry->exempted ? "Returned/Exempt" : "Returned";
+        } else if (entry->departed) {
+            status = "Departed/IL";
+        }
+
+        kbo_window_text_appendf(
+            &buffer,
+            "  %02ld %-24.24s %-11u %-10u %-10u %-3u %-4s %-3s %s\r\n",
+            i + 1,
+            player_name,
+            entry->player_id,
+            entry->original_team_id,
+            entry->original_league_id,
+            entry->age,
+            kbo_asian_games_role_bucket_label(entry->role),
+            entry->wildcard ? "YES" : "NO",
+            status);
+    }
+}
+
 static void kbo_build_settings_hub_text(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
@@ -374,6 +544,8 @@ static void kbo_build_hub_window_text(char* out, size_t out_size)
     switch (g_kbo_hub_selected_view) {
     case KBO_HUB_VIEW_MILITARY: kbo_build_military_service_window_text(out, out_size); return;
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: kbo_build_foreign_rights_window_text(out, out_size); return;
+    case KBO_HUB_VIEW_ASIAN_QUOTA: kbo_build_asian_quota_hub_text(out, out_size);       return;
+    case KBO_HUB_VIEW_ASIAN_GAMES: kbo_build_asian_games_hub_text(out, out_size);       return;
     case KBO_HUB_VIEW_MOD_INFO: kbo_build_mod_info_hub_text(out, out_size);            return;
     case KBO_HUB_VIEW_SETTINGS: kbo_build_settings_hub_text(out, out_size);            return;
     case KBO_HUB_VIEW_OVERVIEW:
@@ -395,7 +567,9 @@ static void kbo_refresh_hotkey_window(void)
     }
 
     kbo_build_hub_window_text(text, 65536u);
-    HFONT content_font = (g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY || g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS)
+    HFONT content_font = (g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_GAMES)
         ? g_kbo_hub_font_mono : g_kbo_hub_font_body;
     if (content_font != NULL) {
         SendMessageA(g_kbo_hotkey_edit, WM_SETFONT, (WPARAM)content_font, TRUE);

@@ -88,9 +88,11 @@ static HHOOK     g_kbo_game_getmsg_hook      = NULL;
 #define KBO_HUB_VIEW_OVERVIEW  0
 #define KBO_HUB_VIEW_MILITARY  1
 #define KBO_HUB_VIEW_FOREIGN_RIGHTS 2
-#define KBO_HUB_VIEW_MOD_INFO  3
-#define KBO_HUB_VIEW_SETTINGS  4
-#define KBO_HUB_NAV_COUNT      5
+#define KBO_HUB_VIEW_ASIAN_QUOTA 3
+#define KBO_HUB_VIEW_ASIAN_GAMES 4
+#define KBO_HUB_VIEW_MOD_INFO    5
+#define KBO_HUB_VIEW_SETTINGS    6
+#define KBO_HUB_NAV_COUNT        7
 #define KBO_HUB_LANG_KO 0
 #define KBO_HUB_LANG_EN 1
 
@@ -209,6 +211,8 @@ static const char* kbo_hub_nav_label(int index)
     case KBO_HUB_VIEW_OVERVIEW:       return kbo_hub_text("\xed\x99\x88",      "HOME");
     case KBO_HUB_VIEW_MILITARY:       return kbo_hub_text("\xea\xb5\xb0\xeb\xb3\xb5\xeb\xac\xb4",  "SERVICE");
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c",  "RIGHTS");
+    case KBO_HUB_VIEW_ASIAN_QUOTA:    return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x84\xec\xbf\xbc\xed\x84\xb0", "ASIAN");
+    case KBO_HUB_VIEW_ASIAN_GAMES:    return kbo_hub_text("AGAMES", "AGAMES");
     case KBO_HUB_VIEW_MOD_INFO:       return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
     case KBO_HUB_VIEW_SETTINGS:       return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",    "SETTINGS");
     default:                          return "";

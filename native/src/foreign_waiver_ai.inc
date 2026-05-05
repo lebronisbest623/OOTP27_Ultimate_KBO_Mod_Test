@@ -5,6 +5,7 @@
 static uint32_t read_u32_leading_number_from_file(const char* filename);
 static int get_kbo_foreign_waiver_cmd_path(char* out, size_t out_size);
 static int get_kbo_foreign_waiver_decisions_path(char* out, size_t out_size);
+static int get_kbo_asian_quota_nation_ids_path(char* out, size_t out_size);
 static int kbo_load_foreign_waiver_rights(void);
 static int kbo_persist_foreign_waiver_rights(void);
 static void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd);
@@ -35,15 +36,7 @@ static int get_kbo_foreign_waiver_event_path(char* out, size_t out_size)
     if (out == NULL || out_size < 2) {
         return 0;
     }
-
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-
-    snprintf(out, out_size, "%s\\OOTP-KBO\\foreign_waiver_negotiation_window.txt", local_app_data);
-    return 1;
+    return kbo_get_save_scoped_data_file("foreign_waiver_negotiation_window.txt", out, out_size);
 }
 
 /* ---- Korean foreign waiver negotiation window control ----
@@ -531,15 +524,7 @@ static int kbo_get_foreign_waiver_rights_path(char* out, size_t out_size)
     if (out == NULL || out_size < 2) {
         return 0;
     }
-
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-
-    snprintf(out, out_size, "%s\\OOTP-KBO\\foreign_waiver_rights.csv", local_app_data);
-    return 1;
+    return kbo_get_save_scoped_data_file("foreign_waiver_rights.csv", out, out_size);
 }
 
 static int get_kbo_foreign_waiver_decisions_path(char* out, size_t out_size)
@@ -547,14 +532,20 @@ static int get_kbo_foreign_waiver_decisions_path(char* out, size_t out_size)
     if (out == NULL || out_size < 2) {
         return 0;
     }
+    return kbo_get_save_scoped_data_file("foreign_waiver_decisions.csv", out, out_size);
+}
 
+static int get_kbo_asian_quota_nation_ids_path(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
     char local_app_data[MAX_PATH] = {0};
     DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
     if (got == 0 || got >= sizeof(local_app_data)) {
         return 0;
     }
-
-    snprintf(out, out_size, "%s\\OOTP-KBO\\foreign_waiver_decisions.csv", local_app_data);
+    snprintf(out, out_size, "%s\\OOTP-KBO\\asian_quota_nation_ids.txt", local_app_data);
     return 1;
 }
 
@@ -563,15 +554,7 @@ static int get_kbo_foreign_waiver_announcement_path(char* out, size_t out_size)
     if (out == NULL || out_size < 2) {
         return 0;
     }
-
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-
-    snprintf(out, out_size, "%s\\OOTP-KBO\\foreign_waiver_announcements.txt", local_app_data);
-    return 1;
+    return kbo_get_save_scoped_data_file("foreign_waiver_announcements.txt", out, out_size);
 }
 
 static int kbo_foreign_waiver_announcement_recorded(uint32_t event_yyyymmdd)
@@ -1393,6 +1376,18 @@ static int kbo_sync_active_foreign_waiver_right_to_memory(
 
 static void kbo_record_recent_foreign_offer_block(uint32_t player_id, uint32_t requester_team_id, uint32_t holder_team_id, uint32_t today);
 static int kbo_recent_foreign_offer_block_matches(uint32_t player_id, uint32_t today, uint32_t* out_requester_team_id, uint32_t* out_holder_team_id);
+static void kbo_log_asian_quota_offer_probe(
+    uint8_t* player,
+    uint32_t player_id,
+    int32_t team_id,
+    uint8_t original_result,
+    int32_t flag);
+static void kbo_log_asian_quota_signability_probe(
+    uint8_t* player,
+    uint32_t player_id,
+    int32_t team_id,
+    int original_signability,
+    uintptr_t caller_rva);
 
 static void kbo_log_foreign_signability_block_callsite(
     uintptr_t caller_rva,
@@ -1454,6 +1449,8 @@ static int kbo_enforce_foreign_waiver_signability(
     if (player_id == 0u) {
         return original_signability;
     }
+
+    kbo_log_asian_quota_signability_probe(player, player_id, requesting_team_id, original_signability, caller_rva);
 
     uint32_t today = 0;
     if (!kbo_get_foreign_waiver_current_yyyymmdd(&today)) {
@@ -1644,6 +1641,8 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
 
     uint8_t* player = (uint8_t*)player_ptr;
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    kbo_log_asian_quota_offer_probe(player, player_id, team_id, original_result, flag);
+
     uint32_t today = 0u;
     uint32_t holder_team_id = 0u;
     if (player_id == 0u
@@ -1958,15 +1957,7 @@ static int get_kbo_foreign_waiver_cmd_path(char* out, size_t out_size)
     if (out == NULL || out_size < 2) {
         return 0;
     }
-
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-
-    snprintf(out, out_size, "%s\\OOTP-KBO\\foreign_waiver_commands.txt", local_app_data);
-    return 1;
+    return kbo_get_save_scoped_data_file("foreign_waiver_commands.txt", out, out_size);
 }
 
 static int get_kbo_foreign_waiver_csv_path(char* out, size_t out_size)
@@ -1974,15 +1965,7 @@ static int get_kbo_foreign_waiver_csv_path(char* out, size_t out_size)
     if (out == NULL || out_size < 2) {
         return 0;
     }
-
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-
-    snprintf(out, out_size, "%s\\OOTP-KBO\\foreign_waiver_candidates.csv", local_app_data);
-    return 1;
+    return kbo_get_save_scoped_data_file("foreign_waiver_candidates.csv", out, out_size);
 }
 
 static int append_foreign_waiver_candidate_csv_header(HANDLE file)
@@ -2140,6 +2123,547 @@ static int kbo_player_is_foreign_for_kbo_rights(uint8_t* player)
 
     uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
     return nation_id != 0u && nation_id != OOTP27_KBO_KOREA_NATION_ID;
+}
+
+#define KBO_ASIAN_QUOTA_NATION_MAX 64
+
+static uint32_t g_kbo_asian_quota_nation_ids[KBO_ASIAN_QUOTA_NATION_MAX] = {0};
+static LONG g_kbo_asian_quota_nation_count = -1;
+
+static void kbo_add_asian_quota_nation_id(uint32_t nation_id, int* count)
+{
+    if (count == NULL || *count >= KBO_ASIAN_QUOTA_NATION_MAX
+            || nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
+        return;
+    }
+    for (int i = 0; i < *count; i++) {
+        if (g_kbo_asian_quota_nation_ids[i] == nation_id) {
+            return;
+        }
+    }
+    g_kbo_asian_quota_nation_ids[(*count)++] = nation_id;
+}
+
+static int kbo_load_asian_quota_nation_ids_once(void)
+{
+    LONG cached = InterlockedCompareExchange(&g_kbo_asian_quota_nation_count, -1, -1);
+    if (cached >= 0) {
+        return (int)cached;
+    }
+
+    LONG marker = InterlockedCompareExchange(&g_kbo_asian_quota_nation_count, -2, -1);
+    if (marker != -1) {
+        while ((cached = InterlockedCompareExchange(&g_kbo_asian_quota_nation_count, -2, -2)) == -2) {
+            Sleep(0);
+        }
+        return cached > 0 ? (int)cached : 0;
+    }
+
+    int count = 0;
+    kbo_add_asian_quota_nation_id(98u, &count); /* Japan */
+    kbo_add_asian_quota_nation_id(12u, &count); /* Australia */
+    kbo_add_asian_quota_nation_id(43u, &count); /* Taiwan */
+
+    char path[MAX_PATH] = {0};
+    if (get_kbo_asian_quota_nation_ids_path(path, sizeof(path))) {
+        HANDLE file = CreateFileA(
+            path,
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+        if (file != INVALID_HANDLE_VALUE) {
+            char raw[4096] = {0};
+            DWORD read = 0;
+            if (ReadFile(file, raw, sizeof(raw) - 1, &read, NULL) && read > 0) {
+                raw[read < sizeof(raw) ? read : sizeof(raw) - 1] = '\0';
+                char* cursor = raw;
+                while (*cursor != '\0' && count < KBO_ASIAN_QUOTA_NATION_MAX) {
+                    while (*cursor != '\0' && (*cursor < '0' || *cursor > '9')) {
+                        cursor++;
+                    }
+                    if (*cursor == '\0') {
+                        break;
+                    }
+                    char* tail = cursor;
+                    unsigned long value = strtoul(cursor, &tail, 10);
+                    if (tail == cursor) {
+                        break;
+                    }
+                    if (value > 0ul && value <= 1000000ul) {
+                        kbo_add_asian_quota_nation_id((uint32_t)value, &count);
+                    }
+                    cursor = tail;
+                }
+            }
+            CloseHandle(file);
+        }
+    }
+
+    append_logf("asian quota: loaded nation_ids=%d path=%s", count, path);
+    InterlockedExchange(&g_kbo_asian_quota_nation_count, (LONG)count);
+    return count;
+}
+
+static int kbo_nation_is_asian_quota_candidate(uint32_t nation_id)
+{
+    if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
+        return 0;
+    }
+
+    int count = kbo_load_asian_quota_nation_ids_once();
+    for (int i = 0; i < count; i++) {
+        if (g_kbo_asian_quota_nation_ids[i] == nation_id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int kbo_player_is_asian_quota_candidate(uint8_t* player)
+{
+    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+    return kbo_nation_is_asian_quota_candidate(*(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET));
+}
+
+static void kbo_count_team_asian_quota_probe(
+    uint32_t team_id,
+    uint32_t* out_foreign_count,
+    uint32_t* out_asian_quota_count,
+    uint32_t* out_non_asian_foreign_count)
+{
+    if (out_foreign_count != NULL) { *out_foreign_count = 0u; }
+    if (out_asian_quota_count != NULL) { *out_asian_quota_count = 0u; }
+    if (out_non_asian_foreign_count != NULL) { *out_non_asian_foreign_count = 0u; }
+    if (team_id == 0u) {
+        return;
+    }
+
+    uintptr_t player_vector = 0;
+    int32_t player_count = 0;
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        return;
+    }
+
+    uint32_t foreign_count = 0u;
+    uint32_t asian_count = 0u;
+    uint32_t non_asian_count = 0u;
+    for (int32_t i = 0; i < player_count; i++) {
+        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if (!kbo_player_pointer_plausible(player_ptr)) {
+            continue;
+        }
+        uint8_t* player = (uint8_t*)player_ptr;
+        if (*(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) != team_id) {
+            continue;
+        }
+        uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+        if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
+            continue;
+        }
+        foreign_count++;
+        if (kbo_nation_is_asian_quota_candidate(nation_id)) {
+            asian_count++;
+        } else {
+            non_asian_count++;
+        }
+    }
+
+    if (out_foreign_count != NULL) { *out_foreign_count = foreign_count; }
+    if (out_asian_quota_count != NULL) { *out_asian_quota_count = asian_count; }
+    if (out_non_asian_foreign_count != NULL) { *out_non_asian_foreign_count = non_asian_count; }
+}
+
+static uint32_t kbo_effective_foreign_count_with_asian_quota(uint32_t asian_count, uint32_t non_asian_foreign_count)
+{
+    return non_asian_foreign_count + (asian_count > 0u ? asian_count - 1u : 0u);
+}
+
+static void kbo_count_active_asian_quota_by_position(
+    uintptr_t team_ptr,
+    uint32_t* out_asian_hitters,
+    uint32_t* out_asian_pitchers)
+{
+    if (out_asian_hitters != NULL) { *out_asian_hitters = 0u; }
+    if (out_asian_pitchers != NULL) { *out_asian_pitchers = 0u; }
+    if (team_ptr == 0 || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return;
+    }
+
+    uint32_t asian_hitters = 0u;
+    uint32_t asian_pitchers = 0u;
+    uint32_t* active_ids = (uint32_t*)(team_ptr + OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET);
+    for (uint32_t i = 0; i < OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT; i++) {
+        uint32_t player_id = active_ids[i];
+        if (player_id == 0u) {
+            continue;
+        }
+
+        uint8_t* player = kbo_find_player_by_id(player_id, NULL, NULL);
+        if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+            continue;
+        }
+        uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+        if (!kbo_nation_is_asian_quota_candidate(nation_id)) {
+            continue;
+        }
+
+        if (*(uint8_t*)(player + OOTP27_PLAYER_POSITION_GROUP_OFFSET) == 1u) {
+            asian_pitchers++;
+        } else {
+            asian_hitters++;
+        }
+    }
+
+    if (out_asian_hitters != NULL) { *out_asian_hitters = asian_hitters; }
+    if (out_asian_pitchers != NULL) { *out_asian_pitchers = asian_pitchers; }
+}
+
+static int32_t kbo_apply_active_asian_quota_count_exception(
+    uintptr_t team_ptr,
+    int32_t original_count,
+    int pitcher_count)
+{
+    if (original_count <= 0) {
+        return original_count;
+    }
+
+    uint32_t asian_hitters = 0u;
+    uint32_t asian_pitchers = 0u;
+    kbo_count_active_asian_quota_by_position(team_ptr, &asian_hitters, &asian_pitchers);
+
+    int use_exception = 0;
+    if (pitcher_count) {
+        use_exception = (asian_pitchers > 0u && asian_hitters == 0u);
+    } else {
+        use_exception = (asian_hitters > 0u);
+    }
+    if (!use_exception) {
+        return original_count;
+    }
+
+    int32_t adjusted = original_count - 1;
+    static volatile LONG log_count = 0;
+    LONG slot = InterlockedIncrement(&log_count);
+    if (slot <= 160) {
+        uint32_t team_id = 0u;
+        if (memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
+        }
+        append_logf(
+            "asian quota active foreign slot exception team=%u type=%s original=%d adjusted=%d asian_hitters=%u asian_pitchers=%u",
+            team_id,
+            pitcher_count ? "pitcher" : "hitter",
+            original_count,
+            adjusted,
+            asian_hitters,
+            asian_pitchers);
+    }
+    return adjusted;
+}
+
+__declspec(noinline) int32_t ootp_kbo_active_foreign_hitter_count_wrapper(
+    uintptr_t team_ptr,
+    uintptr_t original_func_ptr)
+{
+    typedef int32_t (__fastcall *OriginalFn)(uintptr_t);
+    int32_t original = ((OriginalFn)original_func_ptr)(team_ptr);
+    return kbo_apply_active_asian_quota_count_exception(team_ptr, original, 0);
+}
+
+__declspec(noinline) int32_t ootp_kbo_active_foreign_pitcher_count_wrapper(
+    uintptr_t team_ptr,
+    uintptr_t original_func_ptr)
+{
+    typedef int32_t (__fastcall *OriginalFn)(uintptr_t);
+    int32_t original = ((OriginalFn)original_func_ptr)(team_ptr);
+    return kbo_apply_active_asian_quota_count_exception(team_ptr, original, 1);
+}
+
+static void kbo_count_active_foreign_for_asian_quota(
+    uintptr_t team_ptr,
+    uint32_t* out_asian_hitters,
+    uint32_t* out_asian_pitchers,
+    uint32_t* out_non_asian_hitters,
+    uint32_t* out_non_asian_pitchers)
+{
+    if (out_asian_hitters != NULL) { *out_asian_hitters = 0u; }
+    if (out_asian_pitchers != NULL) { *out_asian_pitchers = 0u; }
+    if (out_non_asian_hitters != NULL) { *out_non_asian_hitters = 0u; }
+    if (out_non_asian_pitchers != NULL) { *out_non_asian_pitchers = 0u; }
+    if (team_ptr == 0 || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return;
+    }
+
+    uint32_t asian_hitters = 0u;
+    uint32_t asian_pitchers = 0u;
+    uint32_t non_asian_hitters = 0u;
+    uint32_t non_asian_pitchers = 0u;
+    uint32_t* active_ids = (uint32_t*)(team_ptr + OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET);
+    for (uint32_t i = 0; i < OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT; i++) {
+        uint32_t player_id = active_ids[i];
+        if (player_id == 0u) {
+            continue;
+        }
+        uint8_t* player = kbo_find_player_by_id(player_id, NULL, NULL);
+        if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+            continue;
+        }
+        uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+        if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
+            continue;
+        }
+        int pitcher = (*(uint8_t*)(player + OOTP27_PLAYER_POSITION_GROUP_OFFSET) == 1u);
+        int asian = kbo_nation_is_asian_quota_candidate(nation_id);
+        if (pitcher) {
+            if (asian) { asian_pitchers++; } else { non_asian_pitchers++; }
+        } else {
+            if (asian) { asian_hitters++; } else { non_asian_hitters++; }
+        }
+    }
+
+    if (out_asian_hitters != NULL) { *out_asian_hitters = asian_hitters; }
+    if (out_asian_pitchers != NULL) { *out_asian_pitchers = asian_pitchers; }
+    if (out_non_asian_hitters != NULL) { *out_non_asian_hitters = non_asian_hitters; }
+    if (out_non_asian_pitchers != NULL) { *out_non_asian_pitchers = non_asian_pitchers; }
+}
+
+static uint8_t kbo_callup_foreign_limit_allows_with_asian_quota(
+    uintptr_t team_ptr,
+    uintptr_t player_ptr,
+    int32_t active_count,
+    int32_t limit,
+    int check_type)
+{
+    if (active_count < limit) {
+        return 1u;
+    }
+    if (limit <= 0 || player_ptr == 0 || !kbo_player_pointer_plausible(player_ptr)) {
+        return 0u;
+    }
+
+    uint8_t* player = (uint8_t*)player_ptr;
+    uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+    if (!kbo_nation_is_asian_quota_candidate(nation_id)) {
+        return 0u;
+    }
+
+    uint32_t asian_hitters = 0u;
+    uint32_t asian_pitchers = 0u;
+    uint32_t non_asian_hitters = 0u;
+    uint32_t non_asian_pitchers = 0u;
+    kbo_count_active_foreign_for_asian_quota(
+        team_ptr,
+        &asian_hitters,
+        &asian_pitchers,
+        &non_asian_hitters,
+        &non_asian_pitchers);
+
+    int candidate_pitcher = (*(uint8_t*)(player + OOTP27_PLAYER_POSITION_GROUP_OFFSET) == 1u);
+    uint32_t effective_after = 0u;
+    if (check_type == 1) {
+        uint32_t asian_after = asian_hitters + (candidate_pitcher ? 0u : 1u);
+        effective_after = kbo_effective_foreign_count_with_asian_quota(asian_after, non_asian_hitters);
+    } else if (check_type == 2) {
+        uint32_t asian_after = asian_pitchers + (candidate_pitcher ? 1u : 0u);
+        effective_after = kbo_effective_foreign_count_with_asian_quota(asian_after, non_asian_pitchers);
+    } else {
+        uint32_t asian_after = asian_hitters + asian_pitchers + 1u;
+        uint32_t non_asian_after = non_asian_hitters + non_asian_pitchers;
+        effective_after = kbo_effective_foreign_count_with_asian_quota(asian_after, non_asian_after);
+    }
+
+    uint8_t allowed = (effective_after <= (uint32_t)limit) ? 1u : 0u;
+    static volatile LONG log_count = 0;
+    LONG slot = InterlockedIncrement(&log_count);
+    if (slot <= 160) {
+        uint32_t team_id = 0u;
+        if (memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
+        }
+        append_logf(
+            "asian quota callup limit check team=%u player=%u nation=%u type=%s active_count=%d limit=%d effective_after=%u allowed=%u active_asian_h=%u active_asian_p=%u active_non_asian_h=%u active_non_asian_p=%u",
+            team_id,
+            *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
+            nation_id,
+            check_type == 1 ? "hitter" : (check_type == 2 ? "pitcher" : "total"),
+            active_count,
+            limit,
+            effective_after,
+            (uint32_t)allowed,
+            asian_hitters,
+            asian_pitchers,
+            non_asian_hitters,
+            non_asian_pitchers);
+    }
+    return allowed;
+}
+
+__declspec(noinline) uint8_t ootp_kbo_callup_foreign_hitter_limit_allows_wrapper(
+    uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit)
+{
+    return kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 1);
+}
+
+__declspec(noinline) uint8_t ootp_kbo_callup_foreign_pitcher_limit_allows_wrapper(
+    uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit)
+{
+    return kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 2);
+}
+
+__declspec(noinline) uint8_t ootp_kbo_callup_foreign_total_limit_allows_wrapper(
+    uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit)
+{
+    return kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 3);
+}
+
+static int kbo_asian_quota_exception_available_for_candidate(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t* out_team_foreign,
+    uint32_t* out_team_asian,
+    uint32_t* out_team_non_asian,
+    uint32_t* out_team_effective,
+    uint32_t* out_effective_after)
+{
+    uint32_t foreign_count = 0u;
+    uint32_t asian_count = 0u;
+    uint32_t non_asian_count = 0u;
+    kbo_count_team_asian_quota_probe(team_id, &foreign_count, &asian_count, &non_asian_count);
+
+    uint32_t effective = kbo_effective_foreign_count_with_asian_quota(asian_count, non_asian_count);
+    int candidate_is_asian = kbo_player_is_asian_quota_candidate(candidate);
+    int exception_available = candidate_is_asian && asian_count == 0u;
+    uint32_t effective_after = effective;
+    if (!exception_available) {
+        effective_after++;
+    }
+
+    if (out_team_foreign != NULL) { *out_team_foreign = foreign_count; }
+    if (out_team_asian != NULL) { *out_team_asian = asian_count; }
+    if (out_team_non_asian != NULL) { *out_team_non_asian = non_asian_count; }
+    if (out_team_effective != NULL) { *out_team_effective = effective; }
+    if (out_effective_after != NULL) { *out_effective_after = effective_after; }
+    return exception_available;
+}
+
+static void kbo_log_asian_quota_signability_probe(
+    uint8_t* player,
+    uint32_t player_id,
+    int32_t team_id,
+    int original_signability,
+    uintptr_t caller_rva)
+{
+    if (player == NULL || player_id == 0u || team_id <= 0
+            || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
+            || !kbo_player_is_foreign_for_kbo_rights(player)) {
+        return;
+    }
+
+    static volatile LONG log_count = 0;
+    LONG slot = InterlockedIncrement(&log_count);
+    if (slot > 240) {
+        return;
+    }
+
+    uint32_t team_foreign = 0u;
+    uint32_t team_asian = 0u;
+    uint32_t team_non_asian = 0u;
+    uint32_t team_effective = 0u;
+    uint32_t effective_after = 0u;
+    int exception_available = kbo_asian_quota_exception_available_for_candidate(
+        (uint32_t)team_id,
+        player,
+        &team_foreign,
+        &team_asian,
+        &team_non_asian,
+        &team_effective,
+        &effective_after);
+    uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+    uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+
+    append_logf(
+        "asian quota signability probe player=%u requester_team=%d nation=%u asian_candidate=%d exception_available=%d"
+        " original=%d team_foreign_raw=%u team_asian=%u team_non_asian=%u team_effective_foreign=%u effective_after=%u current_team=%u active_team=%u caller_rva=0x%llx",
+        player_id,
+        team_id,
+        nation_id,
+        kbo_player_is_asian_quota_candidate(player),
+        exception_available,
+        original_signability,
+        team_foreign,
+        team_asian,
+        team_non_asian,
+        team_effective,
+        effective_after,
+        current_team_id,
+        active_team_id,
+        (unsigned long long)caller_rva);
+}
+
+static void kbo_log_asian_quota_offer_probe(
+    uint8_t* player,
+    uint32_t player_id,
+    int32_t team_id,
+    uint8_t original_result,
+    int32_t flag)
+{
+    if (player == NULL || player_id == 0u || team_id <= 0
+            || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
+            || !kbo_player_is_foreign_for_kbo_rights(player)) {
+        return;
+    }
+
+    static volatile LONG log_count = 0;
+    LONG slot = InterlockedIncrement(&log_count);
+    if (slot > 160) {
+        return;
+    }
+
+    uint32_t foreign_count = 0u;
+    uint32_t asian_count = 0u;
+    uint32_t non_asian_count = 0u;
+    uint32_t effective_count = 0u;
+    uint32_t effective_after = 0u;
+    uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+    uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    uint32_t current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+    uint32_t today = 0u;
+    kbo_get_foreign_waiver_current_yyyymmdd(&today);
+    int exception_available = kbo_asian_quota_exception_available_for_candidate(
+        (uint32_t)team_id,
+        player,
+        &foreign_count,
+        &asian_count,
+        &non_asian_count,
+        &effective_count,
+        &effective_after);
+
+    append_logf(
+        "asian quota offer probe player=%u requester_team=%d nation=%u asian_candidate=%d original=%u flag=%d"
+        " exception_available=%d team_foreign_raw=%u team_asian=%u team_non_asian_foreign=%u team_effective_foreign=%u effective_after=%u current_team=%u active_team=%u current_league=%u today=%u",
+        player_id,
+        team_id,
+        nation_id,
+        kbo_nation_is_asian_quota_candidate(nation_id),
+        (uint32_t)original_result,
+        flag,
+        exception_available,
+        foreign_count,
+        asian_count,
+        non_asian_count,
+        effective_count,
+        effective_after,
+        current_team_id,
+        active_team_id,
+        current_league_id,
+        today);
 }
 
 static uint32_t kbo_get_player_original_team_id(uint8_t* player)

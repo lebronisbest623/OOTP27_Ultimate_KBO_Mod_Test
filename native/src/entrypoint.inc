@@ -16,13 +16,23 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
         return 0;
     }
 
+    load_allstar_team_rules_once();
     install_kbo_military_service_entry_patch();
     install_kbo_military_status_update_patch();
+    install_single_division_allstar_patch();
+    install_allstar_team_setup_single_division_patch();
+    install_allstar_voting_begin_prepare_patch();
+    install_allstar_candidate_team_split_patch();
+    append_log_line("KBO all-star events prepare hook disabled: protects base schedule/custom events");
+    install_allstar_settings_ui_patch();
     install_kbo_player_team_signability_patch();
     install_kbo_player_offer_eligibility_patch();
     install_kbo_ai_fa_signability_random_fallback_patch();
     install_kbo_fa_submit_offer_probe_patch();
     install_kbo_ai_fa_status_candidate_insert_patch();
+    install_kbo_active_foreign_hitter_count_patch();
+    install_kbo_active_foreign_pitcher_count_patch();
+    install_kbo_callup_foreign_limit_branch_patches();
     start_kbo_foreign_waiver_scanner_thread();
     start_kbo_custom_event_monitor();
     start_kbo_military_days_tick_thread();
