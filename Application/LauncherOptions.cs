@@ -3,7 +3,6 @@ record LauncherOptions(
     string? DllPath,
     int? AttachPid,
     bool AttachExisting,
-    bool? EnableMilitaryDraftPool,
     bool? EnableForeignWaiverAi,
     bool? EnableSingleDivisionAllstarEvents,
     bool DryRun,
@@ -17,7 +16,6 @@ record LauncherOptions(
         string? dllPath = null;
         int? attachPid = null;
         var attachExisting = false;
-        bool? enableMilitaryDraftPool = null;
         bool? enableForeignWaiverAi = null;
         bool? enableSingleDivisionAllstarEvents = null;
         var dryRun = false;
@@ -47,12 +45,6 @@ record LauncherOptions(
                     break;
                 case "--attach-existing":
                     attachExisting = true;
-                    break;
-                case "--enable-military-draft-pool":
-                    enableMilitaryDraftPool = true;
-                    break;
-                case "--disable-military-draft-pool":
-                    enableMilitaryDraftPool = false;
                     break;
                 case "--enable-foreign-waiver-ai":
                     enableForeignWaiverAi = true;
@@ -90,7 +82,6 @@ record LauncherOptions(
             dllPath,
             attachPid,
             attachExisting,
-            enableMilitaryDraftPool,
             enableForeignWaiverAi,
             enableSingleDivisionAllstarEvents,
             dryRun,
@@ -115,9 +106,6 @@ record LauncherOptions(
           --dll PATH                   Native DLL to load into OOTP.
           --attach-existing            Attach to the single running OOTP process.
           --attach-pid PID             Attach to a specific OOTP process id.
-          --enable-military-draft-pool Enable the military draft pool flag (default when run with no args).
-          --disable-military-draft-pool
-                                       Disable the military draft pool flag.
           --enable-foreign-waiver-ai    Enable foreign waiver assistant log.
           --disable-foreign-waiver-ai   Disable foreign waiver assistant log.
           --enable-single-division-allstar-events

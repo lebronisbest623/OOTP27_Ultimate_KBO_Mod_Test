@@ -45,13 +45,13 @@ public sealed class KboFlagsTests : IDisposable
         File.WriteAllText(ConfigPath, """
         {
           "flags": {
-            "enable_military_draft_pool": "enabled",
+            "enable_foreign_waiver_ai": "enabled",
             "enable_single_division_allstar_events.txt": false
           }
         }
         """);
 
-        Assert.True(global::KboFlags.ReadKboFlag(ConfigPath, "enable_military_draft_pool.txt"));
+        Assert.True(global::KboFlags.ReadKboFlag(ConfigPath, "enable_foreign_waiver_ai.txt"));
         Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_single_division_allstar_events.txt"));
     }
 
@@ -74,13 +74,36 @@ public sealed class KboFlagsTests : IDisposable
         Assert.False(flags["disable_foreign_injury_replacement"]);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void WriteKboSingleDivisionAllstarEventsFlag_UpdatesAllNativeGateFlags(bool enabled)
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(ConfigPath, """
+        {
+          "enable_launcher_injection": true
+        }
+        """);
+
+        global::KboFlags.WriteKboSingleDivisionAllstarEventsFlag(ConfigPath, enabled);
+
+        var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
+        Assert.True(flags["enable_launcher_injection"]);
+        Assert.Equal(enabled, flags["enable_single_division_allstar_runtime_patches"]);
+        Assert.Equal(enabled, flags["enable_single_division_allstar_settings_patch"]);
+        Assert.Equal(enabled, flags["enable_single_division_allstar_voting_hook"]);
+        Assert.Equal(enabled, flags["enable_single_division_allstar_events"]);
+    }
+
     [Fact]
-    public void ImportLegacyKboFlagFilesIfMissing_CopiesBooleanEnableDisableFlagsOnly()
+    public void ImportLegacyKboFlagFilesIfMissing_CopiesKnownBooleanFlagsOnly()
     {
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(Path.Combine(tempDir, "enable_launcher_injection.txt"), "1");
         File.WriteAllText(Path.Combine(tempDir, "enable_experimental_runtime_hooks.txt"), "enabled");
         File.WriteAllText(Path.Combine(tempDir, "disable_foreign_injury_replacement.txt"), "off");
+        File.WriteAllText(Path.Combine(tempDir, "enable_player_profile_ocr_click_v1.txt"), "1");
         File.WriteAllText(Path.Combine(tempDir, "kbo_league_id.txt"), "100");
         File.WriteAllText(Path.Combine(tempDir, "foreign_waiver_negotiation_window.txt"), "2026");
 
@@ -90,6 +113,7 @@ public sealed class KboFlagsTests : IDisposable
         Assert.True(flags["enable_launcher_injection"]);
         Assert.True(flags["enable_experimental_runtime_hooks"]);
         Assert.False(flags["disable_foreign_injury_replacement"]);
+        Assert.False(flags.ContainsKey("enable_player_profile_ocr_click_v1"));
         Assert.False(flags.ContainsKey("kbo_league_id"));
         Assert.False(flags.ContainsKey("foreign_waiver_negotiation_window"));
     }

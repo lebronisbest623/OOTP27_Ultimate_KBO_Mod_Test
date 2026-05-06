@@ -117,7 +117,6 @@ KBOLauncher.exe --ootp "D:\Steam\steamapps\common\Out of the Park Baseball 27\oo
 |---|---|---|
 | `enable_launcher_injection` | off | 런처 자동 주입 활성화 |
 | `enable_foreign_waiver_ai` | on | AI 보류권 자동 결정 |
-| `enable_military_draft_pool` | on | 군복무 선수단 활성화 |
 | `enable_single_division_allstar_events` | on | 단일 디비전 올스타전 |
 | `kbo_league_id.txt` | 100 | KBO 리그 ID 오버라이드 |
 

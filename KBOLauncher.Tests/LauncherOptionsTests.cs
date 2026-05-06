@@ -12,7 +12,6 @@ public sealed class LauncherOptionsTests
             "--dll", @"C:\mods\KBOFix.dll",
             "--attach-existing",
             "--disable-foreign-waiver-ai",
-            "--enable-military-draft-pool",
             "--",
             "no3d",
             "debug"
@@ -22,7 +21,6 @@ public sealed class LauncherOptionsTests
         Assert.Equal(@"C:\mods\KBOFix.dll", options.DllPath);
         Assert.True(options.AttachExisting);
         Assert.False(options.EnableForeignWaiverAi);
-        Assert.True(options.EnableMilitaryDraftPool);
         Assert.Equal(["no3d", "debug"], options.OotpArgs);
     }
 
@@ -38,7 +36,6 @@ public sealed class LauncherOptionsTests
     {
         var options = global::LauncherOptions.Parse([
             "--attach-pid", "1234",
-            "--disable-military-draft-pool",
             "--enable-foreign-waiver-ai",
             "--disable-single-division-allstar-events",
             "--dry-run",
@@ -47,7 +44,6 @@ public sealed class LauncherOptionsTests
         ]);
 
         Assert.Equal(1234, options.AttachPid);
-        Assert.False(options.EnableMilitaryDraftPool);
         Assert.True(options.EnableForeignWaiverAi);
         Assert.False(options.EnableSingleDivisionAllstarEvents);
         Assert.True(options.DryRun);

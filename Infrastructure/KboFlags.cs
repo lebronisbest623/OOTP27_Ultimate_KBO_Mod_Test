@@ -3,6 +3,46 @@ using static LauncherPaths;
 
 internal static class KboFlags
 {
+    private static readonly string[] SingleDivisionAllstarFlagFiles =
+    [
+        "enable_single_division_allstar_runtime_patches.txt",
+        "enable_single_division_allstar_settings_patch.txt",
+        "enable_single_division_allstar_voting_hook.txt",
+        "enable_single_division_allstar_events.txt",
+    ];
+
+    private static readonly HashSet<string> LegacyImportFlagKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "disable_foreign_injury_replacement",
+        "disable_foreign_waiver_legacy_auto_detector",
+        "disable_kbo_ai_fa_status_candidate_insert_hook",
+        "disable_kbo_custom_foreign_policy",
+        "disable_kbo_sangmu_fa_block_core",
+        "enable_experimental_runtime_hooks",
+        "enable_fa_requalification",
+        "enable_foreign_waiver_ai",
+        "enable_foreign_waiver_background_scanner",
+        "enable_foreign_waiver_event_probe",
+        "enable_kbo_ai_fa_fallback_patch",
+        "enable_kbo_asian_quota_probe_logs",
+        "enable_kbo_callup_foreign_limit_patch",
+        "enable_kbo_custom_foreign_offer_logs",
+        "enable_kbo_diagnostic_minimal_runtime",
+        "enable_kbo_fa_signability_hooks",
+        "enable_kbo_fix",
+        "enable_kbo_offer_eligibility_patch",
+        "enable_kbo_player_team_signability_patch",
+        "enable_kbo_sangmu_offer_only",
+        "enable_kbo_sangmu_signability_only",
+        "enable_kbo_season_phase_monitor",
+        "enable_kbo_submit_offer_probe_patch",
+        "enable_launcher_injection",
+        "enable_single_division_allstar_events",
+        "enable_single_division_allstar_runtime_patches",
+        "enable_single_division_allstar_settings_patch",
+        "enable_single_division_allstar_voting_hook",
+    };
+
     public static void WriteKboFlag(string fileName, string label, bool enabled)
     {
         var key = NormalizeKboFlagKey(fileName);
@@ -13,9 +53,16 @@ internal static class KboFlags
 
     internal static void WriteKboFlagValue(string configPath, string fileName, bool enabled)
     {
-        var key = NormalizeKboFlagKey(fileName);
+        WriteKboFlagValues(configPath, [fileName], enabled);
+    }
+
+    internal static void WriteKboFlagValues(string configPath, IEnumerable<string> fileNames, bool enabled)
+    {
         var flags = ReadKboFlagConfig(configPath);
-        flags[key] = enabled;
+        foreach (var fileName in fileNames)
+        {
+            flags[NormalizeKboFlagKey(fileName)] = enabled;
+        }
         Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
         var json = JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(configPath, json + Environment.NewLine);
@@ -46,6 +93,10 @@ internal static class KboFlags
             }
 
             var key = NormalizeKboFlagKey(fileName);
+            if (!LegacyImportFlagKeys.Contains(key))
+            {
+                continue;
+            }
             if (flags.ContainsKey(key))
             {
                 continue;
@@ -200,11 +251,6 @@ internal static class KboFlags
             : key;
     }
     
-    public static void WriteKboMilitaryDraftPoolFlag(bool enabled)
-    {
-        WriteKboFlag("enable_military_draft_pool.txt", "Military draft pool flag", enabled);
-    }
-    
     public static void WriteKboForeignWaiverAiFlag(bool enabled)
     {
         WriteKboFlag("enable_foreign_waiver_ai.txt", "Foreign waiver AI flag", enabled);
@@ -212,6 +258,13 @@ internal static class KboFlags
     
     public static void WriteKboSingleDivisionAllstarEventsFlag(bool enabled)
     {
-        WriteKboFlag("enable_single_division_allstar_events.txt", "Single-division all-star events flag", enabled);
+        var path = GetKboFlagConfigPath();
+        WriteKboSingleDivisionAllstarEventsFlag(path, enabled);
+        Console.WriteLine($"Single-division all-star flags: {path} = {(enabled ? "enabled" : "disabled")}");
+    }
+
+    internal static void WriteKboSingleDivisionAllstarEventsFlag(string configPath, bool enabled)
+    {
+        WriteKboFlagValues(configPath, SingleDivisionAllstarFlagFiles, enabled);
     }
 }

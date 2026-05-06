@@ -75,7 +75,6 @@ internal static class LauncherApp
             options = options with
             {
                 DllPath = defaultDll,
-                EnableMilitaryDraftPool = true,
                 EnableForeignWaiverAi = true,
                 EnableSingleDivisionAllstarEvents = true,
                 AttachExisting = existing.Count > 0,
@@ -139,10 +138,6 @@ internal static class LauncherApp
             }
         }
         
-        if (options.EnableMilitaryDraftPool is not null)
-        {
-            WriteKboMilitaryDraftPoolFlag(options.EnableMilitaryDraftPool.Value);
-        }
         if (options.EnableForeignWaiverAi is not null)
         {
             WriteKboForeignWaiverAiFlag(options.EnableForeignWaiverAi.Value);

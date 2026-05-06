@@ -70,6 +70,8 @@ Runtime boolean feature switches live in one JSON file:
 
 Keys use the old flag-file basename without `.txt`; for example `enable_foreign_waiver_ai.txt` becomes `"enable_foreign_waiver_ai": true`. The launcher reads and writes this JSON for managed flags, and native `read_kbo_localappdata_flag_file()` maps existing call sites to the same JSON keys. Status files, command files, seeds, CSVs, and save-scoped persistence remain separate data files.
 
+The launcher treats the single-division All-Star option as a feature suite. Enabling it writes these native gates together: `enable_single_division_allstar_runtime_patches`, `enable_single_division_allstar_settings_patch`, `enable_single_division_allstar_voting_hook`, and `enable_single_division_allstar_events`. The events hook is nested under the runtime patch gate in native startup, so `enable_single_division_allstar_events` alone is not enough.
+
 ## Native Source Layout
 
 `native/src/*.inc` is the public include layer for `native/KBOFix.c`. Files directly under `native/src/` should be thin feature entrypoints or assemblers only. Implementation bodies live in matching domain folders:
