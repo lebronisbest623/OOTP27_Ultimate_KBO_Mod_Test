@@ -76,37 +76,59 @@ static int install_allstar_settings_ui_patch(void)
         }
     }
 
-    const uint8_t disable_context_may[] = {
-        0x41, 0x80, 0xBD, 0xF0, 0x45, 0x00, 0x00, 0x00,
-        0x0F, 0x84, 0x2A, 0x15, 0x00, 0x00
+    const uint8_t disabled_message_context_may[] = {
+        0x45, 0x84, 0xFF,
+        0x41, 0xBF, 0x01, 0x00, 0x00, 0x00,
+        0x74, 0x44,
+        0x45, 0x33, 0xC0,
+        0x48, 0x8D, 0x15
     };
-    const uint8_t disable_expected_may[6] = {
-        0x0F, 0x84, 0x2A, 0x15, 0x00, 0x00
+    const uint8_t disabled_message_expected_may[2] = {
+        0x74, 0x44
     };
-    const uint8_t disable_patch_may[6] = {
-        0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+    const uint8_t disabled_message_patch_may[2] = {
+        0xEB, 0x44
     };
     int ok_disable = kbo_patch_static_pattern(
-        "KBO all-star settings single-division disable gate",
-        disable_context_may,
-        sizeof(disable_context_may),
-        8,
-        disable_expected_may,
-        disable_patch_may,
-        sizeof(disable_expected_may));
+        "KBO all-star settings disabled-message gate",
+        disabled_message_context_may,
+        sizeof(disabled_message_context_may),
+        9,
+        disabled_message_expected_may,
+        disabled_message_patch_may,
+        sizeof(disabled_message_expected_may));
     if (!ok_disable) {
         uint8_t* disable_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_SETTINGS_SINGLE_DIVISION_DISABLE_RVA);
         const uint8_t expected_disable_gate[2] = {0x74, 0x44};
         const uint8_t patch_disable_gate[2] = {0xEB, 0x44};
         if (memory_range_readable(disable_gate, sizeof(expected_disable_gate))) {
             ok_disable = patch_static_bytes(
-                "KBO all-star settings single-division disable gate",
+                "KBO all-star settings disabled-message gate",
                 disable_gate,
                 expected_disable_gate,
                 patch_disable_gate,
                 sizeof(expected_disable_gate));
         }
     }
+
+    const uint8_t game_flag_skip_context_may[] = {
+        0x41, 0x80, 0xBD, 0xF0, 0x45, 0x00, 0x00, 0x00,
+        0x0F, 0x84, 0x2A, 0x15, 0x00, 0x00
+    };
+    const uint8_t game_flag_skip_expected_may[6] = {
+        0x0F, 0x84, 0x2A, 0x15, 0x00, 0x00
+    };
+    const uint8_t game_flag_skip_patch_may[6] = {
+        0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+    };
+    int ok_game_flag_skip = kbo_patch_static_pattern(
+        "KBO all-star settings game-flag skip gate",
+        game_flag_skip_context_may,
+        sizeof(game_flag_skip_context_may),
+        8,
+        game_flag_skip_expected_may,
+        game_flag_skip_patch_may,
+        sizeof(game_flag_skip_expected_may));
 
     const uint8_t one_division_warning_context_may[] = {
         0x41, 0x80, 0xBD, 0xF0, 0x45, 0x00, 0x00, 0x00,
@@ -148,5 +170,5 @@ static int install_allstar_settings_ui_patch(void)
         }
     }
 
-    return ok_value || ok_disable || ok_warning;
+    return ok_value || ok_disable || ok_game_flag_skip || ok_warning;
 }

@@ -1,7 +1,7 @@
 /* All-Star shared typedefs, state, and layout selection. */
 
-typedef void* (__fastcall *OotpStringAssignFn)(void* string_object, const char* text);
 typedef void (__fastcall *OotpVectorPushBack)(void* vector, void* value);
+typedef void (__fastcall *OotpMakeAllstarGameEventsFn)(uintptr_t league_ptr, uint8_t force_create);
 
 typedef struct KboAllstarTeamRow {
     uint16_t year;
@@ -29,6 +29,11 @@ static LONG g_allstar_team_rules_loaded = 0;
 static LONG g_allstar_candidate_seed_log_count = 0;
 static LONG g_allstar_voting_prepare_log_count = 0;
 static LONG g_allstar_team_name_log_count = 0;
+static volatile LONG g_allstar_native_event_generation_in_progress = 0;
+static volatile LONG g_allstar_native_event_generation_done = 0;
+static volatile uintptr_t g_allstar_schedule_import_league_ptr = 0;
+
+static int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* source);
 
 static KboAllstarLayout kbo_get_allstar_layout(void)
 {

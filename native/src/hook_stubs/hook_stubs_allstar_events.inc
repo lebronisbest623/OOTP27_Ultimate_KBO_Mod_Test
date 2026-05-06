@@ -36,6 +36,48 @@ static uint8_t* build_allstar_events_prepare_stub(void* return_address, void* al
     return memory;
 }
 
+static uint8_t* build_allstar_schedule_import_capture_stub(void* return_address, uint32_t game_flag_offset)
+{
+    uint8_t code[] = {
+        0x50,                                           // push rax
+        0x51,                                           // push rcx
+        0x52,                                           // push rdx
+        0x41, 0x50,                                     // push r8
+        0x41, 0x51,                                     // push r9
+        0x41, 0x52,                                     // push r10
+        0x41, 0x53,                                     // push r11
+        0x48, 0x83, 0xEC, 0x28,                         // sub rsp, 0x28
+        0x49, 0x8B, 0xCD,                               // mov rcx, r13
+        0x48, 0xB8,                                     // mov rax, helper
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xD0,                                     // call rax
+        0x48, 0x83, 0xC4, 0x28,                         // add rsp, 0x28
+        0x41, 0x5B,                                     // pop r11
+        0x41, 0x5A,                                     // pop r10
+        0x41, 0x59,                                     // pop r9
+        0x41, 0x58,                                     // pop r8
+        0x5A,                                           // pop rdx
+        0x59,                                           // pop rcx
+        0x58,                                           // pop rax
+        0x41, 0xC6, 0x85, 0,0,0,0, 0x01,                // mov byte ptr [r13 + game_flag_offset], 1
+        0x48, 0xB8,                                     // mov rax, return_address
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xE0                                      // jmp rax
+    };
+
+    write_u64(&code[20], (uint64_t)(uintptr_t)&ootp_kbo_capture_allstar_schedule_import_league);
+    write_u32(&code[48], game_flag_offset);
+    write_u64(&code[55], (uint64_t)(uintptr_t)return_address);
+
+    uint8_t* memory = (uint8_t*)VirtualAlloc(NULL, sizeof(code), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    if (memory == NULL) {
+        return NULL;
+    }
+    memcpy(memory, code, sizeof(code));
+    FlushInstructionCache(GetCurrentProcess(), memory, sizeof(code));
+    return memory;
+}
+
 static uint8_t* build_allstar_voting_begin_prepare_stub(void* return_address, void* no_game_address, void* allstar_team_setup_address, uint32_t game_flag_offset)
 {
     uint8_t code[91] = {

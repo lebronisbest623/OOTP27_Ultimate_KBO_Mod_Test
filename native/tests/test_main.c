@@ -23,8 +23,34 @@ static int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, ui
     return 0;
 }
 
+static int ascii_equals_ignore_case(const char* a, const char* b)
+{
+    if (a == NULL || b == NULL) {
+        return 0;
+    }
+
+    while (*a != '\0' && *b != '\0') {
+        char ca = *a;
+        char cb = *b;
+        if (ca >= 'A' && ca <= 'Z') {
+            ca = (char)(ca - 'A' + 'a');
+        }
+        if (cb >= 'A' && cb <= 'Z') {
+            cb = (char)(cb - 'A' + 'a');
+        }
+        if (ca != cb) {
+            return 0;
+        }
+        a++;
+        b++;
+    }
+
+    return *a == '\0' && *b == '\0';
+}
+
 #include "../src/military_service/military_service_date.inc"
 #include "../src/military_service/military_service_parse.inc"
+#include "../src/allstar/allstar_csv_parse.inc"
 
 static void test_date_serial(void)
 {
@@ -85,11 +111,64 @@ static void test_military_date_round_trip(void)
     printf("test_military_date_round_trip: PASS\n");
 }
 
+static void test_allstar_csv_parse(void)
+{
+    assert(kbo_parse_allstar_side("Nanum") == 1u);
+    assert(kbo_parse_allstar_side("Dream") == 2u);
+    assert(kbo_parse_allstar_side("North") == 1u);
+    assert(kbo_parse_allstar_side("South") == 2u);
+    assert(kbo_parse_allstar_side("Western") == 1u);
+    assert(kbo_parse_allstar_side("Eastern") == 2u);
+    assert(kbo_parse_allstar_side("unknown") == 0u);
+
+    int year_col = -1;
+    int team_id_col = -1;
+    int name_col = -1;
+    int allstar_col = -1;
+    kbo_csv_find_allstar_team_columns(
+        "yearID,teamID,name,allstar_team",
+        &year_col,
+        &team_id_col,
+        &name_col,
+        &allstar_col);
+    assert(year_col == 0);
+    assert(team_id_col == 1);
+    assert(name_col == 2);
+    assert(allstar_col == 3);
+
+    uint16_t year = 0u;
+    char team_id[16] = {0};
+    char team_name[96] = {0};
+    char current_city[64] = {0};
+    uint8_t side = 0u;
+    kbo_csv_extract_allstar_team_fields(
+        "2026,LG,LG Twins,Nanum",
+        year_col,
+        team_id_col,
+        name_col,
+        allstar_col,
+        &year,
+        team_id,
+        sizeof(team_id),
+        team_name,
+        sizeof(team_name),
+        current_city,
+        sizeof(current_city),
+        &side);
+    assert(year == 2026u);
+    assert(strcmp(team_id, "LG") == 0);
+    assert(strcmp(team_name, "LG Twins") == 0);
+    assert(strcmp(current_city, "LG") == 0);
+    assert(side == 1u);
+    printf("test_allstar_csv_parse: PASS\n");
+}
+
 int main(void)
 {
     test_date_serial();
     test_military_csv_parse();
     test_military_date_round_trip();
+    test_allstar_csv_parse();
     printf("All tests passed.\n");
     return 0;
 }

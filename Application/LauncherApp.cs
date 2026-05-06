@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using static InjectionTargetResolver;
 using static InjectionRosterMarkerWaiter;
 using static InjectedModuleDetector;
@@ -9,6 +10,7 @@ using static KboSeedFiles;
 using static LauncherGuardStatus;
 using static LauncherLog;
 using static LauncherPaths;
+using static OotpScheduleSpoofer;
 using static ProcessDiscovery;
 
 internal static class LauncherApp
@@ -46,6 +48,7 @@ internal static class LauncherApp
         }
         
         EnsureKboLeagueIdConfig();
+        EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
         EnsureBundledKboDataFile("foreign_injury_replacements_seed.csv", "Foreign injury replacement seed");
         EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
@@ -85,6 +88,7 @@ internal static class LauncherApp
         Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
         
         Log(logPath, $"resolved_ootp={exePath}");
+        LogLauncherBuild(logPath);
         if (isDefaultRun && options.DllPath is null)
         {
             Log(logPath, "default_injection=disabled reason=missing_enable_launcher_injection_json_flag");
@@ -145,6 +149,21 @@ internal static class LauncherApp
         if (options.EnableSingleDivisionAllstarEvents is not null)
         {
             WriteKboSingleDivisionAllstarEventsFlag(options.EnableSingleDivisionAllstarEvents.Value);
+        }
+
+        var allstarBootstrapRequested = options.DllPath is not null
+            && supportedOotpBuild is not null
+            && ReadKboFlag("enable_single_division_allstar_runtime_patches.txt")
+            && ReadKboFlag("enable_single_division_allstar_events.txt");
+        if (allstarBootstrapRequested && !options.DryRun)
+        {
+            var spoofResult = EnsureAllKboScheduleSpoofFiles(exePath, message => Log(logPath, message));
+            Console.WriteLine(
+                $"All-star schedule spoof: scanned={spoofResult.ScannedYears} written={spoofResult.WrittenFiles} unchanged={spoofResult.UnchangedFiles} failed={spoofResult.FailedFiles}");
+        }
+        else if (allstarBootstrapRequested)
+        {
+            Console.WriteLine("Dry-run: all-star schedule spoof would run before OOTP launch.");
         }
         
         if (options.AttachPid is not null || options.AttachExisting)
@@ -241,7 +260,54 @@ internal static class LauncherApp
         
         if (options.DllPath is not null)
         {
-            var injectionTarget = WaitForStableOotpProcess(launched, exePath, launchStarted, TimeSpan.FromSeconds(30), logPath);
+            string? earlyInjectableDllPath = null;
+            var earlyInjectedPids = new HashSet<int>();
+            void TryPresaveEarlyInject(Process candidate)
+            {
+                try
+                {
+                    if (!allstarBootstrapRequested || candidate.HasExited || !earlyInjectedPids.Add(candidate.Id))
+                    {
+                        return;
+                    }
+
+                    if (IsKboFixAlreadyLoaded(candidate.Id, logPath))
+                    {
+                        Log(logPath, $"early_inject_skipped pid={candidate.Id} reason=already_loaded");
+                        return;
+                    }
+
+                    earlyInjectableDllPath ??= PrepareInjectableDllCopy(options.DllPath, logPath);
+                    InjectDll(candidate.Id, earlyInjectableDllPath, logPath);
+                    Log(logPath, $"early_inject pid={candidate.Id} reason=presave_allstar_candidate");
+                }
+                catch (Exception ex)
+                {
+                    var pid = 0;
+                    try { pid = candidate.Id; } catch { }
+                    Log(logPath, $"early_inject_candidate_failed pid={pid} error=\"{ex.Message.Replace("\"", "'")}\"");
+                }
+            }
+
+            var injectionTarget = WaitForStableOotpProcess(
+                launched,
+                exePath,
+                launchStarted,
+                TimeSpan.FromSeconds(30),
+                logPath,
+                TryPresaveEarlyInject);
+            if (IsKboFixAlreadyLoaded(injectionTarget.Id, logPath))
+            {
+                Console.WriteLine($"KBOFix is already loaded in pid={injectionTarget.Id}; skipping injection.");
+                Log(logPath, $"inject_skipped pid={injectionTarget.Id} reason=already_loaded");
+            }
+            else
+            {
+                var injectableDllPath = earlyInjectableDllPath ?? PrepareInjectableDllCopy(options.DllPath, logPath);
+                InjectDll(injectionTarget.Id, injectableDllPath, logPath);
+                Log(logPath, $"early_inject pid={injectionTarget.Id} reason=presave_allstar_bootstrap");
+            }
+
             var rosterMarkerInfo = WaitForMarkedCurrentSave(
                 injectionTarget.Id,
                 MarkedSaveWaitTimeout,
@@ -253,19 +319,21 @@ internal static class LauncherApp
                 Log(logPath, $"inject_blocked pid={injectionTarget.Id} reason=missing_roster_marker {KboRosterMarkerGuard.FormatLogStatus(rosterMarkerInfo)}");
                 return 9;
             }
-        
-            if (IsKboFixAlreadyLoaded(injectionTarget.Id, logPath))
-            {
-                Console.WriteLine($"KBOFix is already loaded in pid={injectionTarget.Id}; skipping injection.");
-                Log(logPath, $"inject_skipped pid={injectionTarget.Id} reason=already_loaded");
-                return 0;
-            }
-        
-            var injectableDllPath = PrepareInjectableDllCopy(options.DllPath, logPath);
-            InjectDll(injectionTarget.Id, injectableDllPath, logPath);
         }
 
         return 0;
         
+    }
+
+    private static void LogLauncherBuild(string logPath)
+    {
+        var assemblyPath = Assembly.GetExecutingAssembly().Location;
+        var assemblyWriteTime = File.Exists(assemblyPath)
+            ? File.GetLastWriteTime(assemblyPath).ToString("O")
+            : "";
+
+        Log(
+            logPath,
+            $"launcher_build assembly=\"{assemblyPath}\" base_dir=\"{AppContext.BaseDirectory}\" write_time=\"{assemblyWriteTime}\"");
     }
 }

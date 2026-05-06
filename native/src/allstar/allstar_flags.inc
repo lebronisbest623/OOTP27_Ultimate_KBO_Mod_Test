@@ -60,23 +60,29 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
 {
     (void)parameter;
 
-    for (int attempt = 1; attempt <= 30; attempt++) {
+    for (int attempt = 1; attempt <= 180; attempt++) {
         uint32_t league_id = kbo_get_foreign_waiver_league_id();
         if (league_id == 0u) {
             league_id = kbo_resolve_kbo_league_id();
         }
 
+        patch_kbo_allstar_team_names_for_league_id(league_id, "startup_retry");
+        patch_kbo_allstar_team_names_for_known_exhibition_teams("startup_retry");
+
         uintptr_t league_ptr = kbo_find_allstar_league_ptr(league_id);
         if (league_ptr != 0) {
             append_logf("KBO all-star force retry found league attempt=%d league_id=%u league=%p", attempt, league_id, (void*)league_ptr);
             enable_kbo_allstar_flags(league_ptr, "startup_retry");
-            return 0;
+            if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")
+                    && run_kbo_allstar_native_event_generation(league_ptr, "startup_retry")) {
+                return 0;
+            }
         }
 
         Sleep(1000);
     }
 
-    append_log_line("KBO all-star force retry gave up: league not found");
+    append_log_line("KBO all-star force retry gave up: league not found after 180 attempts");
     return 0;
 }
 

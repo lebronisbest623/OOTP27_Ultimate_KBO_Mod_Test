@@ -7,6 +7,11 @@ static int get_kbo_allstar_teams_csv_path(char* path, size_t path_size)
     }
     path[0] = '\0';
 
+    if (kbo_get_save_scoped_data_file("allstar_teams.csv", path, path_size)
+            && GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
+        return 1;
+    }
+
     HMODULE exe = GetModuleHandleA(NULL);
     char host_stats_dir[MAX_PATH] = {0};
     if (exe != NULL) {

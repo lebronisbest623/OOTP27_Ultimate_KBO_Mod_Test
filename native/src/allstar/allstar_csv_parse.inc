@@ -76,6 +76,24 @@ static void kbo_allstar_csv_read_cell(const char** cursor, char* out, size_t out
     *cursor = p;
 }
 
+static void kbo_allstar_copy_text(char* out, size_t out_size, const char* value)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (value == NULL) {
+        return;
+    }
+
+    size_t len = strlen(value);
+    if (len >= out_size) {
+        len = out_size - 1u;
+    }
+    memcpy(out, value, len);
+    out[len] = '\0';
+}
+
 static int kbo_is_allstar_team_header_name(const char* name)
 {
     return ascii_equals_ignore_case(name, "allstar_team")
@@ -94,21 +112,35 @@ static uint8_t kbo_parse_allstar_side(const char* text)
         return 0;
     }
     if (ascii_equals_ignore_case(text, "1")
-            || ascii_equals_ignore_case(text, "east")
-            || ascii_equals_ignore_case(text, "eastern")
-            || ascii_equals_ignore_case(text, "e")
-            || ascii_equals_ignore_case(text, "dong")
-            || ascii_equals_ignore_case(text, "donggun")
-            || ascii_equals_ignore_case(text, "dong-gun")) {
-        return 1;
-    }
-    if (ascii_equals_ignore_case(text, "2")
+            || ascii_equals_ignore_case(text, "nanum")
+            || ascii_equals_ignore_case(text, "na")
+            || ascii_equals_ignore_case(text, "north")
+            || ascii_equals_ignore_case(text, "northern")
+            || ascii_equals_ignore_case(text, "n")
+            || ascii_equals_ignore_case(text, "buk")
+            || ascii_equals_ignore_case(text, "bukbu")
             || ascii_equals_ignore_case(text, "west")
             || ascii_equals_ignore_case(text, "western")
             || ascii_equals_ignore_case(text, "w")
             || ascii_equals_ignore_case(text, "seo")
             || ascii_equals_ignore_case(text, "seogun")
             || ascii_equals_ignore_case(text, "seo-gun")) {
+        return 1;
+    }
+    if (ascii_equals_ignore_case(text, "2")
+            || ascii_equals_ignore_case(text, "dream")
+            || ascii_equals_ignore_case(text, "dr")
+            || ascii_equals_ignore_case(text, "south")
+            || ascii_equals_ignore_case(text, "southern")
+            || ascii_equals_ignore_case(text, "s")
+            || ascii_equals_ignore_case(text, "nam")
+            || ascii_equals_ignore_case(text, "nambu")
+            || ascii_equals_ignore_case(text, "east")
+            || ascii_equals_ignore_case(text, "eastern")
+            || ascii_equals_ignore_case(text, "e")
+            || ascii_equals_ignore_case(text, "dong")
+            || ascii_equals_ignore_case(text, "donggun")
+            || ascii_equals_ignore_case(text, "dong-gun")) {
         return 2;
     }
     return 0;
@@ -223,11 +255,11 @@ static void kbo_csv_extract_allstar_team_fields(
                 *year = (uint16_t)parsed_year;
             }
         } else if (col == team_id_col && team_id != NULL && team_id_size > 0) {
-            snprintf(team_id, team_id_size, "%s", cell);
+            kbo_allstar_copy_text(team_id, team_id_size, cell);
         } else if (col == name_col) {
-            snprintf(name, sizeof(name), "%s", cell);
+            kbo_allstar_copy_text(name, sizeof(name), cell);
             if (team_name != NULL && team_name_size > 0) {
-                snprintf(team_name, team_name_size, "%s", cell);
+                kbo_allstar_copy_text(team_name, team_name_size, cell);
             }
         } else if (col == allstar_col) {
             *side = kbo_parse_allstar_side(cell);

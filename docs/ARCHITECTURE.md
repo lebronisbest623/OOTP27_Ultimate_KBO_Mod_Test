@@ -563,7 +563,7 @@ native/src/allstar/
 - `allstar_string.inc`: OOTP string assignment helper resolution
 - `allstar_csv_parse.inc`: All-Star team-split CSV parsing helpers
 - `allstar_csv_store.inc`: CSV path resolution, row storage, and lazy loading
-- `allstar_team_patch.inc`: Eastern/Western team name and team-id assignment
+- `allstar_team_patch.inc`: Nanum/Dream and Futures North/South team name assignment
 - `allstar_candidate_seed.inc`: candidate-team seeding wrapper
 - `allstar_flags.inc`: league flag enforcement and startup retry
 - `allstar_event_wrappers.inc`: All-Star event/voting preparation wrappers
@@ -795,6 +795,7 @@ Bundled seed CSVs live under:
 
 ```text
 data/seeds/
+  allstar_teams.csv
   foreign_replacement_players_seed.csv
   military_service_seed.csv
 ```

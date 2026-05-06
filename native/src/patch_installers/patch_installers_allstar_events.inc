@@ -160,4 +160,3 @@ static int install_allstar_events_prepare_patch(void)
 
     return ok;
 }
-

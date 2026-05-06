@@ -8,7 +8,8 @@ internal static class InjectionTargetResolver
         string exePath,
         DateTimeOffset launchStarted,
         TimeSpan timeout,
-        string logPath)
+        string logPath,
+        Action<Process>? onCandidate = null)
     {
         var deadline = DateTimeOffset.Now + timeout;
         Process? lastCandidate = null;
@@ -31,6 +32,7 @@ internal static class InjectionTargetResolver
             if (lastCandidate is not null)
             {
                 Log(logPath, $"candidate_for_injection pid={lastCandidate.Id} path={TryGetProcessPath(lastCandidate)}");
+                onCandidate?.Invoke(lastCandidate);
                 Thread.Sleep(1500);
     
                 try

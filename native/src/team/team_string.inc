@@ -41,6 +41,52 @@ static int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_of
     return copy_limited_ascii_string(text, out, out_size);
 }
 
+static OotpCoreStringAssignFn get_ootp_string_assign_fn(void)
+{
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        return NULL;
+    }
+
+    OotpCoreStringAssignFn assign_string = (OotpCoreStringAssignFn)((uintptr_t)exe + OOTP27_PISD_STRING_ASSIGN_RVA);
+    if (!memory_range_readable((void*)assign_string, 16)) {
+        return NULL;
+    }
+
+    return assign_string;
+}
+
+static int assign_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, const char* text)
+{
+    if (object_base == NULL || text == NULL || text[0] == '\0') {
+        return 0;
+    }
+
+    uint8_t* string_object = object_base + string_offset;
+    if (!memory_range_readable(string_object, 0x18)) {
+        return 0;
+    }
+
+    OotpCoreStringAssignFn assign_string = get_ootp_string_assign_fn();
+    if (assign_string == NULL) {
+        return 0;
+    }
+
+    assign_string(string_object, text);
+    return 1;
+}
+
+static int assign_ootp_string_object_text_if_different(uint8_t* object_base, uint32_t string_offset, const char* text)
+{
+    char current[128] = {0};
+    if (copy_ootp_string_object_text(object_base, string_offset, current, sizeof(current))
+            && ascii_equals_ignore_case(current, text)) {
+        return 0;
+    }
+
+    return assign_ootp_string_object_text(object_base, string_offset, text);
+}
+
 static int team_has_ootp_string_text(uint8_t* team, const char* expected)
 {
     if (team == NULL || expected == NULL || expected[0] == '\0') {

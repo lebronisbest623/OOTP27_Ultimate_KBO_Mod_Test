@@ -37,24 +37,18 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
     uint32_t fallback_league_id = kbo_allstar_read_u32(league, layout.league_id_fallback_offset);
     uint32_t league_year = *(uint32_t*)(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
     uint8_t old_allstar_game = league[layout.game_flag_offset];
-    uint32_t old_team_a = *(uint32_t*)(league + layout.team_a_offset);
-    uint32_t old_team_b = *(uint32_t*)(league + layout.team_b_offset);
 
     enable_kbo_allstar_flags(league_ptr, "allstar_voting_begin");
 
     LONG log_index = InterlockedIncrement(&g_allstar_voting_prepare_log_count);
     if (log_index <= 20) {
         append_logf(
-            "prepared KBO all-star voting begin league=%p league_id=%u/%u year=%u game=%u->%u teams %u/%u->%u/%u",
+            "prepared KBO all-star voting begin league=%p league_id=%u/%u year=%u game=%u->%u",
             league,
             league_id,
             fallback_league_id,
             league_year,
             old_allstar_game,
-            league[layout.game_flag_offset],
-            old_team_a,
-            old_team_b,
-            *(uint32_t*)(league + layout.team_a_offset),
-            *(uint32_t*)(league + layout.team_b_offset));
+            league[layout.game_flag_offset]);
     }
 }

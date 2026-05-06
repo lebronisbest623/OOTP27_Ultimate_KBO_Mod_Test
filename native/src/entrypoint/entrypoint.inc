@@ -1,5 +1,9 @@
 static HANDLE g_kbo_process_instance_mutex = NULL;
 static volatile LONG g_kbo_sangmu_fa_hooks_install_started = 0;
+static volatile LONG g_kbo_full_runtime_install_started = 0;
+static volatile LONG g_kbo_full_runtime_marker_wait_started = 0;
+
+#define KBO_REQUIRED_ROSTER_MARKER_URL "https://github.com/lebronisbest623/OOTP27_Ultimate_KBO"
 
 typedef struct KboSangmuFaHookInstallRequest {
     int enable_signability;
@@ -96,60 +100,112 @@ static void start_kbo_delayed_sangmu_fa_hooks_install_thread(
     }
 }
 
-static DWORD WINAPI patch_thread(LPVOID parameter)
+static int kbo_current_save_has_required_roster_marker(const char* source, int log_detail)
 {
-    append_log_line("KBOFix loaded");
-
-    if (!read_kbo_localappdata_flag_file("enable_experimental_runtime_hooks.txt")) {
-        append_log_line("KBOFix: experimental runtime hooks disabled; safe startup mode active");
+    char save_path[MAX_PATH] = {0};
+    if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
+        if (log_detail) {
+            append_logf("KBO runtime marker guard waiting source=%s reason=current_save_unavailable", source != NULL ? source : "");
+        }
         return 0;
     }
 
-    int diagnostic_minimal_runtime = read_kbo_localappdata_flag_file("enable_kbo_diagnostic_minimal_runtime.txt");
-    if (diagnostic_minimal_runtime) {
-        append_log_line("KBO diagnostic minimal runtime enabled: F2 hub and runtime patches disabled");
-    } else {
-        start_kbo_hotkey_window_thread((HINSTANCE)parameter);
-    }
-
-    if (!verify_ootp_build()) {
-        append_log_line("KBOFix: build verification failed; no patches installed");
+    char description_path[MAX_PATH] = {0};
+    int path_written = snprintf(description_path, sizeof(description_path), "%s\\description.txt", save_path);
+    if (path_written <= 0 || (size_t)path_written >= sizeof(description_path)) {
+        if (log_detail) {
+            append_logf(
+                "KBO runtime marker guard waiting source=%s reason=description_path_overflow save=%s",
+                source != NULL ? source : "",
+                save_path);
+        }
         return 0;
     }
 
-    if (diagnostic_minimal_runtime) {
-        append_log_line("KBO diagnostic minimal runtime: build verified, no runtime patches installed");
+    HANDLE file = CreateFileA(
+        description_path,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        if (log_detail) {
+            append_logf(
+                "KBO runtime marker guard waiting source=%s reason=description_unavailable gle=%lu path=%s",
+                source != NULL ? source : "",
+                GetLastError(),
+                description_path);
+        }
         return 0;
     }
 
-    load_allstar_team_rules_once();
+    LARGE_INTEGER size = {0};
+    if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > 1024 * 1024) {
+        if (log_detail) {
+            append_logf(
+                "KBO runtime marker guard waiting source=%s reason=description_size_invalid path=%s",
+                source != NULL ? source : "",
+                description_path);
+        }
+        CloseHandle(file);
+        return 0;
+    }
+
+    char* text = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size.QuadPart + 1u);
+    if (text == NULL) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    DWORD read = 0;
+    BOOL read_ok = ReadFile(file, text, (DWORD)size.QuadPart, &read, NULL);
+    CloseHandle(file);
+    if (!read_ok || read != (DWORD)size.QuadPart) {
+        HeapFree(GetProcessHeap(), 0, text);
+        if (log_detail) {
+            append_logf(
+                "KBO runtime marker guard waiting source=%s reason=description_read_failed path=%s",
+                source != NULL ? source : "",
+                description_path);
+        }
+        return 0;
+    }
+    text[read] = '\0';
+
+    int marked = kbo_ascii_contains_ignore_case(text, KBO_REQUIRED_ROSTER_MARKER_URL);
+    HeapFree(GetProcessHeap(), 0, text);
+    if (marked) {
+        append_logf(
+            "KBO runtime marker guard passed source=%s save=%s description=%s",
+            source != NULL ? source : "",
+            save_path,
+            description_path);
+        return 1;
+    }
+
+    if (log_detail) {
+        append_logf(
+            "KBO runtime marker guard waiting source=%s reason=marker_missing save=%s description=%s",
+            source != NULL ? source : "",
+            save_path,
+            description_path);
+    }
+    return 0;
+}
+
+static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
+{
+    if (InterlockedCompareExchange(&g_kbo_full_runtime_install_started, 1, 0) != 0) {
+        append_log_line("KBO full runtime install skipped: already started");
+        return;
+    }
+
+    start_kbo_hotkey_window_thread(instance);
+
     install_kbo_military_service_entry_patch();
     install_kbo_military_status_update_patch();
-    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
-        force_kbo_allstar_flags_for_configured_league("startup");
-        start_kbo_allstar_force_retry_thread();
-        install_single_division_allstar_patch();
-        install_allstar_team_setup_single_division_patch();
-        install_allstar_candidate_team_split_patch();
-        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_voting_hook.txt")) {
-            install_allstar_voting_begin_prepare_patch();
-        } else {
-            append_log_line("KBO all-star voting begin prepare hook disabled: kbo_flags.json enable_single_division_allstar_voting_hook is false");
-        }
-        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
-            force_kbo_allstar_flags_for_configured_league("startup_allstar_events_enabled");
-            install_allstar_events_prepare_patch();
-        } else {
-            append_log_line("KBO all-star events prepare hook disabled: kbo_flags.json enable_single_division_allstar_events is false");
-        }
-    } else {
-        append_log_line("KBO single-division all-star runtime patches disabled: kbo_flags.json enable_single_division_allstar_runtime_patches is false");
-    }
-    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
-        install_allstar_settings_ui_patch();
-    } else {
-        append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
-    }
     int enable_legacy_fa_signability_hooks = read_kbo_localappdata_flag_file("enable_kbo_fa_signability_hooks.txt");
     kbo_load_military_service_team_policy_override_once();
     int enable_sangmu_fa_block_default = !read_kbo_localappdata_flag_file("disable_kbo_sangmu_fa_block_core.txt");
@@ -213,6 +269,117 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
     }
     start_kbo_military_seed_bootstrap_thread();
     start_kbo_military_days_tick_thread();
+    append_log_line("KBO full runtime install complete after roster marker");
+}
+
+static DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
+{
+    HINSTANCE instance = (HINSTANCE)parameter;
+    append_log_line("KBO full runtime marker guard thread started");
+
+    for (int attempt = 1; attempt <= 450; attempt++) {
+        int log_detail = attempt == 1 || attempt == 5 || attempt == 15 || attempt % 30 == 0;
+        if (kbo_current_save_has_required_roster_marker("runtime_marker_wait", log_detail)) {
+            install_kbo_full_runtime_after_roster_marker(instance);
+            return 0;
+        }
+        Sleep(2000);
+    }
+
+    append_log_line("KBO full runtime marker guard gave up: required roster marker was not found");
+    return 0;
+}
+
+static void start_kbo_full_runtime_marker_wait_thread(HINSTANCE instance)
+{
+    if (InterlockedCompareExchange(&g_kbo_full_runtime_marker_wait_started, 1, 0) != 0) {
+        append_log_line("KBO full runtime marker guard thread already started");
+        return;
+    }
+
+    HANDLE thread = CreateThread(NULL, 0, kbo_full_runtime_marker_wait_thread, instance, 0, NULL);
+    if (thread != NULL) {
+        CloseHandle(thread);
+    } else {
+        InterlockedExchange(&g_kbo_full_runtime_marker_wait_started, 0);
+        append_logf("KBO full runtime marker guard thread failed error=%lu", GetLastError());
+    }
+}
+
+static DWORD WINAPI patch_thread(LPVOID parameter)
+{
+    append_log_line("KBOFix loaded");
+
+    if (!read_kbo_localappdata_flag_file("enable_experimental_runtime_hooks.txt")) {
+        append_log_line("KBOFix: experimental runtime hooks disabled; safe startup mode active");
+        return 0;
+    }
+
+    int diagnostic_minimal_runtime = read_kbo_localappdata_flag_file("enable_kbo_diagnostic_minimal_runtime.txt");
+    if (diagnostic_minimal_runtime) {
+        append_log_line("KBO diagnostic minimal runtime enabled: F2 hub and runtime patches disabled");
+    }
+
+    if (!verify_ootp_build()) {
+        append_log_line("KBOFix: build verification failed; no patches installed");
+        return 0;
+    }
+
+    if (diagnostic_minimal_runtime) {
+        append_log_line("KBO diagnostic minimal runtime: build verified, no runtime patches installed");
+        return 0;
+    }
+
+    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
+        append_log_line("KBO all-star presave bootstrap install started");
+        install_single_division_allstar_patch();
+        install_allstar_team_setup_single_division_patch();
+        install_allstar_candidate_team_split_patch();
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_voting_hook.txt")) {
+            install_allstar_voting_begin_prepare_patch();
+        } else {
+            append_log_line("KBO all-star voting begin prepare hook disabled: kbo_flags.json enable_single_division_allstar_voting_hook is false");
+        }
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
+            install_allstar_events_prepare_patch();
+        } else {
+            append_log_line("KBO all-star events prepare hook disabled: kbo_flags.json enable_single_division_allstar_events is false");
+        }
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
+            install_allstar_settings_ui_patch();
+        } else {
+            append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
+        }
+        append_log_line("KBO all-star presave bootstrap hooks installed");
+
+        load_allstar_team_rules_once();
+        patch_kbo_allstar_team_names_for_configured_league("startup");
+        patch_kbo_allstar_team_names_for_known_exhibition_teams("startup");
+        force_kbo_allstar_flags_for_configured_league("startup");
+        start_kbo_allstar_force_retry_thread();
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
+            force_kbo_allstar_flags_for_configured_league("startup_allstar_events_enabled");
+        }
+    } else {
+        append_log_line("KBO single-division all-star runtime patches disabled: kbo_flags.json enable_single_division_allstar_runtime_patches is false");
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
+            install_allstar_settings_ui_patch();
+        } else {
+            append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
+        }
+    }
+
+    if (read_kbo_localappdata_flag_file("disable_kbo_runtime_roster_marker_guard.txt")) {
+        append_log_line("KBO runtime marker guard disabled by flag");
+        install_kbo_full_runtime_after_roster_marker((HINSTANCE)parameter);
+        return 0;
+    }
+
+    if (kbo_current_save_has_required_roster_marker("runtime_startup", 1)) {
+        install_kbo_full_runtime_after_roster_marker((HINSTANCE)parameter);
+    } else {
+        start_kbo_full_runtime_marker_wait_thread((HINSTANCE)parameter);
+    }
     return 0;
 }
 

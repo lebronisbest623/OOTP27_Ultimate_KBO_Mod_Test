@@ -200,7 +200,11 @@ static uintptr_t kbo_find_league_ptr_by_memory_scan(uint32_t league_id)
                 && mbi.RegionSize <= (SIZE_T)0x04000000u) {
             uintptr_t scan_end = end >= sizeof(uint32_t) ? end - sizeof(uint32_t) : base;
             for (uintptr_t p = base; p <= scan_end; p += sizeof(uint32_t)) {
-                if (*(uint32_t*)p != league_id) {
+                uint32_t probe = 0;
+                SIZE_T bytes_read = 0;
+                if (!ReadProcessMemory(GetCurrentProcess(), (LPCVOID)p, &probe, sizeof(probe), &bytes_read)
+                        || bytes_read != sizeof(probe)
+                        || probe != league_id) {
                     continue;
                 }
 
