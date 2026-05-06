@@ -466,6 +466,21 @@ static int kbo_handle_asian_games_departure_event(uint32_t event_yyyymmdd, const
     }
     int departed = kbo_asian_games_depart_selected_players(event_yyyymmdd, source);
     if (departed <= 0) {
+        uint32_t current_year = 0;
+        uint32_t current_month = 0;
+        uint32_t current_day = 0;
+        if (kbo_current_date_is_valid(&current_year, &current_month, &current_day)
+                && current_year > (event_yyyymmdd / 10000u)) {
+            append_logf(
+                "KBO Asian Games departure closed stale source=%s date=%u current=%04u-%02u-%02u departed=%d",
+                source != NULL ? source : "",
+                event_yyyymmdd,
+                current_year,
+                current_month,
+                current_day,
+                departed);
+            return 1;
+        }
         append_logf(
             "KBO Asian Games departure deferred source=%s date=%u departed=%d",
             source != NULL ? source : "",
@@ -496,6 +511,21 @@ static int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const cha
     int returned = kbo_asian_games_finalize_selected_players(event_yyyymmdd, source);
     int already_finalized = returned <= 0 ? kbo_asian_games_roster_already_finalized(source) : 0;
     if (returned <= 0 && !already_finalized) {
+        uint32_t current_year = 0;
+        uint32_t current_month = 0;
+        uint32_t current_day = 0;
+        if (kbo_current_date_is_valid(&current_year, &current_month, &current_day)
+                && current_year > (event_yyyymmdd / 10000u)) {
+            append_logf(
+                "KBO Asian Games final closed stale source=%s date=%u current=%04u-%02u-%02u returned=%d",
+                source != NULL ? source : "",
+                event_yyyymmdd,
+                current_year,
+                current_month,
+                current_day,
+                returned);
+            return 1;
+        }
         append_logf(
             "KBO Asian Games final deferred source=%s date=%u returned=%d",
             source != NULL ? source : "",

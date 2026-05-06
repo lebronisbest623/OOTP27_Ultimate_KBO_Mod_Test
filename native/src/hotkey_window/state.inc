@@ -114,6 +114,7 @@ static const char* kbo_hub_text(const char* ko, const char* en)
 }
 
 #define KBO_WM_OPEN_PLAYER_PROFILE (WM_APP + 0x4b1u)
+#define KBO_WM_PLAYER_PROFILE_MENU_ACTION (WM_APP + 0x4b2u)
 #define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_MENU (-0x3ed)
 #define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE_GLOBAL_OPEN (-0x3ee)
 #define KBO_OOTP_CALLBACK_OPEN_PLAYER_PROFILE (-0x3f2)
@@ -121,6 +122,36 @@ static const char* kbo_hub_text(const char* ko, const char* en)
 static DWORD g_kbo_game_thread_id = 0;
 static LONG g_kbo_player_profile_direct_attempted = 0;
 static ULONGLONG g_kbo_player_profile_global_open_v6_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v7_last_ms = 0;
+static uintptr_t g_kbo_player_profile_global_open_v7_cached_sender = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v8_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v9_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v10_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v11_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v12_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v13_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v14_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v15_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v16_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v17_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v18_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v19_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v20_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v21_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v22_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v23_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v24_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_global_open_v25_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_direct_install_v26_last_ms = 0;
+static ULONGLONG g_kbo_player_profile_ocr_click_v1_last_ms = 0;
+static LONG g_kbo_player_profile_ocr_click_v1_active = 0;
+static LONG g_kbo_player_profile_ocr_mouse_hook_installed = 0;
+static LONG g_kbo_player_profile_ocr_virtual_mouse_active = 0;
+static LONG g_kbo_player_profile_ocr_virtual_mouse_x = 0;
+static LONG g_kbo_player_profile_ocr_virtual_mouse_y = 0;
+static LONG g_kbo_player_profile_ocr_virtual_mouse_left_down = 0;
+static LONG g_kbo_player_profile_ocr_virtual_mouse_rewrite_log_count = 0;
+static PVOID g_kbo_player_profile_ocr_virtual_mouse_hwnd = NULL;
 
 static void kbo_try_install_game_getmsg_hook(void);
 

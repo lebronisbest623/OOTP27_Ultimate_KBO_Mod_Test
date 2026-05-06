@@ -420,6 +420,29 @@ static int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* so
             1);
     }
 
+    int wildcard_fills = 0;
+    for (int i = 0; i < candidate_count && selected_count < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
+        int before_selected = selected_count;
+        int before_wildcards = wildcard_count;
+        if (candidates[i].entry.age <= 24u) {
+            continue;
+        }
+        kbo_asian_games_try_select_candidate(
+            candidates,
+            candidate_count,
+            i,
+            &selected_count,
+            &pitcher_count,
+            &catcher_count,
+            &infielder_count,
+            &outfielder_count,
+            &wildcard_count,
+            1);
+        if (selected_count > before_selected && wildcard_count > before_wildcards) {
+            wildcard_fills++;
+        }
+    }
+
     int required_org_repairs = 0;
     for (int org_index = 0; org_index < required_org_count; org_index++) {
         if (kbo_asian_games_roster_org_count(required_orgs[org_index], selected_count) > 0) {
@@ -453,7 +476,7 @@ static int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* so
 
     g_kbo_asian_games_roster_count = selected_count;
     append_logf(
-        "KBO Asian Games roster selected source=%s year=%u scanned=%d candidates=%d selected=%d pitchers=%d catchers=%d infielders=%d outfielders=%d wildcards=%d wildcard_replacements=%d required_orgs=%d required_initial=%d required_repairs=%d required_missing=%d team_max=%d allowed_leagues=%u/%u vector_offset=0x%x rejected_nation=%d rejected_status=%d rejected_league=%d rejected_team=%d rejected_service_team=%d rejected_parentless_affiliate=%d",
+        "KBO Asian Games roster selected source=%s year=%u scanned=%d candidates=%d selected=%d pitchers=%d catchers=%d infielders=%d outfielders=%d wildcards=%d wildcard_fills=%d wildcard_replacements=%d required_orgs=%d required_initial=%d required_repairs=%d required_missing=%d team_max=%d allowed_leagues=%u/%u vector_offset=0x%x rejected_nation=%d rejected_status=%d rejected_league=%d rejected_team=%d rejected_service_team=%d rejected_parentless_affiliate=%d",
         source != NULL ? source : "",
         year,
         scanned,
@@ -464,6 +487,7 @@ static int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* so
         infielder_count,
         outfielder_count,
         wildcard_count,
+        wildcard_fills,
         wildcard_replacements,
         required_org_count,
         required_org_initial_selected,

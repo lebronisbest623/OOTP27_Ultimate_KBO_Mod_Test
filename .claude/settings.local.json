@@ -19,7 +19,16 @@
       "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"nation_id_scan: offset\" | ForEach-Object { $_.Line })",
       "PowerShell(cd C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native; $Gcc = \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\mingw64\\\\bin\\\\gcc.exe\"; & $Gcc -shared -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -o \"bin\\\\KBOFix.dll\" \"KBOFix.c\" -lgdi32 -lmsimg32 -lole32 -luuid -lwindowscodecs 2>&1 | Where-Object { $_ -match \"error:\" })",
       "PowerShell(Test-Path \"C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native\\\\bin\\\\KBOFix.dll\" ; \\(Get-Item \"C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\\\\native\\\\bin\\\\KBOFix.dll\"\\).LastWriteTime)",
-      "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"nation_id_scan\" | Select-Object -Last 30 | ForEach-Object { $_.Line })"
+      "PowerShell(Select-String -Path \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\OOTP-KBO\\\\kbofix.log\" -Pattern \"nation_id_scan\" | Select-Object -Last 30 | ForEach-Object { $_.Line })",
+      "Bash(mkdir *)",
+      "Bash(mv *)",
+      "Bash(mv foreign_fa_block_state.inc foreign_fa_block_policy.inc foreign_signability_wrapper.inc foreign_offer_eligibility_wrapper.inc foreign_submit_offer_probe.inc foreign_ai_fa_candidate_wrapper.inc signability/)",
+      "Bash(ls foreign_fa_block_log.inc foreign_fa_fast_block_policy.inc foreign_signability_block_policy.inc)",
+      "Bash(mv foreign_fa_block_log.inc foreign_fa_fast_block_policy.inc foreign_signability_block_policy.inc signability/)",
+      "Bash(powershell -ExecutionPolicy Bypass -File native\\\\build.ps1)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"native\\\\build.ps1\")",
+      "Bash(grep -v \"//.*fopen\")",
+      "PowerShell(cd \"C:\\\\Users\\\\user\\\\OOTP27-KBO-Launcher\"; powershell -ExecutionPolicy Bypass -File \"native\\\\build.ps1\" 2>&1)"
     ]
   },
   "disabledMcpjsonServers": [

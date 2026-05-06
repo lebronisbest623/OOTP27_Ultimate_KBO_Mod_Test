@@ -34,6 +34,28 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
             continue;
         }
 
+        uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+        uint32_t loan_team_id    = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+        uint32_t seed_return_serial = kbo_military_yyyymmdd_to_serial(seed->service_return_yyyymmdd);
+        if (today_serial != 0u
+                && seed_return_serial != 0u
+                && seed_return_serial <= today_serial
+                && current_team_id != service_team_id
+                && loan_team_id != service_team_id) {
+            LONG skip_log = InterlockedIncrement(&g_military_seed_expired_skip_log_count);
+            if (skip_log <= 40) {
+                append_logf(
+                    "KBO military service seed skipped expired key=%s player=%u return=%u today_serial=%u current_team=%u service_team=%u",
+                    seed->key,
+                    seed->player_id,
+                    seed->service_return_yyyymmdd,
+                    today_serial,
+                    current_team_id,
+                    service_team_id);
+            }
+            continue;
+        }
+
         uint32_t original_team_id = 0u;
         uint32_t original_league_id = 0u;
         if (seed->original_team_code[0] != '\0') {
@@ -71,8 +93,6 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
             }
         }
 
-        uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-        uint32_t loan_team_id    = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
         if (current_team_id != service_team_id && loan_team_id != service_team_id) {
             int called_pre_change = 0;
             int called_register = 0;
@@ -121,7 +141,7 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
             loan->service_total_days = seed->service_total_days > 0
                 ? seed->service_total_days
                 : KBO_MILITARY_SERVICE_DAYS;
-            uint32_t return_serial = kbo_military_yyyymmdd_to_serial(seed->service_return_yyyymmdd);
+            uint32_t return_serial = seed_return_serial;
             if (return_serial == 0u && loan->service_start_date_serial != 0u) {
                 return_serial = loan->service_start_date_serial + (uint32_t)loan->service_total_days;
             }

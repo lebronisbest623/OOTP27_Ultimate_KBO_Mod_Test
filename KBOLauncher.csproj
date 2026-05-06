@@ -8,7 +8,7 @@
     <RootNamespace>KBOLauncher</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="foreign_replacement_players_seed.csv" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="military_service_seed.csv" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="data\seeds\*.csv" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ocr\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

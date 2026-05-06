@@ -13,6 +13,7 @@ static uint32_t g_kbo_asian_games_last_final_fired_date = 0;
 static uintptr_t g_kbo_processed_event_ptrs[256] = {0};
 static LONG g_kbo_processed_event_count = 0;
 
+static const char g_kbo_default_event_source[] = "custom_event_monitor";
 static const char g_kbo_foreign_priority_open_event_title[] =
     "[KBO] Foreign Player Priority Negotiation Begins";
 static const char g_kbo_foreign_priority_close_event_title[] =

@@ -18,14 +18,26 @@ static DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
         }
 
         if (today_yyyymmdd != last_scheduled_yyyymmdd) {
-            kbo_schedule_foreign_priority_custom_events(g_kbo_default_event_source);
-            kbo_schedule_asian_games_custom_events(g_kbo_default_event_source);
-            last_scheduled_yyyymmdd = today_yyyymmdd;
+            int foreign_schedule = kbo_schedule_foreign_priority_custom_events(g_kbo_default_event_source);
+            int asian_schedule = kbo_schedule_asian_games_custom_events(g_kbo_default_event_source);
+            if (foreign_schedule >= 0 && asian_schedule >= 0) {
+                last_scheduled_yyyymmdd = today_yyyymmdd;
+            } else {
+                append_logf(
+                    "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d",
+                    today_yyyymmdd,
+                    foreign_schedule,
+                    asian_schedule);
+            }
         }
         if (today_yyyymmdd != last_scanned_yyyymmdd) {
             int triggered = scan_kbo_custom_events_once("custom_event_monitor");
             if (triggered == 0) {
                 last_scanned_yyyymmdd = today_yyyymmdd;
+            } else if (triggered < 0) {
+                append_logf(
+                    "KBO custom event monitor scan deferred reason=state_not_ready today=%u",
+                    today_yyyymmdd);
             }
         }
     }

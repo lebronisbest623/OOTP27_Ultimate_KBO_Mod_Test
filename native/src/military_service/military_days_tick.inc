@@ -1,7 +1,10 @@
 /* Military service day ticking and background thread. Included from native/src/military_service_loan.inc. */
 
-static int tick_kbo_military_service_days(const char* source)
+static int tick_kbo_military_service_days(const char* source, int* out_seeded_assignments)
 {
+    if (out_seeded_assignments != NULL) {
+        *out_seeded_assignments = 0;
+    }
     if (!kbo_fix_enabled()) {
         return 0;
     }
@@ -27,7 +30,10 @@ static int tick_kbo_military_service_days(const char* source)
     if (sang_id == 0 && kpb_id == 0) {
         return 0;
     }
-    kbo_apply_military_service_seed_assignments(sang, kpb, source);
+    int seeded_assignments = kbo_apply_military_service_seed_assignments(sang, kpb, source);
+    if (out_seeded_assignments != NULL) {
+        *out_seeded_assignments = seeded_assignments;
+    }
 
     int tracked          = 0;
     int monitored        = 0;
@@ -126,13 +132,14 @@ static int tick_kbo_military_service_days(const char* source)
     }
 
     LONG log_index = InterlockedIncrement(&g_military_days_tick_log_count);
-    if (returned > 0 || newly_registered > 0 || managed > 0 || log_index <= 20) {
+    if (seeded_assignments > 0 || returned > 0 || newly_registered > 0 || managed > 0 || log_index <= 20) {
         append_logf(
             "KBO military service day tick source=%s date_serial=%u"
-            " tracked=%d newly_registered=%d monitored=%d managed=%d returned=%d"
+            " seeded=%d tracked=%d newly_registered=%d monitored=%d managed=%d returned=%d"
             " count=%d vector_off=0x%x",
             source != NULL ? source : "",
             today_serial,
+            seeded_assignments,
             tracked, newly_registered, monitored, managed, returned,
             player_count, vector_offset);
     }
@@ -151,7 +158,7 @@ static DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
         if (current_date_serial != 0u && current_date_serial == last_tick_date_serial) {
             continue;
         }
-        tick_kbo_military_service_days("military_days_tick");
+        tick_kbo_military_service_days("military_days_tick", NULL);
         if (current_date_serial != 0u) {
             last_tick_date_serial = current_date_serial;
         }
@@ -159,13 +166,100 @@ static DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
     return 0;
 }
 
-static void start_kbo_military_days_tick_thread(void)
+static DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
+{
+    (void)parameter;
+    append_log_line("KBO military service seed bootstrap thread started");
+
+    char last_save_path[MAX_PATH] = {0};
+    int settled_attempts = 0;
+    for (int attempt = 1; attempt <= 36; attempt++) {
+        Sleep(attempt == 1 ? 2500 : 5000);
+
+        char save_path[MAX_PATH] = {0};
+        if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
+            if (attempt <= 8 || attempt % 6 == 0) {
+                append_logf("KBO military service seed bootstrap waiting attempt=%d reason=no_save_path", attempt);
+            }
+            continue;
+        }
+
+        if (_stricmp(last_save_path, save_path) != 0) {
+            snprintf(last_save_path, sizeof(last_save_path), "%s", save_path);
+            settled_attempts = 0;
+        }
+
+        uint32_t today_serial = kbo_current_date_serial();
+        uintptr_t player_vector = 0;
+        int32_t player_count = 0;
+        uint32_t vector_offset = 0;
+        uint8_t* sang = find_kbo_team_by_csv_id_any_league("SANG", 0);
+        uint8_t* kpb = find_kbo_team_by_csv_id_any_league("KPB", 0);
+        if (today_serial == 0u
+                || !find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)
+                || (sang == NULL && kpb == NULL)) {
+            if (attempt <= 8 || attempt % 6 == 0) {
+                append_logf(
+                    "KBO military service seed bootstrap waiting attempt=%d reason=state_not_ready date_serial=%u player_count=%d sang=%p kpb=%p save=%s",
+                    attempt,
+                    today_serial,
+                    player_count,
+                    (void*)sang,
+                    (void*)kpb,
+                    save_path);
+            }
+            continue;
+        }
+
+        int seeded = 0;
+        int returned = tick_kbo_military_service_days("military_seed_bootstrap", &seeded);
+        if (seeded > 0 || returned > 0) {
+            append_logf(
+                "KBO military service seed bootstrap applied attempt=%d seeded=%d returned=%d save=%s",
+                attempt,
+                seeded,
+                returned,
+                save_path);
+            return 0;
+        }
+
+        if (GetFileAttributesA(save_path) != INVALID_FILE_ATTRIBUTES) {
+            settled_attempts++;
+        }
+        if (settled_attempts >= 3) {
+            append_logf(
+                "KBO military service seed bootstrap settled attempt=%d seeded=0 returned=0 save=%s",
+                attempt,
+                save_path);
+            return 0;
+        }
+    }
+
+    append_log_line("KBO military service seed bootstrap ended without settled save");
+    return 0;
+}
+
+static void start_kbo_military_seed_bootstrap_thread(void)
 {
     if (!kbo_fix_enabled()) {
         return;
     }
-    if (!read_kbo_localappdata_flag_file("enable_military_days_tick.txt")) {
-        append_log_line("KBO military service day tick thread disabled: enable_military_days_tick.txt is off");
+    if (InterlockedCompareExchange(&g_military_seed_bootstrap_started, 1, 0) != 0) {
+        return;
+    }
+
+    HANDLE thread = CreateThread(NULL, 0, kbo_military_seed_bootstrap_thread, NULL, 0, NULL);
+    if (thread != NULL) {
+        CloseHandle(thread);
+    } else {
+        InterlockedExchange(&g_military_seed_bootstrap_started, 0);
+        append_log_line("KBO military service seed bootstrap thread failed to start");
+    }
+}
+
+static void start_kbo_military_days_tick_thread(void)
+{
+    if (!kbo_fix_enabled()) {
         return;
     }
     if (InterlockedCompareExchange(&g_military_days_tick_started, 1, 0) != 0) {

@@ -39,11 +39,14 @@ static uint32_t kbo_get_foreign_waiver_league_id(void)
     return cached_league_id;
 }
 
-static int get_kbo_foreign_waiver_event_path(char* out, size_t out_size)
+static int kbo_foreign_waiver_legacy_auto_detector_enabled(void)
 {
-    if (out == NULL || out_size < 2) {
-        return 0;
+    static LONG cached = -1;
+    LONG value = cached;
+    if (value != -1) {
+        return value == 1;
     }
-    return kbo_get_save_scoped_data_file("foreign_waiver_negotiation_window.txt", out, out_size);
+    value = read_kbo_localappdata_flag_file("enable_foreign_waiver_legacy_auto_detector.txt") ? 1 : 0;
+    InterlockedCompareExchange(&cached, value, -1);
+    return cached == 1;
 }
-

@@ -68,7 +68,8 @@ static int kbo_save_asian_games_roster_csv(const char* source)
         roster_count = 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("KBO Asian Games roster csv save skipped source=%s reason=create_failed gle=%lu path=%s", source != NULL ? source : "", GetLastError(), path);
         return 0;
@@ -110,7 +111,16 @@ static int kbo_save_asian_games_roster_csv(const char* source)
         }
     }
 
-    CloseHandle(file);
+    if (!ok || !kbo_atomic_commit(file, tmp_path, path)) {
+        if (ok) {
+            append_logf("KBO Asian Games roster csv save: atomic commit failed path=%s", path);
+        }
+        if (!ok) {
+            kbo_atomic_commit(file, tmp_path, path);
+            DeleteFileA(path);
+        }
+        return 0;
+    }
     if (ok) {
         snprintf(g_kbo_asian_games_roster_save_path, sizeof(g_kbo_asian_games_roster_save_path), "%s", path);
     }

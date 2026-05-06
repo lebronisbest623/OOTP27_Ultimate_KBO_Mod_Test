@@ -193,6 +193,76 @@ static int kbo_route_queued_military_draft_candidates(
     return routed;
 }
 
+static int kbo_refresh_military_selection_candidates_from_memory(
+    uint16_t entry_year,
+    uint32_t sang_id,
+    const char* source)
+{
+    if (entry_year == 0u || sang_id == 0u) {
+        return 0;
+    }
+
+    uintptr_t player_vector = 0;
+    int32_t player_count = 0;
+    uint32_t vector_offset = 0;
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)) {
+        append_logf(
+            "KBO military selection candidate refresh skipped source=%s year=%u reason=player_vector_unavailable",
+            source != NULL ? source : "",
+            entry_year);
+        return 0;
+    }
+
+    int scanned = 0;
+    int eligible = 0;
+    int queued = 0;
+    for (int32_t i = 0; i < player_count; i++) {
+        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if (!kbo_player_pointer_plausible(player_ptr)) {
+            continue;
+        }
+        scanned++;
+        uint8_t* player = (uint8_t*)player_ptr;
+        int32_t days_left = kbo_military_effective_days_left(player);
+        if (player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET] == 0u
+                || days_left < KBO_MILITARY_SERVICE_DAYS - 90) {
+            continue;
+        }
+        uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+        if (current_team_id == 0u || current_team_id == sang_id) {
+            continue;
+        }
+        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+        if (player_id == 0u) {
+            continue;
+        }
+        uint32_t original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+        if (original_team_id == 0u || original_team_id == sang_id) {
+            original_team_id = current_team_id;
+        }
+        uint32_t original_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+        eligible++;
+        queued += kbo_queue_military_draft_candidate(
+            player_ptr,
+            player_id,
+            entry_year,
+            original_team_id,
+            original_league_id,
+            "military_selection_memory_refresh") ? 1 : 0;
+    }
+
+    append_logf(
+        "KBO military selection candidate refresh source=%s year=%u scanned=%d eligible=%d queued_or_refreshed=%d total_queued=%d vector_off=0x%x",
+        source != NULL ? source : "",
+        entry_year,
+        scanned,
+        eligible,
+        queued,
+        kbo_count_military_draft_candidates_for_year(entry_year),
+        vector_offset);
+    return queued;
+}
+
 static int run_kbo_custom_military_event(
     uintptr_t event_ptr,
     const char* event_name,
@@ -202,7 +272,16 @@ static int run_kbo_custom_military_event(
     const char* source)
 {
     (void)event_ptr;
-    int returned = tick_kbo_military_service_days("military_selection_event");
+    int seeded = 0;
+    int returned = tick_kbo_military_service_days("military_selection_event", &seeded);
+    uint8_t* sang = find_kbo_team_by_csv_id_any_league("SANG", 0);
+    uint32_t sang_id = sang != NULL && memory_range_readable(sang, OOTP27_KBO_TEAM_READABLE_BYTES)
+        ? *(uint32_t*)(sang + OOTP27_KBO_TEAM_ID_OFFSET)
+        : 0u;
+    int refreshed = kbo_refresh_military_selection_candidates_from_memory(
+        (uint16_t)event_year,
+        sang_id,
+        source);
     KboMilitarySelectionNewsEntry news_entries[24] = {0};
     int routed = kbo_route_queued_military_draft_candidates(
         (uint16_t)event_year,
@@ -220,12 +299,14 @@ static int run_kbo_custom_military_event(
             source);
     }
     append_logf(
-        "KBO military selection reached source=%s event=%s year=%u routed=%d returned=%d news=%d queued_left=%d",
+        "KBO military selection reached source=%s event=%s year=%u routed=%d seeded=%d returned=%d refreshed=%d news=%d queued_left=%d",
         source != NULL ? source : "",
         event_name != NULL ? event_name : "",
         event_year,
         routed,
+        seeded,
         returned,
+        refreshed,
         news_created,
         kbo_count_military_draft_candidates_for_year((uint16_t)event_year));
     return 1;

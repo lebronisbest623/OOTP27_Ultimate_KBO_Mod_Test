@@ -4,21 +4,21 @@ static int scan_kbo_custom_events_once(const char* source)
 {
     uintptr_t event_manager = get_kbo_league_event_manager();
     if (event_manager == 0 || !memory_range_readable((void*)event_manager, OOTP27_EVENT_MANAGER_EVENT_COUNT_OFFSET + sizeof(int32_t))) {
-        return 0;
+        return -1;
     }
 
     uint32_t current_year = 0;
     uint32_t current_month = 0;
     uint32_t current_day = 0;
     if (!kbo_current_date_is_valid(&current_year, &current_month, &current_day)) {
-        return 0;
+        return -1;
     }
 
     uintptr_t event_vector = *(uintptr_t*)(event_manager + OOTP27_EVENT_MANAGER_EVENT_VECTOR_OFFSET);
     int32_t event_count = *(int32_t*)(event_manager + OOTP27_EVENT_MANAGER_EVENT_COUNT_OFFSET);
     if (event_vector == 0 || event_count <= 0 || event_count > 20000
             || !memory_range_readable((void*)event_vector, (SIZE_T)event_count * sizeof(uintptr_t))) {
-        return 0;
+        return -1;
     }
 
     int triggered = 0;
@@ -82,71 +82,16 @@ static int scan_kbo_custom_events_once(const char* source)
             continue;
         }
 
-        int action_result = 0;
-        int is_open_event = kbo_custom_event_name_is_open(name);
-        int is_close_event = kbo_custom_event_name_is_close(name);
-        int is_military_selection_event = kbo_custom_event_name_is_military_selection(name);
-        int is_asian_games_selection_event = kbo_custom_event_name_is_asian_games_selection(name);
-        int is_asian_games_departure_event = kbo_custom_event_name_is_asian_games_departure(name);
-        int is_asian_games_final_event = kbo_custom_event_name_is_asian_games_final(name);
-
-        if (is_open_event) {
-            if (g_kbo_foreign_priority_last_open_event_fired_date == event_yyyymmdd) {
-                append_logf(
-                    "KBO custom event skipped duplicate by date source=%s name=%s event_date=%04u-%02u-%02u",
-                    source != NULL ? source : "",
-                    name,
-                    event_year,
-                    event_month,
-                    event_day);
-                continue;
-            }
-            uint32_t serial = kbo_date_serial(event_year, event_month, event_day);
-            action_result = kbo_open_foreign_waiver_window(
-                event_yyyymmdd,
-                serial,
-                "custom_event_monitor");
-            if (action_result) {
-                g_kbo_foreign_priority_last_open_event_fired_date = event_yyyymmdd;
-            }
-        } else if (is_close_event) {
-            if (g_kbo_foreign_priority_last_close_event_fired_date == event_yyyymmdd) {
-                append_logf(
-                    "KBO custom event skipped duplicate by date source=%s name=%s event_date=%04u-%02u-%02u",
-                    source != NULL ? source : "",
-                    name,
-                    event_year,
-                    event_month,
-                    event_day);
-                continue;
-            }
-            append_logf(
-                "KBO custom event close marker reached source=%s date=%04u-%02u-%02u",
-                source != NULL ? source : "",
-                event_year,
-                event_month,
-                event_day);
-            action_result = kbo_announce_foreign_waiver_results(event_yyyymmdd, source);
-            if (!action_result) {
-                action_result = 1;
-            }
-            if (action_result) {
-                g_kbo_foreign_priority_last_close_event_fired_date = event_yyyymmdd;
-            }
-        } else if (is_military_selection_event) {
-            action_result = run_kbo_custom_military_event(
-                event_ptr,
-                name,
-                event_year,
-                event_month,
-                event_day,
-                source);
-        } else if (is_asian_games_selection_event) {
-            action_result = kbo_handle_asian_games_selection_event(event_yyyymmdd, source);
-        } else if (is_asian_games_departure_event) {
-            action_result = kbo_handle_asian_games_departure_event(event_yyyymmdd, source);
-        } else if (is_asian_games_final_event) {
-            action_result = kbo_handle_asian_games_final_event(event_yyyymmdd, source);
+        int action_result = kbo_dispatch_custom_event(
+            event_ptr,
+            name,
+            event_yyyymmdd,
+            event_year,
+            event_month,
+            event_day,
+            source);
+        if (action_result < 0) {
+            continue;
         }
 
         if (action_result) {

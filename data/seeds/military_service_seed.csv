@@ -1,0 +1,42 @@
+# source_key,service_team,original_team,service_return_yyyymmdd,comment
+# Generated from New Game 82.lg/import_export/kbo_rosters.csv on 2026-03-28 game date.
+# Heuristic: if the player has a 2025 SANG stat row, remaining service is 180 days; otherwise 545 days.
+# original_team is inferred from the latest non-SANG KBO/parent team in player batting/pitching stats.
+lee---014yon,SANG,NC,20260924,Lee Yong-jun / 180 days left on 2026-03-28
+jeong-000jun,SANG,kt,20260924,Jung Jun-yeong / 180 days left on 2026-03-28
+kim---022don,SANG,KIW,20260924,Kim Dong-hyeok / 180 days left on 2026-03-28
+kim---007kyu,SANG,HH,20260924,Kim Gyu-yeon / 180 days left on 2026-03-28
+jeon--000mir,SANG,LOT,20260924,Jeon Mi-reu / 180 days left on 2026-03-28
+jang--004jae,SANG,KIW,20260924,Jang Jae-yeong / 180 days left on 2026-03-28
+jeon--000ui-,SANG,SSG,20260924,Jeon Ui-san / 180 days left on 2026-03-28
+kim---006you,SANG,kt,20260924,Kim Yeong-hyeon / 180 days left on 2026-03-28
+song--000myu,SANG,NC,20260924,Song Myeong-gi / 180 days left on 2026-03-28
+kim---019hye,SANG,SAM,20260924,Kim Hyeon-jun / 180 days left on 2026-03-28
+kim---026don,SANG,DOO,20260924,Kim Dong-ju / 180 days left on 2026-03-28
+hwang-000don,SANG,SAM,20270924,Hwang Dong-jae / 545 days left on 2026-03-28
+park--003han,SANG,NC,20260924,Park Han-gyeol / 180 days left on 2026-03-28
+kim---008bye,SANG,kt,20270924,Kim Byeong-jun / 545 days left on 2026-03-28
+park--002jih,SANG,DOO,20270924,Park Ji-ho / 545 days left on 2026-03-28
+jung--000eun,SANG,HH,20260924,Jung Eun-won / 180 days left on 2026-03-28
+park--006seo,SANG,SSG,20270924,Park Seong-bin / 545 days left on 2026-03-28
+jeong-001dae,SANG,LOT,20260924,Jung Dae-seon / 180 days left on 2026-03-28
+yang--000dog,SANG,SAM,20270924,Yang Do-geun / 545 days left on 2026-03-28
+jin---000seu,SANG,LOT,20260924,Jin Seung-hyeon / 180 days left on 2026-03-28
+kang--004seo,SANG,LOT,20260924,Kang Seong-u / 180 days left on 2026-03-28
+yeo---000ton,SANG,DOO,20270924,Yeo Dong-geon / 545 days left on 2026-03-28
+kim---001sia,SANG,KIW,20260924,Kim Si-ang / 180 days left on 2026-03-28
+lee---017jon,SANG,KIW,20260924,Lee Jong-min / 180 days left on 2026-03-28
+kim---034min,SANG,NC,20270924,Kim Min-gyu / 545 days left on 2026-03-28
+shin--000heo,SANG,SSG,20260924,Shin Heon-min / 180 days left on 2026-03-28
+kim---033min,SANG,KIA,20260924,Kim Min-jae / 180 days left on 2026-03-28
+lee---030san,SANG,HH,20270924,Lee Sang-hyeok / 545 days left on 2026-03-28
+kim---000doo,SANG,KIA,20260924,Kim Du-hyeon / 180 days left on 2026-03-28
+choi--005hyu,SANG,SSG,20270924,Choi Hyeon-seok / 545 days left on 2026-03-28
+ko----001you,SANG,KIW,20270924,Ko Yeong-u / 545 days left on 2026-03-28
+jung--000hye,SANG,SSG,20260924,Jung Hyeon-seung / 180 days left on 2026-03-28
+kbo_54814,SANG,SSG,20270924,Baek Jun-seo / 545 days left on 2026-03-28
+kim---012sun,SANG,LG,20270924,Kim Seong-u / 545 days left on 2026-03-28
+kbo_53809,SANG,SSG,20270924,Lee Seung-hun / 545 days left on 2026-03-28
+kim---002hoj,SANG,SAM,20260924,Kim Ho-jin / 180 days left on 2026-03-28
+kbo_54813,SANG,SSG,20270924,Heo Jin / 545 days left on 2026-03-28
+kbo_54149,SANG,LG,20270924,Jung Ji-heon / 545 days left on 2026-03-28

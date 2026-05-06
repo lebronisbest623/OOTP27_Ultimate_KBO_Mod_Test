@@ -1,0 +1,17 @@
+/* KBO patch installer subsystem assembler. */
+
+#include "patch_installers_military.inc"
+#include "patch_installers_foreign_signability_entry.inc"
+#include "patch_installers_global_callback_probe.inc"
+#include "patch_installers_foreign_ai_fa_fallback.inc"
+#include "patch_installers_foreign_submit_offer_probe.inc"
+#include "patch_installers_foreign_signing_branch.inc"
+#include "patch_installers_foreign_ai_fa_status.inc"
+#include "patch_installers_foreign_counts.inc"
+#include "patch_installers_foreign_callup_limits.inc"
+#include "patch_installers_allstar_common.inc"
+#include "patch_installers_allstar_static.inc"
+#include "patch_installers_allstar_candidate.inc"
+#include "patch_installers_allstar_events.inc"
+#include "patch_installers_allstar_settings.inc"
+#include "patch_installers_season_phase_probe.inc"

@@ -1,6 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define COBJMACROS
 #include <windows.h>
+#include <tlhelp32.h>
 #include <objbase.h>
 #include <wincodec.h>
 #include <WebView2.h>
@@ -36,6 +37,16 @@
 #define OOTP27_UI_CONTEXT_ROOT_RVA 0x031EEEA0u
 #define OOTP27_UI_CONTEXT_ACTIVE_INDEX_RVA 0x031EEEC0u
 #define OOTP27_UI_CONTEXT_FALLBACK_INDEX_RVA 0x031EEEAAu
+#define OOTP27_UI_MENU_ITEM_VTABLE_RVA 0x02B3C688u
+#define OOTP27_UI_INPUT_STATE_RVA 0x031EC3C8u
+#define OOTP27_UI_MOUSE_ROOT_RVA 0x031EC3D8u
+#define OOTP27_UI_POPUP_OWNER_RVA 0x031EC410u
+#define OOTP27_UI_ACTIVE_WIDGET_RVA 0x031EC420u
+#define OOTP27_UI_ACTIVE_WIDGET_TICK_RVA 0x031EC428u
+#define OOTP27_UI_POPUP_HOST_RVA 0x031ED898u
+#define OOTP27_UI_POPUP_STACK_ROOT_RVA 0x03164AE0u
+#define OOTP27_UI_POPUP_STACK_ACTIVE_RVA 0x03164AF8u
+#define OOTP27_UI_POPUP_STACK_CHILD_RVA 0x03164B00u
 #define OOTP27_PLAYER_TEAM_SIGNABILITY_RVA 0x0085C340u
 #define OOTP27_PLAYER_SIGNABILITY_BLOCK_849320_RVA 0x00849320u
 #define OOTP27_AI_FA_SIGNABILITY_RANDOM_FALLBACK_RVA 0x00AF1D83u
@@ -60,6 +71,15 @@
 #define OOTP27_ALLSTAR_VOTING_BEGIN_NO_GAME_RVA 0x00763F5Eu
 #define OOTP27_MAKE_ALLSTAR_EVENTS_PREP_SITE_RVA 0x00667624u
 #define OOTP27_ALLSTAR_TEAM_SETUP_SINGLE_DIVISION_BAIL_RVA 0x00667056u
+#define OOTP27_SEASON_PHASE_WRITE_1_RVA 0x00B6BF71u
+#define OOTP27_SEASON_PHASE_WRITE_0_RVA 0x00B6C797u
+#define OOTP27_SEASON_PHASE_WRITE_4_RVA 0x00B6CC88u
+#define OOTP27_SEASON_PHASE_WRITE_2A_RVA 0x00B6E5D7u
+#define OOTP27_SEASON_PHASE_WRITE_2B_RVA 0x00B714BBu
+#define OOTP27_SEASON_PHASE_WRITE_2C_RVA 0x00C87AE1u
+#define OOTP27_SEASON_PHASE_WRITE_3A_RVA 0x0064DB32u
+#define OOTP27_SEASON_PHASE_WRITE_3B_RVA 0x0043C2E9u
+#define OOTP27_SEASON_PHASE_WRITE_3C_RVA 0x0144B4B4u
 #define OOTP27_UI_CHECKBOX_SET_BOOL_RVA 0x01E7A420u
 #define OOTP27_VECTOR_PUSH_BACK_RVA 0x01CC3760u
 #define OOTP27_MESSAGE_OBJECT_SIZE 0xA8u
@@ -143,70 +163,10 @@
 /* ---- League offsets ---- */
 #define OOTP27_KBO_LEAGUE_ID_OFFSET    0x4cc0u
 #define OOTP27_KBO_LEAGUE_YEAR_OFFSET  0x44ecu
+#define OOTP27_KBO_LEAGUE_PHASE_OFFSET 0x44f0u
+#define OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET 0x44f4u
 
-/* ---- Military service ---- */
-#define KBO_MILITARY_SERVICE_DAYS 545
-
-/* ---- Asian Games ---- */
-#define KBO_ASIAN_GAMES_ROSTER_SIZE 24
-#define KBO_ASIAN_GAMES_PITCHER_TARGET 11
-#define KBO_ASIAN_GAMES_CATCHER_TARGET 2
-#define KBO_ASIAN_GAMES_INFIELDER_TARGET 6
-#define KBO_ASIAN_GAMES_OUTFIELDER_TARGET 5
-#define KBO_ASIAN_GAMES_MAX_WILDCARDS 3
-#define KBO_ASIAN_GAMES_MAX_CANDIDATES 4096
-#define KBO_ASIAN_GAMES_MAX_ALLOWED_LEAGUES 8
-#define KBO_ASIAN_GAMES_MAX_ORGS 32
-#define KBO_ASIAN_GAMES_TEAM_MIN_PLAYERS 1
-#define KBO_ASIAN_GAMES_TEAM_MAX_PLAYERS 3
-
-/* ---- Structs ---- */
-typedef struct KboMilitaryActiveLoan {
-    uint32_t player_id;
-    uint32_t original_team_id;
-    uint32_t original_league_id;
-    uint32_t service_team_id;
-    uint32_t service_league_id;
-    uint32_t service_start_date_serial;
-    uint32_t service_return_date_serial;
-    int32_t  service_total_days;
-    uintptr_t player_ptr;
-} KboMilitaryActiveLoan;
-
-typedef struct KboAsianGamesRosterEntry {
-    uint32_t player_id;
-    uint32_t original_team_id;
-    uint32_t original_league_id;
-    uint32_t departure_date;
-    uint32_t return_date;
-    uint16_t age;
-    uint8_t role;
-    uint8_t wildcard;
-    uint8_t old_restricted;
-    uint8_t old_secondary_restricted;
-    uint8_t old_injury_active;
-    int16_t old_injury_days_left;
-    uint8_t departed;
-    uint8_t returned;
-    uint8_t exempted;
-    int32_t score;
-    uintptr_t player_ptr;
-} KboAsianGamesRosterEntry;
-
-typedef struct KboAsianGamesCandidate {
-    KboAsianGamesRosterEntry entry;
-    uint32_t org_team_id;
-    uint8_t selected;
-} KboAsianGamesCandidate;
-
-typedef struct KboAllstarTeamRow {
-    uint16_t year;
-    char team_id[16];
-    char team_name[96];
-    char current_city[64];
-    uint8_t side;
-} KboAllstarTeamRow;
-
+/* ---- OOTP function typedefs ---- */
 typedef void* (__fastcall *OotpCreateLeagueEventFn)(
     void* event_manager,
     void* date,
@@ -240,25 +200,6 @@ typedef void* (__fastcall *OotpNewsObjectCtorFn)(void* news_object);
 typedef void (__fastcall *OotpNewsStringEnsureFn)(void* news_object);
 typedef void* (__fastcall *OotpOperatorNewFn)(size_t size);
 typedef void* (__fastcall *OotpCoreStringAssignFn)(void* string_object, const char* text);
-
-/* ---- Globals ---- */
-static KboMilitaryActiveLoan g_active_military_loans[OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS];
-static LONG g_active_military_loan_count    = 0;
-static LONG g_military_service_entry_log_count = 0;
-static LONG g_military_loan_return_log_count   = 0;
-static LONG g_military_days_tick_started       = 0;
-static LONG g_military_days_tick_log_count     = 0;
-static KboAsianGamesRosterEntry g_kbo_asian_games_roster[KBO_ASIAN_GAMES_ROSTER_SIZE];
-static LONG g_kbo_asian_games_roster_count = 0;
-static uint32_t g_kbo_asian_games_roster_year = 0;
-static char g_kbo_asian_games_roster_save_path[MAX_PATH] = {0};
-static KboAllstarTeamRow g_allstar_team_rows[OOTP27_KBO_MAX_ALLSTAR_TEAM_ROWS];
-static int g_allstar_team_row_count = 0;
-static LONG g_allstar_team_rules_loaded = 0;
-static LONG g_allstar_candidate_seed_log_count = 0;
-static LONG g_allstar_voting_prepare_log_count = 0;
-static LONG g_allstar_team_name_log_count = 0;
-static const char g_kbo_default_event_source[] = "custom_event_monitor";
 
 /* ---- Forward declarations ---- */
 __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
@@ -340,7 +281,13 @@ static int kbo_enforce_foreign_waiver_signability(
     int original_signability,
     uintptr_t caller_rva);
 static int start_kbo_custom_event_monitor(void);
+static int start_kbo_season_phase_monitor(void);
+static int install_kbo_season_phase_write_probe_patches(void);
 static int kbo_schedule_foreign_priority_custom_events(const char* source);
+__declspec(noinline) void ootp_kbo_season_phase_write_probe(
+    uintptr_t league_ptr,
+    uint32_t value,
+    uint32_t site_rva);
 static void kbo_hub_copy_player_display_name(uint8_t* player, char* out, size_t out_size);
 __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
     uintptr_t league_ptr,
@@ -418,6 +365,7 @@ static void kbo_perf_probe_record(
 #include "src/foreign_waiver_ai.inc"
 #include "src/custom_events.inc"
 #include "src/allstar.inc"
+#include "src/season_phase_monitor.inc"
 #include "src/patch_helpers.inc"
 #include "src/hook_stubs.inc"
 #include "src/patch_installers.inc"

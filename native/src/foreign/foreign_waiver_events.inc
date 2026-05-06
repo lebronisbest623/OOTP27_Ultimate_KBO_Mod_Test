@@ -214,69 +214,6 @@ static uint32_t kbo_detect_offseason_starts_event(uint32_t today_yyyymmdd, uint3
     return latest_offseason_start;
 }
 
-static int kbo_days_in_month(uint32_t year, uint32_t month)
-{
-    static const int days[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
-    if (month < 1u || month > 12u) {
-        return 0;
-    }
-    if (month == 2u && kbo_is_leap_year(year)) {
-        return 29;
-    }
-    return days[month];
-}
-
-static uint32_t kbo_add_one_month_yyyymmdd(uint32_t yyyymmdd)
-{
-    uint32_t year = yyyymmdd / 10000u;
-    uint32_t month = (yyyymmdd / 100u) % 100u;
-    uint32_t day = yyyymmdd % 100u;
-    if (year < 1980u || month < 1u || month > 12u || day < 1u || day > 31u) {
-        return 0;
-    }
-    month++;
-    if (month > 12u) {
-        month = 1u;
-        year++;
-    }
-    int dim = kbo_days_in_month(year, month);
-    if (dim <= 0) {
-        return 0;
-    }
-    if (day > (uint32_t)dim) {
-        day = (uint32_t)dim;
-    }
-    return year * 10000u + month * 100u + day;
-}
-
-static uint32_t kbo_add_days_yyyymmdd(uint32_t yyyymmdd, uint32_t add_days)
-{
-    uint32_t year = yyyymmdd / 10000u;
-    uint32_t month = (yyyymmdd / 100u) % 100u;
-    uint32_t day = yyyymmdd % 100u;
-    if (year < 1980u || month < 1u || month > 12u || day < 1u || day > 31u) {
-        return 0;
-    }
-
-    while (add_days > 0u) {
-        int dim = kbo_days_in_month(year, month);
-        if (dim <= 0) {
-            return 0;
-        }
-        day++;
-        if (day > (uint32_t)dim) {
-            day = 1u;
-            month++;
-            if (month > 12u) {
-                month = 1u;
-                year++;
-            }
-        }
-        add_days--;
-    }
-    return year * 10000u + month * 100u + day;
-}
-
 static int kbo_write_foreign_waiver_window(uint32_t start_yyyymmdd, uint32_t end_yyyymmdd, const char* reason)
 {
     char path[MAX_PATH] = {0};
@@ -292,7 +229,8 @@ static int kbo_write_foreign_waiver_window(uint32_t start_yyyymmdd, uint32_t end
         CreateDirectoryA(dir, NULL);
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("foreign priority negotiation: failed to write window file error=%lu", GetLastError());
         return 0;
@@ -302,7 +240,13 @@ static int kbo_write_foreign_waiver_window(uint32_t start_yyyymmdd, uint32_t end
     int len = snprintf(line, sizeof(line), "%08u,%08u\r\n", start_yyyymmdd, end_yyyymmdd);
     DWORD written = 0;
     int ok = WriteFile(file, line, (DWORD)len, &written, NULL) && written == (DWORD)len;
-    CloseHandle(file);
+    if (!ok || !kbo_atomic_commit(file, tmp_path, path)) {
+        if (!ok) {
+            kbo_atomic_commit(file, tmp_path, path);
+            DeleteFileA(path);
+        }
+        ok = 0;
+    }
 
     append_logf(
         "foreign priority negotiation: event window persisted start=%u end=%u reason=%s ok=%d path=%s",
@@ -397,259 +341,6 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
         "offseason_starts_event");
     last_checked_result = opened ? 1u : 2u;
     return opened;
-}
-
-static int kbo_parse_yyyymmdd(const char* date_text, uint32_t* out_date)
-{
-    if (date_text == NULL || out_date == NULL) {
-        return 0;
-    }
-
-    char ymd[9] = {0};
-    size_t len = strlen(date_text);
-    if (len >= 8
-            && date_text[0] >= '0' && date_text[0] <= '9'
-            && date_text[1] >= '0' && date_text[1] <= '9'
-            && date_text[2] >= '0' && date_text[2] <= '9'
-            && date_text[3] >= '0' && date_text[3] <= '9'
-            && date_text[4] >= '0' && date_text[4] <= '9'
-            && date_text[5] >= '0' && date_text[5] <= '9'
-            && date_text[6] >= '0' && date_text[6] <= '9'
-            && date_text[7] >= '0' && date_text[7] <= '9') {
-        memcpy(ymd, date_text, 8);
-    } else if (len >= 10 && date_text[4] == '-' && date_text[7] == '-') {
-        ymd[0] = date_text[0]; ymd[1] = date_text[1]; ymd[2] = date_text[2]; ymd[3] = date_text[3];
-        ymd[4] = date_text[5]; ymd[5] = date_text[6];
-        ymd[6] = date_text[8]; ymd[7] = date_text[9];
-    } else {
-        return 0;
-    }
-
-    for (int i = 0; i < 8; i++) {
-        if (ymd[i] < '0' || ymd[i] > '9') {
-            return 0;
-        }
-    }
-
-    *out_date = (uint32_t)(
-        (ymd[0] - '0') * 10000000u +
-        (ymd[1] - '0') * 1000000u +
-        (ymd[2] - '0') * 100000u +
-        (ymd[3] - '0') * 10000u +
-        (ymd[4] - '0') * 1000u +
-        (ymd[5] - '0') * 100u +
-        (ymd[6] - '0') * 10u +
-        (ymd[7] - '0'));
-    return 1;
-}
-
-static int kbo_get_current_yyyymmdd(uint32_t* out_date)
-{
-    if (out_date == NULL) {
-        return 0;
-    }
-
-    uint32_t year = 0;
-    uint32_t month = 0;
-    uint32_t day = 0;
-    if (!kbo_current_date_is_valid(&year, &month, &day)) {
-        return 0;
-    }
-    *out_date = year * 10000u + month * 100u + day;
-    return 1;
-}
-
-static int kbo_get_foreign_waiver_rights_path(char* out, size_t out_size)
-{
-    if (out == NULL || out_size < 2) {
-        return 0;
-    }
-    return kbo_get_save_scoped_data_file("foreign_waiver_rights.csv", out, out_size);
-}
-
-static int get_kbo_foreign_waiver_decisions_path(char* out, size_t out_size)
-{
-    if (out == NULL || out_size < 2) {
-        return 0;
-    }
-    return kbo_get_save_scoped_data_file("foreign_waiver_decisions.csv", out, out_size);
-}
-
-static int get_kbo_asian_quota_nation_ids_path(char* out, size_t out_size)
-{
-    if (out == NULL || out_size == 0) {
-        return 0;
-    }
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-    snprintf(out, out_size, "%s\\OOTP-KBO\\asian_quota_nation_ids.txt", local_app_data);
-    return 1;
-}
-
-static int kbo_foreign_waiver_legacy_auto_detector_enabled(void)
-{
-    static LONG cached = -1;
-    LONG value = cached;
-    if (value != -1) {
-        return value == 1;
-    }
-    value = read_kbo_localappdata_flag_file("enable_foreign_waiver_legacy_auto_detector.txt") ? 1 : 0;
-    InterlockedCompareExchange(&cached, value, -1);
-    return cached == 1;
-}
-
-static int get_kbo_foreign_waiver_announcement_path(char* out, size_t out_size)
-{
-    if (out == NULL || out_size < 2) {
-        return 0;
-    }
-    return kbo_get_save_scoped_data_file("foreign_waiver_announcements.txt", out, out_size);
-}
-
-static int kbo_foreign_waiver_announcement_recorded(uint32_t event_yyyymmdd)
-{
-    if (event_yyyymmdd == 0u) {
-        return 0;
-    }
-
-    char path[MAX_PATH] = {0};
-    if (!get_kbo_foreign_waiver_announcement_path(path, sizeof(path))) {
-        return 0;
-    }
-
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        return 0;
-    }
-
-    char raw[4096] = {0};
-    DWORD read = 0;
-    int found = 0;
-    if (ReadFile(file, raw, sizeof(raw) - 1u, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        const char* cursor = raw;
-        while (*cursor != '\0') {
-            while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n' || *cursor == ',') {
-                cursor++;
-            }
-            char* tail = NULL;
-            unsigned long raw_date = strtoul(cursor, &tail, 10);
-            if (raw_date == event_yyyymmdd) {
-                found = 1;
-                break;
-            }
-            if (tail == cursor) {
-                break;
-            }
-            cursor = tail;
-        }
-    }
-
-    CloseHandle(file);
-    return found;
-}
-
-static void kbo_record_foreign_waiver_announcement(uint32_t event_yyyymmdd)
-{
-    if (event_yyyymmdd == 0u) {
-        return;
-    }
-
-    char path[MAX_PATH] = {0};
-    if (!get_kbo_foreign_waiver_announcement_path(path, sizeof(path))) {
-        return;
-    }
-
-    char dir[MAX_PATH] = {0};
-    snprintf(dir, sizeof(dir), "%s", path);
-    char* slash = strrchr(dir, '\\');
-    if (slash != NULL) {
-        *slash = '\0';
-        CreateDirectoryA(dir, NULL);
-    }
-
-    HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        return;
-    }
-
-    char line[32] = {0};
-    int len = snprintf(line, sizeof(line), "%u\r\n", event_yyyymmdd);
-    DWORD written = 0;
-    if (len > 0) {
-        WriteFile(file, line, (DWORD)len, &written, NULL);
-    }
-    CloseHandle(file);
-}
-
-static void kbo_record_foreign_waiver_announcement_body(uint32_t event_yyyymmdd, const char* source, const char* body)
-{
-    if (event_yyyymmdd == 0u) {
-        return;
-    }
-
-    char path[MAX_PATH] = {0};
-    if (!get_kbo_foreign_waiver_announcement_path(path, sizeof(path))) {
-        return;
-    }
-
-    char dir[MAX_PATH] = {0};
-    snprintf(dir, sizeof(dir), "%s", path);
-    char* slash = strrchr(dir, '\\');
-    if (slash != NULL) {
-        *slash = '\0';
-        CreateDirectoryA(dir, NULL);
-    }
-
-    HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign reserve rights: announcement body record failed path=%s err=%lu", path, GetLastError());
-        return;
-    }
-
-    char line[1400] = {0};
-    int len = snprintf(
-        line,
-        sizeof(line),
-        "%u|%s|%s\r\n",
-        event_yyyymmdd,
-        source != NULL ? source : "",
-        body != NULL ? body : "");
-    DWORD written = 0;
-    if (len > 0) {
-        WriteFile(file, line, (DWORD)len, &written, NULL);
-    }
-    CloseHandle(file);
-}
-
-static int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_date)
-{
-    return kbo_get_current_yyyymmdd(out_date);
-}
-
-static uint32_t kbo_add_years_yyyymmdd(uint32_t yyyymmdd, uint32_t add_years)
-{
-    uint32_t year = yyyymmdd / 10000u;
-    uint32_t month = (yyyymmdd / 100u) % 100u;
-    uint32_t day = yyyymmdd % 100u;
-    if (year < 1800u || year > 2200u || month < 1u || month > 12u || day < 1u || day > 31u) {
-        return 0u;
-    }
-    year += add_years;
-    if (year > 2200u) {
-        year = 2200u;
-    }
-    int dim = kbo_days_in_month(year, month);
-    if (dim <= 0) {
-        return 0u;
-    }
-    if (day > (uint32_t)dim) {
-        day = (uint32_t)dim;
-    }
-    return year * 10000u + month * 100u + day;
 }
 
 

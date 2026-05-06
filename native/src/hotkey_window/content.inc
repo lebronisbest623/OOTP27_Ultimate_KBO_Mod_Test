@@ -598,7 +598,7 @@ static void kbo_build_asian_games_hub_text(char* out, size_t out_size)
         if (kbo_player_pointer_plausible(player_ptr)) {
             kbo_hub_copy_player_display_name((uint8_t*)player_ptr, player_name, sizeof(player_name));
         } else {
-            snprintf(player_name, sizeof(player_name), "Player #%u", entry->player_id);
+            snprintf(player_name, sizeof(player_name), "Unknown player");
         }
 
         const char* status = "Selected";

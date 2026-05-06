@@ -13,7 +13,7 @@ static int kbo_schedule_foreign_priority_custom_events(const char* source)
         append_logf(
             "KBO custom event schedule skipped source=%s reason=current_date_unavailable",
             source != NULL ? source : "");
-        return 0;
+        return -1;
     }
 
     uint32_t today = year * 10000u + month * 100u + day;
@@ -25,7 +25,7 @@ static int kbo_schedule_foreign_priority_custom_events(const char* source)
                 "KBO custom event schedule skipped source=%s reason=no_offseason_starts_event today=%u",
                 source != NULL ? source : "",
                 today);
-            return 0;
+            return -1;
         }
     }
     if (offseason_starts_yyyymmdd > today) {
@@ -36,15 +36,6 @@ static int kbo_schedule_foreign_priority_custom_events(const char* source)
             today);
         return 0;
     }
-    if (g_kbo_foreign_priority_last_scheduled_date == offseason_starts_yyyymmdd) {
-        append_logf(
-            "KBO custom event schedule skipped source=%s reason=already_scheduled_for_season_end today=%u season_end=%u",
-            source != NULL ? source : "",
-            today,
-            offseason_starts_yyyymmdd);
-        return 0;
-    }
-
     uint32_t anchor_date = offseason_starts_yyyymmdd;
     uint32_t close_date = kbo_add_days_yyyymmdd(anchor_date, 20u);
     uint32_t military_selection_date = kbo_add_one_month_yyyymmdd(anchor_date);
@@ -54,14 +45,31 @@ static int kbo_schedule_foreign_priority_custom_events(const char* source)
             source != NULL ? source : "",
             offseason_starts_yyyymmdd,
             anchor_date);
+        return -1;
+    }
+
+    int close_exists = kbo_custom_event_exists_for_date(
+        league_id,
+        close_date,
+        0);
+    int military_exists = military_selection_date == 0u
+        || kbo_custom_event_exists_by_title_for_date(
+            league_id,
+            military_selection_date,
+            g_kbo_military_selection_event_title);
+    if (g_kbo_foreign_priority_last_scheduled_date == offseason_starts_yyyymmdd
+            && close_exists
+            && military_exists) {
+        append_logf(
+            "KBO custom event schedule skipped source=%s reason=already_scheduled_for_season_end today=%u season_end=%u",
+            source != NULL ? source : "",
+            today,
+            offseason_starts_yyyymmdd);
         return 0;
     }
 
     int created_close = 0;
-    if (!kbo_custom_event_exists_for_date(
-            league_id,
-            close_date,
-            0)) {
+    if (!close_exists) {
         created_close = create_kbo_league_event(
             close_date / 10000u,
             (close_date / 100u) % 100u,
@@ -75,7 +83,7 @@ static int kbo_schedule_foreign_priority_custom_events(const char* source)
 
     int created_military = 0;
     if (military_selection_date != 0u
-            && g_kbo_military_selection_last_scheduled_date != offseason_starts_yyyymmdd) {
+            && !military_exists) {
         created_military = create_kbo_league_event(
             military_selection_date / 10000u,
             (military_selection_date / 100u) % 100u,
@@ -90,16 +98,32 @@ static int kbo_schedule_foreign_priority_custom_events(const char* source)
         }
     }
 
+    close_exists = close_exists || created_close || kbo_custom_event_exists_for_date(
+        league_id,
+        close_date,
+        0);
+    military_exists = military_selection_date == 0u
+        || military_exists
+        || created_military
+        || kbo_custom_event_exists_by_title_for_date(
+            league_id,
+            military_selection_date,
+            g_kbo_military_selection_event_title);
+
     append_logf(
-        "KBO custom event schedule source=%s season_end=%u anchor=%u close=%u military=%u created_close=%d created_military=%d",
+        "KBO custom event schedule source=%s season_end=%u anchor=%u close=%u military=%u created_close=%d created_military=%d ready=%d",
         source != NULL ? source : "",
         offseason_starts_yyyymmdd,
         anchor_date,
         close_date,
         military_selection_date,
         created_close,
-        created_military);
+        created_military,
+        close_exists && military_exists);
 
+    if (!(close_exists && military_exists)) {
+        return -1;
+    }
     g_kbo_foreign_priority_last_scheduled_date = offseason_starts_yyyymmdd;
     return created_close || created_military;
 }

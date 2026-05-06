@@ -1,4 +1,18 @@
-/* Military service seed, draft, and return-history state. Included from native/src/military_service_loan.inc. */
+/* Military service seed, draft, active-loan, and return-history state. Included from native/src/military_service_loan.inc. */
+
+#define KBO_MILITARY_SERVICE_DAYS 545
+
+typedef struct KboMilitaryActiveLoan {
+    uint32_t player_id;
+    uint32_t original_team_id;
+    uint32_t original_league_id;
+    uint32_t service_team_id;
+    uint32_t service_league_id;
+    uint32_t service_start_date_serial;
+    uint32_t service_return_date_serial;
+    int32_t  service_total_days;
+    uintptr_t player_ptr;
+} KboMilitaryActiveLoan;
 
 #define KBO_MILITARY_SERVICE_SEED_MAX        512
 #define KBO_MILITARY_SERVICE_SEED_KEY_BYTES  40
@@ -35,6 +49,14 @@ typedef struct KboMilitaryReturnHistoryKey {
     uint32_t history_yyyymmdd;
 } KboMilitaryReturnHistoryKey;
 
+static KboMilitaryActiveLoan g_active_military_loans[OOTP27_KBO_MAX_SPECIAL_HISTORY_KEYS];
+static LONG g_active_military_loan_count = 0;
+static LONG g_military_service_entry_log_count = 0;
+static LONG g_military_loan_return_log_count = 0;
+static LONG g_military_days_tick_started = 0;
+static LONG g_military_days_tick_log_count = 0;
+static LONG g_military_seed_bootstrap_started = 0;
+static LONG g_military_seed_expired_skip_log_count = 0;
 static KboMilitaryServiceSeed g_kbo_military_service_seeds[KBO_MILITARY_SERVICE_SEED_MAX];
 static int g_kbo_military_service_seed_count = 0;
 static LONG g_kbo_military_service_seed_lock = 0;
