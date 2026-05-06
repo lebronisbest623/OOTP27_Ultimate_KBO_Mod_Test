@@ -1,0 +1,142 @@
+/* Team and player lookup (from team_continuity) */
+
+static int kbo_player_pointer_plausible(uintptr_t player_ptr)
+{
+    if (player_ptr == 0 || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    uint8_t* player   = (uint8_t*)player_ptr;
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    uint16_t age       = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
+    return player_id > 0 && player_id < 200000000u && age < 80;
+}
+
+static int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset)
+{
+    if (out_vector != NULL) { *out_vector = 0; }
+    if (out_count  != NULL) { *out_count  = 0; }
+    if (out_offset != NULL) { *out_offset = 0; }
+
+    uintptr_t global = get_ootp_global_database();
+    if (global == 0) {
+        return 0;
+    }
+
+    int best_matches     = 0;
+    uintptr_t best_vector = 0;
+    int32_t   best_count  = 0;
+    uint32_t  best_offset = 0;
+
+    for (uint32_t offset = 0x20u; offset <= 0x500u; offset += 8u) {
+        if (!memory_range_readable((void*)(global + offset), 0x10)) {
+            continue;
+        }
+
+        uintptr_t vector = *(uintptr_t*)(global + offset);
+        int32_t   count  = *(int32_t*)(global + offset + 0x0cu);
+        if (vector == 0 || count <= 0 || count > 200000) {
+            continue;
+        }
+        if (!memory_range_readable((void*)vector, (SIZE_T)count * sizeof(uintptr_t))) {
+            continue;
+        }
+
+        int matches = 0;
+        int sample_count = count < 2000 ? count : 2000;
+        for (int32_t i = 0; i < sample_count; i++) {
+            uintptr_t player_ptr = *(uintptr_t*)(vector + ((uintptr_t)i * sizeof(uintptr_t)));
+            if (kbo_player_pointer_plausible(player_ptr)) {
+                matches++;
+            }
+        }
+
+        if (matches > best_matches) {
+            best_matches = matches;
+            best_vector  = vector;
+            best_count   = count;
+            best_offset  = offset;
+        }
+    }
+
+    if (best_matches <= 0 || best_vector == 0 || best_count <= 0) {
+        return 0;
+    }
+
+    if (out_vector != NULL) { *out_vector = best_vector; }
+    if (out_count  != NULL) { *out_count  = best_count;  }
+    if (out_offset != NULL) { *out_offset = best_offset; }
+    return 1;
+}
+
+static uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allow_deleted)
+{
+    if (team_id == NULL || team_id[0] == '\0') {
+        return NULL;
+    }
+
+    uintptr_t global = get_ootp_global_database();
+    if (global == 0) {
+        return NULL;
+    }
+
+    uintptr_t team_vector = *(uintptr_t*)(global + OOTP27_KBO_TEAM_VECTOR_OFFSET);
+    int32_t   team_count  = *(int32_t*)(global  + OOTP27_KBO_TEAM_COUNT_OFFSET);
+    if (team_vector == 0 || team_count <= 0 || team_count > 10000
+            || !memory_range_readable((void*)team_vector, (SIZE_T)team_count * sizeof(uintptr_t))) {
+        return NULL;
+    }
+
+    for (int32_t i = 0; i < team_count; i++) {
+        uintptr_t team_ptr = *(uintptr_t*)(team_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if (team_ptr == 0 || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            continue;
+        }
+
+        uint8_t* team = (uint8_t*)team_ptr;
+        if (!allow_deleted && team[OOTP27_KBO_TEAM_DELETED_OFFSET] != 0) {
+            continue;
+        }
+        if (team_has_ootp_string_text(team, team_id)) {
+            return team;
+        }
+    }
+
+    return NULL;
+}
+
+static uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted)
+{
+    if (team_id == 0) {
+        return NULL;
+    }
+
+    uintptr_t global = get_ootp_global_database();
+    if (global == 0) {
+        return NULL;
+    }
+
+    uintptr_t team_vector = *(uintptr_t*)(global + OOTP27_KBO_TEAM_VECTOR_OFFSET);
+    int32_t   team_count  = *(int32_t*)(global  + OOTP27_KBO_TEAM_COUNT_OFFSET);
+    if (team_vector == 0 || team_count <= 0 || team_count > 10000
+            || !memory_range_readable((void*)team_vector, (SIZE_T)team_count * sizeof(uintptr_t))) {
+        return NULL;
+    }
+
+    for (int32_t i = 0; i < team_count; i++) {
+        uintptr_t team_ptr = *(uintptr_t*)(team_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if (team_ptr == 0 || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            continue;
+        }
+
+        uint8_t* team = (uint8_t*)team_ptr;
+        if (!allow_deleted && team[OOTP27_KBO_TEAM_DELETED_OFFSET] != 0) {
+            continue;
+        }
+        if (*(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET) == team_id) {
+            return team;
+        }
+    }
+
+    return NULL;
+}

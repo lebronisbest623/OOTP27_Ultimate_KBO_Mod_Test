@@ -106,7 +106,7 @@ static int kbo_load_foreign_waiver_rights(void)
         }
         cursor = next + 1;
     }
-    append_logf("foreign reserve rights: loaded=%d deduped=%d", g_kbo_foreign_waiver_rights_count, deduped);
+    append_logf("foreign reserve rights: loaded=%d deduped=%d path=%s", g_kbo_foreign_waiver_rights_count, deduped, path);
     if (deduped > 0) {
         kbo_persist_foreign_waiver_rights();
     }

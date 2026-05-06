@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows Artifacts
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup MSYS2 MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Restore
+        run: dotnet restore .\KBOLauncher.csproj
+
+      - name: Restore WebView2 native package
+        shell: pwsh
+        run: |
+          dotnet new classlib --output .\.ci\webview2-restore --framework net8.0
+          dotnet add .\.ci\webview2-restore package Microsoft.Web.WebView2 --version 1.0.3065.39
+          dotnet restore .\.ci\webview2-restore
+
+      - name: Build launcher
+        run: dotnet build .\KBOLauncher.csproj --configuration Release --no-restore
+
+      - name: Build native DLL
+        shell: pwsh
+        run: .\native\build.ps1
+
+      - name: Publish launcher
+        run: dotnet publish .\KBOLauncher.csproj --configuration Release --no-build --output .\artifacts\KBOLauncher
+
+      - name: Collect native artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .\artifacts\native | Out-Null
+          Copy-Item .\native\bin\KBOFix.dll .\artifacts\native\KBOFix.dll -Force
+          Copy-Item .\native\bin\WebView2Loader.dll .\artifacts\native\WebView2Loader.dll -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: KBOLauncher-windows
+          path: artifacts
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: KBOLauncher-windows
+          path: artifacts
+
+      - name: Package artifacts
+        shell: pwsh
+        run: Compress-Archive -Path .\artifacts\* -DestinationPath .\KBOLauncher-windows.zip -Force
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: KBOLauncher-windows.zip

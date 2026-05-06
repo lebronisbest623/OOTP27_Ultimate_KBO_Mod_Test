@@ -58,10 +58,6 @@ static int kbo_fast_block_fa_candidate_before_original(
     }
 
     if (kbo_foreign_waiver_ai_enabled()) {
-        static LONG load_attempted = 0;
-        if (InterlockedCompareExchange(&load_attempted, 1, 0) == 0) {
-            kbo_load_foreign_waiver_rights();
-        }
         kbo_prune_expired_foreign_waiver_rights(today);
 
         uint32_t holder_team_id = 0u;

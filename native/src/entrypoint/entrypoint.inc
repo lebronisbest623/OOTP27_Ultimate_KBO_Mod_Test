@@ -134,26 +134,21 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
         if (read_kbo_localappdata_flag_file("enable_single_division_allstar_voting_hook.txt")) {
             install_allstar_voting_begin_prepare_patch();
         } else {
-            append_log_line("KBO all-star voting begin prepare hook disabled: enable_single_division_allstar_voting_hook.txt is off");
+            append_log_line("KBO all-star voting begin prepare hook disabled: kbo_flags.json enable_single_division_allstar_voting_hook is false");
         }
         if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
             force_kbo_allstar_flags_for_configured_league("startup_allstar_events_enabled");
             install_allstar_events_prepare_patch();
         } else {
-            append_log_line("KBO all-star events prepare hook disabled: enable_single_division_allstar_events.txt is off");
+            append_log_line("KBO all-star events prepare hook disabled: kbo_flags.json enable_single_division_allstar_events is false");
         }
     } else {
-        append_log_line("KBO single-division all-star runtime patches disabled: enable_single_division_allstar_runtime_patches.txt is off");
+        append_log_line("KBO single-division all-star runtime patches disabled: kbo_flags.json enable_single_division_allstar_runtime_patches is false");
     }
     if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
         install_allstar_settings_ui_patch();
     } else {
-        append_log_line("KBO all-star settings UI patch disabled: enable_single_division_allstar_settings_patch.txt is off");
-    }
-    if (read_kbo_localappdata_flag_file("enable_player_profile_callback_probe.txt")) {
-        append_log_line("KBO player profile callback probe disabled: unsafe prologue hook caused OOTP crash");
-    } else {
-        append_log_line("KBO player profile callback probe disabled: enable_player_profile_callback_probe.txt is off");
+        append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
     }
     int enable_legacy_fa_signability_hooks = read_kbo_localappdata_flag_file("enable_kbo_fa_signability_hooks.txt");
     kbo_load_military_service_team_policy_override_once();
@@ -170,7 +165,7 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
             enable_sangmu_signability_only,
             enable_sangmu_offer_only);
     } else {
-        append_log_line("KBO Sangmu FA block diagnostic disabled: enable_kbo_sangmu_signability_only.txt / enable_kbo_sangmu_offer_only.txt are off");
+        append_log_line("KBO Sangmu FA block diagnostic disabled: kbo_flags.json enable_kbo_sangmu_signability_only / enable_kbo_sangmu_offer_only are false");
     }
     start_kbo_delayed_sangmu_fa_hooks_install_thread(
         enable_sangmu_signability_only || read_kbo_localappdata_flag_file("enable_kbo_player_team_signability_patch.txt"),
@@ -179,22 +174,22 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
     if (enable_legacy_fa_signability_hooks || read_kbo_localappdata_flag_file("enable_kbo_ai_fa_fallback_patch.txt")) {
         install_kbo_ai_fa_signability_random_fallback_patch();
     } else {
-        append_log_line("KBO AI FA signability fallback patch disabled: enable_kbo_ai_fa_fallback_patch.txt is off");
+        append_log_line("KBO AI FA signability fallback patch disabled: kbo_flags.json enable_kbo_ai_fa_fallback_patch is false");
     }
     if (enable_legacy_fa_signability_hooks || read_kbo_localappdata_flag_file("enable_kbo_submit_offer_probe_patch.txt")) {
         install_kbo_fa_submit_offer_probe_patch();
     } else {
-        append_log_line("KBO FA submit-offer probe patch disabled: enable_kbo_submit_offer_probe_patch.txt is off");
+        append_log_line("KBO FA submit-offer probe patch disabled: kbo_flags.json enable_kbo_submit_offer_probe_patch is false");
     }
     if (read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
         install_kbo_fa_signing_branch_patch();
     } else {
-        append_log_line("KBO FA requalification signing hook disabled: enable_fa_requalification.txt is off");
+        append_log_line("KBO FA requalification signing hook disabled: kbo_flags.json enable_fa_requalification is false");
     }
-    if (read_kbo_localappdata_flag_file("enable_kbo_ai_fa_status_candidate_insert_hook.txt")) {
+    if (!read_kbo_localappdata_flag_file("disable_kbo_ai_fa_status_candidate_insert_hook.txt")) {
         install_kbo_ai_fa_status_candidate_insert_patch();
     } else {
-        append_log_line("KBO AI FA status candidate insert hook disabled: enable_kbo_ai_fa_status_candidate_insert_hook.txt is off");
+        append_log_line("KBO AI FA status candidate insert hook disabled: kbo_flags.json disable_kbo_ai_fa_status_candidate_insert_hook is true");
     }
     install_kbo_foreign_count_patches();
     if (read_kbo_localappdata_flag_file("enable_kbo_callup_foreign_limit_patch.txt")) {
@@ -207,11 +202,15 @@ static DWORD WINAPI patch_thread(LPVOID parameter)
     if (read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
         start_kbo_fa_requalification_thread();
     } else {
-        append_log_line("KBO FA requalification thread disabled: enable_fa_requalification.txt is off");
+        append_log_line("KBO FA requalification thread disabled: kbo_flags.json enable_fa_requalification is false");
     }
     start_kbo_custom_event_monitor();
-    start_kbo_season_phase_monitor();
-    append_log_line("KBO season phase write probe disabled: unsafe after crash; using read-only monitor");
+    if (read_kbo_localappdata_flag_file("enable_kbo_season_phase_monitor.txt")) {
+        start_kbo_season_phase_monitor();
+        append_log_line("KBO season phase write probe disabled: unsafe after crash; using read-only monitor");
+    } else {
+        append_log_line("KBO season phase read-only monitor disabled: kbo_flags.json enable_kbo_season_phase_monitor is false");
+    }
     start_kbo_military_seed_bootstrap_thread();
     start_kbo_military_days_tick_thread();
     return 0;

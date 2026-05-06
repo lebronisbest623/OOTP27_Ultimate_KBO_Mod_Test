@@ -37,6 +37,36 @@ static int kbo_path_looks_like_absolute_save_path(const char* path)
 
 typedef LONG (WINAPI* KboNtQuerySystemInformationFn)(ULONG, PVOID, ULONG, PULONG);
 
+static char g_kbo_cached_current_save_path[MAX_PATH] = {0};
+static volatile LONG64 g_kbo_cached_current_save_path_tick = 0;
+
+static void kbo_cache_current_save_path(const char* path)
+{
+    if (path == NULL || !kbo_path_looks_like_absolute_save_path(path)) {
+        return;
+    }
+    snprintf(g_kbo_cached_current_save_path, sizeof(g_kbo_cached_current_save_path), "%s", path);
+    InterlockedExchange64(&g_kbo_cached_current_save_path_tick, (LONG64)GetTickCount64());
+}
+
+static int kbo_get_cached_current_save_path(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0 || g_kbo_cached_current_save_path[0] == '\0') {
+        return 0;
+    }
+    LONG64 cached_tick = InterlockedCompareExchange64(&g_kbo_cached_current_save_path_tick, 0, 0);
+    ULONGLONG now = GetTickCount64();
+    if (cached_tick <= 0 || now < (ULONGLONG)cached_tick || now - (ULONGLONG)cached_tick > 5000ull) {
+        return 0;
+    }
+    if (!kbo_path_looks_like_absolute_save_path(g_kbo_cached_current_save_path)) {
+        g_kbo_cached_current_save_path[0] = '\0';
+        return 0;
+    }
+    snprintf(out, out_size, "%s", g_kbo_cached_current_save_path);
+    return out[0] != '\0';
+}
+
 static int kbo_extract_lg_save_path_from_file_path(const char* path, char* out, size_t out_size)
 {
     if (path == NULL || out == NULL || out_size == 0) {
@@ -163,6 +193,10 @@ static int kbo_get_current_save_path(char* out, size_t out_size)
     }
     out[0] = '\0';
 
+    if (kbo_get_cached_current_save_path(out, out_size)) {
+        return 1;
+    }
+
     uintptr_t global = get_ootp_global_database();
     if (global != 0 && memory_range_readable((void*)(global + OOTP27_MESSAGE_SAVE_PATH_OFFSET), 0x20)) {
         copy_ootp_string_object_text((uint8_t*)global, OOTP27_MESSAGE_SAVE_PATH_OFFSET, out, out_size);
@@ -204,6 +238,7 @@ static int kbo_get_current_save_path(char* out, size_t out_size)
                     }
                     if (kbo_path_looks_like_absolute_save_path(cached)) {
                         snprintf(out, out_size, "%s", cached);
+                        kbo_cache_current_save_path(out);
                     }
                 }
                 CloseHandle(file);
@@ -215,6 +250,9 @@ static int kbo_get_current_save_path(char* out, size_t out_size)
         kbo_get_current_save_path_from_own_file_handles(out, out_size);
     }
 
+    if (out[0] != '\0') {
+        kbo_cache_current_save_path(out);
+    }
     return out[0] != '\0';
 }
 

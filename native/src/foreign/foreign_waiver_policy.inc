@@ -46,7 +46,7 @@ static int kbo_foreign_waiver_legacy_auto_detector_enabled(void)
     if (value != -1) {
         return value == 1;
     }
-    value = read_kbo_localappdata_flag_file("enable_foreign_waiver_legacy_auto_detector.txt") ? 1 : 0;
+    value = read_kbo_localappdata_flag_file("disable_foreign_waiver_legacy_auto_detector.txt") ? 0 : 1;
     InterlockedCompareExchange(&cached, value, -1);
     return cached == 1;
 }

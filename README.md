@@ -88,10 +88,12 @@ dotnet build .\OOTP27-KBO-Launcher.sln
 Launch-OOTP-Safe.bat
 ```
 
-DLL 주입 없이 OOTP를 시작한다. 주입을 활성화하려면 플래그 파일을 생성한다.
+DLL 주입 없이 OOTP를 시작한다. 주입을 활성화하려면 `%LOCALAPPDATA%\OOTP-KBO\kbo_flags.json`에 단일 JSON 플래그 설정을 사용한다.
 
-```
-%LOCALAPPDATA%\OOTP-KBO\enable_launcher_injection.txt   (내용: 1)
+```json
+{
+  "enable_launcher_injection": true
+}
 ```
 
 ### 직접 실행
@@ -107,16 +109,16 @@ KBOLauncher.exe --dll native\bin\KBOFix.dll --attach-existing
 KBOLauncher.exe --ootp "D:\Steam\steamapps\common\Out of the Park Baseball 27\ootp27.exe" --dll native\bin\KBOFix.dll
 ```
 
-### 주요 플래그 파일
+### 주요 플래그 설정
 
-런타임 동작은 `%LOCALAPPDATA%\OOTP-KBO\` 아래 플래그 파일로 제어한다.
+런타임 동작은 `%LOCALAPPDATA%\OOTP-KBO\kbo_flags.json` 단일 JSON 파일로 제어한다.
 
-| 파일 | 기본값 | 설명 |
+| 설정 | 기본값 | 설명 |
 |---|---|---|
-| `enable_launcher_injection.txt` | off | 런처 자동 주입 활성화 |
-| `enable_foreign_waiver_ai.txt` | on | AI 보류권 자동 결정 |
-| `enable_military_draft_pool.txt` | on | 군복무 선수단 활성화 |
-| `enable_single_division_allstar.txt` | on | 단일 디비전 올스타전 |
+| `enable_launcher_injection` | off | 런처 자동 주입 활성화 |
+| `enable_foreign_waiver_ai` | on | AI 보류권 자동 결정 |
+| `enable_military_draft_pool` | on | 군복무 선수단 활성화 |
+| `enable_single_division_allstar_events` | on | 단일 디비전 올스타전 |
 | `kbo_league_id.txt` | 100 | KBO 리그 ID 오버라이드 |
 
 ---

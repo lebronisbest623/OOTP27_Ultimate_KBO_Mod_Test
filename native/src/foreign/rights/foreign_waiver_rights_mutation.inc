@@ -5,6 +5,15 @@ static void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd)
     if (today_yyyymmdd == 0u) {
         return;
     }
+    static volatile LONG last_pruned_today = 0;
+    LONG today_long = (LONG)today_yyyymmdd;
+    if (InterlockedCompareExchange(&last_pruned_today, today_long, today_long) == today_long) {
+        return;
+    }
+    LONG previous = InterlockedExchange(&last_pruned_today, today_long);
+    if (previous == today_long) {
+        return;
+    }
     while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
         Sleep(0);
     }

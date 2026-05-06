@@ -5,7 +5,17 @@ static uint32_t kbo_date_serial(uint32_t year, uint32_t month, uint32_t day)
     static const uint16_t days_before_month[12] = {
         0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
     };
+    static const uint8_t days_by_month[12] = {
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+    };
     if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) {
+        return 0;
+    }
+    uint32_t max_day = days_by_month[month - 1u];
+    if (month == 2u && kbo_is_leap_year(year)) {
+        max_day = 29u;
+    }
+    if (day > max_day) {
         return 0;
     }
 

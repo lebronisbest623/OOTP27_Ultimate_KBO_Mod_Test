@@ -2,7 +2,6 @@
 
 #include "patch_installers_military.inc"
 #include "patch_installers_foreign_signability_entry.inc"
-#include "patch_installers_global_callback_probe.inc"
 #include "patch_installers_foreign_ai_fa_fallback.inc"
 #include "patch_installers_foreign_submit_offer_probe.inc"
 #include "patch_installers_foreign_signing_branch.inc"

@@ -14,6 +14,7 @@ static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint
     int user_retained = 0;
     int user_skipped = 0;
     int active_rights = 0;
+    int decision_breakdown_available = 0;
 
     while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
         Sleep(0);
@@ -78,10 +79,12 @@ static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint
 
                             if (_stricmp(action_name, "RETAIN") == 0) {
                                 retained++;
+                                decision_breakdown_available = 1;
                                 if (_stricmp(source_name, "ai") == 0) { ai_retained++; }
                                 else if (_stricmp(source_name, "user") == 0) { user_retained++; }
                             } else if (_stricmp(action_name, "SKIP") == 0) {
                                 skipped++;
+                                decision_breakdown_available = 1;
                                 if (_stricmp(source_name, "ai") == 0) { ai_skipped++; }
                                 else if (_stricmp(source_name, "user") == 0) { user_skipped++; }
                             }
@@ -144,17 +147,25 @@ static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint
         }
     }
 
-    snprintf(
-        out,
-        out_size,
-        "The 20-day KBO foreign player reserve-rights decision period has ended. Decisions recorded: retain=%d, skip=%d. AI clubs: retain=%d, skip=%d. User club: retain=%d, skip=%d. Active stored reserve-right records: %d. Retained players are protected by five-year exclusive negotiation rights.",
-        retained,
-        skipped,
-        ai_retained,
-        ai_skipped,
-        user_retained,
-        user_skipped,
-        active_rights);
+    if (decision_breakdown_available) {
+        snprintf(
+            out,
+            out_size,
+            "The 20-day KBO foreign player reserve-rights decision period has ended. Decisions recorded: retain=%d, skip=%d. AI clubs: retain=%d, skip=%d. User club: retain=%d, skip=%d. Active stored reserve-right records: %d. Retained players are protected by five-year exclusive negotiation rights.",
+            retained,
+            skipped,
+            ai_retained,
+            ai_skipped,
+            user_retained,
+            user_skipped,
+            active_rights);
+    } else {
+        snprintf(
+            out,
+            out_size,
+            "The 20-day KBO foreign player reserve-rights decision period has ended. Active retained reserve-right records: %d. No decision breakdown was available for this close date, so AI/user retain counts were not reported. Retained players are protected by five-year exclusive negotiation rights.",
+            active_rights);
+    }
     return 1;
 }
 

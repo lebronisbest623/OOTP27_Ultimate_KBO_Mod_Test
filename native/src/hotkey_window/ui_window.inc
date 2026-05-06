@@ -209,7 +209,6 @@ static LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM w
                 InvalidateRect(hwnd, &g_kbo_hub_scrollbar_rect, FALSE);
             }
         }
-        kbo_try_install_game_getmsg_hook();
         break;
 
     case KBO_WM_TOGGLE_SERVICE_MONITOR:
@@ -225,10 +224,6 @@ static LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM w
         if (g_kbo_hotkey_keyboard_hook != NULL) {
             UnhookWindowsHookEx(g_kbo_hotkey_keyboard_hook);
             g_kbo_hotkey_keyboard_hook = NULL;
-        }
-        if (g_kbo_game_getmsg_hook != NULL) {
-            UnhookWindowsHookEx(g_kbo_game_getmsg_hook);
-            g_kbo_game_getmsg_hook = NULL;
         }
         g_kbo_hotkey_window         = NULL;
         g_kbo_hotkey_edit           = NULL;

@@ -17,14 +17,9 @@ static void kbo_html_append_escaped(KboWindowTextBuffer* buffer, const char* tex
 
 static void kbo_webview_append_player_name_cell(KboWindowTextBuffer* buffer, const char* player_name, uint32_t player_id)
 {
+    (void)player_id;
     kbo_window_text_appendf(buffer, "<td class='pname'>");
-    if (player_id != 0u) {
-        kbo_window_text_appendf(buffer, "<a title='Open player profile' href='kbo://player/%u'>", player_id);
-    }
     kbo_html_append_escaped(buffer, player_name != NULL && player_name[0] != '\0' ? player_name : "Unknown player");
-    if (player_id != 0u) {
-        kbo_window_text_appendf(buffer, "</a>");
-    }
     kbo_window_text_appendf(buffer, "</td>");
 }
 

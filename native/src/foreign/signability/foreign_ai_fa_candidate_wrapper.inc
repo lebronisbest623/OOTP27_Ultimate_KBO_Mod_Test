@@ -22,6 +22,15 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
         requester_team_id = *(uint32_t*)(team_ptr + 0x4450u);
     }
 
+    if (requester_team_id != 0u
+            && kbo_fast_block_fa_candidate_before_original(
+                player_ptr,
+                (int32_t)requester_team_id,
+                "ai_fa_status_candidate",
+                &player_id)) {
+        return insert_index;
+    }
+
     if (player_id != 0u
         && requester_team_id != 0u
         && kbo_team_id_is_military_service_team(requester_team_id)) {

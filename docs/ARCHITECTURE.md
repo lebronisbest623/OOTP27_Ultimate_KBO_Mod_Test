@@ -60,6 +60,16 @@ If no save is open, the current save path cannot be read, `description.txt` is m
 
 The native save-scoped path helper follows the same fail-closed rule: it uses only the current save path reported by OOTP memory and does not scan for the newest `.lg` folder. If the current save path is unavailable, save-scoped persistence is disabled instead of writing into a guessed save bucket.
 
+## Runtime Flag Config
+
+Runtime boolean feature switches live in one JSON file:
+
+```text
+%LOCALAPPDATA%\OOTP-KBO\kbo_flags.json
+```
+
+Keys use the old flag-file basename without `.txt`; for example `enable_foreign_waiver_ai.txt` becomes `"enable_foreign_waiver_ai": true`. The launcher reads and writes this JSON for managed flags, and native `read_kbo_localappdata_flag_file()` maps existing call sites to the same JSON keys. Status files, command files, seeds, CSVs, and save-scoped persistence remain separate data files.
+
 ## Native Source Layout
 
 `native/src/*.inc` is the public include layer for `native/KBOFix.c`. Files directly under `native/src/` should be thin feature entrypoints or assemblers only. Implementation bodies live in matching domain folders:
@@ -265,9 +275,9 @@ Shared foreign-waiver state and DTOs:
 
 Policy switches and league resolution:
 
-- `enable_foreign_waiver_ai.txt`
-- `disable_kbo_custom_foreign_policy.txt`
-- `enable_foreign_waiver_legacy_auto_detector.txt`
+- `kbo_flags.json` key `enable_foreign_waiver_ai`
+- `kbo_flags.json` key `disable_kbo_custom_foreign_policy`
+- `kbo_flags.json` key `disable_foreign_waiver_legacy_auto_detector`
 - configured or inferred KBO league id
 
 ### `foreign_waiver_date.inc`
@@ -558,6 +568,34 @@ native/src/allstar/
 
 All-Star CSV parsing should stay separate from team-memory mutation. Wrappers should remain thin and call the lower-level helpers.
 
+## Hook Stub Modules
+
+`native/src/hook_stubs.inc` is the stable root wrapper, and `native/src/hook_stubs/hook_stubs.inc` is the executable stub-builder assembler. Stub builders only assemble trampoline/detour byte buffers and flush instruction cache. Policy decisions belong in wrapper/domain modules; patch-site discovery and installation belong in `patch_installers/`.
+
+```text
+native/src/hook_stubs/
+  hook_stubs.inc
+  hook_stubs_military.inc
+  hook_stubs_foreign_signability.inc
+  hook_stubs_foreign_ai_status.inc
+  hook_stubs_foreign_counts.inc
+  hook_stubs_near_code.inc
+  hook_stubs_season_phase.inc
+  hook_stubs_allstar_settings.inc
+  hook_stubs_allstar_events.inc
+  hook_stubs_allstar_candidate.inc
+```
+
+- `hook_stubs_military.inc`: military service entry trampoline and status detour stubs.
+- `hook_stubs_foreign_signability.inc`: foreign signability, offer eligibility, submit-offer probe, and FA signing branch stubs.
+- `hook_stubs_foreign_ai_status.inc`: AI FA status candidate insertion stub.
+- `hook_stubs_foreign_counts.inc`: active foreign count and callup-limit branch stubs.
+- `hook_stubs_near_code.inc`: near-target executable allocation helper for relative call sites.
+- `hook_stubs_season_phase.inc`: season-phase write probe call stub.
+- `hook_stubs_allstar_settings.inc`: All-Star setting enable stub.
+- `hook_stubs_allstar_events.inc`: All-Star event preparation and voting-begin stubs.
+- `hook_stubs_allstar_candidate.inc`: All-Star candidate team split stub.
+
 ## Patch Installer Modules
 
 `native/src/patch_installers.inc` is the stable root wrapper, and `native/src/patch_installers/patch_installers.inc` is the patch installer assembler. Installer modules own byte-pattern verification and patch application only; gameplay policy belongs in the hook wrapper or domain subsystem being called.
@@ -583,7 +621,6 @@ native/src/patch_installers/
 
 - `patch_installers_military.inc`: military service entry and status-update detours.
 - `patch_installers_foreign_signability_entry.inc`: player/team signability and offer-eligibility detours.
-- `patch_installers_global_callback_probe.inc`: global callback probe installer.
 - `patch_installers_foreign_ai_fa_fallback.inc`: AI FA signability fallback static patch.
 - `patch_installers_foreign_submit_offer_probe.inc`: FA submit-offer probe detour.
 - `patch_installers_foreign_signing_branch.inc`: FA signing branch signature scan and detour.
@@ -596,9 +633,99 @@ native/src/patch_installers/
 - `patch_installers_allstar_events.inc`: All-Star voting and event preparation hooks.
 - `patch_installers_allstar_settings.inc`: All-Star settings UI byte patches.
 
+## Team Modules
+
+`native/src/team.inc` is the stable root wrapper, and `native/src/team/team.inc` is the team subsystem assembler. Team lookup/name helpers are read-only. Roster-array and assignment helpers mutate OOTP memory and should only be used by domain modules that own the state transition being performed.
+
+```text
+native/src/team/
+  team.inc
+  team_string.inc
+  team_name_cache.inc
+  team_lookup.inc
+  team_org_assignment_query.inc
+  team_roster_arrays.inc
+  team_assignment.inc
+```
+
+- `team_string.inc`: bounded ASCII copies, OOTP string-object reads, and team string matching.
+- `team_name_cache.inc`: save-scoped `names.dat` cache loading, player name lookup, and display-name formatting.
+- `team_lookup.inc`: player pointer plausibility, global player-vector discovery, and team lookup by CSV or numeric id.
+- `team_org_assignment_query.inc`: organization/affiliate id matching and current player assignment checks.
+- `team_roster_arrays.inc`: fixed-size team roster-array add/remove helpers.
+- `team_assignment.inc`: OOTP-like player-to-team assignment mutation and native team add/remove entry resolution.
+
 ## Hotkey Window Modules
 
 `native/src/hotkey_window.inc` is the stable F2 hub entrypoint. It includes state, support helpers, text-content fallback, and the UI assembler.
+
+`native/src/hotkey_window/state.inc` is a thin assembler for F2 hub types, global handles, selection state, and small state-adjacent lookup helpers:
+
+```text
+native/src/hotkey_window/
+  state.inc
+  state_types.inc
+  state_window.inc
+  state_gdi.inc
+  state_view.inc
+  state_skin.inc
+  state_constants.inc
+  state_text.inc
+  state_team_vector.inc
+  state_language.inc
+  state_nav.inc
+  state_text_utils.inc
+  state_league_lookup.inc
+  state_league_name.inc
+  state_decls.inc
+```
+
+- `state_types.inc`: shared F2 hub buffer/search structs.
+- `state_window.inc`: Win32/WebView window handles, startup flags, hook handles, and thread state.
+- `state_gdi.inc`: GDI font and brush handles.
+- `state_view.inc`: selected view, language, dropdown, selected league/team/player, and legacy hit rectangles.
+- `state_skin.inc`: skin metrics, bitmap assets, and logo cache keys.
+- `state_constants.inc`: hub control ids, view ids, language ids, fixed size, and palette constants.
+- `state_text.inc`: current-language text selection helper.
+- `state_team_vector.inc`: team vector lookup used by hub selection/league filtering.
+- `state_language.inc`: language setting path, load, and save.
+- `state_nav.inc`: localized navigation labels.
+- `state_text_utils.inc`: UTF-8/wide conversion and ASCII trimming helpers.
+- `state_league_lookup.inc`: league pointer cache, miss cache, and global DB league-vector scan.
+- `state_league_name.inc`: league-name string scan and display-name formatting.
+- `state_decls.inc`: forward declarations for later UI/domain helpers needed by the single translation unit.
+
+`native/src/hotkey_window/content.inc` is a thin assembler for the legacy text-content fallback used by the Win32 edit control:
+
+```text
+native/src/hotkey_window/
+  content.inc
+  content_decls.inc
+  content_service_helpers.inc
+  content_overview.inc
+  content_military.inc
+  content_foreign_rights.inc
+  content_foreign_injury.inc
+  content_mod_info.inc
+  content_foreign_policy.inc
+  content_asian_games.inc
+  content_settings.inc
+  content_router.inc
+  content_refresh.inc
+```
+
+- `content_decls.inc`: local forward declarations for foreign-rights status/candidate helpers.
+- `content_service_helpers.inc`: service-team player counts used by overview and military panels.
+- `content_overview.inc`: overview text panel.
+- `content_military.inc`: military service text panel.
+- `content_foreign_rights.inc`: foreign-rights text panel and selected-candidate text.
+- `content_foreign_injury.inc`: foreign injury replacement text panel.
+- `content_mod_info.inc`: mod information text panel.
+- `content_foreign_policy.inc`: Asian-quota/foreign-policy text panel.
+- `content_asian_games.inc`: Asian Games roster text panel.
+- `content_settings.inc`: settings/hotkey text panel.
+- `content_router.inc`: selected-view dispatch for text panels.
+- `content_refresh.inc`: Win32 edit-control refresh and UTF-8 to wide text handoff.
 
 `native/src/hotkey_window/ui.inc` is a thin assembler for the WebView2/Win32 UI surface:
 
@@ -624,12 +751,13 @@ UI modules can submit command-file actions and refresh views, but direct gamepla
 
 ## Remaining Migration Plan
 
-1. Split `team/team.inc` and `fa_requalification/fa_requalification.inc` into state/policy/wrapper files.
+1. Split `fa_requalification/fa_requalification.inc` into state/policy/wrapper files.
 2. Revisit `custom_events/asian_games_selection.inc` and `asian_games_news.inc`; those are the next oversized event-domain files.
 3. Keep actual AI scoring and automatic retain/skip decisions in `foreign_waiver_ai.inc`.
 4. Keep audit/snapshot code observation-only.
-5. Continue splitting `hotkey_window/support.inc` and `hotkey_window/content.inc`; `ui.inc` is already an assembler.
-6. Decide whether `season_phase_monitor.inc` should remain as its own domain module or be folded into a clearer lifecycle owner.
+5. Continue splitting `hotkey_window/support.inc`; `state.inc`, `content.inc`, and `ui.inc` are already assemblers.
+6. Continue trimming team assignment helpers only when a new domain owner makes the mutation boundary clearer.
+7. Decide whether `season_phase_monitor.inc` should remain as its own domain module or be folded into a clearer lifecycle owner.
 
 After each step, run:
 
@@ -676,7 +804,7 @@ At runtime, `Program.cs` copies bundled seed files into `%LOCALAPPDATA%\OOTP-KBO
 - Should `foreign_waiver_rights.csv` be renamed to `foreign_reserve_rights.csv`, or kept for compatibility?
 - Should the F2 hub show retained rights outside the event window separately from event candidates?
 - Should user decisions be command-file driven long term, or should the UI call a narrower in-memory API?
-- Should all foreign-policy flags move behind one config loader instead of repeated flag-file checks?
+- Should numeric foreign-policy config values move into a structured config file, or remain as simple text overrides?
 
 ## Custom Events
 

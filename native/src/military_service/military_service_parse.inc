@@ -43,13 +43,13 @@ static int kbo_military_parse_u32_full_token(const char* text, uint32_t* out)
         return 0;
     }
 
-    unsigned long value = 0ul;
+    uint64_t value = 0u;
     for (; *p != '\0'; p++) {
         if (*p < '0' || *p > '9') {
             return 0;
         }
-        value = value * 10ul + (unsigned long)(*p - '0');
-        if (value > 0xfffffffful) {
+        value = value * 10u + (uint64_t)(*p - '0');
+        if (value > 0xffffffffu) {
             return 0;
         }
     }
@@ -75,9 +75,10 @@ static uint32_t kbo_military_parse_yyyymmdd(const char* text)
         return 0u;
     }
     uint32_t value = (uint32_t)strtoul(digits, NULL, 10);
+    uint32_t year = value / 10000u;
     uint32_t month = (value / 100u) % 100u;
     uint32_t day = value % 100u;
-    return (month >= 1u && month <= 12u && day >= 1u && day <= 31u) ? value : 0u;
+    return kbo_date_serial(year, month, day) != 0u ? value : 0u;
 }
 
 static uint32_t kbo_military_yyyymmdd_to_serial(uint32_t yyyymmdd)

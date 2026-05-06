@@ -93,27 +93,38 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
             adjusted = 1u;
         }
 
-        static volatile LONG custom_policy_offer_log_count = 0;
-        LONG slot = InterlockedIncrement(&custom_policy_offer_log_count);
-        if (slot <= 200) {
-            append_logf(
-                "custom foreign policy offer player=%u requester_team=%d original=%u adjusted=%u allowed=%d override=%d effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u flag=%d today=%u",
-                player_id,
-                team_id,
-                (uint32_t)original_result,
-                (uint32_t)adjusted,
-                allowed,
-                override_original_block,
-                effective_before,
-                effective_after,
-                effective_limit,
-                slot_type != 0u ? kbo_foreign_injury_slot_label(slot_type) : "none",
-                injured_player_id,
-                flag,
-                today);
+        static LONG custom_policy_offer_log_enabled_initialized = 0;
+        static LONG custom_policy_offer_log_enabled = 0;
+        if (InterlockedCompareExchange(&custom_policy_offer_log_enabled_initialized, 1, 0) == 0) {
+            InterlockedExchange(
+                &custom_policy_offer_log_enabled,
+                read_kbo_localappdata_flag_file("enable_kbo_custom_foreign_offer_logs.txt") ? 1 : 0);
+        }
+        if (InterlockedCompareExchange(&custom_policy_offer_log_enabled, 0, 0) != 0) {
+            static volatile LONG custom_policy_offer_log_count = 0;
+            LONG slot = InterlockedIncrement(&custom_policy_offer_log_count);
+            if (slot <= 200) {
+                append_logf(
+                    "custom foreign policy offer player=%u requester_team=%d original=%u adjusted=%u allowed=%d override=%d effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u flag=%d today=%u",
+                    player_id,
+                    team_id,
+                    (uint32_t)original_result,
+                    (uint32_t)adjusted,
+                    allowed,
+                    override_original_block,
+                    effective_before,
+                    effective_after,
+                    effective_limit,
+                    slot_type != 0u ? kbo_foreign_injury_slot_label(slot_type) : "none",
+                    injured_player_id,
+                    flag,
+                    today);
+            }
         }
         if (!allowed) {
             kbo_record_recent_custom_foreign_policy_block(player_id, (uint32_t)team_id, today);
+        } else if (adjusted != 0u && flag != 0) {
+            kbo_record_custom_foreign_pending_offer((uint32_t)team_id, player, today);
         }
         return adjusted;
     }

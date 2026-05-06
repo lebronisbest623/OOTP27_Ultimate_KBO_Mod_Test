@@ -48,10 +48,6 @@ static int kbo_enforce_foreign_waiver_signability(
 
     uint32_t holder_team_id = 0;
     if (kbo_foreign_waiver_ai_enabled()) {
-        static LONG load_attempted = 0;
-        if (InterlockedCompareExchange(&load_attempted, 1, 0) == 0) {
-            kbo_load_foreign_waiver_rights();
-        }
         kbo_prune_expired_foreign_waiver_rights(today);
 
         if (kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)) {
@@ -73,6 +69,23 @@ static int kbo_enforce_foreign_waiver_signability(
             }
 
             uint32_t team_id = (uint32_t)requesting_team_id;
+            if (caller_rva == 0x1b0e3e9u) {
+                static LONG display_block_log_count = 0;
+                LONG display_slot = InterlockedIncrement(&display_block_log_count);
+                if (display_slot <= 120) {
+                    append_logf(
+                        "foreign reserve signability: blocked display request player=%u requester_team=%u holder_team=%u original=%d today=%u caller_rva=0x%llx",
+                        player_id,
+                        team_id,
+                        holder_team_id,
+                        original_signability,
+                        today,
+                        (unsigned long long)caller_rva);
+                }
+                kbo_record_recent_foreign_offer_block(player_id, team_id, holder_team_id, today);
+                return 0; /* This callsite is a FA-list display probe, not a reliable holder-team offer check. */
+            }
+
             if (team_id == holder_team_id) {
                 static LONG allow_log_count = 0;
                 LONG slot = InterlockedIncrement(&allow_log_count);

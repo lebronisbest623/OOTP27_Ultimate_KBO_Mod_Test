@@ -1,5 +1,33 @@
 /* Core league news SQL persistence. */
 
+static int kbo_copy_log_string_safe(const char* source, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+    if (source == NULL || !memory_range_readable(source, 1)) {
+        return 0;
+    }
+
+    size_t len = 0;
+    for (; len + 1 < out_size && len < 256u; len++) {
+        if (!memory_range_readable(source + len, 1)) {
+            break;
+        }
+        char c = source[len];
+        if (c == '\0') {
+            break;
+        }
+        if ((unsigned char)c < 0x20u) {
+            c = ' ';
+        }
+        out[len] = c;
+    }
+    out[len] = '\0';
+    return len > 0;
+}
+
 static int insert_kbo_league_news_sql(
     uint32_t year,
     uint32_t month,
@@ -15,15 +43,20 @@ static int insert_kbo_league_news_sql(
         return 0;
     }
 
+    char log_title[192] = {0};
+    char log_source[96] = {0};
+    kbo_copy_log_string_safe(title, log_title, sizeof(log_title));
+    kbo_copy_log_string_safe(source != NULL ? source : "", log_source, sizeof(log_source));
+
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_logf("league news sql skipped source=%s title=%s reason=no_exe_module", source != NULL ? source : "", title);
+        append_logf("league news sql skipped source=%s title=%s reason=no_exe_module", log_source, log_title);
         return 0;
     }
 
     uintptr_t global = get_ootp_global_database();
     if (global == 0 || !memory_range_readable((void*)global, OOTP27_GLOBAL_SQL_ENABLED_OFFSET + sizeof(uint8_t))) {
-        append_logf("league news sql skipped source=%s title=%s reason=no_global_database", source != NULL ? source : "", title);
+        append_logf("league news sql skipped source=%s title=%s reason=no_global_database", log_source, log_title);
         return 0;
     }
 
@@ -31,21 +64,21 @@ static int insert_kbo_league_news_sql(
     if (sql_enabled == 0 || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
         append_logf(
             "league news sql skipped source=%s title=%s reason=sql_disabled_or_unreadable enabled=%u",
-            source != NULL ? source : "",
-            title,
+            log_source,
+            log_title,
             (uint32_t)sql_enabled);
         return 0;
     }
 
     uintptr_t database = *(uintptr_t*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET);
     if (database == 0 || !memory_range_readable((void*)database, 8)) {
-        append_logf("league news sql skipped source=%s title=%s reason=no_sql_database db=%p", source != NULL ? source : "", title, (void*)database);
+        append_logf("league news sql skipped source=%s title=%s reason=no_sql_database db=%p", log_source, log_title, (void*)database);
         return 0;
     }
 
     OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
     if (!memory_range_readable((void*)sql_exec, 16)) {
-        append_logf("league news sql skipped source=%s title=%s reason=sql_exec_unreadable fn=%p", source != NULL ? source : "", title, (void*)sql_exec);
+        append_logf("league news sql skipped source=%s title=%s reason=sql_exec_unreadable fn=%p", log_source, log_title, (void*)sql_exec);
         return 0;
     }
 
@@ -55,7 +88,7 @@ static int insert_kbo_league_news_sql(
     if (!kbo_sql_escape_literal(escaped_title, sizeof(escaped_title), title)
             || !kbo_sql_escape_literal(escaped_body, sizeof(escaped_body), body != NULL ? body : "")
             || !kbo_format_history_date(news_date, sizeof(news_date), year, month, day)) {
-        append_logf("league news sql skipped source=%s title=%s reason=escape_or_date_failed", source != NULL ? source : "", title);
+        append_logf("league news sql skipped source=%s title=%s reason=escape_or_date_failed", log_source, log_title);
         return 0;
     }
 
@@ -129,23 +162,28 @@ static int insert_kbo_league_news_table_sql(
         return 0;
     }
 
+    char log_title[192] = {0};
+    char log_source[96] = {0};
+    kbo_copy_log_string_safe(title, log_title, sizeof(log_title));
+    kbo_copy_log_string_safe(source != NULL ? source : "", log_source, sizeof(log_source));
+
     HMODULE exe = GetModuleHandleA(NULL);
     uintptr_t global = get_ootp_global_database();
     if (exe == NULL || global == 0
             || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
-        append_logf("league_news table sql skipped source=%s title=%s reason=no_exe_or_global", source != NULL ? source : "", title);
+        append_logf("league_news table sql skipped source=%s title=%s reason=no_exe_or_global", log_source, log_title);
         return 0;
     }
 
     uintptr_t database = *(uintptr_t*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET);
     if (database == 0 || !memory_range_readable((void*)database, 0x10)) {
-        append_logf("league_news table sql skipped source=%s title=%s reason=no_database db=%p", source != NULL ? source : "", title, (void*)database);
+        append_logf("league_news table sql skipped source=%s title=%s reason=no_database db=%p", log_source, log_title, (void*)database);
         return 0;
     }
 
     OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
     if (!memory_range_readable((void*)sql_exec, 16)) {
-        append_logf("league_news table sql skipped source=%s title=%s reason=exec_unreadable fn=%p", source != NULL ? source : "", title, (void*)sql_exec);
+        append_logf("league_news table sql skipped source=%s title=%s reason=exec_unreadable fn=%p", log_source, log_title, (void*)sql_exec);
         return 0;
     }
 
@@ -156,7 +194,7 @@ static int insert_kbo_league_news_table_sql(
     if (!kbo_sql_escape_literal(escaped_title, sizeof(escaped_title), title)
             || !kbo_sql_escape_literal(escaped_body, sizeof(escaped_body), body != NULL ? body : "")
             || !kbo_format_history_date(news_date, sizeof(news_date), year, month, day)) {
-        append_logf("league_news table sql skipped source=%s title=%s reason=escape_or_date_failed", source != NULL ? source : "", title);
+        append_logf("league_news table sql skipped source=%s title=%s reason=escape_or_date_failed", log_source, log_title);
         return 0;
     }
 

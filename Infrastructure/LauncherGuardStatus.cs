@@ -1,0 +1,138 @@
+using static LauncherPaths;
+using static LauncherLog;
+
+internal static class LauncherGuardStatus
+{
+    public static void WriteLauncherBuildGuardStatus(OotpBuildInfo info, OotpSupportedBuild? supportedBuild, bool injectionRequested)
+    {
+        var path = GetKboLocalDataPath("launcher_build_guard_status.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    
+        var lines = new List<string>
+        {
+            $"checked_at={DateTimeOffset.Now:O}",
+            $"injection_requested={(injectionRequested ? "1" : "0")}",
+            $"build_read={(info.Ok ? "1" : "0")}",
+        };
+    
+        if (info.Ok)
+        {
+            lines.Add($"timestamp=0x{info.Timestamp:X8}");
+            lines.Add($"size_of_image=0x{info.SizeOfImage:X8}");
+        }
+        else
+        {
+            lines.Add($"error={info.Error}");
+        }
+    
+        if (supportedBuild is null)
+        {
+            lines.Add("status=unsupported");
+            lines.Add("kbo_injection=disabled");
+        }
+        else
+        {
+            lines.Add("status=supported");
+            lines.Add($"label={supportedBuild.Label}");
+            lines.Add(injectionRequested ? "kbo_injection=allowed" : "kbo_injection=not_requested");
+        }
+    
+        lines.Add("supported_builds=" + string.Join(", ", OotpBuildGuard.SupportedBuildDescriptions()));
+        File.WriteAllLines(path, lines);
+    }
+    
+    public static void PrintUnsupportedBuildInjectionWarning(OotpBuildInfo info)
+    {
+        Console.Error.WriteLine("KBOFix injection disabled: this OOTP build is not verified.");
+        Console.Error.WriteLine("This prevents silent memory-offset mismatches after an OOTP patch.");
+        if (info.Ok)
+        {
+            Console.Error.WriteLine($"Detected build: timestamp=0x{info.Timestamp:X8}, size_of_image=0x{info.SizeOfImage:X8}");
+        }
+        else
+        {
+            Console.Error.WriteLine($"Could not read OOTP build info: {info.Error}");
+        }
+        Console.Error.WriteLine("Update the launcher/native supported-build list after verifying this OOTP version.");
+    }
+    
+    public static RosterMarkerInfo CheckRosterMarkerForInjectionTarget(int pid, string logPath)
+    {
+        var info = KboRosterMarkerGuard.CheckCurrentSave(pid, message => Log(logPath, message));
+        WriteCurrentSavePathCache(pid, info.Ok ? info.SavePath : null, logPath);
+        Console.WriteLine(KboRosterMarkerGuard.FormatConsoleStatus(info));
+        Log(logPath, KboRosterMarkerGuard.FormatLogStatus(info));
+        WriteRosterMarkerGuardStatus(info);
+        return info;
+    }
+    
+    public static void WriteCurrentSavePathCache(int pid, string? savePath, string logPath)
+    {
+        var path = GetKboLocalDataPath($"current_save_path_{pid}.txt");
+        try
+        {
+            if (string.IsNullOrWhiteSpace(savePath))
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+                return;
+            }
+    
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, Path.GetFullPath(savePath));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Log(logPath, $"current_save_cache_write_failed path=\"{path}\" error=\"{ex.Message}\"");
+        }
+    }
+    
+    public static void WriteRosterMarkerGuardStatus(RosterMarkerInfo info)
+    {
+        var path = GetKboLocalDataPath("launcher_roster_marker_guard_status.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    
+        var lines = new List<string>
+        {
+            $"checked_at={DateTimeOffset.Now:O}",
+            $"status={info.Status}",
+            $"kbo_injection={(info.Ok ? "allowed" : "disabled")}",
+            $"required_marker={KboRosterMarkerGuard.RequiredMarkerUrl}",
+        };
+    
+        if (!string.IsNullOrWhiteSpace(info.SavePath))
+        {
+            lines.Add($"save_path={info.SavePath}");
+        }
+        if (!string.IsNullOrWhiteSpace(info.DescriptionPath))
+        {
+            lines.Add($"description_path={info.DescriptionPath}");
+        }
+        if (!string.IsNullOrWhiteSpace(info.Error))
+        {
+            lines.Add($"error={info.Error}");
+        }
+    
+        File.WriteAllLines(path, lines);
+    }
+    
+    public static void PrintMissingRosterMarkerWarning(RosterMarkerInfo info)
+    {
+        Console.Error.WriteLine("KBOFix injection disabled: the currently opened OOTP save is not marked for this KBO roster.");
+        Console.Error.WriteLine($"Required marker in description.txt: {KboRosterMarkerGuard.RequiredMarkerUrl}");
+        if (!string.IsNullOrWhiteSpace(info.SavePath))
+        {
+            Console.Error.WriteLine($"Current save checked: {info.SavePath}");
+        }
+        if (!string.IsNullOrWhiteSpace(info.DescriptionPath))
+        {
+            Console.Error.WriteLine($"Description checked: {info.DescriptionPath}");
+        }
+        if (!string.IsNullOrWhiteSpace(info.Error))
+        {
+            Console.Error.WriteLine($"Reason: {info.Error}");
+        }
+    }
+}

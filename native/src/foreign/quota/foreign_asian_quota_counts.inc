@@ -13,6 +13,26 @@ static void kbo_count_team_asian_quota_probe(
         return;
     }
 
+    enum { KBO_FOREIGN_ORG_COUNT_CACHE_SIZE = 64 };
+    typedef struct KboForeignOrgCountCacheEntry {
+        uint32_t team_id;
+        uint32_t foreign_count;
+        uint32_t asian_count;
+        uint32_t non_asian_count;
+        DWORD tick;
+    } KboForeignOrgCountCacheEntry;
+    static KboForeignOrgCountCacheEntry count_cache[KBO_FOREIGN_ORG_COUNT_CACHE_SIZE] = {{0}};
+
+    DWORD now = GetTickCount();
+    uint32_t slot_index = (team_id ^ (team_id >> 4)) % KBO_FOREIGN_ORG_COUNT_CACHE_SIZE;
+    KboForeignOrgCountCacheEntry* cached = &count_cache[slot_index];
+    if (cached->team_id == team_id && cached->tick != 0u && now - cached->tick <= 500u) {
+        if (out_foreign_count != NULL) { *out_foreign_count = cached->foreign_count; }
+        if (out_asian_quota_count != NULL) { *out_asian_quota_count = cached->asian_count; }
+        if (out_non_asian_foreign_count != NULL) { *out_non_asian_foreign_count = cached->non_asian_count; }
+        return;
+    }
+
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
@@ -61,6 +81,11 @@ static void kbo_count_team_asian_quota_probe(
     if (out_foreign_count != NULL) { *out_foreign_count = foreign_count; }
     if (out_asian_quota_count != NULL) { *out_asian_quota_count = asian_count; }
     if (out_non_asian_foreign_count != NULL) { *out_non_asian_foreign_count = non_asian_count; }
+    cached->team_id = team_id;
+    cached->foreign_count = foreign_count;
+    cached->asian_count = asian_count;
+    cached->non_asian_count = non_asian_count;
+    cached->tick = now;
 }
 
 static uint32_t kbo_effective_foreign_count_with_asian_quota(uint32_t asian_count, uint32_t non_asian_foreign_count)

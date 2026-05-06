@@ -30,7 +30,11 @@ static int tick_kbo_military_service_days(const char* source, int* out_seeded_as
     if (sang_id == 0 && kpb_id == 0) {
         return 0;
     }
-    int seeded_assignments = kbo_apply_military_service_seed_assignments(sang, kpb, source);
+    int seeded_assignments = 0;
+    int source_is_daily_tick = source != NULL && strcmp(source, "military_days_tick") == 0;
+    if (!source_is_daily_tick || InterlockedCompareExchange(&g_active_military_loan_count, 0, 0) <= 0) {
+        seeded_assignments = kbo_apply_military_service_seed_assignments(sang, kpb, source);
+    }
     if (out_seeded_assignments != NULL) {
         *out_seeded_assignments = seeded_assignments;
     }

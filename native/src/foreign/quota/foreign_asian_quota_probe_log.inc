@@ -37,6 +37,17 @@ static void kbo_log_asian_quota_signability_probe(
     int original_signability,
     uintptr_t caller_rva)
 {
+    static LONG log_enabled_initialized = 0;
+    static LONG log_enabled = 0;
+    if (InterlockedCompareExchange(&log_enabled_initialized, 1, 0) == 0) {
+        InterlockedExchange(
+            &log_enabled,
+            read_kbo_localappdata_flag_file("enable_kbo_asian_quota_probe_logs.txt") ? 1 : 0);
+    }
+    if (InterlockedCompareExchange(&log_enabled, 0, 0) == 0) {
+        return;
+    }
+
     if (player == NULL || player_id == 0u || team_id <= 0
             || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
             || !kbo_player_is_foreign_for_kbo_rights(player)) {
@@ -92,6 +103,17 @@ static void kbo_log_asian_quota_offer_probe(
     uint8_t original_result,
     int32_t flag)
 {
+    static LONG log_enabled_initialized = 0;
+    static LONG log_enabled = 0;
+    if (InterlockedCompareExchange(&log_enabled_initialized, 1, 0) == 0) {
+        InterlockedExchange(
+            &log_enabled,
+            read_kbo_localappdata_flag_file("enable_kbo_asian_quota_probe_logs.txt") ? 1 : 0);
+    }
+    if (InterlockedCompareExchange(&log_enabled, 0, 0) == 0) {
+        return;
+    }
+
     if (player == NULL || player_id == 0u || team_id <= 0
             || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
             || !kbo_player_is_foreign_for_kbo_rights(player)) {

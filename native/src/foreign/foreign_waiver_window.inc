@@ -113,7 +113,7 @@ static int kbo_is_foreign_waiver_negotiation_window_open(void)
     } else {
         static LONG logged_legacy_disabled = 0;
         if (InterlockedCompareExchange(&logged_legacy_disabled, 1, 0) == 0) {
-            append_log_line("foreign waiver legacy auto detector disabled: enable_foreign_waiver_legacy_auto_detector.txt is off");
+            append_log_line("foreign waiver legacy auto detector disabled: kbo_flags.json disable_foreign_waiver_legacy_auto_detector is true");
         }
     }
 

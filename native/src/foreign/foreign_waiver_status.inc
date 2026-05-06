@@ -23,7 +23,7 @@ static int kbo_get_foreign_waiver_window_status_text(char* out, size_t out_size)
     out[0] = '\0';
 
     if (!kbo_foreign_waiver_ai_enabled()) {
-        snprintf(out, out_size, "Foreign waiver negotiation: disabled (run launcher once after this update to create enable_foreign_waiver_ai.txt)");
+        snprintf(out, out_size, "Foreign waiver negotiation: disabled (set enable_foreign_waiver_ai=true in kbo_flags.json)");
         return 1;
     }
 

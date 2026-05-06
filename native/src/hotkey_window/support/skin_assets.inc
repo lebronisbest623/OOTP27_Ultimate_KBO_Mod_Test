@@ -1,0 +1,5 @@
+#include "skin_assets/style_paths.inc"
+#include "skin_assets/wic_bitmap.inc"
+#include "skin_assets/asset_lifecycle.inc"
+#include "skin_assets/bitmap_draw.inc"
+#include "skin_assets/scrollbar_gdi.inc"
