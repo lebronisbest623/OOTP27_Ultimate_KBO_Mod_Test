@@ -56,7 +56,7 @@ The current save's `description.txt` must contain:
 https://github.com/lebronisbest623/OOTP27_Ultimate_KBO
 ```
 
-If no save is open, the current save path cannot be read, `description.txt` is missing, or the description does not contain the marker URL, KBOFix injection is blocked. Explicit injection commands fail visibly, and default launcher runs either launch OOTP unmodified or leave an existing process untouched. The launcher writes `launcher_roster_marker_guard_status.txt` under `%LOCALAPPDATA%\OOTP-KBO\` for diagnostics.
+If no save is open immediately after a new OOTP launch, the launcher waits for a marked current save before injecting KBOFix. This supports the "create a new save, then begin play" path without loading the DLL into an unmarked process. If an explicit attach target is unmarked, or the launched process opens a save whose `description.txt` does not contain the marker URL, KBOFix injection is blocked visibly. The launcher writes `launcher_roster_marker_guard_status.txt` under `%LOCALAPPDATA%\OOTP-KBO\` for diagnostics.
 
 The native save-scoped path helper follows the same fail-closed rule: it uses only the current save path reported by OOTP memory and does not scan for the newest `.lg` folder. If the current save path is unavailable, save-scoped persistence is disabled instead of writing into a guessed save bucket.
 

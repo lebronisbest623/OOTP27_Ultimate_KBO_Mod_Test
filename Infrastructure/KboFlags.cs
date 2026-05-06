@@ -20,6 +20,55 @@ internal static class KboFlags
         var json = JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(configPath, json + Environment.NewLine);
     }
+
+    public static void ImportLegacyKboFlagFilesIfMissing()
+    {
+        ImportLegacyKboFlagFilesIfMissing(GetKboFlagConfigPath());
+    }
+
+    internal static void ImportLegacyKboFlagFilesIfMissing(string configPath)
+    {
+        var configDir = Path.GetDirectoryName(configPath);
+        if (string.IsNullOrWhiteSpace(configDir) || !Directory.Exists(configDir))
+        {
+            return;
+        }
+
+        var flags = ReadKboFlagConfig(configPath);
+        var changed = false;
+        foreach (var path in Directory.EnumerateFiles(configDir, "*.txt", SearchOption.TopDirectoryOnly))
+        {
+            var fileName = Path.GetFileName(path);
+            if (!fileName.StartsWith("enable_", StringComparison.OrdinalIgnoreCase)
+                    && !fileName.StartsWith("disable_", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var key = NormalizeKboFlagKey(fileName);
+            if (flags.ContainsKey(key))
+            {
+                continue;
+            }
+
+            if (!TryReadLegacyFlagFile(path, out var value))
+            {
+                continue;
+            }
+
+            flags[key] = value;
+            changed = true;
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(configDir);
+        var json = JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(configPath, json + Environment.NewLine);
+    }
     
     public static bool ReadKboFlag(string fileName)
     {
@@ -95,31 +144,51 @@ internal static class KboFlags
                 return false;
             case JsonValueKind.String:
                 var text = value.GetString()?.Trim();
-                if (string.IsNullOrEmpty(text))
-                {
-                    return false;
-                }
-                if (text.Equals("1", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("true", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("yes", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("on", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("enabled", StringComparison.OrdinalIgnoreCase))
-                {
-                    result = true;
-                    return true;
-                }
-                if (text.Equals("0", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("false", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("no", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("off", StringComparison.OrdinalIgnoreCase)
-                        || text.Equals("disabled", StringComparison.OrdinalIgnoreCase))
-                {
-                    result = false;
-                    return true;
-                }
-                return false;
+                return TryReadBooleanText(text, out result);
             default:
                 return false;
+        }
+    }
+
+    internal static bool TryReadBooleanText(string? text, out bool result)
+    {
+        result = false;
+        text = text?.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+        if (text.Equals("1", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("true", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("yes", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("on", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("enabled", StringComparison.OrdinalIgnoreCase))
+        {
+            result = true;
+            return true;
+        }
+        if (text.Equals("0", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("false", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("no", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("off", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            result = false;
+            return true;
+        }
+        return false;
+    }
+
+    private static bool TryReadLegacyFlagFile(string path, out bool value)
+    {
+        value = false;
+        try
+        {
+            return TryReadBooleanText(File.ReadAllText(path), out value);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 

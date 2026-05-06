@@ -75,6 +75,42 @@ public sealed class KboFlagsTests : IDisposable
     }
 
     [Fact]
+    public void ImportLegacyKboFlagFilesIfMissing_CopiesBooleanEnableDisableFlagsOnly()
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "enable_launcher_injection.txt"), "1");
+        File.WriteAllText(Path.Combine(tempDir, "enable_experimental_runtime_hooks.txt"), "enabled");
+        File.WriteAllText(Path.Combine(tempDir, "disable_foreign_injury_replacement.txt"), "off");
+        File.WriteAllText(Path.Combine(tempDir, "kbo_league_id.txt"), "100");
+        File.WriteAllText(Path.Combine(tempDir, "foreign_waiver_negotiation_window.txt"), "2026");
+
+        global::KboFlags.ImportLegacyKboFlagFilesIfMissing(ConfigPath);
+
+        var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
+        Assert.True(flags["enable_launcher_injection"]);
+        Assert.True(flags["enable_experimental_runtime_hooks"]);
+        Assert.False(flags["disable_foreign_injury_replacement"]);
+        Assert.False(flags.ContainsKey("kbo_league_id"));
+        Assert.False(flags.ContainsKey("foreign_waiver_negotiation_window"));
+    }
+
+    [Fact]
+    public void ImportLegacyKboFlagFilesIfMissing_DoesNotOverwriteJsonValues()
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(ConfigPath, """
+        {
+          "enable_launcher_injection": false
+        }
+        """);
+        File.WriteAllText(Path.Combine(tempDir, "enable_launcher_injection.txt"), "1");
+
+        global::KboFlags.ImportLegacyKboFlagFilesIfMissing(ConfigPath);
+
+        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
+    }
+
+    [Fact]
     public void ReadKboFlagConfig_MissingOrMalformedFileFailsClosed()
     {
         Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));

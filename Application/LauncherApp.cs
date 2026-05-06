@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using static InjectionTargetResolver;
+using static InjectionRosterMarkerWaiter;
 using static InjectedModuleDetector;
 using static DllPayloadStager;
 using static DllInjector;
@@ -12,6 +13,9 @@ using static ProcessDiscovery;
 
 internal static class LauncherApp
 {
+    private static readonly TimeSpan MarkedSaveWaitTimeout = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan MarkedSavePollInterval = TimeSpan.FromSeconds(2);
+
     public static int Run(string[] args)
     {
         
@@ -32,6 +36,7 @@ internal static class LauncherApp
             LauncherOptions.PrintHelp();
             return 0;
         }
+        var isDefaultRun = args.Length == 0;
         
         var exePath = ResolveOotpPath(options.OotpPath);
         if (exePath is null)
@@ -44,6 +49,7 @@ internal static class LauncherApp
         EnsureBundledKboDataFile("foreign_injury_replacements_seed.csv", "Foreign injury replacement seed");
         EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
+        ImportLegacyKboFlagFilesIfMissing();
         
         var existing = Process.GetProcesses()
             .Select(TryDescribe)
@@ -52,7 +58,7 @@ internal static class LauncherApp
             .Where(p => PathEquals(p.Path, exePath))
             .ToList();
         
-        if (args.Length == 0)
+        if (isDefaultRun)
         {
             var enableDefaultInjection = ReadKboFlag("enable_launcher_injection.txt");
             string? defaultDll = null;
@@ -80,14 +86,14 @@ internal static class LauncherApp
         Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
         
         Log(logPath, $"resolved_ootp={exePath}");
-        if (args.Length == 0 && options.DllPath is null)
+        if (isDefaultRun && options.DllPath is null)
         {
             Log(logPath, "default_injection=disabled reason=missing_enable_launcher_injection_json_flag");
         }
         Console.WriteLine($"OOTP: {exePath}");
         Console.WriteLine($"WorkDir: {Path.GetDirectoryName(exePath)}");
         Console.WriteLine($"Log: {logPath}");
-        if (args.Length == 0 && options.DllPath is null)
+        if (isDefaultRun && options.DllPath is null)
         {
             Console.WriteLine("KBOFix injection is disabled for safe startup.");
             Console.WriteLine($"To re-enable launcher injection, set enable_launcher_injection=true in: {GetKboFlagConfigPath()}");
@@ -108,7 +114,7 @@ internal static class LauncherApp
             {
                 Console.WriteLine("Dry-run: KBOFix injection would be blocked for this OOTP build.");
             }
-            else if (args.Length == 0)
+            else if (isDefaultRun)
             {
                 options = options with { DllPath = null, AttachExisting = false };
                 if (existing.Count > 0)
@@ -161,7 +167,13 @@ internal static class LauncherApp
                 return 6;
             }
         
-            var rosterMarkerInfo = CheckRosterMarkerForInjectionTarget(targetPid.Value, logPath);
+            var rosterMarkerInfo = isDefaultRun
+                ? WaitForMarkedCurrentSave(
+                    targetPid.Value,
+                    MarkedSaveWaitTimeout,
+                    MarkedSavePollInterval,
+                    logPath)
+                : CheckRosterMarkerForInjectionTarget(targetPid.Value, logPath);
             if (!rosterMarkerInfo.Ok)
             {
                 PrintMissingRosterMarkerWarning(rosterMarkerInfo);
@@ -235,7 +247,11 @@ internal static class LauncherApp
         if (options.DllPath is not null)
         {
             var injectionTarget = WaitForStableOotpProcess(launched, exePath, launchStarted, TimeSpan.FromSeconds(30), logPath);
-            var rosterMarkerInfo = CheckRosterMarkerForInjectionTarget(injectionTarget.Id, logPath);
+            var rosterMarkerInfo = WaitForMarkedCurrentSave(
+                injectionTarget.Id,
+                MarkedSaveWaitTimeout,
+                MarkedSavePollInterval,
+                logPath);
             if (!rosterMarkerInfo.Ok)
             {
                 PrintMissingRosterMarkerWarning(rosterMarkerInfo);

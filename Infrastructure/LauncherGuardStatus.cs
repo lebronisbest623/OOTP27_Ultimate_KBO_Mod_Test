@@ -58,9 +58,24 @@ internal static class LauncherGuardStatus
     
     public static RosterMarkerInfo CheckRosterMarkerForInjectionTarget(int pid, string logPath)
     {
-        var info = KboRosterMarkerGuard.CheckCurrentSave(pid, message => Log(logPath, message));
-        WriteCurrentSavePathCache(pid, info.Ok ? info.SavePath : null, logPath);
+        var info = ProbeRosterMarkerForInjectionTarget(pid, logPath);
         Console.WriteLine(KboRosterMarkerGuard.FormatConsoleStatus(info));
+        return info;
+    }
+
+    public static RosterMarkerInfo ProbeRosterMarkerForInjectionTarget(int pid, string logPath)
+    {
+        RosterMarkerInfo info;
+        try
+        {
+            info = KboRosterMarkerGuard.CheckCurrentSave(pid, message => Log(logPath, message));
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            info = RosterMarkerInfo.Fail("process_unavailable", null, null, $"{ex.GetType().Name}: {ex.Message}");
+        }
+
+        WriteCurrentSavePathCache(pid, info.Ok ? info.SavePath : null, logPath);
         Log(logPath, KboRosterMarkerGuard.FormatLogStatus(info));
         WriteRosterMarkerGuardStatus(info);
         return info;

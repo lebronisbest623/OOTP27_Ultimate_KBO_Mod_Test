@@ -182,14 +182,12 @@ static LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM w
 
     case WM_TIMER:
         if (wparam == 1u
-                && g_kbo_hotkey_keyboard_hook == NULL
                 && (GetAsyncKeyState(VK_F2) & 1) != 0
                 && kbo_foreground_is_this_process()) {
-            kbo_show_or_hide_hotkey_window();
+            kbo_queue_hotkey_window_toggle();
             return 0;
         }
         if (wparam == 1u
-                && g_kbo_hotkey_keyboard_hook == NULL
                 && (GetAsyncKeyState(VK_F5) & 1) != 0
                 && g_kbo_hotkey_window != NULL
                 && IsWindowVisible(g_kbo_hotkey_window)
