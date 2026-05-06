@@ -12,6 +12,18 @@ static void kbo_custom_event_monitor_tick(
         return;
     }
 
+    int offseason_transition_ready = kbo_custom_event_monitor_check_offseason_transition(
+        today_yyyymmdd,
+        source);
+    if (offseason_transition_ready) {
+        if (last_scheduled_yyyymmdd != NULL) {
+            *last_scheduled_yyyymmdd = today_yyyymmdd;
+        }
+        if (last_scanned_yyyymmdd != NULL) {
+            *last_scanned_yyyymmdd = 0u;
+        }
+    }
+
     if (last_scheduled_yyyymmdd != NULL && today_yyyymmdd != *last_scheduled_yyyymmdd) {
         int foreign_schedule = kbo_schedule_foreign_priority_custom_events(source);
         int asian_schedule = kbo_schedule_asian_games_custom_events(source);

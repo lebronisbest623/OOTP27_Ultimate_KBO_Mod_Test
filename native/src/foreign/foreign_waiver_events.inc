@@ -269,6 +269,7 @@ static int kbo_open_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t toda
     g_kbo_foreign_waiver_window_end_serial = today_serial + 20u;
     kbo_write_foreign_waiver_window(today_yyyymmdd, end_yyyymmdd, reason);
     g_kbo_foreign_waiver_start_event_date = today_yyyymmdd;
+    g_kbo_foreign_waiver_close_event_end_date = end_yyyymmdd;
     append_logf(
         "foreign priority negotiation: season-end event opened start=%u end=%u serial=%u~%u reason=%s",
         today_yyyymmdd,

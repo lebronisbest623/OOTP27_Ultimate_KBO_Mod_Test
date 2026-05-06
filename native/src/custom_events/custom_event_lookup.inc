@@ -70,7 +70,11 @@ static uint32_t kbo_detect_offseason_anchor_by_league_year(uint32_t league_id, u
     }
 
     uint32_t current_year = today_yyyymmdd / 10000u;
-    uint32_t league_year = kbo_find_league_year_from_id(league_id);
+    if ((today_yyyymmdd % 10000u) < 1001u) {
+        return 0u;
+    }
+
+    uint32_t league_year = kbo_find_league_year_from_id_no_scan(league_id);
     if (league_year < 1980u || league_year > 2300u) {
         return 0u;
     }

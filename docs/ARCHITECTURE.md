@@ -831,6 +831,7 @@ native/src/custom_events/
   custom_event_dispatch.inc
   custom_event_scan.inc
   nation_id_scan.inc
+  offseason_transition_schedule.inc
   custom_event_monitor.inc
 ```
 
@@ -922,6 +923,10 @@ Due-event scanner. It owns event-manager traversal, due checks, duplicate marker
 ### `nation_id_scan.inc`
 
 Diagnostics only. It should not affect gameplay state.
+
+### `offseason_transition_schedule.inc`
+
+Read-only league-phase transition watcher used by the custom-event monitor. When the KBO league moves from postseason/regular phase into offseason phase after October 1, it treats the current date as the offseason anchor and schedules the same foreign-priority and military-selection events that would otherwise wait for OOTP's `Offseason starts` league event to become visible.
 
 ### `custom_event_monitor.inc`
 

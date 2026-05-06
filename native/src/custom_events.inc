@@ -17,4 +17,5 @@
 #include "custom_events/custom_event_dispatch.inc"
 #include "custom_events/custom_event_scan.inc"
 #include "custom_events/nation_id_scan.inc"
+#include "custom_events/offseason_transition_schedule.inc"
 #include "custom_events/custom_event_monitor.inc"

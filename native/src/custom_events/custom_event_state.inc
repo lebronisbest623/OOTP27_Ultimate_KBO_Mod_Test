@@ -10,6 +10,14 @@ static uint32_t g_kbo_foreign_priority_last_close_event_fired_date = 0;
 static uint32_t g_kbo_asian_games_last_selection_fired_date = 0;
 static uint32_t g_kbo_asian_games_last_departure_fired_date = 0;
 static uint32_t g_kbo_asian_games_last_final_fired_date = 0;
+static uint32_t g_kbo_custom_event_last_phase_league_id = 0;
+static uintptr_t g_kbo_custom_event_last_phase_league_ptr = 0;
+static uint32_t g_kbo_custom_event_last_phase_date = 0;
+static uint32_t g_kbo_custom_event_last_phase_league_year = 0;
+static uint32_t g_kbo_custom_event_last_phase_year = 0;
+static uint8_t g_kbo_custom_event_last_seen_league_phase = 0xffu;
+static uint32_t g_kbo_custom_event_pending_offseason_transition_anchor = 0;
+static uint32_t g_kbo_custom_event_last_offseason_transition_anchor = 0;
 static uintptr_t g_kbo_processed_event_ptrs[256] = {0};
 static LONG g_kbo_processed_event_count = 0;
 
