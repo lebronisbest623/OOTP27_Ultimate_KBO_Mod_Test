@@ -1,4 +1,4 @@
-static int install_kbo_season_phase_write_probe_patch(
+static int install_kbo_season_phase_opening_day_snapshot_hook_patch(
     const char* label,
     uint32_t site_rva,
     const uint8_t* expected,
@@ -28,7 +28,7 @@ static int install_kbo_season_phase_write_probe_patch(
         return 0;
     }
 
-    uint8_t* stub = build_kbo_season_phase_write_probe_call_stub(target, base_reg, site_rva, value);
+    uint8_t* stub = build_kbo_season_phase_opening_day_event_stub(target, base_reg, site_rva, value);
     if (stub == NULL) {
         append_logf("%s skipped target=%p reason=stub_alloc_failed", label, target);
         return 0;
@@ -63,27 +63,33 @@ static int install_kbo_season_phase_write_probe_patch(
     return 1;
 }
 
-static int install_kbo_season_phase_write_probe_patches(void)
+static int install_kbo_season_phase_opening_day_snapshot_hooks(void)
 {
     int ok = 1;
-    const uint8_t write_1[] = { 0x41, 0xC6, 0x87, 0xF0, 0x44, 0x00, 0x00, 0x01 };
-    const uint8_t write_0[] = { 0x41, 0xC6, 0x87, 0xF0, 0x44, 0x00, 0x00, 0x00 };
-    const uint8_t write_4[] = { 0x41, 0xC6, 0x87, 0xF0, 0x44, 0x00, 0x00, 0x04 };
-    const uint8_t write_2_r14[] = { 0x41, 0xC6, 0x86, 0xF0, 0x44, 0x00, 0x00, 0x02 };
-    const uint8_t write_2_rbx[] = { 0xC6, 0x83, 0xF0, 0x44, 0x00, 0x00, 0x02 };
-    const uint8_t write_2_rdx[] = { 0xC6, 0x82, 0xF0, 0x44, 0x00, 0x00, 0x02 };
     const uint8_t write_3_rdi[] = { 0xC6, 0x87, 0xF0, 0x44, 0x00, 0x00, 0x03 };
     const uint8_t write_3_rcx[] = { 0xC6, 0x81, 0xF0, 0x44, 0x00, 0x00, 0x03 };
     const uint8_t write_3_rsi[] = { 0xC6, 0x86, 0xF0, 0x44, 0x00, 0x00, 0x03 };
 
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 1", OOTP27_SEASON_PHASE_WRITE_1_RVA, write_1, sizeof(write_1), 15, 1);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 0", OOTP27_SEASON_PHASE_WRITE_0_RVA, write_0, sizeof(write_0), 15, 0);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 4", OOTP27_SEASON_PHASE_WRITE_4_RVA, write_4, sizeof(write_4), 15, 4);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 2a", OOTP27_SEASON_PHASE_WRITE_2A_RVA, write_2_r14, sizeof(write_2_r14), 14, 2);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 2b", OOTP27_SEASON_PHASE_WRITE_2B_RVA, write_2_rbx, sizeof(write_2_rbx), 3, 2);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 2c", OOTP27_SEASON_PHASE_WRITE_2C_RVA, write_2_rdx, sizeof(write_2_rdx), 2, 2);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 3a", OOTP27_SEASON_PHASE_WRITE_3A_RVA, write_3_rdi, sizeof(write_3_rdi), 7, 3);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 3b", OOTP27_SEASON_PHASE_WRITE_3B_RVA, write_3_rcx, sizeof(write_3_rcx), 1, 3);
-    ok &= install_kbo_season_phase_write_probe_patch("KBO season phase write probe 3c", OOTP27_SEASON_PHASE_WRITE_3C_RVA, write_3_rsi, sizeof(write_3_rsi), 6, 3);
+    ok &= install_kbo_season_phase_opening_day_snapshot_hook_patch(
+        "KBO FA salary opening-day phase hook 3a",
+        OOTP27_SEASON_PHASE_WRITE_3A_RVA,
+        write_3_rdi,
+        sizeof(write_3_rdi),
+        7,
+        3);
+    ok &= install_kbo_season_phase_opening_day_snapshot_hook_patch(
+        "KBO FA salary opening-day phase hook 3b",
+        OOTP27_SEASON_PHASE_WRITE_3B_RVA,
+        write_3_rcx,
+        sizeof(write_3_rcx),
+        1,
+        3);
+    ok &= install_kbo_season_phase_opening_day_snapshot_hook_patch(
+        "KBO FA salary opening-day phase hook 3c",
+        OOTP27_SEASON_PHASE_WRITE_3C_RVA,
+        write_3_rsi,
+        sizeof(write_3_rsi),
+        6,
+        3);
     return ok;
 }

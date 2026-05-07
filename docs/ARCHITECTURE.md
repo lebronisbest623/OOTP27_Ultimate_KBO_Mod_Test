@@ -791,12 +791,13 @@ dotnet build .\OOTP27-KBO-Launcher.sln
 
 The repository root is for project entry points only: the solution file, launcher project, launcher source, and startup scripts. Domain data should not live in the root.
 
-Bundled seed CSVs live under:
+Bundled seed/config data files live under:
 
 ```text
 data/seeds/
   asian_games_schedule_seed.csv
   allstar_teams.csv
+  fa_rules.json
   foreign_replacement_players_seed.csv
   military_service_seed.csv
 ```

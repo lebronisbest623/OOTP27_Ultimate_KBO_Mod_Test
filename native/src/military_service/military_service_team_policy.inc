@@ -1,4 +1,4 @@
-/* Military-service team FA policy helpers. */
+/* Military-service team policy helpers. Included from native/src/military_service_loan.inc. */
 
 #define KBO_DEFAULT_SANGMU_TEAM_ID 21u
 

@@ -49,6 +49,7 @@ internal static class LauncherApp
         EnsureKboLeagueIdConfig();
         EnsureBundledKboDataFile("asian_games_schedule_seed.csv", "Asian Games schedule seed");
         EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
+        EnsureBundledKboDataFile("fa_rules.json", "FA rules");
         EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
         ImportLegacyKboFlagFilesIfMissing();

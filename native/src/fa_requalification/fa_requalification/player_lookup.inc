@@ -68,13 +68,6 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
 
     uint32_t team_id = 0u;
     uint32_t league_id = 0u;
-    if (!kbo_fa_requalification_team_ptr_is_kbo(team_ptr, &team_id, &league_id)) {
-        LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
-        if (slot <= 20) {
-            append_logf("KBO FA signing branch skipped reason=non_kbo_team player_ptr=%p team_ptr=%p team=%u league=%u", (void*)player_ptr, (void*)team_ptr, team_id, league_id);
-        }
-        return 1;
-    }
 
     uint8_t* player = (uint8_t*)player_ptr;
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
@@ -82,6 +75,29 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
         if (slot <= 20) {
             append_logf("KBO FA signing branch skipped reason=bad_player_id player=%u team=%u league=%u", player_id, team_id, league_id);
+        }
+        return 1;
+    }
+
+    int is_kbo_team = kbo_fa_requalification_team_ptr_is_kbo(team_ptr, &team_id, &league_id);
+
+    if (kbo_team_id_is_military_service_team(team_id)) {
+        static volatile LONG military_fa_signing_block_log_count = 0;
+        LONG slot = InterlockedIncrement(&military_fa_signing_block_log_count);
+        if (slot <= 200) {
+            append_logf(
+                "military service team FA signing blocked player=%u team=%u league=%u",
+                player_id,
+                team_id,
+                league_id);
+        }
+        return 0;
+    }
+
+    if (!is_kbo_team) {
+        LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
+        if (slot <= 20) {
+            append_logf("KBO FA signing branch skipped reason=non_kbo_team player=%u team_ptr=%p team=%u league=%u", player_id, (void*)team_ptr, team_id, league_id);
         }
         return 1;
     }
@@ -125,6 +141,8 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
             return 0;
         }
     }
+
+    kbo_record_fa_compensation_signing(player_ptr, team_id, league_id, "fa_signing_branch");
 
     if (!read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
         return 1;

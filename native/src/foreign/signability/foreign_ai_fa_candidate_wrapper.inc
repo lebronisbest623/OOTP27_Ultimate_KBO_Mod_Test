@@ -31,18 +31,7 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
         return insert_index;
     }
 
-    if (player_id != 0u
-        && requester_team_id != 0u
-        && kbo_team_id_is_military_service_team(requester_team_id)) {
-        static LONG military_ai_block_log_count = 0;
-        LONG slot = InterlockedIncrement(&military_ai_block_log_count);
-        if (slot <= 300) {
-            append_logf(
-                "military service team AI FA status candidate blocked player=%u requester_team=%u index=%d",
-                player_id,
-                requester_team_id,
-                insert_index);
-        }
+    if (kbo_military_ai_fa_candidate_should_block(player_id, requester_team_id, insert_index)) {
         return insert_index;
     }
 

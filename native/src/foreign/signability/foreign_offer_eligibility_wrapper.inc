@@ -27,17 +27,12 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     kbo_log_asian_quota_offer_probe(player, player_id, team_id, original_result, flag);
 
-    if (kbo_team_id_is_military_service_team((uint32_t)team_id)) {
-        static volatile LONG military_team_offer_log_count = 0;
-        LONG slot = InterlockedIncrement(&military_team_offer_log_count);
-        if (slot <= 120) {
-            append_logf(
-                "military service team FA offer eligibility blocked player=%u requester_team=%d original=%u flag=%d",
-                player_id,
-                team_id,
-                (uint32_t)original_result,
-                flag);
-        }
+    if (kbo_military_offer_eligibility_should_block(
+            player_ptr,
+            team_id,
+            flag,
+            original_result,
+            &player_id)) {
         return 0;
     }
 

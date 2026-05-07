@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "faCompensation": {
+    "excludeForeignPlayers": true,
+    "ageGradeOverride": {
+      "enabled": true,
+      "minAge": 35,
+      "grade": "C"
+    },
+    "compensableCases": [
+      "KBO_FA_APPROVED",
+      "KBO_FA_ELIGIBLE_NOT_APPROVED",
+      "KBO_FA_DEFERRED",
+      "KBO_FA_BY_HISTORY_UNGRADED"
+    ],
+    "grades": {
+      "A": {
+        "protectedCount": 20,
+        "cashWithPlayerPercent": 200,
+        "cashOnlyPercent": 300,
+        "requiresPlayerCompensation": true
+      },
+      "B": {
+        "protectedCount": 25,
+        "cashWithPlayerPercent": 100,
+        "cashOnlyPercent": 200,
+        "requiresPlayerCompensation": true
+      },
+      "C": {
+        "protectedCount": 0,
+        "cashOnlyPercent": 150,
+        "requiresPlayerCompensation": false
+      }
+    }
+  }
+}

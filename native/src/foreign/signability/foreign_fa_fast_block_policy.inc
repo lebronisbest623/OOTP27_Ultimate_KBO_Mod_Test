@@ -14,27 +14,7 @@ static int kbo_fast_block_fa_candidate_before_original(
     }
 
     uint32_t requester_team_id = (uint32_t)requesting_team_id;
-    if (kbo_team_id_is_military_service_team(requester_team_id)) {
-        if (context != NULL && strcmp(context, "signability") == 0) {
-            return 0;
-        }
-        uint32_t player_id = 0u;
-        if (player_ptr != 0
-                && memory_range_readable((void*)(player_ptr + OOTP27_PLAYER_ID_OFFSET), sizeof(uint32_t))) {
-            player_id = *(uint32_t*)(player_ptr + OOTP27_PLAYER_ID_OFFSET);
-        }
-        if (out_player_id != NULL) {
-            *out_player_id = player_id;
-        }
-        static volatile LONG military_fast_block_log_count = 0;
-        LONG slot = InterlockedIncrement(&military_fast_block_log_count);
-        if (slot <= 120) {
-            append_logf(
-                "FA fast-block source=%s reason=military_service_team player=%u requester_team=%u",
-                context != NULL ? context : "",
-                player_id,
-                requester_team_id);
-        }
+    if (kbo_military_fa_candidate_fast_block(player_ptr, requester_team_id, context, out_player_id)) {
         return 1;
     }
 

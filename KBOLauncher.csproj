@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="data\seeds\*.csv" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="data\seeds\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="KBOLauncher.Tests\**\*.cs" />

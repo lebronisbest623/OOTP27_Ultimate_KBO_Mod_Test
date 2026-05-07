@@ -3,6 +3,15 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
     uintptr_t player_ptr, uintptr_t original_func_ptr);
 __declspec(noinline) void ootp_kbo_military_status_update_wrapper(
     uintptr_t player_ptr, uintptr_t original_func_ptr);
+__declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
+    uintptr_t team_ptr,
+    uintptr_t player_ptr,
+    uintptr_t arg3,
+    uintptr_t arg4,
+    uintptr_t arg5,
+    uintptr_t arg6,
+    uintptr_t arg7,
+    uintptr_t arg8);
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr, int32_t team_id, uint16_t year_hint, uintptr_t original_func_ptr);
 __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
@@ -24,6 +33,12 @@ __declspec(noinline) uint8_t ootp_kbo_player_action_eligibility_wrapper(
 static void start_kbo_no_minor_contract_demand_floor_scanner_thread(void);
 __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(
     uintptr_t player_ptr, uintptr_t team_ptr);
+static int kbo_record_fa_compensation_signing(
+    uintptr_t player_ptr,
+    uint32_t signing_team_id,
+    uint32_t league_id,
+    const char* source);
+static int kbo_team_id_is_military_service_team(uint32_t team_id);
 __declspec(noinline) int ootp_kbo_trade_check_foreign_policy_probe(
     uintptr_t trade_ptr,
     int32_t side);
@@ -99,6 +114,7 @@ static int insert_kbo_roster_transaction_sql(
     const char* source);
 static void start_kbo_foreign_waiver_scanner_thread(void);
 static void start_kbo_foreign_injury_replacement_thread(void);
+static void start_kbo_fa_salary_snapshot_phase_event_thread(void);
 static void start_kbo_fa_requalification_thread(void);
 static void kbo_flush_pending_foreign_priority_events(const char* source);
 static int kbo_get_current_yyyymmdd(uint32_t* out_date);
@@ -110,7 +126,7 @@ static int kbo_enforce_foreign_waiver_signability(
     uintptr_t caller_rva);
 static int start_kbo_custom_event_monitor(void);
 static int start_kbo_season_phase_monitor(void);
-static int install_kbo_season_phase_write_probe_patches(void);
+static int install_kbo_season_phase_opening_day_snapshot_hooks(void);
 static int kbo_schedule_foreign_priority_custom_events(const char* source);
 __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     uintptr_t league_ptr,

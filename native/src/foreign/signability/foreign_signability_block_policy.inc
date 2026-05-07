@@ -36,17 +36,11 @@ static int kbo_enforce_foreign_waiver_signability(
         return original_signability;
     }
 
-    if (requesting_team_id > 0 && kbo_team_id_is_military_service_team((uint32_t)requesting_team_id)) {
-        static volatile LONG military_team_signability_log_count = 0;
-        LONG slot = InterlockedIncrement(&military_team_signability_log_count);
-        if (slot <= 200) {
-            append_logf(
-                "military service team FA signability blocked player=%u requester_team=%d original=%d caller_rva=0x%llx",
-                player_id,
-                requesting_team_id,
-                original_signability,
-                (unsigned long long)caller_rva);
-        }
+    if (kbo_military_signability_should_block(
+            player_id,
+            requesting_team_id,
+            original_signability,
+            caller_rva)) {
         return 0; /* OOTP signability enum: 0 = Impossible. */
     }
 

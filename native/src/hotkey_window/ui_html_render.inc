@@ -3,6 +3,7 @@
 #include "ui_html_render/view_asian_quota.inc"
 #include "ui_html_render/view_asian_games.inc"
 #include "ui_html_render/view_fa_cases.inc"
+#include "ui_html_render/view_fa_compensation.inc"
 #include "ui_html_render/view_mod_info.inc"
 #include "ui_html_render/view_settings.inc"
 #include "ui_html_render/view_fallback.inc"

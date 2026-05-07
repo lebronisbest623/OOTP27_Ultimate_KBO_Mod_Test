@@ -1,59 +1,113 @@
-static uint8_t* build_kbo_season_phase_write_probe_call_stub(
+static int kbo_season_phase_event_stub_append_original_write(uint8_t* code, size_t* used, uint8_t base_reg, uint8_t value)
+{
+    if (code == NULL || used == NULL) {
+        return 0;
+    }
+
+    size_t n = *used;
+    switch (base_reg) {
+    case 1: code[n++] = 0xC6; code[n++] = 0x81; break;             /* rcx */
+    case 2: code[n++] = 0xC6; code[n++] = 0x82; break;             /* rdx */
+    case 3: code[n++] = 0xC6; code[n++] = 0x83; break;             /* rbx */
+    case 6: code[n++] = 0xC6; code[n++] = 0x86; break;             /* rsi */
+    case 7: code[n++] = 0xC6; code[n++] = 0x87; break;             /* rdi */
+    case 14: code[n++] = 0x41; code[n++] = 0xC6; code[n++] = 0x86; break; /* r14 */
+    case 15: code[n++] = 0x41; code[n++] = 0xC6; code[n++] = 0x87; break; /* r15 */
+    default: return 0;
+    }
+
+    write_u32(&code[n], OOTP27_KBO_LEAGUE_PHASE_OFFSET);
+    n += 4;
+    code[n++] = value;
+    *used = n;
+    return 1;
+}
+
+static int kbo_season_phase_event_stub_append_mov_rdx_base(uint8_t* code, size_t* used, uint8_t base_reg)
+{
+    if (code == NULL || used == NULL) {
+        return 0;
+    }
+
+    size_t n = *used;
+    switch (base_reg) {
+    case 1: code[n++] = 0x48; code[n++] = 0x89; code[n++] = 0xCA; break; /* mov rdx, rcx */
+    case 2: break;                                                       /* rdx already holds base */
+    case 3: code[n++] = 0x48; code[n++] = 0x89; code[n++] = 0xDA; break; /* mov rdx, rbx */
+    case 6: code[n++] = 0x48; code[n++] = 0x89; code[n++] = 0xF2; break; /* mov rdx, rsi */
+    case 7: code[n++] = 0x48; code[n++] = 0x89; code[n++] = 0xFA; break; /* mov rdx, rdi */
+    case 14: code[n++] = 0x4C; code[n++] = 0x89; code[n++] = 0xF2; break; /* mov rdx, r14 */
+    case 15: code[n++] = 0x4C; code[n++] = 0x89; code[n++] = 0xFA; break; /* mov rdx, r15 */
+    default: return 0;
+    }
+
+    *used = n;
+    return 1;
+}
+
+static uint8_t* build_kbo_season_phase_opening_day_event_stub(
     void* patch_site,
     uint8_t base_reg,
     uint32_t site_rva,
     uint8_t value)
 {
-    uint8_t code[96] = {
-        0x50,                                           // push rax
-        0x51,                                           // push rcx
-        0x52,                                           // push rdx
-        0x41, 0x50,                                     // push r8
-        0x41, 0x51,                                     // push r9
-        0x41, 0x52,                                     // push r10
-        0x41, 0x53,                                     // push r11
-        0x48, 0x83, 0xEC, 0x28,                         // sub rsp, 0x28
-        0x48, 0x89, 0xD9,                               // mov rcx, rbx placeholder
-        0xBA, 0,0,0,0,                                  // mov edx, value
-        0x41, 0xB8, 0,0,0,0,                            // mov r8d, site_rva
-        0x48, 0xB8,                                     // mov rax, helper
-        0,0,0,0,0,0,0,0,
-        0xFF, 0xD0,                                     // call rax
-        0x48, 0x83, 0xC4, 0x28,                         // add rsp, 0x28
-        0x41, 0x5B,                                     // pop r11
-        0x41, 0x5A,                                     // pop r10
-        0x41, 0x59,                                     // pop r9
-        0x41, 0x58,                                     // pop r8
-        0x5A,                                           // pop rdx
-        0x59,                                           // pop rcx
-        0x58,                                           // pop rax
-        0xC3,                                           // ret
-        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
-        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
-        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
-        0xCC, 0xCC, 0xCC, 0xCC, 0xCC
-    };
+    uint8_t code[160] = {0};
+    size_t n = 0;
 
-    switch (base_reg) {
-    case 1: code[16] = 0x48; code[17] = 0x89; code[18] = 0xC9; break; /* rcx */
-    case 2: code[16] = 0x48; code[17] = 0x89; code[18] = 0xD1; break; /* rdx */
-    case 3: code[16] = 0x48; code[17] = 0x89; code[18] = 0xD9; break; /* rbx */
-    case 6: code[16] = 0x48; code[17] = 0x89; code[18] = 0xF1; break; /* rsi */
-    case 7: code[16] = 0x48; code[17] = 0x89; code[18] = 0xF9; break; /* rdi */
-    case 14: code[16] = 0x4C; code[17] = 0x89; code[18] = 0xF1; break; /* r14 */
-    case 15: code[16] = 0x4C; code[17] = 0x89; code[18] = 0xF9; break; /* r15 */
-    default: return NULL;
+    code[n++] = 0x9C; /* pushfq */
+    code[n++] = 0x50; /* push rax */
+    code[n++] = 0x51; /* push rcx */
+    code[n++] = 0x52; /* push rdx */
+
+    if (!kbo_season_phase_event_stub_append_original_write(code, &n, base_reg, value)
+            || !kbo_season_phase_event_stub_append_mov_rdx_base(code, &n, base_reg)) {
+        return NULL;
     }
 
-    write_u32(&code[20], (uint32_t)value);
-    write_u32(&code[26], site_rva);
-    write_u64(&code[32], (uint64_t)(uintptr_t)&ootp_kbo_season_phase_write_probe);
+    code[n++] = 0x48; code[n++] = 0xB8;
+    write_u64(&code[n], (uint64_t)(uintptr_t)&g_kbo_fa_salary_snapshot_phase_event_write_cursor);
+    n += 8;
+    code[n++] = 0xB9;
+    write_u32(&code[n], 1u);
+    n += 4;
+    code[n++] = 0xF0; code[n++] = 0x0F; code[n++] = 0xC1; code[n++] = 0x08; /* lock xadd dword ptr [rax], ecx */
+    code[n++] = 0x83; code[n++] = 0xE1; code[n++] = (uint8_t)KBO_FA_SALARY_PHASE_EVENT_RING_MASK;
 
-    uint8_t* memory = kbo_alloc_near_code(patch_site, sizeof(code));
+    code[n++] = 0x48; code[n++] = 0xB8;
+    write_u64(&code[n], (uint64_t)(uintptr_t)g_kbo_fa_salary_snapshot_phase_event_league_ptrs);
+    n += 8;
+    code[n++] = 0x48; code[n++] = 0x89; code[n++] = 0x14; code[n++] = 0xC8; /* mov [rax+rcx*8], rdx */
+
+    code[n++] = 0x48; code[n++] = 0xB8;
+    write_u64(&code[n], (uint64_t)(uintptr_t)g_kbo_fa_salary_snapshot_phase_event_values);
+    n += 8;
+    code[n++] = 0xC7; code[n++] = 0x04; code[n++] = 0x88;
+    write_u32(&code[n], (uint32_t)value);
+    n += 4;
+
+    code[n++] = 0x48; code[n++] = 0xB8;
+    write_u64(&code[n], (uint64_t)(uintptr_t)g_kbo_fa_salary_snapshot_phase_event_site_rvas);
+    n += 8;
+    code[n++] = 0xC7; code[n++] = 0x04; code[n++] = 0x88;
+    write_u32(&code[n], site_rva);
+    n += 4;
+
+    code[n++] = 0x48; code[n++] = 0xB8;
+    write_u64(&code[n], (uint64_t)(uintptr_t)&g_kbo_fa_salary_snapshot_phase_event_published_sequence);
+    n += 8;
+    code[n++] = 0xF0; code[n++] = 0xFF; code[n++] = 0x00; /* lock inc dword ptr [rax] */
+
+    code[n++] = 0x5A; /* pop rdx */
+    code[n++] = 0x59; /* pop rcx */
+    code[n++] = 0x58; /* pop rax */
+    code[n++] = 0x9D; /* popfq */
+    code[n++] = 0xC3; /* ret */
+
+    uint8_t* memory = kbo_alloc_near_code(patch_site, n);
     if (memory == NULL) {
         return NULL;
     }
-    memcpy(memory, code, sizeof(code));
-    FlushInstructionCache(GetCurrentProcess(), memory, sizeof(code));
+    memcpy(memory, code, n);
+    FlushInstructionCache(GetCurrentProcess(), memory, n);
     return memory;
 }

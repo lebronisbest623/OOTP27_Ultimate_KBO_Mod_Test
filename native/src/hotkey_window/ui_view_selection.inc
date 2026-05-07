@@ -48,7 +48,7 @@ static const char* kbo_hub_current_view_subtitle(void)
         }
     case KBO_HUB_VIEW_UPCOMING_FA:
     case KBO_HUB_VIEW_FA_CASES:
-        return kbo_hub_fa_subnav_label(KBO_HUB_FA_SUBVIEW_MARKET);
+        return kbo_hub_fa_subnav_label(g_kbo_hub_selected_fa_subview);
     case KBO_HUB_VIEW_MOD_INFO:
         return kbo_hub_mod_subnav_label(g_kbo_hub_selected_mod_subview);
     case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xeb\xa6\xac\xea\xb7\xb8\xec\x99\x80 \xea\xb2\x8c\xec\x9e\x84 \xed\x94\x8c\xeb\xa0\x88\xec\x9d\xb4 \xec\x84\xa4\xec\xa0\x95", "League and gameplay settings");

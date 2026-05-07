@@ -44,6 +44,8 @@ static const char* kbo_hub_fa_subnav_label(int index)
     switch (index) {
     case KBO_HUB_FA_SUBVIEW_MARKET:
         return kbo_hub_text("\xec\x8b\x9c\xec\x9e\xa5", "MARKET");
+    case KBO_HUB_FA_SUBVIEW_COMPENSATION:
+        return kbo_hub_text("\xeb\xb3\xb4\xec\x83\x81", "COMPENSATION");
     default:
         return "";
     }

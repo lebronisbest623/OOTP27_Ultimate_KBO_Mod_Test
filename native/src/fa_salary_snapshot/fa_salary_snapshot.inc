@@ -3,6 +3,8 @@
 #define KBO_FA_SALARY_SNAPSHOT_THREAD_SLEEP_MS 1000u
 #define KBO_FA_SALARY_SNAPSHOT_OPENING_WINDOW_DAYS 3u
 #define KBO_FA_SALARY_SNAPSHOT_GRADE_MAX 4096
+#define KBO_FA_SALARY_PHASE_EVENT_RING_SIZE 32u
+#define KBO_FA_SALARY_PHASE_EVENT_RING_MASK (KBO_FA_SALARY_PHASE_EVENT_RING_SIZE - 1u)
 
 typedef struct KboFaSalarySnapshotRow {
     uint32_t player_id;
@@ -43,6 +45,17 @@ typedef struct KboFaSalarySnapshotGrade {
 } KboFaSalarySnapshotGrade;
 
 static volatile LONG g_kbo_fa_salary_snapshot_thread_started = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_phase_event_thread_started = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_phase_event_write_cursor = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_phase_event_published_sequence = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_phase_event_consumed_sequence = 0;
+static uintptr_t g_kbo_fa_salary_snapshot_phase_event_league_ptrs[KBO_FA_SALARY_PHASE_EVENT_RING_SIZE];
+static uint32_t g_kbo_fa_salary_snapshot_phase_event_values[KBO_FA_SALARY_PHASE_EVENT_RING_SIZE];
+static uint32_t g_kbo_fa_salary_snapshot_phase_event_site_rvas[KBO_FA_SALARY_PHASE_EVENT_RING_SIZE];
+static volatile LONG g_kbo_fa_salary_snapshot_phase_pending_active = 0;
+static uintptr_t g_kbo_fa_salary_snapshot_phase_pending_league_ptr = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_phase_pending_value = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_phase_pending_site_rva = 0;
 
 static int kbo_fa_salary_snapshot_path(uint32_t season, char* out, size_t out_size)
 {
@@ -1025,6 +1038,177 @@ static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32
 
     HeapFree(GetProcessHeap(), 0, rows);
     return wrote;
+}
+
+static int kbo_fa_salary_snapshot_phase_event_league_is_kbo(uintptr_t league_ptr, uint32_t league_id)
+{
+    if (league_ptr == 0 || league_id == 0
+            || !memory_range_readable((void*)league_ptr, OOTP27_KBO_LEAGUE_ID_OFFSET + 16u)) {
+        return 0;
+    }
+
+    uint32_t legacy_id = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_ID_OFFSET);
+    uint32_t alternate_id = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_ID_OFFSET + 8u);
+    if (legacy_id == league_id
+            && kbo_league_candidate_matches_id(league_ptr, league_id, OOTP27_KBO_LEAGUE_ID_OFFSET)) {
+        return 1;
+    }
+    if (alternate_id == league_id
+            && kbo_league_candidate_matches_id(league_ptr, league_id, OOTP27_KBO_LEAGUE_ID_OFFSET + 8u)) {
+        return 1;
+    }
+    return 0;
+}
+
+static void kbo_fa_salary_snapshot_set_pending_phase_event(uintptr_t league_ptr, uint32_t value, uint32_t site_rva)
+{
+    g_kbo_fa_salary_snapshot_phase_pending_league_ptr = league_ptr;
+    InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_value, (LONG)value);
+    InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_site_rva, (LONG)site_rva);
+    InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 1);
+    append_logf(
+        "KBO FA salary opening-day phase hook observed site=0x%x league=%p value=%u",
+        site_rva,
+        (void*)league_ptr,
+        value);
+}
+
+static void kbo_fa_salary_snapshot_drain_phase_events_once(void)
+{
+    LONG latest = InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_phase_event_published_sequence, 0, 0);
+    LONG consumed = InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_phase_event_consumed_sequence, 0, 0);
+    if (latest == consumed) {
+        return;
+    }
+
+    if (latest - consumed > (LONG)KBO_FA_SALARY_PHASE_EVENT_RING_SIZE) {
+        append_logf(
+            "KBO FA salary opening-day phase hook event ring overflow consumed=%ld latest=%ld",
+            (long)consumed,
+            (long)latest);
+        consumed = latest - (LONG)KBO_FA_SALARY_PHASE_EVENT_RING_SIZE;
+    }
+
+    uint32_t league_id = kbo_resolve_kbo_league_id();
+    for (LONG event_no = consumed; event_no < latest; event_no++) {
+        uint32_t index = (uint32_t)event_no & KBO_FA_SALARY_PHASE_EVENT_RING_MASK;
+        uintptr_t league_ptr = g_kbo_fa_salary_snapshot_phase_event_league_ptrs[index];
+        uint32_t value = g_kbo_fa_salary_snapshot_phase_event_values[index];
+        uint32_t site_rva = g_kbo_fa_salary_snapshot_phase_event_site_rvas[index];
+        if (value != 3u || !kbo_fa_salary_snapshot_phase_event_league_is_kbo(league_ptr, league_id)) {
+            continue;
+        }
+        kbo_fa_salary_snapshot_set_pending_phase_event(league_ptr, value, site_rva);
+    }
+
+    InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_event_consumed_sequence, latest);
+}
+
+static void kbo_fa_salary_snapshot_try_pending_phase_event(void)
+{
+    if (InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 1, 1) == 0) {
+        return;
+    }
+
+    uintptr_t league_ptr = g_kbo_fa_salary_snapshot_phase_pending_league_ptr;
+    uint32_t value = (uint32_t)InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_phase_pending_value, 0, 0);
+    uint32_t site_rva = (uint32_t)InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_phase_pending_site_rva, 0, 0);
+    if (value != 3u) {
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 0);
+        return;
+    }
+
+    uint32_t league_id = kbo_resolve_kbo_league_id();
+    if (!kbo_fa_salary_snapshot_phase_event_league_is_kbo(league_ptr, league_id)) {
+        append_logf(
+            "KBO FA salary opening-day phase hook ignored site=0x%x league=%p value=%u reason=not_kbo_league",
+            site_rva,
+            (void*)league_ptr,
+            value);
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 0);
+        return;
+    }
+
+    uint32_t opening_day = 0u;
+    if (!kbo_fa_salary_snapshot_read_opening_day(league_ptr, &opening_day)) {
+        return;
+    }
+
+    uint32_t year = 0u;
+    uint32_t month = 0u;
+    uint32_t day = 0u;
+    if (!kbo_current_date_is_valid(&year, &month, &day)) {
+        return;
+    }
+
+    uint32_t date = year * 10000u + month * 100u + day;
+    if (date < opening_day) {
+        return;
+    }
+
+    uint32_t season = opening_day / 10000u;
+    if (season < 1982u || season > 2200u) {
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 0);
+        return;
+    }
+
+    if (kbo_fa_salary_snapshot_file_exists(season)) {
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 0);
+        return;
+    }
+
+    if (date > opening_day) {
+        append_logf(
+            "KBO FA salary opening-day phase hook missed exact opening day site=0x%x date=%u opening_day=%u league=%u",
+            site_rva,
+            date,
+            opening_day,
+            league_id);
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 0);
+        return;
+    }
+
+    char source[64] = {0};
+    snprintf(source, sizeof(source), "season_phase_hook_0x%x", site_rva);
+    if (kbo_capture_fa_salary_opening_day_snapshot(source, date, season, opening_day, league_id)) {
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 0);
+    }
+}
+
+static DWORD WINAPI kbo_fa_salary_snapshot_phase_event_thread(LPVOID parameter)
+{
+    (void)parameter;
+    append_log_line("KBO FA salary opening-day phase hook event thread started");
+
+    for (;;) {
+        Sleep(250);
+        if (!kbo_fix_enabled()) {
+            continue;
+        }
+
+        kbo_fa_salary_snapshot_drain_phase_events_once();
+        kbo_fa_salary_snapshot_try_pending_phase_event();
+    }
+
+    return 0;
+}
+
+static void start_kbo_fa_salary_snapshot_phase_event_thread(void)
+{
+    if (!kbo_fix_enabled()) {
+        return;
+    }
+    if (InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_phase_event_thread_started, 1, 0) != 0) {
+        return;
+    }
+
+    HANDLE thread = CreateThread(NULL, 0, kbo_fa_salary_snapshot_phase_event_thread, NULL, 0, NULL);
+    if (thread != NULL) {
+        CloseHandle(thread);
+    } else {
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_event_thread_started, 0);
+        append_logf("KBO FA salary opening-day phase hook event thread failed to start gle=%lu", GetLastError());
+    }
 }
 
 static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)

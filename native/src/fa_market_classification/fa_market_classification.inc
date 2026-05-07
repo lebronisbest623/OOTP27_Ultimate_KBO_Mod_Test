@@ -579,6 +579,81 @@ static const KboFaMarketHistoryCase* kbo_find_fa_market_history_case(
     return NULL;
 }
 
+static uint32_t kbo_fa_market_history_date_u32(const KboFaMarketHistoryCase* history)
+{
+    if (history == NULL || history->history_date[0] == '\0') {
+        return 0u;
+    }
+    uint32_t date = 0u;
+    if (kbo_parse_yyyymmdd(history->history_date, &date)) {
+        return date;
+    }
+    return kbo_fa_filing_parse_u32(history->history_date);
+}
+
+static int kbo_fa_market_overlay_filing_history_cases(
+    KboFaMarketClassification* rows,
+    int row_count,
+    KboFaMarketHistoryCase* histories,
+    int history_count)
+{
+    if (rows == NULL || row_count <= 0 || histories == NULL || history_count < row_count) {
+        return 0;
+    }
+
+    KboFaFilingRecord* filings = (KboFaFilingRecord*)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        (SIZE_T)KBO_FA_FILING_MAX * sizeof(KboFaFilingRecord));
+    if (filings == NULL) {
+        append_log_line("FA market filing ledger overlay skipped: allocation failed");
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    int filing_count = kbo_load_fa_filing_records(filings, KBO_FA_FILING_MAX, path, sizeof(path));
+    int applied = 0;
+    for (int f = 0; f < filing_count; f++) {
+        const KboFaFilingRecord* filing = &filings[f];
+        if (filing->player_id == 0u || filing->filing_date == 0u) {
+            continue;
+        }
+        for (int i = 0; i < row_count; i++) {
+            if (rows[i].player_id != filing->player_id) {
+                continue;
+            }
+            uint32_t existing_date = kbo_fa_market_history_date_u32(&histories[i]);
+            if (histories[i].found && existing_date > filing->filing_date) {
+                break;
+            }
+
+            histories[i].player_id = rows[i].player_id;
+            histories[i].found = 1;
+            histories[i].became_free_agent = 1;
+            histories[i].undrafted_free_agent = 0;
+            histories[i].released = 0;
+            snprintf(histories[i].history_date, sizeof(histories[i].history_date), "%u", filing->filing_date);
+            snprintf(histories[i].history_text, sizeof(histories[i].history_text), "[G]Became a free agent.");
+            if (rows[i].original_team_id == 0u && filing->original_team_id != 0u) {
+                rows[i].original_team_id = filing->original_team_id;
+            }
+            applied++;
+            break;
+        }
+    }
+
+    if (filing_count > 0 || applied > 0) {
+        append_logf(
+            "FA market filing ledger overlay applied=%d filings=%d rows=%d csv=%s",
+            applied,
+            filing_count,
+            row_count,
+            path);
+    }
+    HeapFree(GetProcessHeap(), 0, filings);
+    return applied;
+}
+
 static void kbo_fa_market_copy_token(const char* value, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
@@ -1029,17 +1104,6 @@ static int kbo_fa_market_apply_history_case(
     return 0;
 }
 
-static int kbo_fa_market_case_is_salary_grade_eligible(const char* case_label)
-{
-    if (case_label == NULL) {
-        return 0;
-    }
-    return strcmp(case_label, "KBO_FA_APPROVED") == 0
-        || strcmp(case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0
-        || strcmp(case_label, "KBO_FA_DEFERRED") == 0
-        || strcmp(case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0;
-}
-
 static int kbo_fa_market_grade_is_unknown(const char* grade)
 {
     return grade == NULL
@@ -1125,45 +1189,58 @@ static const char* kbo_fa_market_display_case_label(const char* case_label)
     return case_label;
 }
 
-static int kbo_fa_market_apply_age_grade_override(KboFaMarketClassification* row)
+static int kbo_fa_market_apply_age_grade_override(KboFaMarketClassification* row, const KboFaRules* rules)
 {
     if (row == NULL
-            || row->foreign_player
-            || row->age < 35u
-            || !kbo_fa_market_case_is_salary_grade_eligible(row->case_label)) {
+            || rules == NULL
+            || !rules->age_grade_override_enabled
+            || rules->age_grade_min_age == 0u
+            || rules->age_grade[0] == '\0'
+            || (rules->exclude_foreign_players && row->foreign_player)
+            || row->age < rules->age_grade_min_age
+            || !kbo_fa_rules_case_is_compensable(rules, row->case_label)) {
         return 0;
     }
 
-    if (strcmp(row->grade, "C") != 0) {
-        snprintf(row->grade, sizeof(row->grade), "C");
+    if (_stricmp(row->grade, rules->age_grade) != 0) {
+        snprintf(row->grade, sizeof(row->grade), "%s", rules->age_grade);
         row->fa_grade_auto = 1u;
         char previous_reason[224] = {0};
         snprintf(previous_reason, sizeof(previous_reason), "%s", row->reason);
         snprintf(
             row->reason,
             sizeof(row->reason),
-            "%s; age >= 35 FA grade override=C",
-            previous_reason);
+            "%s; age >= %u FA grade override=%s",
+            previous_reason,
+            rules->age_grade_min_age,
+            rules->age_grade);
     }
-    snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "AGE_35_C");
+    snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "AGE_%u_%s", rules->age_grade_min_age, rules->age_grade);
     return 1;
 }
 
 static void kbo_fa_market_apply_salary_snapshot_grade(
     KboFaMarketClassification* row,
     const KboFaSalarySnapshotGrade* salary_grades,
-    int salary_grade_count)
+    int salary_grade_count,
+    const KboFaRules* rules)
 {
-    if (row == NULL || !kbo_fa_market_case_is_salary_grade_eligible(row->case_label)) {
+    KboFaRules local_rules;
+    if (rules == NULL) {
+        kbo_fa_rules_load(&local_rules);
+        rules = &local_rules;
+    }
+
+    if (row == NULL || !kbo_fa_rules_case_is_compensable(rules, row->case_label)) {
         return;
     }
-    if (row->foreign_player
+    if ((rules->exclude_foreign_players && row->foreign_player)
             || strcmp(row->case_label, "FOREIGN_FREE") == 0
             || strcmp(row->case_label, "FOREIGN_RESERVED_RIGHT") == 0) {
         return;
     }
 
-    int age_grade_override = kbo_fa_market_apply_age_grade_override(row);
+    int age_grade_override = kbo_fa_market_apply_age_grade_override(row, rules);
 
     const KboFaSalarySnapshotGrade* grade =
         kbo_find_fa_salary_snapshot_grade(salary_grades, salary_grade_count, row->player_id);
@@ -1207,7 +1284,7 @@ static void kbo_fa_market_apply_salary_snapshot_grade(
             sizeof(row->fa_grade_flag),
             "TEAM_CHANGED_REVIEW");
     } else if (age_grade_override) {
-        snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "AGE_35_C");
+        snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "AGE_%u_%s", rules->age_grade_min_age, rules->age_grade);
     } else if (row->fa_grade_auto) {
         snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "AUTO");
     } else {
@@ -1588,6 +1665,8 @@ static int kbo_collect_fa_market_classifications(
         KBO_FA_SALARY_SNAPSHOT_GRADE_MAX,
         salary_snapshot_path,
         sizeof(salary_snapshot_path));
+    KboFaRules fa_rules;
+    kbo_fa_rules_load(&fa_rules);
     if (summary != NULL) {
         summary->seed_count = seed_count;
         summary->requalification_count = requalification_count;
@@ -1654,6 +1733,7 @@ static int kbo_collect_fa_market_classifications(
             (SIZE_T)row_count * sizeof(KboFaMarketHistoryCase));
         if (histories != NULL) {
             kbo_load_fa_market_history_cases(rows, row_count, histories, row_count);
+            kbo_fa_market_overlay_filing_history_cases(rows, row_count, histories, row_count);
             history_count = row_count;
         } else {
             append_log_line("FA market classification: history allocation failed");
@@ -1672,7 +1752,7 @@ static int kbo_collect_fa_market_classifications(
             history_case,
             current_year,
             today);
-        kbo_fa_market_apply_salary_snapshot_grade(&rows[i], salary_grades, salary_grade_count);
+        kbo_fa_market_apply_salary_snapshot_grade(&rows[i], salary_grades, salary_grade_count, &fa_rules);
     }
 
     if (row_count > 1) {
