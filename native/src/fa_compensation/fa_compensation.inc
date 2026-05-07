@@ -9,6 +9,28 @@
 #define KBO_FA_COMPENSATION_STATUS_CASH_ONLY_RECORDED 5u
 #define KBO_FA_COMPENSATION_PROTECTED_LIST_MAX 128
 
+static volatile LONG g_kbo_fa_compensation_ledger_lock = 0;
+
+static void kbo_fa_compensation_lock_ledger(const char* source)
+{
+    DWORD start = GetTickCount();
+    while (InterlockedCompareExchange(&g_kbo_fa_compensation_ledger_lock, 1, 0) != 0) {
+        if ((GetTickCount() - start) > 5000u) {
+            append_logf(
+                "KBO FA compensation ledger lock waiting source=%s wait_ms=%lu",
+                source != NULL ? source : "",
+                (unsigned long)(GetTickCount() - start));
+            start = GetTickCount();
+        }
+        Sleep(1);
+    }
+}
+
+static void kbo_fa_compensation_unlock_ledger(void)
+{
+    InterlockedExchange(&g_kbo_fa_compensation_ledger_lock, 0);
+}
+
 typedef struct KboFaCompensationRecord {
     uint32_t player_id;
     uint32_t signed_on_yyyymmdd;
@@ -1652,6 +1674,7 @@ static int kbo_manual_select_fa_compensation_player(
         return 0;
     }
 
+    kbo_fa_compensation_lock_ledger(source != NULL ? source : "manual_compensation_select");
     char path[MAX_PATH] = {0};
     int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
     KboFaCompensationRecord* rec = NULL;
@@ -1669,6 +1692,7 @@ static int kbo_manual_select_fa_compensation_player(
             selected_player_id,
             rec != NULL ? (uint32_t)rec->status : 999u,
             source != NULL ? source : "");
+        kbo_fa_compensation_unlock_ledger();
         HeapFree(GetProcessHeap(), 0, rows);
         HeapFree(GetProcessHeap(), 0, records);
         return 0;
@@ -1701,6 +1725,7 @@ static int kbo_manual_select_fa_compensation_player(
             fa_player_id,
             selected_player_id,
             source != NULL ? source : "");
+        kbo_fa_compensation_unlock_ledger();
         HeapFree(GetProcessHeap(), 0, rows);
         HeapFree(GetProcessHeap(), 0, records);
         return 0;
@@ -1725,6 +1750,7 @@ static int kbo_manual_select_fa_compensation_player(
         kbo_persist_fa_compensation_records(records, record_count);
     }
 
+    kbo_fa_compensation_unlock_ledger();
     HeapFree(GetProcessHeap(), 0, rows);
     HeapFree(GetProcessHeap(), 0, records);
     return ok;
@@ -1747,6 +1773,7 @@ static int kbo_manual_select_fa_compensation_cash_only(uint32_t fa_player_id, co
     if (records == NULL) {
         return 0;
     }
+    kbo_fa_compensation_lock_ledger(source != NULL ? source : "manual_cash_only_select");
     char path[MAX_PATH] = {0};
     int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
     int ok = 0;
@@ -1773,6 +1800,7 @@ static int kbo_manual_select_fa_compensation_cash_only(uint32_t fa_player_id, co
         break;
     }
 
+    kbo_fa_compensation_unlock_ledger();
     HeapFree(GetProcessHeap(), 0, records);
     return ok;
 }
@@ -1899,6 +1927,7 @@ static int kbo_manual_submit_fa_compensation_protected_list(uint32_t fa_player_i
         return 0;
     }
 
+    kbo_fa_compensation_lock_ledger(source != NULL ? source : "manual_protected_list_submit");
     char path[MAX_PATH] = {0};
     int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
     int ok = 0;
@@ -1918,6 +1947,7 @@ static int kbo_manual_submit_fa_compensation_protected_list(uint32_t fa_player_i
         kbo_persist_fa_compensation_records(records, record_count);
     }
 
+    kbo_fa_compensation_unlock_ledger();
     HeapFree(GetProcessHeap(), 0, auto_protected);
     HeapFree(GetProcessHeap(), 0, candidates);
     HeapFree(GetProcessHeap(), 0, records);
@@ -1951,6 +1981,7 @@ static int kbo_process_due_fa_compensation_protected_lists(const char* source)
         return 0;
     }
 
+    kbo_fa_compensation_lock_ledger(source != NULL ? source : "process_due");
     char path[MAX_PATH] = {0};
     int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
     int generated = 0;
@@ -2015,6 +2046,7 @@ static int kbo_process_due_fa_compensation_protected_lists(const char* source)
         kbo_persist_fa_compensation_records(records, record_count);
     }
 
+    kbo_fa_compensation_unlock_ledger();
     HeapFree(GetProcessHeap(), 0, auto_protected);
     HeapFree(GetProcessHeap(), 0, candidates);
     HeapFree(GetProcessHeap(), 0, records);
@@ -2169,6 +2201,7 @@ static int kbo_record_fa_compensation_signing(
         return 0;
     }
 
+    kbo_fa_compensation_lock_ledger(source != NULL ? source : "record_signing");
     char path[MAX_PATH] = {0};
     int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
     if (kbo_fa_compensation_find_existing(
@@ -2178,12 +2211,14 @@ static int kbo_record_fa_compensation_signing(
             signing_year,
             row.original_team_id,
             signing_team_id) >= 0) {
+        kbo_fa_compensation_unlock_ledger();
         HeapFree(GetProcessHeap(), 0, records);
         return 0;
     }
 
     if (record_count >= KBO_FA_COMPENSATION_MAX) {
         append_logf("KBO FA compensation skipped reason=ledger_full player=%u path=%s", row.player_id, path);
+        kbo_fa_compensation_unlock_ledger();
         HeapFree(GetProcessHeap(), 0, records);
         return 0;
     }
@@ -2224,6 +2259,7 @@ static int kbo_record_fa_compensation_signing(
             path);
     }
 
+    kbo_fa_compensation_unlock_ledger();
     HeapFree(GetProcessHeap(), 0, records);
     return persisted;
 }
