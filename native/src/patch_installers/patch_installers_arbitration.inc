@@ -39,12 +39,14 @@ static uint8_t* build_kbo_salary_arbitration_final_zero_tender_stub(
     void* non_tender_continuation,
     void* tender_continuation)
 {
-    uint8_t code[96] = {
+    uint8_t code[112] = {
         0x41, 0x83, 0xBD, 0x7C, 0x08, 0x00, 0x00, 0x00, /* cmp dword ptr [r13+0x87c], 0 */
-        0x0F, 0x8F, 0x36, 0x00, 0x00, 0x00,             /* jg tender_continuation */
+        0x0F, 0x8F, 0x42, 0x00, 0x00, 0x00,             /* jg tender_continuation */
         0x41, 0x83, 0x7D, 0x48, 0x64,                   /* cmp dword ptr [r13+0x48], 100 */
-        0x74, 0x17,                                     /* je clamp_to_floor */
+        0x74, 0x21,                                     /* je clamp_to_floor */
         0x41, 0x83, 0xBE, 0x20, 0x01, 0x00, 0x00, 0x64, /* cmp dword ptr [r14+0x120], 100 */
+        0x74, 0x17,                                     /* je clamp_to_floor */
+        0x41, 0x83, 0xBD, 0x70, 0x0D, 0x00, 0x00, 0x64, /* cmp dword ptr [r13+0xd70], 100 */
         0x74, 0x0D,                                     /* je clamp_to_floor */
         0x49, 0xBB,                                     /* mov r11, non_tender_continuation */
         0,0,0,0,0,0,0,0,
@@ -58,11 +60,13 @@ static uint8_t* build_kbo_salary_arbitration_final_zero_tender_stub(
         0,0,0,0,0,0,0,0,
         0x41, 0xFF, 0xE3,                               /* jmp r11 */
         0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
         0xCC, 0xCC, 0xCC, 0xCC
     };
 
-    write_u64(&code[33], (uint64_t)(uintptr_t)non_tender_continuation);
-    write_u64(&code[72], (uint64_t)(uintptr_t)tender_continuation);
+    write_u64(&code[43], (uint64_t)(uintptr_t)non_tender_continuation);
+    write_u64(&code[82], (uint64_t)(uintptr_t)tender_continuation);
     return allocate_kbo_salary_arbitration_stub(code, sizeof(code));
 }
 
@@ -136,13 +140,15 @@ static uint8_t* build_kbo_salary_arbitration_zero_offer_check_682089_stub(
     void* non_tender_continuation,
     void* continuation)
 {
-    uint8_t code[104] = {
+    uint8_t code[112] = {
         0x41, 0x8B, 0x85, 0x7C, 0x08, 0x00, 0x00,       /* mov eax, [r13+0x87c] */
         0x85, 0xC0,                                     /* test eax, eax */
-        0x75, 0x2E,                                     /* jne normal */
+        0x75, 0x38,                                     /* jne normal */
         0x41, 0x83, 0x7D, 0x48, 0x64,                   /* cmp dword ptr [r13+0x48], 100 */
-        0x74, 0x0A,                                     /* je clamp_to_floor */
+        0x74, 0x14,                                     /* je clamp_to_floor */
         0x41, 0x83, 0xBE, 0x20, 0x01, 0x00, 0x00, 0x64, /* cmp dword ptr [r14+0x120], 100 */
+        0x74, 0x0A,                                     /* je clamp_to_floor */
+        0x41, 0x83, 0xBD, 0x70, 0x0D, 0x00, 0x00, 0x64, /* cmp dword ptr [r13+0xd70], 100 */
         0x75, 0x31,                                     /* jne non_tender_continuation */
         0x45, 0x8B, 0x9C, 0x24, 0x78, 0x02, 0x00, 0x00, /* mov r11d, [r12+0x278] */
         0x45, 0x85, 0xDB,                               /* test r11d, r11d */
@@ -159,12 +165,50 @@ static uint8_t* build_kbo_salary_arbitration_zero_offer_check_682089_stub(
         0x41, 0xFF, 0xE3,                               /* jmp r11 */
         0xCC, 0xCC, 0xCC, 0xCC,
         0xCC, 0xCC, 0xCC, 0xCC,
-        0xCC, 0xCC, 0xCC, 0xCC,
         0xCC, 0xCC
     };
 
-    write_u64(&code[66], (uint64_t)(uintptr_t)continuation);
-    write_u64(&code[79], (uint64_t)(uintptr_t)non_tender_continuation);
+    write_u64(&code[76], (uint64_t)(uintptr_t)continuation);
+    write_u64(&code[89], (uint64_t)(uintptr_t)non_tender_continuation);
+    return allocate_kbo_salary_arbitration_stub(code, sizeof(code));
+}
+
+static uint8_t* build_kbo_salary_arbitration_high_limit_non_tender_6820af_stub(
+    void* tender_continuation,
+    void* non_tender_call_continuation)
+{
+    uint8_t code[120] = {
+        0x48, 0x8B, 0x75, 0xB8,                         /* mov rsi, [rbp-0x48] */
+        0x4C, 0x8B, 0x75, 0xC0,                         /* mov r14, [rbp-0x40] */
+        0x41, 0x83, 0x7D, 0x48, 0x64,                   /* cmp dword ptr [r13+0x48], 100 */
+        0x74, 0x14,                                     /* je clamp_to_floor */
+        0x41, 0x83, 0xBE, 0x20, 0x01, 0x00, 0x00, 0x64, /* cmp dword ptr [r14+0x120], 100 */
+        0x74, 0x0A,                                     /* je clamp_to_floor */
+        0x41, 0x83, 0xBD, 0x70, 0x0D, 0x00, 0x00, 0x64, /* cmp dword ptr [r13+0xd70], 100 */
+        0x75, 0x35,                                     /* jne non_tender_call */
+        0x49, 0x8D, 0xBD, 0x14, 0x09, 0x00, 0x00,       /* lea rdi, [r13+0x914] */
+        0x49, 0x8D, 0x9D, 0xA0, 0x08, 0x00, 0x00,       /* lea rbx, [r13+0x8a0] */
+        0x45, 0x8B, 0x9C, 0x24, 0x78, 0x02, 0x00, 0x00, /* mov r11d, [r12+0x278] */
+        0x45, 0x85, 0xDB,                               /* test r11d, r11d */
+        0x7F, 0x06,                                     /* jg write_floor */
+        0x41, 0xBB, 0x01, 0x00, 0x00, 0x00,             /* mov r11d, 1 */
+        0x45, 0x89, 0x9D, 0x7C, 0x08, 0x00, 0x00,       /* mov [r13+0x87c], r11d */
+        0x49, 0xBB,                                     /* mov r11, tender_continuation */
+        0,0,0,0,0,0,0,0,
+        0x41, 0xFF, 0xE3,                               /* jmp r11 */
+        0x45, 0x0F, 0xB6, 0xC7,                         /* movzx r8d, r15b */
+        0x49, 0x8B, 0xD5,                               /* mov rdx, r13 */
+        0x49, 0x8B, 0xCE,                               /* mov rcx, r14 */
+        0x49, 0xBB,                                     /* mov r11, non_tender_call_continuation */
+        0,0,0,0,0,0,0,0,
+        0x41, 0xFF, 0xE3,                               /* jmp r11 */
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC
+    };
+
+    write_u64(&code[77], (uint64_t)(uintptr_t)tender_continuation);
+    write_u64(&code[100], (uint64_t)(uintptr_t)non_tender_call_continuation);
     return allocate_kbo_salary_arbitration_stub(code, sizeof(code));
 }
 
@@ -504,6 +548,14 @@ static int install_kbo_salary_arbitration_no_withdraw_patch(void)
         0x41, 0x8B, 0x8D, 0x80, 0x08, 0x00, 0x00        /* mov ecx, [r13+0x880] */
     };
 
+    const uint8_t expected_high_limit_non_tender_gate_6820af[18] = {
+        0x48, 0x8B, 0x75, 0xB8,                         /* mov rsi, [rbp-0x48] */
+        0x4C, 0x8B, 0x75, 0xC0,                         /* mov r14, [rbp-0x40] */
+        0x45, 0x0F, 0xB6, 0xC7,                         /* movzx r8d, r15b */
+        0x49, 0x8B, 0xD5,                               /* mov rdx, r13 */
+        0x49, 0x8B, 0xCE                                /* mov rcx, r14 */
+    };
+
     const uint8_t expected_ai_offer_write_6827cd[13] = {
         0x89, 0x83, 0x7C, 0x08, 0x00, 0x00,             /* mov [rbx+0x87c], eax */
         0x48, 0x8D, 0x05, 0xFE, 0x23, 0x43, 0x02        /* lea 0x142ab4bd8, rax */
@@ -568,6 +620,21 @@ static int install_kbo_salary_arbitration_no_withdraw_patch(void)
             zero_offer_check_stub_682089);
     } else {
         append_log_line("failed to allocate KBO salary arbitration AI zero-offer final check 682089 stub");
+    }
+
+    uint8_t* high_limit_non_tender_stub_6820af = build_kbo_salary_arbitration_high_limit_non_tender_6820af_stub(
+        (void*)((uintptr_t)exe + 0x006821FFu),
+        (void*)((uintptr_t)exe + 0x006820C1u));
+    if (high_limit_non_tender_stub_6820af != NULL) {
+        ok |= patch_kbo_salary_arbitration_r11_detour(
+            exe,
+            "KBO salary arbitration high-limit non-tender gate 6820af",
+            OOTP27_ARBITRATION_HIGH_LIMIT_NON_TENDER_GATE_RVA,
+            expected_high_limit_non_tender_gate_6820af,
+            sizeof(expected_high_limit_non_tender_gate_6820af),
+            high_limit_non_tender_stub_6820af);
+    } else {
+        append_log_line("failed to allocate KBO salary arbitration high-limit non-tender gate 6820af stub");
     }
 
     uint8_t* ai_offer_stub_6827cd = build_kbo_salary_arbitration_ai_offer_write_6827cd_stub(
