@@ -220,6 +220,11 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
             "KBO Sangmu FA block enabled: signability=%d offer=%d",
             enable_sangmu_signability_only,
             enable_sangmu_offer_only);
+        if (!read_kbo_localappdata_flag_file("disable_kbo_military_team_add_guard_patch.txt")) {
+            install_kbo_military_team_add_guard_patch();
+        } else {
+            append_log_line("KBO military team-add guard patch disabled: kbo_flags.json disable_kbo_military_team_add_guard_patch is true");
+        }
     } else {
         append_log_line("KBO Sangmu FA block diagnostic disabled: kbo_flags.json enable_kbo_sangmu_signability_only / enable_kbo_sangmu_offer_only are false");
     }

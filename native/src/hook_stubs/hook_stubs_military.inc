@@ -67,3 +67,27 @@ static uint8_t* build_kbo_military_status_update_detour_stub(void* original_tram
     FlushInstructionCache(GetCurrentProcess(), memory, sizeof(code));
     return memory;
 }
+
+static uint8_t* build_kbo_team_add_player_guard_detour_stub(void)
+{
+    uint8_t code[32] = {
+        0x48, 0xB8,                                     // mov rax, wrapper
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xE0,                                     // jmp rax
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC
+    };
+
+    write_u64(&code[2], (uint64_t)(uintptr_t)&ootp_kbo_team_add_player_guard_wrapper);
+
+    uint8_t* memory = (uint8_t*)VirtualAlloc(NULL, sizeof(code), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    if (memory == NULL) {
+        return NULL;
+    }
+    memcpy(memory, code, sizeof(code));
+    FlushInstructionCache(GetCurrentProcess(), memory, sizeof(code));
+    return memory;
+}
