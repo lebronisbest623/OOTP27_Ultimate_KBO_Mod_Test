@@ -3,6 +3,7 @@
 /* ---- KBO custom event subsystem ---- */
 
 #include "custom_events/asian_games_state.inc"
+#include "custom_events/asian_games_schedule_seed.inc"
 #include "custom_events/custom_event_state.inc"
 #include "custom_events/custom_event_names.inc"
 #include "custom_events/custom_event_lookup.inc"

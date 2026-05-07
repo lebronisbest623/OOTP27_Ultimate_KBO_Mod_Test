@@ -34,7 +34,11 @@ static void register_active_kbo_military_loan(
     if (existing >= 0) {
         KboMilitaryActiveLoan* loan = &g_active_military_loans[existing];
         loan->player_ptr = player_ptr;
-        if (original_team_id  != 0) { loan->original_team_id  = original_team_id;  }
+        if (original_team_id != 0 && original_team_id != service_team_id) {
+            loan->original_team_id = original_team_id;
+        } else if (loan->original_team_id == service_team_id) {
+            loan->original_team_id = 0u;
+        }
         if (original_league_id != 0) { loan->original_league_id = original_league_id; }
         loan->service_team_id   = service_team_id;
         loan->service_league_id = service_league_id;
@@ -77,7 +81,7 @@ static void register_active_kbo_military_loan(
     KboMilitaryActiveLoan* loan = &g_active_military_loans[slot];
     loan->player_id              = player_id;
     loan->player_ptr             = player_ptr;
-    loan->original_team_id       = original_team_id;
+    loan->original_team_id       = original_team_id != service_team_id ? original_team_id : 0u;
     loan->original_league_id     = original_league_id;
     loan->service_team_id        = service_team_id;
     loan->service_league_id      = service_league_id;

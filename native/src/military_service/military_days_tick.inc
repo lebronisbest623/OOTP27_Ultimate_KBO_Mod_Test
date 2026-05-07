@@ -59,14 +59,27 @@ static int tick_kbo_military_service_days(const char* source, int* out_seeded_as
         }
 
         tracked++;
-        uint32_t player_id        = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
-        uint32_t original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-        uint32_t original_league_id = *(uint32_t*)(player + 0x4c);
-        if (original_team_id == 0
-                || original_team_id == current_team_id
-                || original_team_id == sang_id
-                || original_team_id == kpb_id) {
-            original_team_id = *(uint32_t*)(player + 0x5c);
+        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+        uint32_t original_team_id = 0u;
+        uint32_t original_league_id = 0u;
+        kbo_military_resolve_original_team(
+            player,
+            current_team_id,
+            sang_id,
+            kpb_id,
+            &original_team_id,
+            &original_league_id);
+        if (original_team_id != 0u
+                && original_team_id != current_team_id
+                && original_team_id != sang_id
+                && original_team_id != kpb_id) {
+            kbo_military_repair_original_team_memory(
+                player,
+                original_team_id,
+                original_league_id,
+                current_team_id,
+                sang_id,
+                kpb_id);
         }
 
         int active_index = find_active_kbo_military_loan_index(player_id);

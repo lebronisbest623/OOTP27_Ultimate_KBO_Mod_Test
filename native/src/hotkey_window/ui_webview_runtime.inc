@@ -52,6 +52,16 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         return 0;
     }
     const char* cmd = uri + 6;
+    if (ascii_equals_ignore_case(cmd, "github")) {
+        ShellExecuteA(
+            hwnd,
+            "open",
+            "https://github.com/lebronisbest623/OOTP27_Ultimate_KBO",
+            NULL,
+            NULL,
+            SW_SHOWNORMAL);
+        return 1;
+    }
     if (strncmp(cmd, "select/", 7) == 0) {
         uint32_t player_id = (uint32_t)strtoul(cmd + 7, NULL, 10);
         if (player_id != 0u) {
@@ -75,9 +85,126 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
     if (strncmp(cmd, "view/", 5) == 0) {
         int view = atoi(cmd + 5);
         if (view >= 0 && view < KBO_HUB_NAV_COUNT) {
-            g_kbo_hub_selected_view = view;
+            if (view == KBO_HUB_VIEW_FOREIGN_RIGHTS) {
+                g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_QUOTA;
+                g_kbo_hub_selected_foreign_subview = KBO_HUB_FOREIGN_SUBVIEW_RIGHTS;
+            } else {
+                g_kbo_hub_selected_view = view;
+            }
+            g_kbo_hub_open_dropdown = 0;
+            if (g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_QUOTA
+                    && (g_kbo_hub_selected_foreign_subview < 0
+                        || g_kbo_hub_selected_foreign_subview >= KBO_HUB_FOREIGN_SUBVIEW_COUNT)) {
+                g_kbo_hub_selected_foreign_subview = KBO_HUB_FOREIGN_SUBVIEW_ROSTER;
+            }
+            if (view == KBO_HUB_VIEW_ASIAN_GAMES
+                    && (g_kbo_hub_selected_agames_subview < 0
+                        || g_kbo_hub_selected_agames_subview >= KBO_HUB_AGAMES_SUBVIEW_COUNT)) {
+                g_kbo_hub_selected_agames_subview = KBO_HUB_AGAMES_SUBVIEW_TOURNAMENTS;
+            }
+            if (view == KBO_HUB_VIEW_MILITARY
+                    && (g_kbo_hub_selected_military_subview < 0
+                        || g_kbo_hub_selected_military_subview >= KBO_HUB_MILITARY_SUBVIEW_COUNT)) {
+                g_kbo_hub_selected_military_subview = KBO_HUB_MILITARY_SUBVIEW_ROSTER;
+            }
+            if (view == KBO_HUB_VIEW_MOD_INFO
+                    && (g_kbo_hub_selected_mod_subview < 0
+                        || g_kbo_hub_selected_mod_subview >= KBO_HUB_MOD_SUBVIEW_COUNT)) {
+                g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_README;
+            }
+        }
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "military/results/year/", 22) == 0) {
+        uint32_t year = (uint32_t)strtoul(cmd + 22, NULL, 10);
+        if (year >= 1982u && year <= 2300u) {
+            g_kbo_hub_selected_military_results_year = year;
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MILITARY;
+        g_kbo_hub_selected_military_subview = KBO_HUB_MILITARY_SUBVIEW_RESULTS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "military/", 9) == 0) {
+        int subview = atoi(cmd + 9);
+        if (subview >= 0 && subview < KBO_HUB_MILITARY_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MILITARY;
+            g_kbo_hub_selected_military_subview = subview;
             g_kbo_hub_open_dropdown = 0;
         }
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "foreign/", 8) == 0) {
+        int subview = atoi(cmd + 8);
+        if (subview >= 0 && subview < KBO_HUB_FOREIGN_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_QUOTA;
+            g_kbo_hub_selected_foreign_subview = subview;
+            g_kbo_hub_open_dropdown = 0;
+        }
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "mod/settings/lang/", 18) == 0) {
+        const char* lang = cmd + 18;
+        if (ascii_equals_ignore_case(lang, "en") || ascii_equals_ignore_case(lang, "english")) {
+            g_kbo_hub_language = KBO_HUB_LANG_EN;
+            kbo_hub_save_language_setting();
+        } else if (ascii_equals_ignore_case(lang, "ko") || ascii_equals_ignore_case(lang, "korean")) {
+            g_kbo_hub_language = KBO_HUB_LANG_KO;
+            kbo_hub_save_language_setting();
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "mod/", 4) == 0) {
+        int subview = atoi(cmd + 4);
+        if (subview >= 0 && subview < KBO_HUB_MOD_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_selected_mod_subview = subview;
+            g_kbo_hub_open_dropdown = 0;
+        }
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "agames/", 7) == 0) {
+        int subview = atoi(cmd + 7);
+        if (subview >= 0 && subview < KBO_HUB_AGAMES_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_GAMES;
+            g_kbo_hub_selected_agames_subview = subview;
+            g_kbo_hub_open_dropdown = 0;
+        }
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "settings/intl-fa-multiplier/", 29) == 0) {
+        int multiplier = kbo_clamp_intl_established_fa_multiplier(atoi(cmd + 29));
+        if (kbo_set_intl_established_fa_multiplier(multiplier)) {
+            append_logf("settings webview: international established FA multiplier=%d", multiplier);
+        } else {
+            append_logf("settings webview: failed to write international established FA multiplier=%d", multiplier);
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "settings/lang/", 14) == 0) {
+        const char* lang = cmd + 14;
+        if (ascii_equals_ignore_case(lang, "en") || ascii_equals_ignore_case(lang, "english")) {
+            g_kbo_hub_language = KBO_HUB_LANG_EN;
+            kbo_hub_save_language_setting();
+        } else if (ascii_equals_ignore_case(lang, "ko") || ascii_equals_ignore_case(lang, "korean")) {
+            g_kbo_hub_language = KBO_HUB_LANG_KO;
+            kbo_hub_save_language_setting();
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
         kbo_webview_navigate_current();
         return 1;
     }

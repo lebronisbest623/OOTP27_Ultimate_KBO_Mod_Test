@@ -267,7 +267,16 @@ static int kbo_asian_games_collect_required_orgs(uint32_t main_league_id, uint32
 
 static uint32_t kbo_asian_games_final_date_for_year(uint32_t year)
 {
-    return year * 10000u + 1004u;
+    KboAsianGamesScheduleSeed schedule;
+    if (kbo_get_asian_games_schedule_for_year(year, &schedule)) {
+        if (schedule.final_date != 0u) {
+            return schedule.final_date;
+        }
+        if (schedule.tournament_end != 0u) {
+            return schedule.tournament_end;
+        }
+    }
+    return 0u;
 }
 
 static int32_t kbo_asian_games_days_until_return(uint32_t event_yyyymmdd)

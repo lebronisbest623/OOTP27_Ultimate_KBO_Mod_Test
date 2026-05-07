@@ -46,27 +46,36 @@ static int return_completed_kbo_military_loan_player(
         return 0;
     }
 
-    uint32_t original_team_id =
-        registered_original_team_id != 0
-            ? registered_original_team_id
-            : *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-    uint32_t original_league_id =
-        registered_original_league_id != 0
+    uint32_t original_team_id = 0u;
+    uint32_t original_league_id = 0u;
+    if (!kbo_military_resolve_original_team(
+            player,
+            service_team_id,
+            sang_id,
+            kpb_id,
+            &original_team_id,
+            &original_league_id)) {
+        original_team_id = registered_original_team_id;
+        original_league_id = registered_original_league_id;
+    }
+    if (original_league_id == 0u) {
+        original_league_id = registered_original_league_id != 0u
             ? registered_original_league_id
             : *(uint32_t*)(player + 0x4c);
-
-    if (original_team_id == 0
-            || original_team_id == service_team_id
-            || original_team_id == sang_id
-            || original_team_id == kpb_id) {
-        original_team_id = *(uint32_t*)(player + 0x5c);
     }
-    if (original_team_id == 0
+    if (original_team_id == 0u
             || original_team_id == service_team_id
             || original_team_id == sang_id
             || original_team_id == kpb_id) {
         return 0;
     }
+    kbo_military_repair_original_team_memory(
+        player,
+        original_team_id,
+        original_league_id,
+        service_team_id,
+        sang_id,
+        kpb_id);
 
     int32_t days_left = kbo_military_effective_days_left(player);
     if (days_left > 0) {

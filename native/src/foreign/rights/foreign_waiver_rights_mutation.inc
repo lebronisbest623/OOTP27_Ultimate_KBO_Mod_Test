@@ -20,7 +20,7 @@ static void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd)
     int w = 0;
     int removed = 0;
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
-        if (!kbo_is_foreign_waiver_right_active(&g_kbo_foreign_waiver_rights[i], today_yyyymmdd)) {
+        if (kbo_is_foreign_waiver_right_expired(&g_kbo_foreign_waiver_rights[i], today_yyyymmdd)) {
             removed++;
             continue;
         }
@@ -88,4 +88,55 @@ static int kbo_set_foreign_waiver_right(
         kbo_persist_foreign_waiver_rights();
     }
     return upserted;
+}
+
+static int kbo_clear_foreign_waiver_right(uint32_t team_id, uint32_t player_id)
+{
+    if (team_id == 0u || player_id == 0u) {
+        return 0;
+    }
+
+    int removed = 0;
+    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
+        Sleep(0);
+    }
+    int w = 0;
+    for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
+        KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
+        if (rec->team_id == team_id && rec->player_id == player_id) {
+            removed++;
+            continue;
+        }
+        if (w != i) {
+            g_kbo_foreign_waiver_rights[w] = g_kbo_foreign_waiver_rights[i];
+        }
+        w++;
+    }
+    for (int i = w; i < g_kbo_foreign_waiver_rights_count; i++) {
+        memset(&g_kbo_foreign_waiver_rights[i], 0, sizeof(KboForeignWaiverRetention));
+    }
+    g_kbo_foreign_waiver_rights_count = w;
+    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+
+    if (removed > 0) {
+        uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
+        if (team != NULL) {
+            kbo_remove_player_id_from_team_fixed_array(team, OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET, player_id);
+        }
+
+        uint32_t current_team_id = 0u;
+        uint32_t current_league_id = 0u;
+        uint8_t* player = kbo_find_player_by_id(player_id, &current_team_id, &current_league_id);
+        if (player != NULL && memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+            player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = 0u;
+            player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 0u;
+            if (*(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) == team_id) {
+                *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = 0u;
+            }
+        }
+
+        append_logf("foreign reserve rights: released team=%u player=%u removed=%d", team_id, player_id, removed);
+        kbo_persist_foreign_waiver_rights();
+    }
+    return removed;
 }

@@ -4,6 +4,7 @@
 #include <tlhelp32.h>
 #include <objbase.h>
 #include <wincodec.h>
+#include <shellapi.h>
 #include <WebView2.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -27,6 +28,8 @@
 #include "src/fa_requalification.inc"
 #include "src/military_service_loan.inc"
 #include "src/foreign_waiver_ai.inc"
+#include "src/fa_salary_snapshot.inc"
+#include "src/fa_market_classification.inc"
 #include "src/custom_events.inc"
 #include "src/allstar.inc"
 #include "src/season_phase_monitor.inc"

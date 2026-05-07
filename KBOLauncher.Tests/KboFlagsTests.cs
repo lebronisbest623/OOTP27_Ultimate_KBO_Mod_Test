@@ -61,7 +61,8 @@ public sealed class KboFlagsTests : IDisposable
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, """
         {
-          "enable_launcher_injection": true
+          "enable_launcher_injection": true,
+          "intl_established_fa_multiplier": 10
         }
         """);
 
@@ -72,6 +73,24 @@ public sealed class KboFlagsTests : IDisposable
         Assert.True(flags["enable_launcher_injection"]);
         Assert.True(flags["enable_foreign_waiver_ai"]);
         Assert.False(flags["disable_foreign_injury_replacement"]);
+        Assert.Equal(10, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20));
+    }
+
+    [Fact]
+    public void WriteKboIntSetting_UpdatesOneJsonFileAndPreservesBooleanFlags()
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(ConfigPath, """
+        {
+          "enable_launcher_injection": true
+        }
+        """);
+
+        global::KboFlags.WriteKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 99, 1, 20);
+
+        var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
+        Assert.True(flags["enable_launcher_injection"]);
+        Assert.Equal(20, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20));
     }
 
     [Theory]
@@ -145,6 +164,23 @@ public sealed class KboFlagsTests : IDisposable
 
         Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));
         Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
+    }
+
+    [Theory]
+    [InlineData("10", 10)]
+    [InlineData("\" 5 \"", 5)]
+    [InlineData("0", 1)]
+    [InlineData("99", 20)]
+    public void ReadKboIntSetting_ReadsAndClampsSupportedValues(string jsonValue, int expected)
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(ConfigPath, $$"""
+        {
+          "intl_established_fa_multiplier": {{jsonValue}}
+        }
+        """);
+
+        Assert.Equal(expected, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20));
     }
 
     [Theory]

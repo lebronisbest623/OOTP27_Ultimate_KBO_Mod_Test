@@ -85,7 +85,7 @@ dotnet build .\OOTP27-KBO-Launcher.sln
 ### 일반 실행 (권장)
 
 ```bat
-Launch-OOTP-Safe.bat
+KBOLauncher.exe
 ```
 
 DLL 주입 없이 OOTP를 시작한다. 주입을 활성화하려면 `%LOCALAPPDATA%\OOTP-KBO\kbo_flags.json`에 단일 JSON 플래그 설정을 사용한다.

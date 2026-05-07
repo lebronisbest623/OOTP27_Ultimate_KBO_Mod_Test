@@ -88,6 +88,59 @@ static void kbo_count_team_asian_quota_probe(
     cached->tick = now;
 }
 
+static void kbo_count_team_asian_quota_probe_fresh(
+    uint32_t team_id,
+    uint32_t* out_foreign_count,
+    uint32_t* out_asian_quota_count,
+    uint32_t* out_non_asian_foreign_count)
+{
+    if (out_foreign_count != NULL) { *out_foreign_count = 0u; }
+    if (out_asian_quota_count != NULL) { *out_asian_quota_count = 0u; }
+    if (out_non_asian_foreign_count != NULL) { *out_non_asian_foreign_count = 0u; }
+    if (team_id == 0u) {
+        return;
+    }
+
+    uintptr_t player_vector = 0;
+    int32_t player_count = 0;
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        return;
+    }
+
+    uint32_t foreign_count = 0u;
+    uint32_t asian_count = 0u;
+    uint32_t non_asian_count = 0u;
+    kbo_ensure_foreign_replacement_player_seeds_loaded();
+    for (int32_t i = 0; i < player_count; i++) {
+        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if (!kbo_player_pointer_plausible(player_ptr)) {
+            continue;
+        }
+        uint8_t* player = (uint8_t*)player_ptr;
+        uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+        if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
+            continue;
+        }
+        if (!kbo_player_current_assignment_matches_team_or_affiliate(player, team_id)) {
+            continue;
+        }
+        uint8_t replacement_slot_type = 0u;
+        if (kbo_foreign_replacement_player_seed_matches_loaded(player, &replacement_slot_type)) {
+            continue;
+        }
+        foreign_count++;
+        if (kbo_nation_is_asian_quota_candidate(nation_id)) {
+            asian_count++;
+        } else {
+            non_asian_count++;
+        }
+    }
+
+    if (out_foreign_count != NULL) { *out_foreign_count = foreign_count; }
+    if (out_asian_quota_count != NULL) { *out_asian_quota_count = asian_count; }
+    if (out_non_asian_foreign_count != NULL) { *out_non_asian_foreign_count = non_asian_count; }
+}
+
 static uint32_t kbo_effective_foreign_count_with_asian_quota(uint32_t asian_count, uint32_t non_asian_foreign_count)
 {
     return non_asian_foreign_count + (asian_count > 0u ? asian_count - 1u : 0u);

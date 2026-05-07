@@ -135,6 +135,15 @@ static int kbo_route_queued_military_draft_candidates(
         uint32_t original_league_id = candidate->original_league_id != 0u
             ? candidate->original_league_id
             : *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+        if (original_team_id == 0u || original_team_id == sang_id) {
+            kbo_military_resolve_original_team(
+                player,
+                sang_id,
+                sang_id,
+                0u,
+                &original_team_id,
+                &original_league_id);
+        }
         int called_pre_change = 0;
         int called_register = 0;
         int called_attach = 0;
@@ -236,11 +245,18 @@ static int kbo_refresh_military_selection_candidates_from_memory(
         if (player_id == 0u) {
             continue;
         }
-        uint32_t original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-        if (original_team_id == 0u || original_team_id == sang_id) {
+        uint32_t original_team_id = 0u;
+        uint32_t original_league_id = 0u;
+        if (!kbo_military_resolve_original_team(
+                player,
+                sang_id,
+                sang_id,
+                0u,
+                &original_team_id,
+                &original_league_id)) {
             original_team_id = current_team_id;
+            original_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
         }
-        uint32_t original_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
         eligible++;
         queued += kbo_queue_military_draft_candidate(
             player_ptr,

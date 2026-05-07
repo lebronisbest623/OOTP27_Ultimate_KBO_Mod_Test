@@ -21,8 +21,6 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr)
 
 __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league_ptr, uintptr_t allstar_team_setup_ptr)
 {
-    (void)allstar_team_setup_ptr;
-
     if (!kbo_allstar_league_context_enabled(league_ptr)) {
         return;
     }
@@ -37,18 +35,34 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
     uint32_t fallback_league_id = kbo_allstar_read_u32(league, layout.league_id_fallback_offset);
     uint32_t league_year = *(uint32_t*)(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
     uint8_t old_allstar_game = league[layout.game_flag_offset];
+    uint32_t old_team_a = kbo_allstar_read_u32(league, layout.team_a_offset);
+    uint32_t old_team_b = kbo_allstar_read_u32(league, layout.team_b_offset);
+    int setup_called = 0;
 
     enable_kbo_allstar_flags(league_ptr, "allstar_voting_begin");
+    if (allstar_team_setup_ptr != 0 && memory_range_readable((void*)allstar_team_setup_ptr, 16u)) {
+        OotpAllstarTeamSetupFn setup_allstar_teams = (OotpAllstarTeamSetupFn)allstar_team_setup_ptr;
+        setup_allstar_teams(league_ptr);
+        setup_called = 1;
+        patch_kbo_allstar_team_names_for_league_id(league_id != 0u ? league_id : fallback_league_id, "allstar_voting_begin_setup");
+        patch_kbo_allstar_team_names_for_known_exhibition_teams("allstar_voting_begin_setup");
+    }
 
     LONG log_index = InterlockedIncrement(&g_allstar_voting_prepare_log_count);
     if (log_index <= 20) {
         append_logf(
-            "prepared KBO all-star voting begin league=%p league_id=%u/%u year=%u game=%u->%u",
+            "prepared KBO all-star voting begin league=%p league_id=%u/%u year=%u game=%u->%u teams=%u/%u->%u/%u setup=%p called=%d",
             league,
             league_id,
             fallback_league_id,
             league_year,
             old_allstar_game,
-            league[layout.game_flag_offset]);
+            league[layout.game_flag_offset],
+            old_team_a,
+            old_team_b,
+            kbo_allstar_read_u32(league, layout.team_a_offset),
+            kbo_allstar_read_u32(league, layout.team_b_offset),
+            (void*)allstar_team_setup_ptr,
+            setup_called);
     }
 }

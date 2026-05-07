@@ -36,35 +36,46 @@ static uint8_t* build_allstar_events_prepare_stub(void* return_address, void* al
     return memory;
 }
 
-static uint8_t* build_allstar_schedule_import_capture_stub(void* return_address, uint32_t game_flag_offset)
+/* reg_idx: 0=R13 (default), 1=R14, 2=R15 */
+static uint8_t* build_allstar_schedule_import_capture_stub_r(void* return_address, uint32_t game_flag_offset, int reg_idx)
 {
+    /* mov rcx, Rn  (ModRM byte: CD=R13, CE=R14, CF=R15) */
+    static const uint8_t rcx_modrm[3] = {0xCD, 0xCE, 0xCF};
+    /* mov byte ptr [Rn+disp32], 1  (ModRM byte: 85=R13, 86=R14, 87=R15) */
+    static const uint8_t mov_modrm[3] = {0x85, 0x86, 0x87};
+    if (reg_idx < 0 || reg_idx > 2) {
+        reg_idx = 0;
+    }
+
     uint8_t code[] = {
-        0x50,                                           // push rax
-        0x51,                                           // push rcx
-        0x52,                                           // push rdx
-        0x41, 0x50,                                     // push r8
-        0x41, 0x51,                                     // push r9
-        0x41, 0x52,                                     // push r10
-        0x41, 0x53,                                     // push r11
-        0x48, 0x83, 0xEC, 0x28,                         // sub rsp, 0x28
-        0x49, 0x8B, 0xCD,                               // mov rcx, r13
-        0x48, 0xB8,                                     // mov rax, helper
-        0,0,0,0,0,0,0,0,
-        0xFF, 0xD0,                                     // call rax
-        0x48, 0x83, 0xC4, 0x28,                         // add rsp, 0x28
-        0x41, 0x5B,                                     // pop r11
-        0x41, 0x5A,                                     // pop r10
-        0x41, 0x59,                                     // pop r9
-        0x41, 0x58,                                     // pop r8
-        0x5A,                                           // pop rdx
-        0x59,                                           // pop rcx
-        0x58,                                           // pop rax
-        0x41, 0xC6, 0x85, 0,0,0,0, 0x01,                // mov byte ptr [r13 + game_flag_offset], 1
-        0x48, 0xB8,                                     // mov rax, return_address
-        0,0,0,0,0,0,0,0,
-        0xFF, 0xE0                                      // jmp rax
+        0x50,                                           // [0]  push rax
+        0x51,                                           // [1]  push rcx
+        0x52,                                           // [2]  push rdx
+        0x41, 0x50,                                     // [3]  push r8
+        0x41, 0x51,                                     // [5]  push r9
+        0x41, 0x52,                                     // [7]  push r10
+        0x41, 0x53,                                     // [9]  push r11
+        0x48, 0x83, 0xEC, 0x28,                         // [11] sub rsp, 0x28
+        0x49, 0x8B, 0xCD,                               // [15] mov rcx, r13  (byte [17] patched below)
+        0x48, 0xB8,                                     // [18] mov rax, helper
+        0,0,0,0,0,0,0,0,                                // [20] helper address
+        0xFF, 0xD0,                                     // [28] call rax
+        0x48, 0x83, 0xC4, 0x28,                         // [30] add rsp, 0x28
+        0x41, 0x5B,                                     // [34] pop r11
+        0x41, 0x5A,                                     // [36] pop r10
+        0x41, 0x59,                                     // [38] pop r9
+        0x41, 0x58,                                     // [40] pop r8
+        0x5A,                                           // [42] pop rdx
+        0x59,                                           // [43] pop rcx
+        0x58,                                           // [44] pop rax
+        0x41, 0xC6, 0x85, 0,0,0,0, 0x01,               // [45] mov byte ptr [r13+offset], 1 (byte [47] patched)
+        0x48, 0xB8,                                     // [53] mov rax, return_address
+        0,0,0,0,0,0,0,0,                                // [55] return address
+        0xFF, 0xE0                                      // [63] jmp rax
     };
 
+    code[17] = rcx_modrm[reg_idx];
+    code[47] = mov_modrm[reg_idx];
     write_u64(&code[20], (uint64_t)(uintptr_t)&ootp_kbo_capture_allstar_schedule_import_league);
     write_u32(&code[48], game_flag_offset);
     write_u64(&code[55], (uint64_t)(uintptr_t)return_address);
@@ -76,6 +87,11 @@ static uint8_t* build_allstar_schedule_import_capture_stub(void* return_address,
     memcpy(memory, code, sizeof(code));
     FlushInstructionCache(GetCurrentProcess(), memory, sizeof(code));
     return memory;
+}
+
+static uint8_t* build_allstar_schedule_import_capture_stub(void* return_address, uint32_t game_flag_offset)
+{
+    return build_allstar_schedule_import_capture_stub_r(return_address, game_flag_offset, 0);
 }
 
 static uint8_t* build_allstar_voting_begin_prepare_stub(void* return_address, void* no_game_address, void* allstar_team_setup_address, uint32_t game_flag_offset)

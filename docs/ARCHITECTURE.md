@@ -795,6 +795,7 @@ Bundled seed CSVs live under:
 
 ```text
 data/seeds/
+  asian_games_schedule_seed.csv
   allstar_teams.csv
   foreign_replacement_players_seed.csv
   military_service_seed.csv

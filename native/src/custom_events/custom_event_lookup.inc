@@ -179,14 +179,6 @@ static int kbo_custom_event_name_matches_local(const char* name)
         || kbo_custom_event_name_is_asian_games_final(name);
 }
 
-static int kbo_year_has_asian_games(uint32_t year)
-{
-    if (year < 1982u || year > 2200u) {
-        return 0;
-    }
-    return ((year - 1982u) % 4u) == 0u;
-}
-
 static int kbo_custom_event_exists_by_title_for_date(
     uint32_t league_id,
     uint32_t event_yyyymmdd,

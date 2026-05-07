@@ -11,10 +11,28 @@ __declspec(noinline) int ootp_kbo_global_handle_callback_probe_wrapper(
     uintptr_t sender, intptr_t callback_id, uintptr_t value, uintptr_t original_func_ptr);
 __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
     uintptr_t screen_ptr, uintptr_t original_func_ptr);
-__declspec(noinline) void ootp_kbo_fa_signing_branch_wrapper(
+__declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
+    uintptr_t screen_ptr, uintptr_t sender_ptr, uintptr_t callback_id, uintptr_t value, uintptr_t original_func_ptr);
+__declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
+    uintptr_t offer_ptr, uintptr_t sender_ptr, uintptr_t callback_id, uintptr_t value, uintptr_t original_func_ptr);
+__declspec(noinline) void ootp_kbo_fa_offer_player_demand_floor_probe(
+    uintptr_t player_ptr, uintptr_t screen_ptr, uint32_t source_rva);
+__declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
+    uintptr_t player_ptr, int32_t proposed_demand, uint32_t source_rva, int32_t salary_floor_hint);
+__declspec(noinline) uint8_t ootp_kbo_player_action_eligibility_wrapper(
+    uintptr_t action_context, int32_t action_id, uint8_t strict_check, uintptr_t original_func_ptr);
+static void start_kbo_no_minor_contract_demand_floor_scanner_thread(void);
+__declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(
     uintptr_t player_ptr, uintptr_t team_ptr);
+__declspec(noinline) int ootp_kbo_trade_check_foreign_policy_probe(
+    uintptr_t trade_ptr,
+    int32_t side);
 __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     uintptr_t frame_ptr, uintptr_t player_ptr, int32_t insert_index, uintptr_t candidate_array);
+__declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(
+    int32_t original_count, uintptr_t league_ptr);
+__declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
+    uintptr_t player_ptr, uintptr_t league_ptr);
 __declspec(noinline) int32_t ootp_kbo_active_foreign_hitter_count_wrapper(
     uintptr_t team_ptr, uintptr_t original_func_ptr);
 __declspec(noinline) int32_t ootp_kbo_active_foreign_pitcher_count_wrapper(
@@ -28,6 +46,19 @@ __declspec(noinline) uint8_t ootp_kbo_callup_foreign_total_limit_allows_wrapper(
 static int memory_range_readable(const void* address, SIZE_T size);
 static uintptr_t get_ootp_global_database(void);
 static int kbo_player_pointer_plausible(uintptr_t player_ptr);
+static int kbo_player_is_foreign_for_kbo_rights(uint8_t* player);
+static int kbo_custom_foreign_policy_enabled(void);
+static int kbo_custom_foreign_policy_team_allows_final_signing(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t* out_effective_before,
+    uint32_t* out_effective_after,
+    uint32_t* out_effective_limit,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id);
+static void kbo_record_recent_custom_foreign_policy_block(uint32_t player_id, uint32_t requester_team_id, uint32_t today);
+static int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_date);
+static const char* kbo_foreign_injury_slot_label(uint8_t slot_type);
 static int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset);
 static int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, char* out, size_t out_size);
 static int kbo_get_current_save_path(char* out, size_t out_size);

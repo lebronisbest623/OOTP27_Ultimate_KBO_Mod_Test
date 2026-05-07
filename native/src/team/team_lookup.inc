@@ -12,6 +12,27 @@ static int kbo_player_pointer_plausible(uintptr_t player_ptr)
     return player_id > 0 && player_id < 200000000u && age < 80;
 }
 
+static int kbo_player_is_draft_pool_candidate(uint8_t* player)
+{
+    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_DRAFT_ELIGIBLE_OFFSET + sizeof(uint8_t))) {
+        return 0;
+    }
+    return player[OOTP27_PLAYER_DRAFT_ELIGIBLE_OFFSET] != 0u;
+}
+
+static int kbo_player_has_nonzero_evaluation(uint8_t* player)
+{
+    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_CAREER_VALUE_OFFSET + sizeof(int16_t))) {
+        return 0;
+    }
+
+    int16_t overall = *(int16_t*)(player + OOTP27_PLAYER_OVERALL_VALUE_OFFSET);
+    int16_t talent = *(int16_t*)(player + OOTP27_PLAYER_TALENT_VALUE_OFFSET);
+    int16_t ratings = *(int16_t*)(player + OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
+    int16_t career = *(int16_t*)(player + OOTP27_PLAYER_CAREER_VALUE_OFFSET);
+    return overall > 0 || talent > 0 || ratings > 0 || career > 0;
+}
+
 static int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset)
 {
     if (out_vector != NULL) { *out_vector = 0; }

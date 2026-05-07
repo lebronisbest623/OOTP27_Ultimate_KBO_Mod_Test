@@ -265,7 +265,7 @@ static DWORD WINAPI kbo_hotkey_window_thread(LPVOID parameter)
     HWND hwnd = CreateWindowExA(
         window_ex_style,
         wc.lpszClassName,
-        "KBO Companion",
+        "Ultimate KBO",
         window_style,
         CW_USEDEFAULT, CW_USEDEFAULT,
         fixed_rect.right - fixed_rect.left,

@@ -35,7 +35,7 @@ static uint32_t kbo_get_foreign_waiver_decision_team_id(uint8_t* player)
         return current_team_id;
     }
 
-    return kbo_get_player_original_team_id(player);
+    return 0u;
 }
 
 static int kbo_original_club_priority_window_allows(uint8_t* player, uint32_t team_id, const char* action_name)
@@ -44,8 +44,8 @@ static int kbo_original_club_priority_window_allows(uint8_t* player, uint32_t te
         return 1;
     }
 
-    uint32_t original_team_id = kbo_get_player_original_team_id(player);
-    if (original_team_id == 0 || team_id == original_team_id) {
+    uint32_t priority_team_id = kbo_get_foreign_waiver_decision_team_id(player);
+    if (priority_team_id == 0 || team_id == priority_team_id) {
         return 1;
     }
 
@@ -54,11 +54,11 @@ static int kbo_original_club_priority_window_allows(uint8_t* player, uint32_t te
         player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     }
     append_logf(
-        "foreign priority negotiation: blocked action=%s team=%u player=%u original_team=%u",
+        "foreign priority negotiation: blocked action=%s team=%u player=%u priority_team=%u",
         action_name == NULL ? "" : action_name,
         team_id,
         player_id,
-        original_team_id);
+        priority_team_id);
     return 0;
 }
 

@@ -19,7 +19,7 @@ static void kbo_build_overview_hub_text(char* out, size_t out_size)
 
     kbo_window_text_appendf(&buffer, "%s\r\n\r\n", kbo_hub_text("\xec\x9a\x94\xec\x95\xbd", "OVERVIEW"));
 
-    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xeb\xb3\xb5\xeb\xac\xb4", "MILITARY SERVICE"));
+    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80", "SERVICE TEAMS"));
     kbo_window_text_appendf(
         &buffer,
         kbo_hub_text("  \xec\x83\x81\xeb\xac\xb4 \xeb\xb3\xb5\xeb\xac\xb4 \xec\xa4\x91: %d\xeb\xaa\x85\r\n", "  Sangmu serving: %d\r\n"),

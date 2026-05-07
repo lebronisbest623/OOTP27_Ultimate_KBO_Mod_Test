@@ -13,6 +13,12 @@ static int kbo_player_is_asian_quota_candidate(uint8_t* player);
 static int kbo_is_forced_foreign_candidate_id(uint32_t player_id);
 static int32_t kbo_foreign_waiver_value_score(uint8_t* player);
 static int32_t kbo_get_foreign_waiver_value_threshold(void);
+static void kbo_intl_established_fa_postscan_schedule(
+    int32_t original_count,
+    int32_t expected_count,
+    int multiplier,
+    uint32_t primary_league_id,
+    uint32_t fallback_league_id);
 static uint8_t* kbo_find_player_by_id(uint32_t player_id, uint32_t* out_current_team_id, uint32_t* out_current_league_id);
 static uint32_t kbo_get_foreign_waiver_league_id(void);
 static int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_date);
@@ -21,7 +27,9 @@ static uint32_t kbo_get_foreign_waiver_auto_target_team_id(void);
 static int kbo_read_foreign_waiver_window(uint32_t* out_start, uint32_t* out_end);
 static int kbo_get_foreign_waiver_window_status_text(char* out, size_t out_size);
 static int kbo_set_foreign_waiver_right(uint32_t team_id, uint32_t player_id, uint32_t league_id, uint32_t retained_on, uint32_t expires_on);
+static int kbo_clear_foreign_waiver_right(uint32_t team_id, uint32_t player_id);
 static int kbo_has_active_foreign_waiver_right(uint32_t team_id, uint32_t player_id, uint32_t today_yyyymmdd);
+static int kbo_get_active_foreign_waiver_right_dates(uint32_t team_id, uint32_t player_id, uint32_t today_yyyymmdd, uint32_t* out_retained_on, uint32_t* out_expires_on);
 static int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t today_yyyymmdd, uint32_t* out_team_id);
 static int kbo_sync_active_foreign_waiver_right_to_memory(uint8_t* player, uint32_t player_id, uint32_t holder_team_id, uint32_t today_yyyymmdd);
 static void kbo_record_recent_custom_foreign_policy_block(uint32_t player_id, uint32_t requester_team_id, uint32_t today);
@@ -48,6 +56,14 @@ static int kbo_foreign_injury_replacement_signing_exception_available(
     uint32_t* out_effective_limit);
 static int kbo_custom_foreign_policy_enabled(void);
 static int kbo_custom_foreign_policy_team_allows_candidate(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t* out_effective_before,
+    uint32_t* out_effective_after,
+    uint32_t* out_effective_limit,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id);
+static int kbo_custom_foreign_policy_team_allows_final_signing(
     uint32_t team_id,
     uint8_t* candidate,
     uint32_t* out_effective_before,

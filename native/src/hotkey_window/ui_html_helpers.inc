@@ -30,6 +30,20 @@ static void kbo_webview_append_team_cell(KboWindowTextBuffer* buffer, const char
     kbo_window_text_appendf(buffer, "</td>");
 }
 
+static void kbo_webview_append_roster_top_bar(KboWindowTextBuffer* buffer, const char* right_text)
+{
+    if (buffer == NULL) {
+        return;
+    }
+    kbo_window_text_appendf(buffer, "<div class='rosterTopBar'>");
+    if (right_text != NULL && right_text[0] != '\0') {
+        kbo_window_text_appendf(buffer, "<div class='rosterTopText'>");
+        kbo_html_append_escaped(buffer, right_text);
+        kbo_window_text_appendf(buffer, "</div>");
+    }
+    kbo_window_text_appendf(buffer, "</div>");
+}
+
 static int kbo_hub_days_until_yyyymmdd(uint32_t yyyymmdd)
 {
     if (yyyymmdd == 0u) {
@@ -118,37 +132,317 @@ static void kbo_hub_format_ootp_date(uint32_t year, uint32_t month, uint32_t day
         year);
 }
 
-static const char* kbo_hub_flag_entity_for_nation_id(uint32_t nation_id, const char** out_label)
+static void kbo_webview_append_image_src(KboWindowTextBuffer* buffer, const char* path);
+
+static const char* kbo_hub_nation_label_for_id(uint32_t nation_id)
 {
-    const char* label = "Unknown nation";
-    const char* flag = "&#x1F3F3;";
     switch (nation_id) {
-    case OOTP27_KBO_KOREA_NATION_ID: label = "Korea";             flag = "&#x1F1F0;&#x1F1F7;"; break;
-    case 12u:                        label = "Australia";         flag = "&#x1F1E6;&#x1F1FA;"; break;
-    case 36u:                        label = "Canada";            flag = "&#x1F1E8;&#x1F1E6;"; break;
-    case 43u:                        label = "Taiwan";            flag = "&#x1F1F9;&#x1F1FC;"; break;
-    case 49u:                        label = "Cuba";              flag = "&#x1F1E8;&#x1F1FA;"; break;
-    case 56u:                        label = "Dominican Republic"; flag = "&#x1F1E9;&#x1F1F4;"; break;
-    case 98u:                        label = "Japan";             flag = "&#x1F1EF;&#x1F1F5;"; break;
-    case 124u:                       label = "Mexico";            flag = "&#x1F1F2;&#x1F1FD;"; break;
-    case 206u:                       label = "United States";     flag = "&#x1F1FA;&#x1F1F8;"; break;
-    case 210u:                       label = "Venezuela";         flag = "&#x1F1FB;&#x1F1EA;"; break;
-    default: break;
+    case OOTP27_KBO_KOREA_NATION_ID: return "Korea";
+    case 12u:                        return "Australia";
+    case 36u:                        return "Canada";
+    case 43u:                        return "Taiwan";
+    case 49u:                        return "Cuba";
+    case 56u:                        return "Dominican Republic";
+    case 98u:                        return "Japan";
+    case 124u:                       return "Mexico";
+    case 206u:                       return "United States";
+    case 210u:                       return "Venezuela";
+    default:                         return "Unknown nation";
     }
-    if (out_label != NULL) {
-        *out_label = label;
+}
+
+static const char* kbo_hub_nation_abbrev_for_id(uint32_t nation_id)
+{
+    switch (nation_id) {
+    case OOTP27_KBO_KOREA_NATION_ID: return "KOR";
+    case 12u:                        return "AUS";
+    case 36u:                        return "CAN";
+    case 43u:                        return "TPE";
+    case 49u:                        return "CUB";
+    case 56u:                        return "DOM";
+    case 98u:                        return "JPN";
+    case 124u:                       return "MEX";
+    case 206u:                       return "USA";
+    case 210u:                       return "VEN";
+    default:                         return "---";
     }
-    return flag;
+}
+
+static const char* kbo_hub_nation_flag_file_for_id(uint32_t nation_id)
+{
+    switch (nation_id) {
+    case OOTP27_KBO_KOREA_NATION_ID: return "kor.png";
+    case 12u:                        return "aus.png";
+    case 36u:                        return "can.png";
+    case 43u:                        return "tpe.png";
+    case 49u:                        return "cub.png";
+    case 56u:                        return "dom.png";
+    case 98u:                        return "jpn.png";
+    case 124u:                       return "mex.png";
+    case 206u:                       return "usa.png";
+    case 210u:                       return "ven.png";
+    default:                         return "unknown.png";
+    }
+}
+
+static void kbo_webview_append_nation_flag_image(KboWindowTextBuffer* buffer, uint32_t nation_id)
+{
+    if (buffer == NULL) {
+        return;
+    }
+
+    char flag_path[MAX_PATH] = {0};
+    kbo_hub_nation_flag_asset_path(kbo_hub_nation_flag_file_for_id(nation_id), flag_path, sizeof(flag_path));
+    if (flag_path[0] == '\0' || GetFileAttributesA(flag_path) == INVALID_FILE_ATTRIBUTES) {
+        kbo_hub_nation_flag_asset_path("unknown.png", flag_path, sizeof(flag_path));
+    }
+
+    kbo_window_text_appendf(buffer, "<img class='roNatFlag' alt='");
+    kbo_html_append_escaped(buffer, kbo_hub_nation_abbrev_for_id(nation_id));
+    kbo_window_text_appendf(buffer, "' title='");
+    kbo_html_append_escaped(buffer, kbo_hub_nation_label_for_id(nation_id));
+    kbo_window_text_appendf(buffer, " nation#%u' src='", nation_id);
+    kbo_webview_append_image_src(buffer, flag_path);
+    kbo_window_text_appendf(buffer, "'>");
 }
 
 static void kbo_webview_append_nation_flag_cell(KboWindowTextBuffer* buffer, uint32_t nation_id)
 {
-    const char* label = NULL;
-    const char* flag = kbo_hub_flag_entity_for_nation_id(nation_id, &label);
-    kbo_window_text_appendf(buffer, "<td class='flag' title='%s nation#%u'>%s</td>",
-        label != NULL ? label : "Unknown nation",
-        nation_id,
-        flag);
+    kbo_window_text_appendf(buffer, "<td class='flag'>");
+    kbo_webview_append_nation_flag_image(buffer, nation_id);
+    kbo_window_text_appendf(buffer, "</td>");
+}
+
+static void kbo_webview_append_roster_nation_cell(KboWindowTextBuffer* buffer, uint32_t nation_id)
+{
+    if (buffer == NULL) {
+        return;
+    }
+    kbo_window_text_appendf(buffer, "<td class='roNat' title='");
+    kbo_html_append_escaped(buffer, kbo_hub_nation_label_for_id(nation_id));
+    kbo_window_text_appendf(buffer, " nation#%u'><span class='roNatWrap'>", nation_id);
+    kbo_webview_append_nation_flag_image(buffer, nation_id);
+    kbo_window_text_appendf(buffer, "<span class='roNatText'>");
+    kbo_html_append_escaped(buffer, kbo_hub_nation_abbrev_for_id(nation_id));
+    kbo_window_text_appendf(buffer, "</span></span></td>");
+}
+
+static const char* kbo_webview_position_label_from_values(uint8_t position, uint8_t role)
+{
+    if (position == 1u) {
+        if (role == 11u) {
+            return "SP";
+        }
+        if (role == 12u) {
+            return "RP";
+        }
+        if (role == 13u) {
+            return "CL";
+        }
+        return "P";
+    }
+    switch (position) {
+    case 2u:  return "C";
+    case 3u:  return "1B";
+    case 4u:  return "2B";
+    case 5u:  return "3B";
+    case 6u:  return "SS";
+    case 7u:  return "LF";
+    case 8u:  return "CF";
+    case 9u:  return "RF";
+    case 10u: return "DH";
+    default:  break;
+    }
+
+    switch (role) {
+    case 1u:  return "P";
+    case 2u:  return "C";
+    case 3u:  return "1B";
+    case 4u:  return "2B";
+    case 5u:  return "3B";
+    case 6u:  return "SS";
+    case 7u:  return "LF";
+    case 8u:  return "CF";
+    case 9u:  return "RF";
+    case 10u: return "DH";
+    case 11u: return "SP";
+    case 12u: return "RP";
+    case 13u: return "CL";
+    default:  return "-";
+    }
+}
+
+static const char* kbo_webview_player_position_label(uint8_t* player, uint8_t fallback_position)
+{
+    if (player == NULL || !memory_range_readable(player + OOTP27_PLAYER_POSITION_ROLE_OFFSET, sizeof(uint8_t))) {
+        return kbo_webview_position_label_from_values(fallback_position, 0u);
+    }
+    return kbo_webview_position_label_from_values(
+        player[OOTP27_PLAYER_POSITION_GROUP_OFFSET],
+        player[OOTP27_PLAYER_POSITION_ROLE_OFFSET]);
+}
+
+typedef struct KboHubUniformNumberEntry {
+    uint32_t player_id;
+    char number[8];
+} KboHubUniformNumberEntry;
+
+#define KBO_HUB_UNIFORM_NUMBER_CACHE_CAP 8192
+
+static KboHubUniformNumberEntry g_kbo_hub_uniform_number_cache[KBO_HUB_UNIFORM_NUMBER_CACHE_CAP];
+static int g_kbo_hub_uniform_number_cache_count = 0;
+static char g_kbo_hub_uniform_number_cache_save_path[MAX_PATH] = {0};
+
+static int kbo_hub_csv_copy_field(const char* line, int target_index, char* out, size_t out_size)
+{
+    if (line == NULL || target_index < 0 || out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    int field = 0;
+    int quoted = 0;
+    size_t len = 0;
+    for (const char* p = line; ; p++) {
+        char ch = *p;
+        int end = ch == '\0' || ch == '\r' || ch == '\n';
+        if (!end && ch == '"') {
+            if (quoted && p[1] == '"') {
+                if (field == target_index && len + 1 < out_size) {
+                    out[len++] = '"';
+                }
+                p++;
+            } else {
+                quoted = !quoted;
+            }
+            continue;
+        }
+        if (end || (ch == ',' && !quoted)) {
+            if (field == target_index) {
+                out[len] = '\0';
+                kbo_hub_trim_ascii(out);
+                return 1;
+            }
+            field++;
+            len = 0;
+            if (end) {
+                break;
+            }
+            continue;
+        }
+        if (field == target_index && len + 1 < out_size) {
+            out[len++] = ch;
+        }
+    }
+    return 0;
+}
+
+static void kbo_hub_uniform_number_cache_put(uint32_t player_id, const char* number)
+{
+    if (player_id == 0u || number == NULL || number[0] == '\0') {
+        return;
+    }
+
+    char clean[8] = {0};
+    snprintf(clean, sizeof(clean), "%s", number);
+    kbo_hub_trim_ascii(clean);
+    if (clean[0] == '\0') {
+        return;
+    }
+
+    for (int i = 0; i < g_kbo_hub_uniform_number_cache_count; i++) {
+        if (g_kbo_hub_uniform_number_cache[i].player_id == player_id) {
+            snprintf(g_kbo_hub_uniform_number_cache[i].number, sizeof(g_kbo_hub_uniform_number_cache[i].number), "%s", clean);
+            return;
+        }
+    }
+    if (g_kbo_hub_uniform_number_cache_count >= KBO_HUB_UNIFORM_NUMBER_CACHE_CAP) {
+        return;
+    }
+
+    KboHubUniformNumberEntry* entry = &g_kbo_hub_uniform_number_cache[g_kbo_hub_uniform_number_cache_count++];
+    entry->player_id = player_id;
+    snprintf(entry->number, sizeof(entry->number), "%s", clean);
+}
+
+static void kbo_hub_load_uniform_numbers_from_csv(const char* path, int id_column, int number_column)
+{
+    if (path == NULL || path[0] == '\0') {
+        return;
+    }
+
+    FILE* file = fopen(path, "rb");
+    if (file == NULL) {
+        return;
+    }
+
+    char line[8192];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        const char* first = line;
+        while (*first == ' ' || *first == '\t') {
+            first++;
+        }
+        if (*first == '\0' || *first == '#' || *first == '/' || *first == ';') {
+            continue;
+        }
+
+        char id_text[32] = {0};
+        char number_text[16] = {0};
+        if (!kbo_hub_csv_copy_field(line, id_column, id_text, sizeof(id_text))
+                || !kbo_hub_csv_copy_field(line, number_column, number_text, sizeof(number_text))) {
+            continue;
+        }
+        if (id_text[0] < '0' || id_text[0] > '9') {
+            continue;
+        }
+        uint32_t player_id = (uint32_t)strtoul(id_text, NULL, 10);
+        kbo_hub_uniform_number_cache_put(player_id, number_text);
+    }
+
+    fclose(file);
+}
+
+static void kbo_hub_load_uniform_numbers_for_current_save(void)
+{
+    char save_path[MAX_PATH] = {0};
+    if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
+        g_kbo_hub_uniform_number_cache_count = 0;
+        g_kbo_hub_uniform_number_cache_save_path[0] = '\0';
+        return;
+    }
+    if (_stricmp(g_kbo_hub_uniform_number_cache_save_path, save_path) == 0) {
+        return;
+    }
+
+    g_kbo_hub_uniform_number_cache_count = 0;
+    snprintf(g_kbo_hub_uniform_number_cache_save_path, sizeof(g_kbo_hub_uniform_number_cache_save_path), "%s", save_path);
+
+    char path[MAX_PATH] = {0};
+    snprintf(path, sizeof(path), "%s\\import_export\\kbo_rosters.csv", save_path);
+    kbo_hub_load_uniform_numbers_from_csv(path, 0, 8);
+    snprintf(path, sizeof(path), "%s\\import_export\\kbo_rosters.txt", save_path);
+    kbo_hub_load_uniform_numbers_from_csv(path, 0, 8);
+    snprintf(path, sizeof(path), "%s\\data\\derived\\matching\\uniform_number_patch_report.csv", save_path);
+    kbo_hub_load_uniform_numbers_from_csv(path, 0, 7);
+}
+
+static void kbo_webview_copy_player_uniform_number(uint32_t player_id, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (player_id == 0u) {
+        return;
+    }
+
+    kbo_hub_load_uniform_numbers_for_current_save();
+    for (int i = 0; i < g_kbo_hub_uniform_number_cache_count; i++) {
+        if (g_kbo_hub_uniform_number_cache[i].player_id == player_id) {
+            snprintf(out, out_size, "%s", g_kbo_hub_uniform_number_cache[i].number);
+            return;
+        }
+    }
 }
 
 static void kbo_webview_append_candidate_card(
@@ -157,20 +451,52 @@ static void kbo_webview_append_candidate_card(
     uint32_t player_id,
     uint32_t current_team_id,
     uint32_t nation_id,
-    const char* flags)
+    const char* flags,
+    uint32_t retained_on,
+    uint32_t expires_on)
 {
     char player_name[96] = {0};
     char team_abbrev[16] = {0};
+    char uniform_number[8] = {0};
+    char retained_text[16] = {0};
+    char expires_text[16] = {0};
+    uint16_t age = memory_range_readable(player + OOTP27_PLAYER_AGE_OFFSET, sizeof(uint16_t))
+        ? *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET)
+        : 0u;
     kbo_hub_copy_player_display_name(player, player_name, sizeof(player_name));
     kbo_hub_copy_team_abbrev_by_id(current_team_id, team_abbrev, sizeof(team_abbrev), NULL);
-    kbo_window_text_appendf(buffer,
-        "<tr><td class='toggle'><a class='switch keep' title='Retain rights' href='kbo://retain/%u'>&#9679;</a><a class='switch release' title='Do not retain rights' href='kbo://release/%u'>&#9675;</a></td>",
-        player_id,
+    kbo_webview_copy_player_uniform_number(player_id, uniform_number, sizeof(uniform_number));
+    kbo_military_format_yyyymmdd(retained_on, retained_text, sizeof(retained_text));
+    kbo_military_format_yyyymmdd(expires_on, expires_text, sizeof(expires_text));
+
+    kbo_window_text_appendf(
+        buffer,
+        "<tr%s><td class='roAction'><span class='rightsActions'>"
+        "<a class='rightsAction rightsRelease' title='Release reserve rights' href='kbo://release/%u' data-player='",
+        player_id == g_kbo_hub_selected_foreign_player_id ? " class='selected'" : "",
         player_id);
-    kbo_webview_append_player_name_cell(buffer, player_name, player_id);
-    kbo_webview_append_team_cell(buffer, team_abbrev);
-    kbo_webview_append_nation_flag_cell(buffer, nation_id);
-    kbo_window_text_appendf(buffer, "<td>");
+    kbo_html_append_escaped(buffer, player_name[0] != '\0' ? player_name : "Unknown player");
+    kbo_window_text_appendf(
+        buffer,
+        "'>-</a></span></td><td class='roPo'>%s</td><td class='roNum'>",
+        kbo_webview_player_position_label(player, 0u));
+    kbo_html_append_escaped(buffer, uniform_number);
+    kbo_window_text_appendf(buffer, "</td><td class='roName'><a href='kbo://select/%u'>", player_id);
+    kbo_html_append_escaped(buffer, player_name[0] != '\0' ? player_name : "Unknown player");
+    kbo_window_text_appendf(buffer, "</a></td><td class='roTeam'>");
+    kbo_html_append_escaped(buffer, team_abbrev[0] != '\0' ? team_abbrev : "-");
+    kbo_window_text_appendf(buffer, "</td>");
+    kbo_webview_append_roster_nation_cell(buffer, nation_id);
+    if (age > 0u) {
+        kbo_window_text_appendf(buffer, "<td class='roAge'>%u</td>", (uint32_t)age);
+    } else {
+        kbo_window_text_appendf(buffer, "<td class='roAge'></td>");
+    }
+    kbo_window_text_appendf(buffer, "<td class='roDate'>");
+    kbo_html_append_escaped(buffer, retained_text);
+    kbo_window_text_appendf(buffer, "</td><td class='roDate'>");
+    kbo_html_append_escaped(buffer, expires_text);
+    kbo_window_text_appendf(buffer, "</td><td class='roStatus'>");
     kbo_html_append_escaped(buffer, flags != NULL && flags[0] != '\0' ? flags : "Active");
     kbo_window_text_appendf(buffer, "</td></tr>");
 }
@@ -196,6 +522,23 @@ static void kbo_webview_append_file_url(KboWindowTextBuffer* buffer, const char*
             kbo_window_text_appendf(buffer, "%c", ch);
         }
     }
+}
+
+static void kbo_webview_copy_file_url(const char* path, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (path == NULL || path[0] == '\0') {
+        return;
+    }
+
+    KboWindowTextBuffer buffer;
+    buffer.data = out;
+    buffer.capacity = out_size;
+    buffer.length = 0;
+    kbo_webview_append_file_url(&buffer, path);
 }
 
 static const char* kbo_webview_image_mime_for_path(const char* path)
@@ -275,6 +618,26 @@ static void kbo_webview_append_image_src(KboWindowTextBuffer* buffer, const char
     HeapFree(GetProcessHeap(), 0, data);
 }
 
+static void kbo_webview_copy_image_src(const char* path, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (path == NULL || path[0] == '\0') {
+        return;
+    }
+
+    KboWindowTextBuffer buffer;
+    buffer.data = out;
+    buffer.capacity = out_size;
+    buffer.length = 0;
+    kbo_webview_append_image_src(&buffer, path);
+    if (out[0] == '\0') {
+        kbo_webview_copy_file_url(path, out, out_size);
+    }
+}
+
 static void kbo_webview_append_dropdown_logo(KboWindowTextBuffer* buffer, const char* path)
 {
     kbo_window_text_appendf(buffer, "<span class='ddLogo'>");
@@ -324,7 +687,7 @@ static void kbo_webview_append_league_dropdown(KboWindowTextBuffer* buffer, uint
     for (int i = 0; i < league_count; i++) {
         char label[128] = {0};
         char logo_path[MAX_PATH] = {0};
-        kbo_hub_copy_league_display_name(leagues[i], label, sizeof(label));
+        kbo_hub_copy_league_display_name_fast(leagues[i], label, sizeof(label));
         kbo_hub_get_league_logo_path(leagues[i], current_year, logo_path, sizeof(logo_path));
         kbo_window_text_appendf(buffer, "<a class='ddItem%s' href='kbo://setleague/%u'>",
             leagues[i] == g_kbo_hub_selected_league_id ? " selected" : "", leagues[i]);

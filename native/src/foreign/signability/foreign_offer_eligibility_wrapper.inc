@@ -51,6 +51,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
             && kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)
             && holder_team_id != 0u) {
         if (holder_team_id == (uint32_t)team_id) {
+            kbo_record_recent_foreign_offer_allow(player_id, (uint32_t)team_id, today);
             return original_result;
         }
 
@@ -90,7 +91,10 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
         int override_original_block = kbo_custom_foreign_policy_can_override_original_block(player, (uint32_t)team_id);
         uint8_t adjusted = allowed ? original_result : 0u;
         if (allowed && original_result == 0u && override_original_block) {
-            adjusted = 1u;
+            adjusted = 4u;
+        }
+        if (adjusted > 0u && adjusted < 4u) {
+            adjusted = 4u;
         }
 
         static LONG custom_policy_offer_log_enabled_initialized = 0;
@@ -100,10 +104,10 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
                 &custom_policy_offer_log_enabled,
                 read_kbo_localappdata_flag_file("enable_kbo_custom_foreign_offer_logs.txt") ? 1 : 0);
         }
-        if (InterlockedCompareExchange(&custom_policy_offer_log_enabled, 0, 0) != 0) {
-            static volatile LONG custom_policy_offer_log_count = 0;
-            LONG slot = InterlockedIncrement(&custom_policy_offer_log_count);
-            if (slot <= 200) {
+        static volatile LONG custom_policy_offer_log_count = 0;
+        LONG offer_log_slot = InterlockedIncrement(&custom_policy_offer_log_count);
+        if (offer_log_slot <= 120 || InterlockedCompareExchange(&custom_policy_offer_log_enabled, 0, 0) != 0) {
+            if (offer_log_slot <= 240) {
                 append_logf(
                     "custom foreign policy offer player=%u requester_team=%d original=%u adjusted=%u allowed=%d override=%d effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u flag=%d today=%u",
                     player_id,
@@ -125,6 +129,9 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
             kbo_record_recent_custom_foreign_policy_block(player_id, (uint32_t)team_id, today);
         } else if (adjusted != 0u && flag != 0) {
             kbo_record_custom_foreign_pending_offer((uint32_t)team_id, player, today);
+            kbo_record_recent_custom_foreign_policy_allow(player_id, (uint32_t)team_id, today);
+        } else if (adjusted != 0u) {
+            kbo_record_recent_custom_foreign_policy_allow(player_id, (uint32_t)team_id, today);
         }
         return adjusted;
     }
@@ -142,7 +149,10 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
             &effective_limit)) {
         static volatile LONG injury_offer_log_count = 0;
         LONG slot = InterlockedIncrement(&injury_offer_log_count);
-        uint8_t adjusted = original_result != 0u ? original_result : 1u;
+        uint8_t adjusted = original_result != 0u ? original_result : 4u;
+        if (adjusted > 0u && adjusted < 4u) {
+            adjusted = 4u;
+        }
         if (slot <= 120) {
             append_logf(
                 "foreign injury replacement offer eligibility allowed player=%u requester_team=%d injured=%u slot=%s original=%u adjusted=%u effective=%u limit=%u flag=%d today=%u",

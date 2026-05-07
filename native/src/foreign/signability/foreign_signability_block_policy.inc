@@ -1,5 +1,16 @@
 /* Foreign-player signability block and adjustment policy. */
 
+static int kbo_no_minor_contract_signability_floor(int signability)
+{
+    if (!kbo_fix_enabled()) {
+        return signability;
+    }
+    if (signability > 0 && signability < 4) {
+        return 4;
+    }
+    return signability;
+}
+
 static int kbo_enforce_foreign_waiver_signability(
     uintptr_t player_ptr,
     int32_t requesting_team_id,
@@ -87,6 +98,7 @@ static int kbo_enforce_foreign_waiver_signability(
             }
 
             if (team_id == holder_team_id) {
+                kbo_record_recent_foreign_offer_allow(player_id, team_id, today);
                 static LONG allow_log_count = 0;
                 LONG slot = InterlockedIncrement(&allow_log_count);
                 if (slot <= 40) {
@@ -140,8 +152,9 @@ static int kbo_enforce_foreign_waiver_signability(
             (uint32_t)requesting_team_id);
         int adjusted = allowed ? original_signability : 0;
         if (allowed && original_signability == 0 && override_original_block) {
-            adjusted = 1;
+            adjusted = 4;
         }
+        adjusted = kbo_no_minor_contract_signability_floor(adjusted);
 
         static volatile LONG custom_policy_signability_log_count = 0;
         LONG slot = InterlockedIncrement(&custom_policy_signability_log_count);
@@ -164,6 +177,8 @@ static int kbo_enforce_foreign_waiver_signability(
         }
         if (!allowed) {
             kbo_record_recent_custom_foreign_policy_block(player_id, (uint32_t)requesting_team_id, today);
+        } else if (adjusted != 0) {
+            kbo_record_recent_custom_foreign_policy_allow(player_id, (uint32_t)requesting_team_id, today);
         }
         return adjusted;
     }
@@ -182,7 +197,8 @@ static int kbo_enforce_foreign_waiver_signability(
                 &effective_limit)) {
             static LONG injury_signability_log_count = 0;
             LONG slot = InterlockedIncrement(&injury_signability_log_count);
-            int adjusted = original_signability != 0 ? original_signability : 1;
+            int adjusted = original_signability != 0 ? original_signability : 4;
+            adjusted = kbo_no_minor_contract_signability_floor(adjusted);
             if (slot <= 120) {
                 append_logf(
                     "foreign injury replacement signability allowed player=%u requester_team=%d injured=%u slot=%s original=%d adjusted=%d effective=%u limit=%u today=%u caller_rva=0x%llx",
@@ -201,5 +217,5 @@ static int kbo_enforce_foreign_waiver_signability(
         }
     }
 
-    return original_signability;
+    return kbo_no_minor_contract_signability_floor(original_signability);
 }

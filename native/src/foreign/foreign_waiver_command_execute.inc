@@ -99,6 +99,7 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
     }
 
     if (skip_rights) {
+        kbo_clear_foreign_waiver_right(team_id, player_id);
         append_logf("foreign waiver command line %d executed: action=%s team=%u player=%u",
                    line_no, action_name, team_id, player_id);
         kbo_append_foreign_waiver_decision_record("user", "SKIP", team_id, player_id, 0, 0, 1);

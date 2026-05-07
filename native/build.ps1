@@ -116,6 +116,7 @@ Write-Host "WebView2: $WebView2Root"
     -lmsimg32 `
     -lole32 `
     -luuid `
+    -lshell32 `
     -lwindowscodecs
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to build KBOFix.dll"

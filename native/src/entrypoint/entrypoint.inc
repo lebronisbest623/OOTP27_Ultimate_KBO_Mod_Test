@@ -232,20 +232,53 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         append_log_line("KBO AI FA signability fallback patch disabled: kbo_flags.json enable_kbo_ai_fa_fallback_patch is false");
     }
-    if (enable_legacy_fa_signability_hooks || read_kbo_localappdata_flag_file("enable_kbo_submit_offer_probe_patch.txt")) {
+    int enable_submit_offer_probe = enable_legacy_fa_signability_hooks
+        || read_kbo_localappdata_flag_file("enable_kbo_submit_offer_probe_patch.txt")
+        || (kbo_custom_foreign_policy_enabled()
+            && !read_kbo_localappdata_flag_file("disable_kbo_submit_offer_probe_patch.txt"));
+    if (enable_submit_offer_probe) {
         install_kbo_fa_submit_offer_probe_patch();
     } else {
-        append_log_line("KBO FA submit-offer probe patch disabled: kbo_flags.json enable_kbo_submit_offer_probe_patch is false");
+        append_log_line("KBO FA submit-offer probe patch disabled: kbo_flags.json disable_kbo_submit_offer_probe_patch is true");
     }
-    if (read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
+    int enable_fa_requalification = read_kbo_localappdata_flag_file("enable_fa_requalification.txt");
+    int enable_fa_signing_branch = enable_fa_requalification
+        || (kbo_custom_foreign_policy_enabled()
+            && !read_kbo_localappdata_flag_file("disable_kbo_foreign_signing_branch_patch.txt"));
+    if (enable_fa_signing_branch) {
         install_kbo_fa_signing_branch_patch();
     } else {
-        append_log_line("KBO FA requalification signing hook disabled: kbo_flags.json enable_fa_requalification is false");
+        append_log_line("KBO FA signing branch hook disabled: enable_fa_requalification is false and custom foreign policy hook is disabled");
+    }
+    if (kbo_custom_foreign_policy_enabled()
+            && read_kbo_localappdata_flag_file("enable_kbo_foreign_trade_check_patch.txt")
+            && !read_kbo_localappdata_flag_file("disable_kbo_foreign_trade_check_patch.txt")) {
+        install_kbo_trade_check_foreign_policy_patch();
+    } else {
+        append_log_line("KBO trade foreign policy patch disabled: custom foreign policy is disabled, enable_kbo_foreign_trade_check_patch is false, or disable_kbo_foreign_trade_check_patch is true");
     }
     if (!read_kbo_localappdata_flag_file("disable_kbo_ai_fa_status_candidate_insert_hook.txt")) {
         install_kbo_ai_fa_status_candidate_insert_patch();
     } else {
         append_log_line("KBO AI FA status candidate insert hook disabled: kbo_flags.json disable_kbo_ai_fa_status_candidate_insert_hook is true");
+    }
+    if (!read_kbo_localappdata_flag_file("disable_kbo_no_minor_contract_experimental_patch.txt")) {
+        install_kbo_no_minor_contract_experimental_patch();
+        start_kbo_no_minor_contract_demand_floor_scanner_thread();
+    } else {
+        append_log_line("KBO no-minor-contract experimental patch disabled: kbo_flags.json disable_kbo_no_minor_contract_experimental_patch is true");
+    }
+    if (!read_kbo_localappdata_flag_file("disable_kbo_salary_arbitration_no_withdraw_patch.txt")) {
+        install_kbo_salary_arbitration_no_withdraw_patch();
+    } else {
+        append_log_line("KBO salary arbitration no-withdraw patch disabled: kbo_flags.json disable_kbo_salary_arbitration_no_withdraw_patch is true");
+    }
+    install_kbo_intl_established_fa_multiplier_patch();
+    start_kbo_intl_established_fa_postscan_thread();
+    if (read_kbo_localappdata_flag_file("enable_intl_established_fa_quality_probe_patch.txt")) {
+        install_kbo_intl_established_fa_player_probe_patch();
+    } else {
+        append_log_line("KBO international established FA player probe patch disabled: kbo_flags.json enable_intl_established_fa_quality_probe_patch is false");
     }
     install_kbo_foreign_count_patches();
     if (read_kbo_localappdata_flag_file("enable_kbo_callup_foreign_limit_patch.txt")) {
@@ -255,7 +288,12 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     }
     start_kbo_foreign_waiver_scanner_thread();
     start_kbo_foreign_injury_replacement_thread();
-    if (read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
+    if (!read_kbo_localappdata_flag_file("disable_kbo_fa_salary_opening_day_snapshot.txt")) {
+        start_kbo_fa_salary_snapshot_thread();
+    } else {
+        append_log_line("KBO FA salary opening-day snapshot thread disabled: kbo_flags.json disable_kbo_fa_salary_opening_day_snapshot is true");
+    }
+    if (enable_fa_requalification) {
         start_kbo_fa_requalification_thread();
     } else {
         append_log_line("KBO FA requalification thread disabled: kbo_flags.json enable_fa_requalification is false");

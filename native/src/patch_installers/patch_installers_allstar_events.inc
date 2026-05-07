@@ -1,3 +1,33 @@
+static void* resolve_allstar_team_setup_address(HMODULE exe)
+{
+    static const uint8_t original_context[] = {
+        0xF6, 0x41, 0x4C, 0x01,
+        0x0F, 0x85, 0x74, 0x02, 0x00, 0x00
+    };
+    static const uint8_t patched_context[] = {
+        0xF6, 0x41, 0x4C, 0x01,
+        0x90, 0x90, 0x90, 0x90, 0x90, 0x90
+    };
+
+    uint8_t* context = find_ootp_executable_pattern(original_context, sizeof(original_context));
+    if (context == NULL) {
+        context = find_ootp_executable_pattern(patched_context, sizeof(patched_context));
+    }
+    if (context != NULL && (uintptr_t)context > (uintptr_t)OOTP27_ALLSTAR_TEAM_SETUP_BAIL_CONTEXT_FROM_FUNC_DELTA) {
+        uint8_t* setup = context - OOTP27_ALLSTAR_TEAM_SETUP_BAIL_CONTEXT_FROM_FUNC_DELTA;
+        if (memory_range_readable(setup, 16u)) {
+            return setup;
+        }
+    }
+
+    uint8_t* fallback = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_TEAM_SETUP_FUNC_RVA);
+    if (memory_range_readable(fallback, 16u)) {
+        return fallback;
+    }
+
+    return NULL;
+}
+
 static int install_allstar_voting_begin_prepare_patch(void)
 {
     HMODULE exe = kbo_allstar_get_host_exe("KBO all-star voting begin prepare patch");
@@ -17,15 +47,23 @@ static int install_allstar_voting_begin_prepare_patch(void)
         0x0F, 0x84, 0xF3, 0x01, 0x00, 0x00
     };
 
-    uint8_t* target = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
-    const uint8_t* expected = may_expected;
-    if (target == NULL) {
-        target = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
-        expected = april_expected;
-    }
-    if (target == NULL) {
-        target = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_VOTING_BEGIN_PREP_SITE_RVA);
-        expected = april_expected;
+    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_VOTING_BEGIN_PREP_SITE_RVA);
+    const uint8_t* expected = april_expected;
+    if (memory_range_readable(target, sizeof(may_expected)) && memcmp(target, may_expected, sizeof(may_expected)) == 0) {
+        expected = may_expected;
+    } else if (!memory_range_readable(target, sizeof(april_expected)) || memcmp(target, april_expected, sizeof(april_expected)) != 0) {
+        uint8_t* found = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
+        if (found == NULL) {
+            found = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
+            if (found != NULL) { expected = april_expected; }
+        } else {
+            expected = may_expected;
+        }
+        if (found != NULL) {
+            uintptr_t dist = found > target ? (uintptr_t)(found - target) : (uintptr_t)(target - found);
+            append_logf("KBO all-star voting begin prepare hook: RVA mismatch, pattern found at %p dist=0x%zx from RVA", found, (size_t)dist);
+            target = found;
+        }
     }
 
     if (!memory_range_readable(target, sizeof(april_expected))) {
@@ -39,10 +77,12 @@ static int install_allstar_voting_begin_prepare_patch(void)
         ok = 1;
     } else if (memcmp(target, expected, sizeof(april_expected)) != 0) {
         log_patch_bytes_mismatch("KBO all-star voting begin prepare hook", target, sizeof(april_expected));
+        log_extended_context("KBO all-star voting begin prepare hook", target, 16, 96);
     } else {
         void* return_address = target + sizeof(april_expected);
         void* no_game_address = target + (OOTP27_ALLSTAR_VOTING_BEGIN_NO_GAME_RVA - OOTP27_ALLSTAR_VOTING_BEGIN_PREP_SITE_RVA);
-        uint8_t* stub = build_allstar_voting_begin_prepare_stub(return_address, no_game_address, NULL, layout.game_flag_offset);
+        void* allstar_team_setup_address = resolve_allstar_team_setup_address(exe);
+        uint8_t* stub = build_allstar_voting_begin_prepare_stub(return_address, no_game_address, allstar_team_setup_address, layout.game_flag_offset);
         if (stub == NULL) {
             append_log_line("failed to allocate KBO all-star voting begin prepare hook stub");
         } else {
@@ -62,11 +102,12 @@ static int install_allstar_voting_begin_prepare_patch(void)
                 DWORD ignored = 0;
                 VirtualProtect(target, sizeof(patch), old_protect, &ignored);
                 append_logf(
-                    "installed KBO all-star voting begin prepare hook target=%p stub=%p return=%p no_game=%p helper=%p",
+                    "installed KBO all-star voting begin prepare hook target=%p stub=%p return=%p no_game=%p setup=%p helper=%p",
                     target,
                     stub,
                     return_address,
                     no_game_address,
+                    allstar_team_setup_address,
                     &ootp_kbo_prepare_allstar_voting_begin);
                 ok = 1;
             }
@@ -97,15 +138,23 @@ static int install_allstar_events_prepare_patch(void)
         0xE8, 0x89, 0x55, 0xFF, 0xFF
     };
 
-    uint8_t* target = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
-    const uint8_t* expected = may_expected;
-    if (target == NULL) {
-        target = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
-        expected = april_expected;
-    }
-    if (target == NULL) {
-        target = (uint8_t*)((uintptr_t)exe + OOTP27_MAKE_ALLSTAR_EVENTS_PREP_SITE_RVA);
-        expected = april_expected;
+    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_MAKE_ALLSTAR_EVENTS_PREP_SITE_RVA);
+    const uint8_t* expected = april_expected;
+    if (memory_range_readable(target, sizeof(may_expected)) && memcmp(target, may_expected, sizeof(may_expected)) == 0) {
+        expected = may_expected;
+    } else if (!memory_range_readable(target, sizeof(april_expected)) || memcmp(target, april_expected, sizeof(april_expected)) != 0) {
+        uint8_t* found = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
+        if (found == NULL) {
+            found = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
+            if (found != NULL) { expected = april_expected; }
+        } else {
+            expected = may_expected;
+        }
+        if (found != NULL) {
+            uintptr_t dist = found > target ? (uintptr_t)(found - target) : (uintptr_t)(target - found);
+            append_logf("KBO all-star events prepare hook: RVA mismatch, pattern found at %p dist=0x%zx from RVA", found, (size_t)dist);
+            target = found;
+        }
     }
 
     if (!memory_range_readable(target, sizeof(april_expected))) {
@@ -119,6 +168,7 @@ static int install_allstar_events_prepare_patch(void)
         ok = 1;
     } else if (memcmp(target, expected, sizeof(april_expected)) != 0) {
         log_patch_bytes_mismatch("KBO all-star events prepare hook", target, sizeof(april_expected));
+        log_extended_context("KBO all-star events prepare hook", target, 16, 96);
     } else {
         void* return_address = target + sizeof(april_expected);
         void* allstar_prep_address = resolve_relative_call_target(target + 14);

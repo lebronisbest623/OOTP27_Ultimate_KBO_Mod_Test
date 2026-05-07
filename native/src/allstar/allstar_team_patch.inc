@@ -4,12 +4,14 @@ static int patch_kbo_allstar_team_name(
     uint8_t* team,
     const char* old_city,
     const char* old_full_name,
+    const char* abbreviation,
     const char* city,
     const char* nickname,
     const char* full_name,
     const char* source)
 {
     if (team == NULL || city == NULL || city[0] == '\0'
+            || abbreviation == NULL || abbreviation[0] == '\0'
             || nickname == NULL || nickname[0] == '\0'
             || full_name == NULL || full_name[0] == '\0'
             || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
@@ -20,15 +22,14 @@ static int patch_kbo_allstar_team_name(
     copy_ootp_string_object_text(team, OOTP27_KBO_TEAM_CITY_STRING_OFFSET, old_name, sizeof(old_name));
 
     int patched = 0;
-    patched += assign_ootp_string_object_text_if_different(team, OOTP27_KBO_TEAM_CITY_STRING_OFFSET, city);
-    patched += assign_ootp_string_object_text_if_different(team, OOTP27_KBO_TEAM_NICKNAME_STRING_OFFSET, nickname);
+    patched += assign_ootp_string_object_text_if_different(team, 0x10u, city);
+    patched += assign_ootp_string_object_text_if_different(team, 0x28u, abbreviation);
+    patched += assign_ootp_string_object_text_if_different(team, 0x40u, nickname);
+    patched += assign_ootp_string_object_text_if_different(team, 0x70u, full_name);
+    patched += assign_ootp_string_object_text_if_different(team, 0x100u, full_name);
 
-    static const uint32_t full_name_offsets[] = {
-        0x40u, 0x58u, 0x70u, 0x100u
-    };
-    for (size_t i = 0; i < sizeof(full_name_offsets) / sizeof(full_name_offsets[0]); i++) {
-        patched += assign_ootp_string_object_text_if_different(team, full_name_offsets[i], full_name);
-    }
+    char duplicated_full_name[160] = {0};
+    snprintf(duplicated_full_name, sizeof(duplicated_full_name), "%s %s", city, full_name);
 
     for (uint32_t offset = 0; offset <= 0x140u; offset += sizeof(uintptr_t)) {
         char text[128] = {0};
@@ -38,6 +39,8 @@ static int patch_kbo_allstar_team_name(
         if (old_city != NULL && old_city[0] != '\0' && ascii_equals_ignore_case(text, old_city)) {
             patched += assign_ootp_string_object_text(team, offset, city);
         } else if (old_full_name != NULL && old_full_name[0] != '\0' && ascii_equals_ignore_case(text, old_full_name)) {
+            patched += assign_ootp_string_object_text(team, offset, full_name);
+        } else if (duplicated_full_name[0] != '\0' && ascii_equals_ignore_case(text, duplicated_full_name)) {
             patched += assign_ootp_string_object_text(team, offset, full_name);
         }
     }
@@ -70,6 +73,7 @@ static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
 
     if (team_has_ootp_string_text(team, "All-Stars")) {
         if (team_has_ootp_string_text(team, "AS1")
+                || team_has_ootp_string_text(team, "Nanum")
                 || team_has_ootp_string_text(team, "Team 1")
                 || team_has_ootp_string_text(team, "Team 1 All-Stars")) {
             if (out_kind != NULL) {
@@ -78,6 +82,7 @@ static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
             return 1;
         }
         if (team_has_ootp_string_text(team, "AS2")
+                || team_has_ootp_string_text(team, "Dream")
                 || team_has_ootp_string_text(team, "Team 2")
                 || team_has_ootp_string_text(team, "Team 2 All-Stars")) {
             if (out_kind != NULL) {
@@ -89,6 +94,7 @@ static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
 
     if (team_has_ootp_string_text(team, "Future Stars")) {
         if (team_has_ootp_string_text(team, "FS1")
+                || team_has_ootp_string_text(team, "North")
                 || team_has_ootp_string_text(team, "Team 1")
                 || team_has_ootp_string_text(team, "Team 1 Future Stars")) {
             if (out_kind != NULL) {
@@ -97,6 +103,7 @@ static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
             return 1;
         }
         if (team_has_ootp_string_text(team, "FS2")
+                || team_has_ootp_string_text(team, "South")
                 || team_has_ootp_string_text(team, "Team 2")
                 || team_has_ootp_string_text(team, "Team 2 Future Stars")) {
             if (out_kind != NULL) {
@@ -112,16 +119,16 @@ static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
 static int patch_kbo_allstar_team_pair_name(uint8_t* team, int kind, int side, const char* source)
 {
     if (kind == 1 && side == 1) {
-        return patch_kbo_allstar_team_name(team, "Team 1", "Team 1 All-Stars", "Nanum", "All-Stars", "Nanum All-Stars", source);
+        return patch_kbo_allstar_team_name(team, "Team 1", "Team 1 All-Stars", "AS1", "Nanum", "All-Stars", "Nanum All-Stars", source);
     }
     if (kind == 1 && side == 2) {
-        return patch_kbo_allstar_team_name(team, "Team 2", "Team 2 All-Stars", "Dream", "All-Stars", "Dream All-Stars", source);
+        return patch_kbo_allstar_team_name(team, "Team 2", "Team 2 All-Stars", "AS2", "Dream", "All-Stars", "Dream All-Stars", source);
     }
     if (kind == 2 && side == 1) {
-        return patch_kbo_allstar_team_name(team, "Team 1", "Team 1 Future Stars", "North", "Future Stars", "North Future Stars", source);
+        return patch_kbo_allstar_team_name(team, "Team 1", "Team 1 Future Stars", "FS1", "North", "Future Stars", "North Future Stars", source);
     }
     if (kind == 2 && side == 2) {
-        return patch_kbo_allstar_team_name(team, "Team 2", "Team 2 Future Stars", "South", "Future Stars", "South Future Stars", source);
+        return patch_kbo_allstar_team_name(team, "Team 2", "Team 2 Future Stars", "FS2", "South", "Future Stars", "South Future Stars", source);
     }
     return 0;
 }

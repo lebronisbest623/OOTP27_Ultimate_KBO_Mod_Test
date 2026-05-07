@@ -15,10 +15,12 @@ static RECT kbo_hub_nav_item_rect(int index, int width, int height)
 static const char* kbo_hub_current_view_title(void)
 {
     switch (g_kbo_hub_selected_view) {
-    case KBO_HUB_VIEW_MILITARY: return kbo_hub_text("\xea\xb5\xb0\xeb\xb3\xb5\xeb\xac\xb4",    "SERVICE TEAMS");
+    case KBO_HUB_VIEW_MILITARY: return kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80",    "SERVICE TEAMS");
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c", "FOREIGN RIGHTS");
-    case KBO_HUB_VIEW_ASIAN_QUOTA: return kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\xa0\x95\xec\xb1\x85", "FOREIGN POLICY");
+    case KBO_HUB_VIEW_ASIAN_QUOTA: return kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98", "FOREIGN PLAYERS");
     case KBO_HUB_VIEW_ASIAN_GAMES: return kbo_hub_text("ASIAN GAMES", "ASIAN GAMES");
+    case KBO_HUB_VIEW_UPCOMING_FA: return kbo_hub_text("UPCOMING FA", "UPCOMING FA");
+    case KBO_HUB_VIEW_FA_CASES: return kbo_hub_text("FA CASES", "FA CASES");
     case KBO_HUB_VIEW_MOD_INFO: return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
     case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",      "SETTINGS");
     default:                    return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
@@ -28,11 +30,28 @@ static const char* kbo_hub_current_view_title(void)
 static const char* kbo_hub_current_view_subtitle(void)
 {
     switch (g_kbo_hub_selected_view) {
-    case KBO_HUB_VIEW_MILITARY: return kbo_hub_text("\xeb\xb3\xb5\xeb\xac\xb4 \xec\xa4\x91\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98\xec\x99\x80 \xeb\xb3\xb5\xea\xb7\x80 \xec\x8b\x9c\xec\xa0\x90\xec\x9d\x84 \xed\x99\x95\xec\x9d\xb8\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",   "Who is serving and when they return");
+    case KBO_HUB_VIEW_MILITARY:
+        return kbo_hub_military_subnav_label(g_kbo_hub_selected_military_subview);
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xed\x8c\x80\xeb\xb3\x84 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98 \xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c\xec\x9d\x84 \xed\x99\x95\xec\x9d\xb8\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4", "Retained foreign player rights by club");
-    case KBO_HUB_VIEW_ASIAN_QUOTA: return kbo_hub_text("\xec\x84\xa0\xed\x83\x9d\xed\x95\x9c \xed\x8c\x80\xec\x9d\x98 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x8a\xac\xeb\xa1\xaf\xea\xb3\xbc \xec\x84\xa0\xec\x88\x98 \xeb\xaa\x85\xeb\x8b\xa8\xec\x9d\x84 \xed\x99\x95\xec\x9d\xb8\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4", "Foreign slots and players for the selected club");
-    case KBO_HUB_VIEW_ASIAN_GAMES: return kbo_hub_text("ASIAN GAMES ROSTER", "Selected roster, departure, return, and exemption state");
-    case KBO_HUB_VIEW_MOD_INFO: return kbo_hub_text("\xeb\x9f\xb0\xec\xb2\x98\xec\x99\x80 \xeb\x9f\xb0\xed\x83\x80\xec\x9e\x84 \xed\x8c\xa8\xec\xb9\x98 \xec\x83\x81\xed\x83\x9c\xeb\xa5\xbc \xed\x91\x9c\xec\x8b\x9c\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",       "Launcher and runtime patch status");
+    case KBO_HUB_VIEW_ASIAN_QUOTA:
+        return kbo_hub_foreign_subnav_label(g_kbo_hub_selected_foreign_subview);
+    case KBO_HUB_VIEW_ASIAN_GAMES:
+        switch (g_kbo_hub_selected_agames_subview) {
+        case KBO_HUB_AGAMES_SUBVIEW_TOURNAMENTS:
+            return kbo_hub_text("ASIAN GAMES TOURNAMENTS", "ASIAN GAMES TOURNAMENTS");
+        case KBO_HUB_AGAMES_SUBVIEW_SCHEDULE:
+            return kbo_hub_text("ASIAN GAMES SCHEDULE", "ASIAN GAMES SCHEDULE");
+        case KBO_HUB_AGAMES_SUBVIEW_ROSTER:
+            return kbo_hub_text("ASIAN GAMES ROSTER", "ASIAN GAMES ROSTER");
+        default:
+            return kbo_hub_text("ASIAN GAMES", "ASIAN GAMES");
+        }
+    case KBO_HUB_VIEW_UPCOMING_FA:
+        return kbo_hub_text("Tracked KBO FA requalification by club", "Tracked KBO FA requalification by club");
+    case KBO_HUB_VIEW_FA_CASES:
+        return kbo_hub_text("Read-only classification of players currently visible in the FA market", "Read-only classification of players currently visible in the FA market");
+    case KBO_HUB_VIEW_MOD_INFO:
+        return kbo_hub_mod_subnav_label(g_kbo_hub_selected_mod_subview);
     case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xec\x96\xb8\xec\x96\xb4\xec\x99\x80 \xeb\x8b\xa8\xec\xb6\x95\xed\x82\xa4\xeb\xa5\xbc \xec\x84\xa4\xec\xa0\x95\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",                "Language and hotkey settings");
     default:                    return kbo_hub_text("\xeb\x9f\xb0\xec\xb2\x98\xec\x99\x80 \xeb\x9f\xb0\xed\x83\x80\xec\x9e\x84 \xed\x8c\xa8\xec\xb9\x98 \xec\x83\x81\xed\x83\x9c\xeb\xa5\xbc \xed\x91\x9c\xec\x8b\x9c\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",       "Launcher and runtime patch status");
     }
@@ -41,7 +60,7 @@ static const char* kbo_hub_current_view_subtitle(void)
 static int kbo_hub_league_keeps_allstar_teams(uint32_t league_id)
 {
     char league_name[128] = {0};
-    kbo_hub_copy_league_display_name(league_id, league_name, sizeof(league_name));
+    kbo_hub_copy_league_display_name_fast(league_id, league_name, sizeof(league_name));
     return kbo_ascii_contains_ignore_case(league_name, "Tournament")
         || kbo_ascii_contains_ignore_case(league_name, "Classic")
         || kbo_ascii_contains_ignore_case(league_name, "Cup")
@@ -229,7 +248,7 @@ static void kbo_hub_show_league_dropdown(HWND hwnd)
     for (int i = 0; i < league_count; i++) {
         char label[128] = {0};
         WCHAR wide_label[160] = {0};
-        kbo_hub_copy_league_display_name(leagues[i], label, sizeof(label));
+        kbo_hub_copy_league_display_name_fast(leagues[i], label, sizeof(label));
         kbo_utf8_to_wide(label, wide_label, (int)(sizeof(wide_label) / sizeof(wide_label[0])));
         UINT flags = MF_STRING;
         if (leagues[i] == g_kbo_hub_selected_league_id) { flags |= MF_CHECKED; }

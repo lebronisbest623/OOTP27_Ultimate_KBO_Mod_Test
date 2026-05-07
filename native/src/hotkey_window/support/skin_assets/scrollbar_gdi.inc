@@ -10,7 +10,10 @@ static int kbo_hub_estimate_visible_edit_lines(void)
     }
 
     HFONT font = (g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY
-            || g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS)
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_QUOTA
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES)
         ? g_kbo_hub_font_mono : g_kbo_hub_font_body;
     HGDIOBJ old = NULL;
     if (font != NULL) {

@@ -26,7 +26,7 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
     int sang_count = kbo_hub_count_service_players(sang_id, &sang_due_60, &sang_due_now);
     int kpb_count  = kbo_hub_count_service_players(kpb_id,  &kpb_due_60,  &kpb_due_now);
 
-    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xeb\xb3\xb5\xeb\xac\xb4 \xed\x8c\x80", "SERVICE TEAMS"));
+    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80", "SERVICE TEAMS"));
     kbo_window_text_appendf(
         &buffer,
         kbo_hub_text("\xec\xb6\x94\xec\xa0\x81 \xec\xa4\x91\xec\x9d\xb8 \xeb\xb3\xb5\xeb\xac\xb4 \xeb\xb0\xb0\xec\xa0\x95: %ld\r\n\r\n", "Tracked service assignments: %ld\r\n\r\n"),
@@ -58,7 +58,6 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
         }
 
         uint8_t* player = (uint8_t*)player_ptr;
-        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
         uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
         uint32_t loan_team_id    = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
         const char* service_fallback = NULL;
@@ -75,16 +74,22 @@ static void kbo_build_military_service_window_text(char* out, size_t out_size)
             continue;
         }
 
-        uint32_t original_team_id = *(uint32_t*)(player + 0x5cu);
-        int active_service_index = find_active_kbo_military_loan_index(player_id);
-        if (active_service_index >= 0
-                && g_active_military_loans[active_service_index].original_team_id != 0u) {
-            original_team_id = g_active_military_loans[active_service_index].original_team_id;
-        }
-        if (g_kbo_hub_selected_team_id != 0 && original_team_id != g_kbo_hub_selected_team_id) {
-            continue;
-        }
-
+        uint32_t original_team_id = 0u;
+        uint32_t original_league_id = 0u;
+        kbo_military_resolve_original_team(
+            player,
+            service_team_id,
+            sang_id,
+            kpb_id,
+            &original_team_id,
+            &original_league_id);
+        kbo_military_repair_original_team_memory(
+            player,
+            original_team_id,
+            original_league_id,
+            service_team_id,
+            sang_id,
+            kpb_id);
         int32_t days_left     = kbo_military_effective_days_left(player);
         uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
         uint8_t loan_active     = player[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET];

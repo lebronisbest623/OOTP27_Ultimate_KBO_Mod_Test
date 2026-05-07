@@ -2,6 +2,7 @@
 
 typedef void (__fastcall *OotpVectorPushBack)(void* vector, void* value);
 typedef void (__fastcall *OotpMakeAllstarGameEventsFn)(uintptr_t league_ptr, uint8_t force_create);
+typedef void (__fastcall *OotpAllstarTeamSetupFn)(uintptr_t league_ptr);
 
 typedef struct KboAllstarTeamRow {
     uint16_t year;

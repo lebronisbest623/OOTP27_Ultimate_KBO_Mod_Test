@@ -1,3 +1,10 @@
+static int kbo_hub_foreign_rights_ui_selected(void)
+{
+    return g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS
+        || (g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_QUOTA
+            && g_kbo_hub_selected_foreign_subview == KBO_HUB_FOREIGN_SUBVIEW_RIGHTS);
+}
+
 static uint32_t kbo_parse_foreign_candidate_player_id_from_line(const char* line)
 {
     if (line == NULL || (line[0] != ' ' && line[0] != '>')) {
@@ -29,7 +36,7 @@ static uint32_t kbo_parse_foreign_candidate_player_id_from_line(const char* line
 
 static int kbo_select_foreign_candidate_from_edit_click(HWND edit, LPARAM lparam)
 {
-    if (edit == NULL || g_kbo_hub_selected_view != KBO_HUB_VIEW_FOREIGN_RIGHTS) {
+    if (edit == NULL || !kbo_hub_foreign_rights_ui_selected()) {
         return 0;
     }
 
@@ -86,7 +93,7 @@ static void kbo_refresh_foreign_rights_controls(void)
 
     SendMessageA(g_kbo_foreign_list, LB_RESETCONTENT, 0, 0);
 
-    if (g_kbo_hub_selected_view != KBO_HUB_VIEW_FOREIGN_RIGHTS || g_kbo_hub_selected_team_id == 0u) {
+    if (!kbo_hub_foreign_rights_ui_selected() || g_kbo_hub_selected_team_id == 0u) {
         return;
     }
 
@@ -172,6 +179,7 @@ static void kbo_apply_foreign_rights_button(int retain)
 
     if (player_id != 0u && kbo_append_foreign_waiver_user_decision(g_kbo_hub_selected_team_id, player_id, retain)) {
         append_logf("foreign rights ui: queued %s team=%u player=%u", retain ? "RETAIN" : "SKIP", g_kbo_hub_selected_team_id, player_id);
+        process_foreign_waiver_commands();
         kbo_refresh_foreign_rights_controls();
         kbo_refresh_hotkey_window();
         if (g_kbo_hotkey_window != NULL) {

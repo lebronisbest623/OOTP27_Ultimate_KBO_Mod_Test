@@ -322,6 +322,31 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
         last_checked_result = 2u;
         return 0;
     }
+
+    uint32_t season_end_serial = kbo_date_serial(
+        season_end_yyyymmdd / 10000u,
+        (season_end_yyyymmdd / 100u) % 100u,
+        season_end_yyyymmdd % 100u);
+    if (season_end_serial == 0u) {
+        append_logf(
+            "foreign waiver auto: invalid Offseason starts serial season_end=%u today=%u",
+            season_end_yyyymmdd,
+            today_yyyymmdd);
+        last_checked_result = 2u;
+        return 0;
+    }
+    if (today_serial >= season_end_serial + 20u) {
+        g_kbo_foreign_waiver_last_seen_yyyymmdd = season_end_yyyymmdd;
+        kbo_write_foreign_waiver_window(season_end_yyyymmdd, season_end_yyyymmdd, "stale_offseason_marker");
+        g_kbo_foreign_waiver_start_event_date = season_end_yyyymmdd;
+        g_kbo_foreign_waiver_close_event_end_date = season_end_yyyymmdd;
+        append_logf(
+            "foreign waiver auto: skipped stale season-end marker season_end=%u today=%u reason=window_already_elapsed",
+            season_end_yyyymmdd,
+            today_yyyymmdd);
+        last_checked_result = 2u;
+        return 0;
+    }
     if (g_kbo_foreign_waiver_last_seen_yyyymmdd == season_end_yyyymmdd) {
         append_logf(
             "foreign waiver auto: already opened for marker=%u today=%u",
@@ -337,8 +362,8 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
         season_end_yyyymmdd,
         today_yyyymmdd);
     int opened = kbo_open_foreign_waiver_window(
-        today_yyyymmdd,
-        today_serial,
+        season_end_yyyymmdd,
+        season_end_serial,
         "offseason_starts_event");
     last_checked_result = opened ? 1u : 2u;
     return opened;

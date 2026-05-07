@@ -11,7 +11,11 @@ static int kbo_schedule_asian_games_custom_events(const char* source)
             source != NULL ? source : "");
         return -1;
     }
-    if (!kbo_year_has_asian_games(year)) {
+    KboAsianGamesScheduleSeed schedule;
+    if (!kbo_get_asian_games_schedule_for_year(year, &schedule)) {
+        return 0;
+    }
+    if (!kbo_asian_games_schedule_auto_events_enabled(&schedule)) {
         return 0;
     }
     int year_was_marked_scheduled = g_kbo_asian_games_last_scheduled_year == year;
@@ -28,9 +32,9 @@ static int kbo_schedule_asian_games_custom_events(const char* source)
         return -1;
     }
 
-    uint32_t selection_date = year * 10000u + 805u;
-    uint32_t departure_date = year * 10000u + 919u;
-    uint32_t final_date = year * 10000u + 1004u;
+    uint32_t selection_date = schedule.selection_date;
+    uint32_t departure_date = schedule.departure_date;
+    uint32_t final_date = schedule.final_date;
     uint32_t today = year * 10000u + month * 100u + day;
     if (today > final_date) {
         g_kbo_asian_games_last_scheduled_year = year;
@@ -81,9 +85,9 @@ static int kbo_schedule_asian_games_custom_events(const char* source)
 
     if (!selection_exists) {
         created_selection = create_kbo_league_event(
-            year,
-            8u,
-            5u,
+            selection_date / 10000u,
+            (selection_date / 100u) % 100u,
+            selection_date % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
             g_kbo_asian_games_selection_event_title,
@@ -92,9 +96,9 @@ static int kbo_schedule_asian_games_custom_events(const char* source)
     }
     if (!departure_exists) {
         created_departure = create_kbo_league_event(
-            year,
-            9u,
-            19u,
+            departure_date / 10000u,
+            (departure_date / 100u) % 100u,
+            departure_date % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
             g_kbo_asian_games_departure_event_title,
@@ -103,9 +107,9 @@ static int kbo_schedule_asian_games_custom_events(const char* source)
     }
     if (!final_exists) {
         created_final = create_kbo_league_event(
-            year,
-            10u,
-            4u,
+            final_date / 10000u,
+            (final_date / 100u) % 100u,
+            final_date % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
             g_kbo_asian_games_final_event_title,

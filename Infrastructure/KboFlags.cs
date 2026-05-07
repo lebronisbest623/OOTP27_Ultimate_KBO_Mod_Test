@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using static LauncherPaths;
 
 internal static class KboFlags
@@ -17,7 +18,10 @@ internal static class KboFlags
         "disable_foreign_waiver_legacy_auto_detector",
         "disable_kbo_ai_fa_status_candidate_insert_hook",
         "disable_kbo_custom_foreign_policy",
+        "disable_kbo_foreign_signing_branch_patch",
+        "disable_kbo_foreign_trade_check_patch",
         "disable_kbo_sangmu_fa_block_core",
+        "disable_kbo_submit_offer_probe_patch",
         "enable_experimental_runtime_hooks",
         "enable_fa_requalification",
         "enable_foreign_waiver_ai",
@@ -29,6 +33,7 @@ internal static class KboFlags
         "enable_kbo_custom_foreign_offer_logs",
         "enable_kbo_diagnostic_minimal_runtime",
         "enable_kbo_fa_signability_hooks",
+        "enable_kbo_foreign_trade_check_patch",
         "enable_kbo_fix",
         "enable_kbo_offer_eligibility_patch",
         "enable_kbo_player_team_signability_patch",
@@ -58,10 +63,10 @@ internal static class KboFlags
 
     internal static void WriteKboFlagValues(string configPath, IEnumerable<string> fileNames, bool enabled)
     {
-        var flags = ReadKboFlagConfig(configPath);
+        var flags = ReadKboRawConfig(configPath);
         foreach (var fileName in fileNames)
         {
-            flags[NormalizeKboFlagKey(fileName)] = enabled;
+            flags[NormalizeKboFlagKey(fileName)] = JsonValue.Create(enabled);
         }
         Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
         var json = JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
@@ -81,7 +86,7 @@ internal static class KboFlags
             return;
         }
 
-        var flags = ReadKboFlagConfig(configPath);
+        var raw = ReadKboRawConfig(configPath);
         var changed = false;
         foreach (var path in Directory.EnumerateFiles(configDir, "*.txt", SearchOption.TopDirectoryOnly))
         {
@@ -97,7 +102,7 @@ internal static class KboFlags
             {
                 continue;
             }
-            if (flags.ContainsKey(key))
+            if (raw.ContainsKey(key))
             {
                 continue;
             }
@@ -107,7 +112,7 @@ internal static class KboFlags
                 continue;
             }
 
-            flags[key] = value;
+            raw[key] = JsonValue.Create(value);
             changed = true;
         }
 
@@ -117,7 +122,7 @@ internal static class KboFlags
         }
 
         Directory.CreateDirectory(configDir);
-        var json = JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(raw, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(configPath, json + Environment.NewLine);
     }
     
@@ -176,6 +181,42 @@ internal static class KboFlags
         return flags;
     }
 
+    internal static SortedDictionary<string, JsonNode?> ReadKboRawConfig(string configPath)
+    {
+        var values = new SortedDictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+        if (!File.Exists(configPath))
+        {
+            return values;
+        }
+
+        try
+        {
+            var node = JsonNode.Parse(File.ReadAllText(configPath));
+            var root = node as JsonObject;
+            if (root is not null
+                    && root.TryGetPropertyValue("flags", out var nestedFlags)
+                    && nestedFlags is JsonObject nestedObject)
+            {
+                root = nestedObject;
+            }
+            if (root is null)
+            {
+                return values;
+            }
+
+            foreach (var property in root)
+            {
+                values[NormalizeKboFlagKey(property.Key)] = property.Value?.DeepClone();
+            }
+        }
+        catch
+        {
+            return values;
+        }
+
+        return values;
+    }
+
     public static bool TryReadJsonBool(JsonElement value, out bool result)
     {
         result = false;
@@ -228,6 +269,73 @@ internal static class KboFlags
             return true;
         }
         return false;
+    }
+
+    public static int ReadKboIntlEstablishedFaMultiplier()
+    {
+        return ReadKboIntSetting(GetKboFlagConfigPath(), "intl_established_fa_multiplier", defaultValue: 20, minValue: 1, maxValue: 20);
+    }
+
+    internal static int ReadKboIntSetting(string configPath, string key, int defaultValue, int minValue, int maxValue)
+    {
+        if (!File.Exists(configPath))
+        {
+            return defaultValue;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(configPath));
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Object
+                    && root.TryGetProperty("flags", out var nestedFlags)
+                    && nestedFlags.ValueKind == JsonValueKind.Object)
+            {
+                root = nestedFlags;
+            }
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return defaultValue;
+            }
+
+            foreach (var property in root.EnumerateObject())
+            {
+                if (NormalizeKboFlagKey(property.Name).Equals(key, StringComparison.OrdinalIgnoreCase)
+                        && TryReadJsonInt(property.Value, out var value))
+                {
+                    return Math.Clamp(value, minValue, maxValue);
+                }
+            }
+        }
+        catch
+        {
+            return defaultValue;
+        }
+
+        return defaultValue;
+    }
+
+    internal static void WriteKboIntSetting(string configPath, string key, int value, int minValue, int maxValue)
+    {
+        var values = ReadKboRawConfig(configPath);
+        values[NormalizeKboFlagKey(key)] = JsonValue.Create(Math.Clamp(value, minValue, maxValue));
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+        var json = JsonSerializer.Serialize(values, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(configPath, json + Environment.NewLine);
+    }
+
+    public static bool TryReadJsonInt(JsonElement value, out int result)
+    {
+        result = 0;
+        switch (value.ValueKind)
+        {
+            case JsonValueKind.Number:
+                return value.TryGetInt32(out result);
+            case JsonValueKind.String:
+                return int.TryParse(value.GetString()?.Trim(), out result);
+            default:
+                return false;
+        }
     }
 
     private static bool TryReadLegacyFlagFile(string path, out bool value)

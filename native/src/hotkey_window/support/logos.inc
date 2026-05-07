@@ -124,21 +124,119 @@ static int kbo_hub_find_best_logo_file(
     return 1;
 }
 
+static const char* kbo_hub_file_name_part(const char* path)
+{
+    if (path == NULL) {
+        return NULL;
+    }
+
+    const char* name = path;
+    for (const char* p = path; *p != '\0'; p++) {
+        if (*p == '\\' || *p == '/') {
+            name = p + 1;
+        }
+    }
+    return name;
+}
+
+static void kbo_hub_copy_logo_prefix_from_file_name(const char* file_name, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (file_name == NULL || file_name[0] == '\0') {
+        return;
+    }
+
+    snprintf(out, out_size, "%s", file_name);
+    char* dot = strrchr(out, '.');
+    if (dot != NULL) {
+        *dot = '\0';
+    }
+}
+
+static int kbo_hub_copy_existing_file(const char* path, char* out, size_t out_size)
+{
+    if (path == NULL || path[0] == '\0' || out == NULL || out_size == 0) {
+        return 0;
+    }
+
+    DWORD attrs = GetFileAttributesA(path);
+    if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+        return 0;
+    }
+
+    snprintf(out, out_size, "%s", path);
+    return 1;
+}
+
+static int kbo_hub_find_cached_league_logo_in_dir(
+    const char* directory,
+    const char* logo_file,
+    uint32_t year,
+    char* out,
+    size_t out_size)
+{
+    if (directory == NULL || directory[0] == '\0'
+            || logo_file == NULL || logo_file[0] == '\0'
+            || out == NULL || out_size == 0) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    snprintf(path, sizeof(path), "%s\\%s", directory, logo_file);
+    if (kbo_hub_copy_existing_file(path, out, out_size)) {
+        return 1;
+    }
+
+    char prefix[128] = {0};
+    kbo_hub_copy_logo_prefix_from_file_name(logo_file, prefix, sizeof(prefix));
+    if (prefix[0] == '\0') {
+        return 0;
+    }
+
+    snprintf(path, sizeof(path), "%s\\%s.oi", directory, prefix);
+    if (kbo_hub_copy_existing_file(path, out, out_size)) {
+        return 1;
+    }
+
+    return kbo_hub_find_best_logo_file(directory, prefix, year, out, out_size);
+}
+
 static int kbo_hub_get_league_logo_path(uint32_t league_id, uint32_t year, char* out, size_t out_size)
 {
-    (void)league_id;
     if (out == NULL || out_size == 0) {
         return 0;
     }
     out[0] = '\0';
 
-    const char* league_logo = "2024~ KBO.png";
-    if      (year >= 1982 && year <= 1999) { league_logo = "1982~1999 KBO.png"; }
-    else if (year >= 2000 && year <= 2011) { league_logo = "2000~2011 KBO.png"; }
-    else if (year >= 2012 && year <= 2023) { league_logo = "2012~2023 KBO.png"; }
+    char cached_logo_file_raw[128] = {0};
+    if (!kbo_hub_try_copy_cached_league_logo_file(league_id, cached_logo_file_raw, sizeof(cached_logo_file_raw))) {
+        return 0;
+    }
 
-    kbo_hub_logo_asset_path(league_logo, out, out_size);
-    return out[0] != '\0' && GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES;
+    const char* cached_logo_file = kbo_hub_file_name_part(cached_logo_file_raw);
+    if (cached_logo_file == NULL || cached_logo_file[0] == '\0') {
+        return 0;
+    }
+
+    char save_path[MAX_PATH] = {0};
+    if (kbo_get_current_save_path(save_path, sizeof(save_path))) {
+        char save_logo_dir[MAX_PATH] = {0};
+        snprintf(save_logo_dir, sizeof(save_logo_dir), "%s\\news\\html\\images\\league_logos", save_path);
+        if (kbo_hub_find_cached_league_logo_in_dir(save_logo_dir, cached_logo_file, year, out, out_size)) {
+            return 1;
+        }
+    }
+
+    char data_logo_dir[MAX_PATH] = {0};
+    kbo_hub_ootp_install_path("data\\logos", data_logo_dir, sizeof(data_logo_dir));
+    if (kbo_hub_find_cached_league_logo_in_dir(data_logo_dir, cached_logo_file, year, out, out_size)) {
+        return 1;
+    }
+
+    return 0;
 }
 
 static int kbo_hub_get_team_logo_path(uint32_t team_id, uint32_t year, char* out, size_t out_size)

@@ -48,6 +48,48 @@ static int kbo_has_active_foreign_waiver_right(uint32_t team_id, uint32_t player
     return result;
 }
 
+static int kbo_get_active_foreign_waiver_right_dates(
+    uint32_t team_id,
+    uint32_t player_id,
+    uint32_t today_yyyymmdd,
+    uint32_t* out_retained_on,
+    uint32_t* out_expires_on)
+{
+    if (out_retained_on != NULL) {
+        *out_retained_on = 0u;
+    }
+    if (out_expires_on != NULL) {
+        *out_expires_on = 0u;
+    }
+    if (team_id == 0u || player_id == 0u || today_yyyymmdd == 0u) {
+        return 0;
+    }
+
+    kbo_ensure_foreign_waiver_rights_loaded_for_lookup();
+
+    int result = 0;
+    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
+        Sleep(0);
+    }
+    for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
+        KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
+        if (rec->team_id == team_id
+                && rec->player_id == player_id
+                && kbo_is_foreign_waiver_right_active(rec, today_yyyymmdd)) {
+            if (out_retained_on != NULL) {
+                *out_retained_on = rec->retained_on_yyyymmdd;
+            }
+            if (out_expires_on != NULL) {
+                *out_expires_on = rec->expires_on_yyyymmdd;
+            }
+            result = 1;
+            break;
+        }
+    }
+    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    return result;
+}
+
 static int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t today_yyyymmdd, uint32_t* out_team_id)
 {
     if (out_team_id != NULL) {

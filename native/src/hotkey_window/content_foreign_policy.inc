@@ -16,7 +16,7 @@ static void kbo_build_foreign_policy_hub_text(char* out, size_t out_size)
     uint32_t team_non_asian = 0u;
     kbo_count_team_asian_quota_probe(g_kbo_hub_selected_team_id, &team_foreign, &team_asian, &team_non_asian);
     uint32_t team_effective = kbo_effective_foreign_count_with_asian_quota(team_asian, team_non_asian);
-    kbo_window_text_appendf(&buffer, "KBO FOREIGN PLAYER POLICY\r\n");
+    kbo_window_text_appendf(&buffer, "KBO FOREIGN PLAYERS\r\n");
     kbo_window_text_appendf(
         &buffer,
         "Policy: %s / Base effective limit: %u / Asian-quota nation IDs: %d\r\n\r\n",

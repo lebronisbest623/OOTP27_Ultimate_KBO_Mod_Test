@@ -3,3 +3,4 @@
 #include "support/window_hotkey.inc"
 #include "support/names.inc"
 #include "support/logos.inc"
+#include "support/team_colors.inc"

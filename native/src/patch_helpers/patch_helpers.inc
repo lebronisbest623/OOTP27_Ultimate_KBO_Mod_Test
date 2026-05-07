@@ -49,6 +49,30 @@ static void log_patch_bytes_mismatch(const char* label, const uint8_t* target, s
     append_logf("%s bytes mismatch at %p: %s", label, target, bytes);
 }
 
+/* Dump pre_bytes before and (total_bytes - pre_bytes) after target, 16 bytes per log line.
+ * Useful for diagnosing hook site mismatches after a binary update. */
+static void log_extended_context(const char* label, const uint8_t* target, int pre_bytes, int total_bytes)
+{
+    const uint8_t* start = (pre_bytes > 0) ? (target - pre_bytes) : target;
+    if ((uintptr_t)start < 0x10000u) {
+        start = (const uint8_t*)0x10000u;
+    }
+    if (!memory_range_readable(start, (SIZE_T)total_bytes)) {
+        append_logf("%s extended ctx unreadable start=%p pre=%d total=%d", label, start, pre_bytes, total_bytes);
+        return;
+    }
+    for (int row = 0; row < total_bytes; row += 16) {
+        char hex[80] = {0};
+        size_t hex_off = 0;
+        for (int col = 0; col < 16 && row + col < total_bytes; col++) {
+            hex_off += (size_t)snprintf(hex + hex_off, sizeof(hex) - hex_off,
+                "%s%02X", col == 0 ? "" : " ", start[row + col]);
+        }
+        int rel = row - pre_bytes;
+        append_logf("%s ctx%+d [%p]: %s", label, rel, start + row, hex);
+    }
+}
+
 static int patch_static_bytes(const char* label, uint8_t* target, const uint8_t* expected, const uint8_t* patch, size_t size)
 {
     if (memcmp(target, patch, size) == 0) {

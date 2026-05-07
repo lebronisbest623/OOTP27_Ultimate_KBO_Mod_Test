@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using static InjectionTargetResolver;
 using static InjectionRosterMarkerWaiter;
 using static InjectedModuleDetector;
@@ -48,8 +47,8 @@ internal static class LauncherApp
         }
         
         EnsureKboLeagueIdConfig();
+        EnsureBundledKboDataFile("asian_games_schedule_seed.csv", "Asian Games schedule seed");
         EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
-        EnsureBundledKboDataFile("foreign_injury_replacements_seed.csv", "Foreign injury replacement seed");
         EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
         ImportLegacyKboFlagFilesIfMissing();
@@ -327,13 +326,13 @@ internal static class LauncherApp
 
     private static void LogLauncherBuild(string logPath)
     {
-        var assemblyPath = Assembly.GetExecutingAssembly().Location;
-        var assemblyWriteTime = File.Exists(assemblyPath)
-            ? File.GetLastWriteTime(assemblyPath).ToString("O")
+        var exePath = Environment.ProcessPath ?? "";
+        var assemblyWriteTime = File.Exists(exePath)
+            ? File.GetLastWriteTime(exePath).ToString("O")
             : "";
 
         Log(
             logPath,
-            $"launcher_build assembly=\"{assemblyPath}\" base_dir=\"{AppContext.BaseDirectory}\" write_time=\"{assemblyWriteTime}\"");
+            $"launcher_build exe=\"{exePath}\" base_dir=\"{AppContext.BaseDirectory}\" write_time=\"{assemblyWriteTime}\"");
     }
 }

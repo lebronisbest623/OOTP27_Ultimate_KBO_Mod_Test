@@ -7,13 +7,7 @@ static int kbo_apply_ai_foreign_waiver_rules(
     int forced,
     uint32_t target_team_id)
 {
-    (void)player_current_team_id;
-
     if (target_team_id == 0 || player_id == 0) {
-        return 0;
-    }
-
-    if (!forced && value_score < kbo_get_foreign_waiver_value_threshold()) {
         return 0;
     }
 
@@ -27,10 +21,6 @@ static int kbo_apply_ai_foreign_waiver_rules(
     uint8_t* player = kbo_find_player_by_id(player_id, &player_current_team_id, &player_current_league_id);
     if (player == NULL) {
         return 0;
-    }
-
-    if (player_current_team_id == target_team_id) {
-        return 1;
     }
 
     uint32_t destination_league = *(uint32_t*)(destination_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
@@ -136,25 +126,16 @@ static void run_foreign_waiver_ai_core_once(void)
 
         int forced = kbo_is_forced_foreign_candidate_id(player_id);
         int score = kbo_foreign_waiver_value_score(player);
-        int retain = forced || score >= kbo_get_foreign_waiver_value_threshold();
         considered++;
 
-        if (retain) {
-            if (kbo_apply_ai_foreign_waiver_rules(player_id, current_team_id, score, forced, decision_team_id)) {
-                retained++;
-            } else {
-                skipped++;
-                append_logf(
-                    "foreign waiver auto: SKIP player=%u team=%u value=%d forced=%d reason=retain_failed",
-                    player_id, decision_team_id, score, forced);
-                kbo_append_foreign_waiver_decision_record("ai", "SKIP", decision_team_id, player_id, score, forced, 0);
-            }
+        if (kbo_apply_ai_foreign_waiver_rules(player_id, current_team_id, score, forced, decision_team_id)) {
+            retained++;
         } else {
             skipped++;
             append_logf(
-                "foreign waiver auto: SKIP player=%u team=%u value=%d forced=%d",
+                "foreign waiver auto: SKIP player=%u team=%u value=%d forced=%d reason=retain_failed",
                 player_id, decision_team_id, score, forced);
-            kbo_append_foreign_waiver_decision_record("ai", "SKIP", decision_team_id, player_id, score, forced, 1);
+            kbo_append_foreign_waiver_decision_record("ai", "SKIP", decision_team_id, player_id, score, forced, 0);
         }
     }
 
