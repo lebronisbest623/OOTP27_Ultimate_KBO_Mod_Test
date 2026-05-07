@@ -39,6 +39,7 @@ static void kbo_custom_event_monitor_tick(
     }
     if (last_scanned_yyyymmdd != NULL && today_yyyymmdd != *last_scanned_yyyymmdd) {
         int triggered = scan_kbo_custom_events_once(source);
+        kbo_process_due_fa_compensation_protected_lists(source);
         if (triggered == 0) {
             *last_scanned_yyyymmdd = today_yyyymmdd;
         } else if (triggered < 0) {

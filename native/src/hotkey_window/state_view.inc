@@ -4,6 +4,7 @@ static int g_kbo_hub_selected_foreign_subview = 0;
 static int g_kbo_hub_selected_agames_subview = 0;
 static int g_kbo_hub_selected_military_subview = 0;
 static int g_kbo_hub_selected_fa_subview = 0;
+static uint32_t g_kbo_hub_selected_fa_compensation_player_id = 0u;
 static uint32_t g_kbo_hub_selected_military_results_year = 0;
 static int g_kbo_hub_language = 0;
 static RECT g_kbo_hub_refresh_rect = {0, 0, 0, 0};

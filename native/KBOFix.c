@@ -25,6 +25,7 @@
 #include "src/build_verify.inc"
 #include "src/runtime_memory.inc"
 #include "src/team.inc"
+#include "src/high_school_freshman_quality.inc"
 #include "src/fa_requalification.inc"
 #include "src/military_service_loan.inc"
 #include "src/foreign_waiver_ai.inc"

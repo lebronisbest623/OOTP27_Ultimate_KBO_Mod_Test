@@ -173,6 +173,8 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         return 0;
     }
 
+    kbo_high_school_team_add_player_prepare_quality(team_ptr, player_ptr);
+
     uint32_t before_current_team_id = 0u;
     uint32_t before_active_team_id = 0u;
     uint32_t before_original_team_id = 0u;

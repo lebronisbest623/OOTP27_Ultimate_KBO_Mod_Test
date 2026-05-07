@@ -40,6 +40,7 @@ static int kbo_record_fa_compensation_signing(
     uint32_t signing_team_id,
     uint32_t league_id,
     const char* source);
+static int kbo_process_due_fa_compensation_protected_lists(const char* source);
 static int kbo_fa_filing_find_latest_player(
     uint32_t player_id,
     uint32_t* out_original_team_id,
@@ -89,6 +90,8 @@ static int kbo_get_current_save_path(char* out, size_t out_size);
 static void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_size);
 static uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allow_deleted);
 static uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted);
+static int16_t kbo_read_player_i16(uint8_t* player, uint32_t offset);
+static int32_t kbo_foreign_waiver_value_score(uint8_t* player);
 static int create_kbo_native_live_news_with_body(
     uint32_t year,
     uint32_t month,

@@ -15,6 +15,7 @@ typedef struct KboFaRuleGradeConfig {
 typedef struct KboFaRules {
     uint32_t version;
     uint8_t exclude_foreign_players;
+    uint32_t protected_list_due_days;
     uint8_t age_grade_override_enabled;
     uint32_t age_grade_min_age;
     char age_grade[12];
@@ -91,6 +92,7 @@ static void kbo_fa_rules_init_defaults(KboFaRules* rules)
     memset(rules, 0, sizeof(*rules));
     rules->version = 1u;
     rules->exclude_foreign_players = 1u;
+    rules->protected_list_due_days = 3u;
     rules->age_grade_override_enabled = 1u;
     rules->age_grade_min_age = 35u;
     kbo_fa_rules_copy_text("C", rules->age_grade, sizeof(rules->age_grade));
@@ -443,6 +445,10 @@ static void kbo_fa_rules_parse_json(KboFaRules* rules, const char* json, DWORD j
 
     if (kbo_fa_rules_read_bool(fa_start, fa_end, "excludeForeignPlayers", &bool_value)) {
         rules->exclude_foreign_players = bool_value;
+    }
+    if (kbo_fa_rules_read_u32(fa_start, fa_end, "protectedListDueDays", &u32_value)
+            && u32_value <= 30u) {
+        rules->protected_list_due_days = u32_value;
     }
 
     if (kbo_fa_rules_find_json_value_span(fa_start, fa_end, "ageGradeOverride", &value_start, &value_end)) {

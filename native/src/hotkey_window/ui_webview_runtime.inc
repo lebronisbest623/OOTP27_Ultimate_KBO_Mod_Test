@@ -200,6 +200,56 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "fa-comp/select/", 15) == 0) {
+        const char* text = cmd + 15;
+        uint32_t fa_player_id = (uint32_t)strtoul(text, NULL, 10);
+        const char* slash = strchr(text, '/');
+        uint32_t selected_player_id = slash != NULL ? (uint32_t)strtoul(slash + 1, NULL, 10) : 0u;
+        if (fa_player_id != 0u && selected_player_id != 0u) {
+            kbo_manual_select_fa_compensation_player(fa_player_id, selected_player_id, "hub_manual_compensation_select");
+            g_kbo_hub_selected_fa_compensation_player_id = fa_player_id;
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_COMPENSATION;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "fa-comp/cash-only/", 18) == 0) {
+        uint32_t fa_player_id = (uint32_t)strtoul(cmd + 18, NULL, 10);
+        if (fa_player_id != 0u) {
+            kbo_manual_select_fa_compensation_cash_only(fa_player_id, "hub_cash_only_select");
+            g_kbo_hub_selected_fa_compensation_player_id = fa_player_id;
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_COMPENSATION;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "fa-comp/submit/", 15) == 0) {
+        uint32_t fa_player_id = (uint32_t)strtoul(cmd + 15, NULL, 10);
+        if (fa_player_id != 0u) {
+            kbo_manual_submit_fa_compensation_protected_list(fa_player_id, "hub_protected_list_submit");
+            g_kbo_hub_selected_fa_compensation_player_id = fa_player_id;
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_COMPENSATION;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "fa-comp/detail/", 15) == 0) {
+        uint32_t fa_player_id = (uint32_t)strtoul(cmd + 15, NULL, 10);
+        if (fa_player_id != 0u) {
+            g_kbo_hub_selected_fa_compensation_player_id = fa_player_id;
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_COMPENSATION;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "settings/intl-fa-multiplier/", 29) == 0) {
         int multiplier = kbo_clamp_intl_established_fa_multiplier(atoi(cmd + 29));
         if (kbo_set_intl_established_fa_multiplier(multiplier)) {

@@ -2,6 +2,7 @@
   "version": 1,
   "faCompensation": {
     "excludeForeignPlayers": true,
+    "protectedListDueDays": 3,
     "ageGradeOverride": {
       "enabled": true,
       "minAge": 35,
