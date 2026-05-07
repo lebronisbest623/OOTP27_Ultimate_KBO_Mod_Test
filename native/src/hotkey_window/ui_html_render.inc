@@ -2,7 +2,6 @@
 #include "ui_html_render/view_foreign_rights.inc"
 #include "ui_html_render/view_asian_quota.inc"
 #include "ui_html_render/view_asian_games.inc"
-#include "ui_html_render/view_upcoming_fa.inc"
 #include "ui_html_render/view_fa_cases.inc"
 #include "ui_html_render/view_mod_info.inc"
 #include "ui_html_render/view_settings.inc"
@@ -44,7 +43,6 @@ static void kbo_webview_append_main_tabs(KboWindowTextBuffer* buffer)
         KBO_HUB_VIEW_MILITARY,
         KBO_HUB_VIEW_ASIAN_QUOTA,
         KBO_HUB_VIEW_ASIAN_GAMES,
-        KBO_HUB_VIEW_UPCOMING_FA,
         KBO_HUB_VIEW_FA_CASES,
         KBO_HUB_VIEW_SETTINGS
     };
@@ -90,6 +88,13 @@ static void kbo_webview_append_sub_tabs(KboWindowTextBuffer* buffer)
             kbo_html_append_escaped(buffer, kbo_hub_agames_subnav_label(i));
             kbo_window_text_appendf(buffer, "</a>");
         }
+    } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES) {
+        for (int i = 0; i < KBO_HUB_FA_SUBVIEW_COUNT; i++) {
+            kbo_window_text_appendf(buffer, "<a class='subTab %s' href='kbo://fa/%d'>",
+                i == g_kbo_hub_selected_fa_subview ? "active" : "", i);
+            kbo_html_append_escaped(buffer, kbo_hub_fa_subnav_label(i));
+            kbo_window_text_appendf(buffer, "</a>");
+        }
     }
 }
 
@@ -98,7 +103,9 @@ static int kbo_webview_current_view_has_sub_tabs(void)
     return g_kbo_hub_selected_view == KBO_HUB_VIEW_MOD_INFO
         || g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY
         || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_QUOTA
-        || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_GAMES;
+        || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_GAMES
+        || g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES
+        || g_kbo_hub_selected_view == KBO_HUB_VIEW_SETTINGS;
 }
 
 static void kbo_webview_copy_scrollbar_skin_src(const char* file_name, char* out, size_t out_size)
@@ -288,6 +295,20 @@ static void kbo_webview_append_roster_table_css(KboWindowTextBuffer* css)
         ".ootpRosterTable .roLeague{width:250px}.ootpRosterTable .roAge{width:44px;text-align:right}.ootpRosterTable .roNat{width:110px}.roNatWrap{display:flex;align-items:center;gap:6px;min-width:0}.roNatFlag{width:20px;height:14px;object-fit:cover;flex:none;border:1px solid rgba(0,0,0,.48);box-shadow:0 0 0 1px rgba(255,255,255,.08)}.roNatText{min-width:0;overflow:hidden;text-overflow:ellipsis}.ootpRosterTable .roTeam{width:94px}.ootpRosterTable .roClub{width:160px}.ootpRosterTable .roReturn{width:118px}.ootpRosterTable .roEntry{width:96px;text-align:right}.ootpRosterTable .roStatus{width:98px}.ootpRosterTable .roSlot{width:58px}.ootpRosterTable .roResult{width:94px}.ootpRosterTable .roAction{width:110px}.ootpRosterTable .roDate{width:92px}"
         ".ootpRosterTable .roOrange{color:#ff7a00}.ootpRosterTable .roMuted{color:#bcbcbc}.ootpRosterTable .roReady{color:#49c5ff}.ootpRosterTable .roSoon{color:#ffb13b}.ootpRosterTable .roServing{color:#d7d7d7}"
         ".applicantRosterTable .roName{width:230px}.applicantRosterTable .roClub{width:190px}.applicantRosterTable .roStatus{color:#ff7a00;font-weight:500}.resultRosterTable .roName{width:240px}.resultRosterTable .roLeague{width:210px}.resultRosterTable .roResult{color:#ff7a00;font-weight:500}.foreignRosterTable .roName{width:230px}.foreignRosterTable .roNat{width:160px}.foreignRosterTable .roStatus{width:140px}.foreignRosterTable .roSlot{color:#ff7a00;font-weight:500}.foreignRightsTable .roAction{width:58px;text-align:center}.foreignRightsTable .roName{width:230px}.foreignRightsTable .roNat{width:150px}.foreignRightsTable .roStatus{width:140px}.foreignRightsTable .roTeam{width:82px}.faCasesTable .roName{width:220px}.faCasesTable .roStatus{width:340px}.faCases .metricRow{display:flex;align-items:center;gap:7px;min-height:28px;padding:0 8px 6px;overflow:hidden}.faCases .pill{display:inline-flex;align-items:center;min-width:0;height:22px;padding:0 8px;border:1px solid #343434;border-radius:4px;background:#202020;color:#e8e8e8;font-family:var(--ui-font);font-size:12px;font-weight:900;white-space:nowrap}.agTournamentTable .roPo{width:60px}.agTournamentTable .roName{width:220px}.agTournamentTable .roDate{width:190px}.agTournamentTable .roClub{width:116px}.agTournamentTable .roTeam{width:116px}.agTournamentTable .roReturn{width:116px}.agTournamentTable .roStatus{width:118px}.agTournamentTable .roResult{width:122px}.rightsActions{display:flex;align-items:center;justify-content:center;min-width:0}.rightsAction{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;border-radius:0;background-color:transparent;background-repeat:no-repeat;background-position:center center;background-size:24px 24px;color:transparent;font-size:0;line-height:0;text-decoration:none;cursor:pointer}.rightsRelease{background-image:var(--ootp-btn-minus-up)}.rightsRelease:hover{background-image:var(--ootp-btn-minus-over)}.rightsRelease:active{background-image:var(--ootp-btn-minus-down)}.ootpConfirmOverlay{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.46);font-family:var(--ui-font)}.ootpConfirmOverlay.show{display:flex}.ootpConfirmDialog{width:430px;max-width:calc(100vw - 36px);border:1px solid #383838;border-radius:5px;background:#1a1a1a;box-shadow:0 10px 28px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}.ootpConfirmTitle{height:31px;display:flex;align-items:center;padding:0 11px;background:#2a2a2a;color:#f2f2f2;font-size:14px;font-weight:900;border-bottom:1px solid #0f0f0f;text-transform:uppercase}.ootpConfirmBody{padding:14px 14px 10px;color:#e8e8e8;font-size:13px;font-weight:400;line-height:1.42}.ootpConfirmPlayer{margin-top:8px;padding:7px 9px;border:1px solid #313131;border-radius:3px;background:#101010;color:#fff;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ootpConfirmDetail{margin-top:8px;color:#a7a7a7}.ootpConfirmActions{display:flex;justify-content:flex-end;gap:8px;padding:0 14px 14px}.ootpConfirmButton{min-width:96px;height:28px;border:1px solid #414141;border-radius:4px;background:#262626;color:#eeeeee;font-family:var(--ui-font);font-size:13px;font-weight:900}.ootpConfirmButton:hover{border-color:#777;background:#303030}.ootpConfirmButton.primary{background:#3b2318;border-color:#7c3b24;color:#fff}.ootpConfirmButton.primary:hover{background:#562c1d;border-color:#a24d2d}.rosterRights{gap:0!important}.rosterTopBar{height:34px;display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 8px 4px 8px;background:transparent;border:0;color:#e8e8e8;font-family:var(--ui-font);font-size:14px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden}.rosterTopText{margin-left:auto;min-width:0;max-width:100%%;overflow:hidden;text-overflow:ellipsis;text-align:right}.rosterTopControls{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:none}.rosterTopLabel{color:#f0f0f0;font-size:14px;font-weight:900;text-transform:uppercase}.rosterTopBar .rosterYearSelect{width:96px;height:24px;border:1px solid #c8c8c8;border-radius:4px;background:#ededed;color:#111;font-family:var(--ui-font);font-size:13px;font-weight:900;padding:0 24px 0 9px}.ootpRosterTable .roEmptyMessage{text-align:center;color:#dcdcdc;font-weight:500;background:#202020!important}");
+    kbo_window_text_appendf(
+        css,
+        ".ootpConfirmOverlay{background:rgba(0,0,0,.56);align-items:center;justify-content:center}"
+        ".ootpConfirmDialog{width:486px;max-width:calc(100vw - 28px);min-height:176px;border:1px solid #242428;border-radius:5px;background:#38383c;box-shadow:0 8px 24px rgba(0,0,0,.78);overflow:hidden}"
+        ".ootpConfirmTitle{position:relative;height:35px;display:flex;align-items:center;justify-content:center;padding:0 54px;background:linear-gradient(#5d5d63,#4d4d53);border-bottom:1px solid rgba(0,0,0,.5);color:#111;font-size:22px;font-weight:900;line-height:35px;text-transform:none}"
+        ".ootpConfirmQuestion{position:absolute;left:20px;top:0;height:35px;line-height:35px;color:#8d8d93;text-shadow:0 1px 0 rgba(255,255,255,.14);font-size:23px;font-weight:900}"
+        ".ootpConfirmTitleText{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+        ".ootpConfirmBody{min-height:95px;padding:30px 32px 12px;color:#f5f5f6;font-size:16px;font-weight:800;line-height:1.35}"
+        ".ootpConfirmMessage{white-space:normal}.ootpConfirmPlayer,.ootpConfirmDetail{display:none}"
+        ".ootpConfirmActions{height:46px;display:flex;align-items:flex-start;justify-content:flex-end;gap:14px;padding:0 33px 18px}"
+        ".ootpConfirmButton,.ootpConfirmButton.primary{min-width:92px;height:26px;display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:4px;background:#717079;color:#f3f3f3;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);font-family:var(--ui-font);font-size:14px;font-weight:800;line-height:26px}"
+        ".ootpConfirmButton:hover,.ootpConfirmButton.primary:hover{background:#7b7a82}.ootpConfirmButton:active,.ootpConfirmButton.primary:active{background:#64636b}"
+        ".ootpConfirmButton:focus{outline:1px solid rgba(255,255,255,.38);outline-offset:1px}"
+        ".ootpConfirmButtonIcon{display:inline-block;width:16px;color:#050505;font-family:'Segoe UI Symbol','Arial',sans-serif;font-size:20px;font-weight:900;line-height:20px;text-align:center}");
 }
 
 static void kbo_webview_append_roster_sort_script(KboWindowTextBuffer* buffer)
@@ -295,16 +316,13 @@ static void kbo_webview_append_roster_sort_script(KboWindowTextBuffer* buffer)
     if (buffer == NULL) {
         return;
     }
-    const char* confirm_title = kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c \xed\x95\xb4\xec\xa0\x9c", "Release Reserve Rights");
+    const char* confirm_title = kbo_hub_text("\xec\xa7\x88\xeb\xac\xb8", "Question");
     const char* confirm_message = kbo_hub_text(
-        "\xec\x9d\xb4 \xec\x84\xa0\xec\x88\x98\xec\x9d\x98 \xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c\xec\x9d\x84 \xed\x95\xb4\xec\xa0\x9c\xed\x95\x98\xec\x8b\x9c\xea\xb2\xa0\xec\x8a\xb5\xeb\x8b\x88\xea\xb9\x8c?",
-        "Do you want to release reserve rights for this player?");
-    const char* confirm_detail = kbo_hub_text(
-        "\xed\x99\x95\xec\x9d\xb8\xed\x95\x98\xeb\xa9\xb4 \xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c \xed\x91\x9c\xec\x97\x90\xec\x84\x9c \xec\xa0\x9c\xec\x99\xb8\xeb\x90\xa9\xeb\x8b\x88\xeb\x8b\xa4.",
-        "Confirming will remove him from the reserve-rights list.");
-    const char* confirm_player = kbo_hub_text("\xec\x84\xa0\xec\x88\x98", "Player");
+        "\xec\xa0\x95\xeb\xa7\x90\xeb\xa1\x9c %s\xec\x9d\x98 \xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c\xec\x9d\x84 \xed\x95\xb4\xec\xa0\x9c\xed\x95\x98\xec\x8b\x9c\xea\xb2\xa0\xec\x8a\xb5\xeb\x8b\x88\xea\xb9\x8c?",
+        "Do you really want to release %s?");
+    const char* confirm_player = kbo_hub_text("\xec\x9d\xb4 \xec\x84\xa0\xec\x88\x98", "this player");
     const char* confirm_cancel = kbo_hub_text("\xec\xb7\xa8\xec\x86\x8c", "Cancel");
-    const char* confirm_ok = kbo_hub_text("\xed\x99\x95\xec\x9d\xb8", "Confirm");
+    const char* confirm_ok = kbo_hub_text("\xed\x99\x95\xec\x9d\xb8", "OK");
     kbo_window_text_appendf(
         buffer,
         "<script>"
@@ -331,33 +349,31 @@ static void kbo_webview_append_roster_sort_script(KboWindowTextBuffer* buffer)
         "document.addEventListener('mousemove',function(e){if(!dragging){return;}var m=metrics();if(m.maxTop<=0||m.maxScroll<=0){return;}var nextTop=Math.max(0,Math.min(m.maxTop,dragStartTop+(e.clientY-dragStartY)));scroller.scrollTop=nextTop*m.maxScroll/m.maxTop;});"
         "document.addEventListener('mouseup',function(){if(!dragging){return;}dragging=false;thumb.classList.remove('dragging');document.body.style.userSelect='';});"
         "scroller.addEventListener('scroll',update);window.addEventListener('resize',update);scroller.kboOotpUpdate=update;setTimeout(update,0);setTimeout(update,150);}"
-        "function installRightsConfirm(){var pendingHref='';var overlay=document.createElement('div');overlay.className='ootpConfirmOverlay';var dialog=document.createElement('div');dialog.className='ootpConfirmDialog';var title=document.createElement('div');title.className='ootpConfirmTitle';title.textContent=");
-    kbo_webview_append_js_string(buffer, confirm_title);
-    kbo_window_text_appendf(
-        buffer,
-        ";var body=document.createElement('div');body.className='ootpConfirmBody';var message=document.createElement('div');message.className='ootpConfirmMessage';message.textContent=");
+        "function makeConfirmButton(cls,icon,text){var button=document.createElement('button');button.type='button';button.className='ootpConfirmButton '+cls;var mark=document.createElement('span');mark.className='ootpConfirmButtonIcon';mark.textContent=icon;var label=document.createElement('span');label.textContent=text;button.appendChild(mark);button.appendChild(label);return button;}"
+        "function formatConfirmQuestion(template,name){return template.indexOf('%%s')>=0?template.replace('%%s',name):template;}"
+        "function installRightsConfirm(){var pendingHref='';var messageTemplate=");
     kbo_webview_append_js_string(buffer, confirm_message);
     kbo_window_text_appendf(
         buffer,
-        ";var player=document.createElement('div');player.className='ootpConfirmPlayer';var detail=document.createElement('div');detail.className='ootpConfirmDetail';detail.textContent=");
-    kbo_webview_append_js_string(buffer, confirm_detail);
+        ";var overlay=document.createElement('div');overlay.className='ootpConfirmOverlay';var dialog=document.createElement('div');dialog.className='ootpConfirmDialog';var title=document.createElement('div');title.className='ootpConfirmTitle';var question=document.createElement('span');question.className='ootpConfirmQuestion';question.textContent='?';var titleText=document.createElement('span');titleText.className='ootpConfirmTitleText';titleText.textContent=");
+    kbo_webview_append_js_string(buffer, confirm_title);
     kbo_window_text_appendf(
         buffer,
-        ";var actions=document.createElement('div');actions.className='ootpConfirmActions';var cancel=document.createElement('button');cancel.type='button';cancel.className='ootpConfirmButton';cancel.textContent=");
-    kbo_webview_append_js_string(buffer, confirm_cancel);
-    kbo_window_text_appendf(
-        buffer,
-        ";var ok=document.createElement('button');ok.type='button';ok.className='ootpConfirmButton primary';ok.textContent=");
+        ";title.appendChild(question);title.appendChild(titleText);var body=document.createElement('div');body.className='ootpConfirmBody';var message=document.createElement('div');message.className='ootpConfirmMessage';var actions=document.createElement('div');actions.className='ootpConfirmActions';var ok=makeConfirmButton('primary','\\u2713',");
     kbo_webview_append_js_string(buffer, confirm_ok);
     kbo_window_text_appendf(
         buffer,
-        ";actions.appendChild(cancel);actions.appendChild(ok);body.appendChild(message);body.appendChild(player);body.appendChild(detail);dialog.appendChild(title);dialog.appendChild(body);dialog.appendChild(actions);overlay.appendChild(dialog);document.body.appendChild(overlay);"
+        ");var cancel=makeConfirmButton('','\\u2715',");
+    kbo_webview_append_js_string(buffer, confirm_cancel);
+    kbo_window_text_appendf(
+        buffer,
+        ");actions.appendChild(ok);actions.appendChild(cancel);body.appendChild(message);dialog.appendChild(title);dialog.appendChild(body);dialog.appendChild(actions);overlay.appendChild(dialog);document.body.appendChild(overlay);"
         "function close(){overlay.classList.remove('show');pendingHref='';}"
         "function open(link){pendingHref=link.getAttribute('href')||'';var name=link.getAttribute('data-player')||");
     kbo_webview_append_js_string(buffer, confirm_player);
     kbo_window_text_appendf(
         buffer,
-        ";player.textContent=name;overlay.classList.add('show');cancel.focus();}"
+        ";message.textContent=formatConfirmQuestion(messageTemplate,name);overlay.classList.add('show');cancel.focus();}"
         "document.addEventListener('click',function(e){var node=e.target;while(node&&node!==document&&!(node.classList&&node.classList.contains('rightsRelease'))){node=node.parentNode;}if(!node||node===document){return;}e.preventDefault();open(node);});"
         "cancel.addEventListener('click',function(){close();});overlay.addEventListener('click',function(e){if(e.target===overlay){close();}});ok.addEventListener('click',function(){var href=pendingHref;close();if(href){window.location.href=href;}});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay.classList.contains('show')){close();}});}"
         "installGameSurfaceGuards();"
@@ -380,6 +396,10 @@ static WCHAR* kbo_build_webview_hub_html(void)
     buffer.capacity = html_cap;
     buffer.length = 0;
 
+    if (g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA) {
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
+    }
     kbo_hub_ensure_valid_selection();
 
     char league_name[96] = {0};

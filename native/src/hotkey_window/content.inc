@@ -9,7 +9,6 @@
 #include "content_mod_info.inc"
 #include "content_foreign_policy.inc"
 #include "content_asian_games.inc"
-#include "content_upcoming_fa.inc"
 #include "content_fa_cases.inc"
 #include "content_settings.inc"
 #include "content_router.inc"

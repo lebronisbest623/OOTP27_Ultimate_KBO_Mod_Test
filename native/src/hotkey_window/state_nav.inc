@@ -6,8 +6,8 @@ static const char* kbo_hub_nav_label(int index)
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c",  "RIGHTS");
     case KBO_HUB_VIEW_ASIAN_QUOTA:    return kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98", "FOREIGN PLAYERS");
     case KBO_HUB_VIEW_ASIAN_GAMES:    return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84", "AGAMES");
-    case KBO_HUB_VIEW_UPCOMING_FA:     return kbo_hub_text("FA", "FA");
-    case KBO_HUB_VIEW_FA_CASES:       return kbo_hub_text("FA CASES", "FA CASES");
+    case KBO_HUB_VIEW_UPCOMING_FA:    return "";
+    case KBO_HUB_VIEW_FA_CASES:       return kbo_hub_text("FA", "FA");
     case KBO_HUB_VIEW_SETTINGS:       return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",    "SETTINGS");
     default:                          return "";
     }
@@ -34,6 +34,16 @@ static const char* kbo_hub_agames_subnav_label(int index)
         return kbo_hub_text("\xec\x9d\xbc\xec\xa0\x95", "SCHEDULE");
     case KBO_HUB_AGAMES_SUBVIEW_ROSTER:
         return kbo_hub_text("\xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0", "ROSTER");
+    default:
+        return "";
+    }
+}
+
+static const char* kbo_hub_fa_subnav_label(int index)
+{
+    switch (index) {
+    case KBO_HUB_FA_SUBVIEW_MARKET:
+        return kbo_hub_text("\xec\x8b\x9c\xec\x9e\xa5", "MARKET");
     default:
         return "";
     }

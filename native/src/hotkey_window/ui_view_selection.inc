@@ -19,8 +19,8 @@ static const char* kbo_hub_current_view_title(void)
     case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c", "FOREIGN RIGHTS");
     case KBO_HUB_VIEW_ASIAN_QUOTA: return kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98", "FOREIGN PLAYERS");
     case KBO_HUB_VIEW_ASIAN_GAMES: return kbo_hub_text("ASIAN GAMES", "ASIAN GAMES");
-    case KBO_HUB_VIEW_UPCOMING_FA: return kbo_hub_text("UPCOMING FA", "UPCOMING FA");
-    case KBO_HUB_VIEW_FA_CASES: return kbo_hub_text("FA CASES", "FA CASES");
+    case KBO_HUB_VIEW_UPCOMING_FA:
+    case KBO_HUB_VIEW_FA_CASES: return kbo_hub_text("FA", "FA");
     case KBO_HUB_VIEW_MOD_INFO: return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
     case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",      "SETTINGS");
     default:                    return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
@@ -47,12 +47,11 @@ static const char* kbo_hub_current_view_subtitle(void)
             return kbo_hub_text("ASIAN GAMES", "ASIAN GAMES");
         }
     case KBO_HUB_VIEW_UPCOMING_FA:
-        return kbo_hub_text("Tracked KBO FA requalification by club", "Tracked KBO FA requalification by club");
     case KBO_HUB_VIEW_FA_CASES:
-        return kbo_hub_text("Read-only classification of players currently visible in the FA market", "Read-only classification of players currently visible in the FA market");
+        return kbo_hub_fa_subnav_label(KBO_HUB_FA_SUBVIEW_MARKET);
     case KBO_HUB_VIEW_MOD_INFO:
         return kbo_hub_mod_subnav_label(g_kbo_hub_selected_mod_subview);
-    case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xec\x96\xb8\xec\x96\xb4\xec\x99\x80 \xeb\x8b\xa8\xec\xb6\x95\xed\x82\xa4\xeb\xa5\xbc \xec\x84\xa4\xec\xa0\x95\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",                "Language and hotkey settings");
+    case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xeb\xa6\xac\xea\xb7\xb8\xec\x99\x80 \xea\xb2\x8c\xec\x9e\x84 \xed\x94\x8c\xeb\xa0\x88\xec\x9d\xb4 \xec\x84\xa4\xec\xa0\x95", "League and gameplay settings");
     default:                    return kbo_hub_text("\xeb\x9f\xb0\xec\xb2\x98\xec\x99\x80 \xeb\x9f\xb0\xed\x83\x80\xec\x9e\x84 \xed\x8c\xa8\xec\xb9\x98 \xec\x83\x81\xed\x83\x9c\xeb\xa5\xbc \xed\x91\x9c\xec\x8b\x9c\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",       "Launcher and runtime patch status");
     }
 }

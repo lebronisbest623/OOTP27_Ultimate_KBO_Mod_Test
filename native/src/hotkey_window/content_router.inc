@@ -11,7 +11,7 @@ static void kbo_build_hub_window_text(char* out, size_t out_size)
         }
         return;
     case KBO_HUB_VIEW_ASIAN_GAMES: kbo_build_asian_games_hub_text(out, out_size);       return;
-    case KBO_HUB_VIEW_UPCOMING_FA: kbo_build_upcoming_fa_hub_text(out, out_size);        return;
+    case KBO_HUB_VIEW_UPCOMING_FA:
     case KBO_HUB_VIEW_FA_CASES:    kbo_build_fa_cases_hub_text(out, out_size);           return;
     case KBO_HUB_VIEW_MOD_INFO: kbo_build_mod_info_hub_text(out, out_size);            return;
     case KBO_HUB_VIEW_SETTINGS: kbo_build_settings_hub_text(out, out_size);            return;

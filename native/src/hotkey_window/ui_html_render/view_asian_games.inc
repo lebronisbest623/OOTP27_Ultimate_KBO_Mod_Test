@@ -508,11 +508,11 @@ static void kbo_webview_append_asian_games_view(KboWindowTextBuffer* buffer)
                         "<tr><td class='roPo'>%s</td><td class='roNum'>",
                         kbo_webview_player_position_label(kbo_player_pointer_plausible(player_ptr) ? (uint8_t*)player_ptr : NULL, entry->role));
                     kbo_html_append_escaped(buffer, uniform_number);
-                    kbo_window_text_appendf(buffer, "</td><td class='roName'>");
-                    kbo_html_append_escaped(buffer, player_name);
+                    kbo_window_text_appendf(buffer, "</td>");
+                    kbo_webview_append_player_name_cell(buffer, player_name, entry->player_id);
                     kbo_window_text_appendf(
                         buffer,
-                        "</td><td class='roLeague'>Korean National Team</td><td class='roAge'>%u</td>",
+                        "<td class='roLeague'>Korean National Team</td><td class='roAge'>%u</td>",
                         (uint32_t)entry->age
                     );
                     kbo_webview_append_roster_nation_cell(buffer, OOTP27_KBO_KOREA_NATION_ID);

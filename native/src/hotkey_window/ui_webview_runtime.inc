@@ -88,6 +88,9 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
             if (view == KBO_HUB_VIEW_FOREIGN_RIGHTS) {
                 g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_QUOTA;
                 g_kbo_hub_selected_foreign_subview = KBO_HUB_FOREIGN_SUBVIEW_RIGHTS;
+            } else if (view == KBO_HUB_VIEW_UPCOMING_FA) {
+                g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+                g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
             } else {
                 g_kbo_hub_selected_view = view;
             }
@@ -111,6 +114,11 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
                     && (g_kbo_hub_selected_mod_subview < 0
                         || g_kbo_hub_selected_mod_subview >= KBO_HUB_MOD_SUBVIEW_COUNT)) {
                 g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_README;
+            }
+            if (g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES
+                    && (g_kbo_hub_selected_fa_subview < 0
+                        || g_kbo_hub_selected_fa_subview >= KBO_HUB_FA_SUBVIEW_COUNT)) {
+                g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
             }
         }
         kbo_webview_navigate_current();
@@ -182,26 +190,22 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "fa/", 3) == 0) {
+        int subview = atoi(cmd + 3);
+        if (subview >= 0 && subview < KBO_HUB_FA_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+            g_kbo_hub_selected_fa_subview = subview;
+            g_kbo_hub_open_dropdown = 0;
+        }
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "settings/intl-fa-multiplier/", 29) == 0) {
         int multiplier = kbo_clamp_intl_established_fa_multiplier(atoi(cmd + 29));
         if (kbo_set_intl_established_fa_multiplier(multiplier)) {
             append_logf("settings webview: international established FA multiplier=%d", multiplier);
         } else {
             append_logf("settings webview: failed to write international established FA multiplier=%d", multiplier);
-        }
-        g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
-        g_kbo_hub_open_dropdown = 0;
-        kbo_webview_navigate_current();
-        return 1;
-    }
-    if (strncmp(cmd, "settings/lang/", 14) == 0) {
-        const char* lang = cmd + 14;
-        if (ascii_equals_ignore_case(lang, "en") || ascii_equals_ignore_case(lang, "english")) {
-            g_kbo_hub_language = KBO_HUB_LANG_EN;
-            kbo_hub_save_language_setting();
-        } else if (ascii_equals_ignore_case(lang, "ko") || ascii_equals_ignore_case(lang, "korean")) {
-            g_kbo_hub_language = KBO_HUB_LANG_KO;
-            kbo_hub_save_language_setting();
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;

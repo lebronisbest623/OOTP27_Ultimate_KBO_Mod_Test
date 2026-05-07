@@ -15,7 +15,7 @@ static void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_FA_MARKET_CLASSIFICATION_MAX * sizeof(KboFaMarketClassification));
     if (rows == NULL) {
-        kbo_window_text_appendf(&buffer, "FA CASES\r\n\r\nCould not allocate classification buffer.\r\n");
+        kbo_window_text_appendf(&buffer, "FA MARKET\r\n\r\nCould not allocate classification buffer.\r\n");
         return;
     }
 
@@ -31,7 +31,7 @@ static void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     char league_name[128] = {0};
     kbo_hub_copy_league_display_name(summary.league_id, league_name, sizeof(league_name));
 
-    kbo_window_text_appendf(&buffer, "FA CASES\r\n");
+    kbo_window_text_appendf(&buffer, "FA MARKET\r\n");
     kbo_window_text_appendf(&buffer, "%s\r\n", league_name[0] != '\0' ? league_name : "Selected league");
     kbo_window_text_appendf(
         &buffer,

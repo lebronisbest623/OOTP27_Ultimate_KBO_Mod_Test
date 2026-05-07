@@ -50,9 +50,9 @@ static void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer)
             sizeof(team_abbrev),
             "-");
         kbo_hub_copy_team_abbrev_by_id(row->rights_team_id, rights_abbrev, sizeof(rights_abbrev), "-");
-        kbo_window_text_appendf(buffer, "<tr><td class='roName'>");
-        kbo_html_append_escaped(buffer, row->player_name);
-        kbo_window_text_appendf(buffer, "</td><td>");
+        kbo_window_text_appendf(buffer, "<tr>");
+        kbo_webview_append_player_name_cell(buffer, row->player_name, row->player_id);
+        kbo_window_text_appendf(buffer, "<td>");
         kbo_html_append_escaped(buffer, kbo_fa_market_display_case_label(row->case_label));
         kbo_window_text_appendf(buffer, "</td><td data-sort-value='%u'>", grade_sort_rank);
         kbo_html_append_escaped(buffer, grade_display);

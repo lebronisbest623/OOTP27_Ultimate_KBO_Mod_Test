@@ -15,12 +15,38 @@ static void kbo_html_append_escaped(KboWindowTextBuffer* buffer, const char* tex
     }
 }
 
+static void kbo_webview_append_player_id_attrs(KboWindowTextBuffer* buffer, uint32_t player_id)
+{
+    if (buffer == NULL || player_id == 0u) {
+        return;
+    }
+    kbo_window_text_appendf(buffer, " title='");
+    kbo_html_append_escaped(buffer, kbo_hub_text("OOTP \xec\x84\xa0\xec\x88\x98 ID", "OOTP player ID"));
+    kbo_window_text_appendf(buffer, ": %u' data-player-id='%u'", player_id, player_id);
+}
+
 static void kbo_webview_append_player_name_cell(KboWindowTextBuffer* buffer, const char* player_name, uint32_t player_id)
 {
-    (void)player_id;
-    kbo_window_text_appendf(buffer, "<td class='pname'>");
+    kbo_window_text_appendf(buffer, "<td class='roName'");
+    kbo_webview_append_player_id_attrs(buffer, player_id);
+    kbo_window_text_appendf(buffer, ">");
     kbo_html_append_escaped(buffer, player_name != NULL && player_name[0] != '\0' ? player_name : "Unknown player");
     kbo_window_text_appendf(buffer, "</td>");
+}
+
+static void kbo_webview_append_player_name_link_cell(
+    KboWindowTextBuffer* buffer,
+    const char* player_name,
+    uint32_t player_id,
+    const char* href_prefix)
+{
+    kbo_window_text_appendf(buffer, "<td class='roName'");
+    kbo_webview_append_player_id_attrs(buffer, player_id);
+    kbo_window_text_appendf(buffer, "><a href='%s%u'", href_prefix != NULL ? href_prefix : "#", player_id);
+    kbo_webview_append_player_id_attrs(buffer, player_id);
+    kbo_window_text_appendf(buffer, ">");
+    kbo_html_append_escaped(buffer, player_name != NULL && player_name[0] != '\0' ? player_name : "Unknown player");
+    kbo_window_text_appendf(buffer, "</a></td>");
 }
 
 static void kbo_webview_append_team_cell(KboWindowTextBuffer* buffer, const char* team_text)
@@ -481,9 +507,13 @@ static void kbo_webview_append_candidate_card(
         "'>-</a></span></td><td class='roPo'>%s</td><td class='roNum'>",
         kbo_webview_player_position_label(player, 0u));
     kbo_html_append_escaped(buffer, uniform_number);
-    kbo_window_text_appendf(buffer, "</td><td class='roName'><a href='kbo://select/%u'>", player_id);
-    kbo_html_append_escaped(buffer, player_name[0] != '\0' ? player_name : "Unknown player");
-    kbo_window_text_appendf(buffer, "</a></td><td class='roTeam'>");
+    kbo_window_text_appendf(buffer, "</td>");
+    kbo_webview_append_player_name_link_cell(
+        buffer,
+        player_name[0] != '\0' ? player_name : "Unknown player",
+        player_id,
+        "kbo://select/");
+    kbo_window_text_appendf(buffer, "<td class='roTeam'>");
     kbo_html_append_escaped(buffer, team_abbrev[0] != '\0' ? team_abbrev : "-");
     kbo_window_text_appendf(buffer, "</td>");
     kbo_webview_append_roster_nation_cell(buffer, nation_id);

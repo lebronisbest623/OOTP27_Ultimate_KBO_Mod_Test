@@ -19,9 +19,8 @@ static void kbo_webview_append_selected_view(KboWindowTextBuffer* buffer, uint32
         }
     } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_GAMES) {
         kbo_webview_append_asian_games_view(buffer);
-    } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA) {
-        kbo_webview_append_upcoming_fa_view(buffer);
-    } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES) {
+    } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA
+            || g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES) {
         kbo_webview_append_fa_cases_view(buffer);
     } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_SETTINGS) {
         kbo_webview_append_settings_view(buffer);

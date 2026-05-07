@@ -68,9 +68,9 @@ static void kbo_webview_append_asian_quota_view(KboWindowTextBuffer* buffer)
                 "<tr><td class='roPo'>%s</td><td class='roNum'>",
                 kbo_webview_player_position_label(player, 0u));
             kbo_html_append_escaped(buffer, uniform_number);
-            kbo_window_text_appendf(buffer, "</td><td class='roName'>");
-            kbo_html_append_escaped(buffer, player_name[0] != '\0' ? player_name : "Unknown player");
-            kbo_window_text_appendf(buffer, "</td><td class='roSlot'>");
+            kbo_window_text_appendf(buffer, "</td>");
+            kbo_webview_append_player_name_cell(buffer, player_name[0] != '\0' ? player_name : "Unknown player", player_id);
+            kbo_window_text_appendf(buffer, "<td class='roSlot'>");
             kbo_html_append_escaped(buffer, kbo_hub_foreign_slot_code_for_player(player));
             kbo_window_text_appendf(buffer, "</td><td class='roTeam'>");
             kbo_html_append_escaped(buffer, current_team_abbrev[0] != '\0' ? current_team_abbrev : "-");
