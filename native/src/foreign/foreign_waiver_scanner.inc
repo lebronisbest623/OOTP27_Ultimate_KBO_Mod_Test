@@ -7,6 +7,7 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
     uint32_t last_ai_run_date = 0u;
     for (;;) {
         Sleep(5000);
+        KBO_PROFILE_BEGIN(profile_foreign_waiver_scanner_tick);
         tick++;
         uint32_t today = 0u;
         char readiness_path[MAX_PATH] = {0};
@@ -16,11 +17,13 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
             if (InterlockedCompareExchange(&waiting_logged, 1, 0) == 0) {
                 append_log_line("foreign waiver worker waiting: save path/date not ready");
             }
+            KBO_PROFILE_END(profile_foreign_waiver_scanner_tick, "foreign_waiver.scanner.not_ready");
             continue;
         }
 
         process_foreign_waiver_commands();
         if (!kbo_is_foreign_waiver_negotiation_window_open()) {
+            KBO_PROFILE_END(profile_foreign_waiver_scanner_tick, "foreign_waiver.scanner.window_closed");
             continue;
         }
 
@@ -36,6 +39,7 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
             audit_foreign_roster_state("foreign_roster_post_tick", 1);
             write_foreign_waiver_candidates("foreign_waiver_scanner");
         }
+        KBO_PROFILE_END(profile_foreign_waiver_scanner_tick, "foreign_waiver.scanner.tick");
     }
     return 0;
 }

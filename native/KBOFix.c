@@ -21,6 +21,7 @@
  * Single-translation-unit build: feature areas split into source fragments.
  */
 #include "src/core.inc"
+#include "src/bootstrap/profiler.inc"
 #include "src/bootstrap/perf_probe.inc"
 #include "src/build_verify.inc"
 #include "src/runtime_memory.inc"

@@ -1,10 +1,19 @@
 /* Core logging helpers. */
 
+static int kbo_profiler_begin(LARGE_INTEGER* out_start);
+static void kbo_profiler_end(const char* name, const LARGE_INTEGER* start);
+
 static void append_log_line(const char* message)
 {
+    LARGE_INTEGER profile_start = {0};
+    int profile_active = kbo_profiler_begin(&profile_start);
+
     char local_app_data[MAX_PATH] = {0};
     DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
     if (got == 0 || got >= sizeof(local_app_data)) {
+        if (profile_active) {
+            kbo_profiler_end("log.append_line.env_unavailable", &profile_start);
+        }
         return;
     }
 
@@ -24,6 +33,9 @@ static void append_log_line(const char* message)
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
+        if (profile_active) {
+            kbo_profiler_end("log.append_line.open_failed", &profile_start);
+        }
         return;
     }
 
@@ -51,6 +63,9 @@ static void append_log_line(const char* message)
     }
 
     CloseHandle(file);
+    if (profile_active) {
+        kbo_profiler_end("log.append_line", &profile_start);
+    }
 }
 
 static void append_logf(const char* format, ...)

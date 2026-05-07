@@ -84,17 +84,21 @@ static void kbo_team_add_player_record_fa_compensation_success(
 
 static int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t player_ptr)
 {
+    KBO_PROFILE_BEGIN(profile_military_team_add_should_block);
     if (!kbo_fix_enabled()) {
+        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.disabled");
         return 0;
     }
     if (team_ptr == 0
             || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.bad_team");
         return 0;
     }
 
     uint8_t* team = (uint8_t*)team_ptr;
     uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
     if (!kbo_team_id_is_military_service_team(team_id)) {
+        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.non_military_team");
         return 0;
     }
 
@@ -107,12 +111,14 @@ static int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr
                 team_id,
                 (void*)player_ptr);
         }
+        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.bad_player");
         return 0;
     }
 
     uint8_t* player = (uint8_t*)player_ptr;
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     if (player_id == 0u) {
+        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.no_player_id");
         return 0;
     }
 
@@ -124,6 +130,7 @@ static int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr
     if (active_index >= 0
             || (military_active != 0u && days_left > 0)
             || (loan_team_id == team_id && days_left > 0)) {
+        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.allowed_active_loan");
         return 0;
     }
 
@@ -151,6 +158,7 @@ static int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr
             active_index,
             today);
     }
+    KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.blocked");
     return 1;
 }
 
@@ -164,12 +172,15 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     uintptr_t arg7,
     uintptr_t arg8)
 {
+    KBO_PROFILE_BEGIN(profile_team_add_guard_wrapper);
     if (kbo_military_team_add_player_should_block(team_ptr, player_ptr)) {
+        KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.blocked");
         return 0;
     }
 
     OotpKboTeamAddPlayerExFn original = g_kbo_team_add_player_guard_trampoline;
     if (original == NULL) {
+        KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.no_original");
         return 0;
     }
 
@@ -196,5 +207,6 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             before_active_team_id,
             before_original_team_id);
     }
+    KBO_PROFILE_END(profile_team_add_guard_wrapper, result != 0u ? "team_add_guard.success" : "team_add_guard.original_rejected");
     return result;
 }

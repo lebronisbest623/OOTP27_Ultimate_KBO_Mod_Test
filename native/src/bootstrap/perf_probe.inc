@@ -7,6 +7,16 @@ static void kbo_perf_probe_record(
     volatile LONG* last_tick,
     DWORD elapsed_ms)
 {
+    if (elapsed_ms > 0u) {
+        kbo_profiler_record_us(
+            name != NULL ? name : "legacy_perf_probe",
+            (unsigned long long)elapsed_ms * 1000ULL);
+    } else if (kbo_profiler_is_enabled()) {
+        kbo_profiler_record_us(
+            name != NULL ? name : "legacy_perf_probe",
+            0ULL);
+    }
+
     LONG total = InterlockedIncrement(total_calls);
     if (elapsed_ms > 0u) {
         LONG elapsed = elapsed_ms > 0x7fffffffu ? 0x7fffffff : (LONG)elapsed_ms;
@@ -51,4 +61,3 @@ static void kbo_perf_probe_record(
             (unsigned long)window_ms);
     }
 }
-

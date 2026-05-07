@@ -948,10 +948,12 @@ static int kbo_fa_salary_snapshot_write_csv(
 
 static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date, uint32_t season, uint32_t opening_day, uint32_t league_id)
 {
+    KBO_PROFILE_BEGIN(profile_snapshot_capture);
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
         append_logf("KBO FA salary snapshot skipped source=%s reason=no_player_vector date=%u", source != NULL ? source : "", date);
+        KBO_PROFILE_END(profile_snapshot_capture, "fa_salary_snapshot.capture.no_player_vector");
         return 0;
     }
 
@@ -961,6 +963,7 @@ static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32
         (SIZE_T)player_count * sizeof(KboFaSalarySnapshotRow));
     if (rows == NULL) {
         append_logf("KBO FA salary snapshot skipped source=%s reason=alloc_failed count=%d", source != NULL ? source : "", player_count);
+        KBO_PROFILE_END(profile_snapshot_capture, "fa_salary_snapshot.capture.alloc_failed");
         return 0;
     }
 
@@ -1037,6 +1040,7 @@ static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32
     }
 
     HeapFree(GetProcessHeap(), 0, rows);
+    KBO_PROFILE_END(profile_snapshot_capture, "fa_salary_snapshot.capture");
     return wrote;
 }
 
@@ -1182,12 +1186,15 @@ static DWORD WINAPI kbo_fa_salary_snapshot_phase_event_thread(LPVOID parameter)
 
     for (;;) {
         Sleep(250);
+        KBO_PROFILE_BEGIN(profile_phase_thread_tick);
         if (!kbo_fix_enabled()) {
+            KBO_PROFILE_END(profile_phase_thread_tick, "fa_salary_snapshot.phase_thread.disabled_tick");
             continue;
         }
 
         kbo_fa_salary_snapshot_drain_phase_events_once();
         kbo_fa_salary_snapshot_try_pending_phase_event();
+        KBO_PROFILE_END(profile_phase_thread_tick, "fa_salary_snapshot.phase_thread.tick");
     }
 
     return 0;
@@ -1221,7 +1228,9 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
     uint32_t captured_season = 0u;
     for (;;) {
         Sleep(KBO_FA_SALARY_SNAPSHOT_THREAD_SLEEP_MS);
+        KBO_PROFILE_BEGIN(profile_snapshot_thread_tick);
         if (!kbo_fix_enabled()) {
+            KBO_PROFILE_END(profile_snapshot_thread_tick, "fa_salary_snapshot.thread.disabled_tick");
             continue;
         }
 
@@ -1229,6 +1238,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
         uint32_t month = 0;
         uint32_t day = 0;
         if (!kbo_current_date_is_valid(&year, &month, &day)) {
+            KBO_PROFILE_END(profile_snapshot_thread_tick, "fa_salary_snapshot.thread.no_date");
             continue;
         }
         uint32_t date = year * 10000u + month * 100u + day;
@@ -1243,6 +1253,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
                     append_logf("KBO FA salary snapshot waiting date=%u league=%u reason=opening_day_unavailable", date, league_id);
                     last_log_date = date;
                 }
+                KBO_PROFILE_END(profile_snapshot_thread_tick, "fa_salary_snapshot.thread.opening_day_unavailable");
                 continue;
             }
             if (opening_day == 0u) {
@@ -1260,17 +1271,20 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
                 last_log_date = date;
                 last_log_opening_day = opening_day;
             }
+            KBO_PROFILE_END(profile_snapshot_thread_tick, "fa_salary_snapshot.thread.outside_opening_window");
             continue;
         }
 
         if (captured_season == year || kbo_fa_salary_snapshot_file_exists(year)) {
             captured_season = year;
+            KBO_PROFILE_END(profile_snapshot_thread_tick, "fa_salary_snapshot.thread.already_captured");
             continue;
         }
 
         if (kbo_capture_fa_salary_opening_day_snapshot("opening_day_thread", date, year, opening_day, league_id)) {
             captured_season = year;
         }
+        KBO_PROFILE_END(profile_snapshot_thread_tick, "fa_salary_snapshot.thread.capture_attempt");
     }
 
     return 0;

@@ -282,11 +282,13 @@ static int kbo_open_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t toda
 
 static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_serial)
 {
+    KBO_PROFILE_BEGIN(profile_foreign_waiver_advance);
     static uint32_t last_checked_yyyymmdd = 0u;
     static uint32_t last_checked_result = 0u;
     if (today_yyyymmdd != 0u
             && today_yyyymmdd == last_checked_yyyymmdd
             && last_checked_result != 0u) {
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.cached");
         return 0;
     }
     last_checked_yyyymmdd = today_yyyymmdd;
@@ -299,12 +301,14 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
 
     if (today_yyyymmdd == 0 || today_serial == 0) {
         append_log_line("foreign waiver auto: season-end check skipped - invalid date");
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.invalid_date");
         return 0;
     }
 
     uint32_t configured_league_id = kbo_get_foreign_waiver_league_id();
     if (configured_league_id == 0u) {
         append_log_line("foreign waiver auto: missing configured league id; skip season-end evaluation");
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.no_league_id");
         return 0;
     }
 
@@ -312,6 +316,7 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
     if (season_end_yyyymmdd == 0u) {
         append_logf("foreign waiver auto: no Offseason starts event found today=%u", today_yyyymmdd);
         last_checked_result = 2u;
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.no_offseason_marker");
         return 0;
     }
     if (today_yyyymmdd < season_end_yyyymmdd) {
@@ -320,6 +325,7 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
             season_end_yyyymmdd,
             today_yyyymmdd);
         last_checked_result = 2u;
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.waiting_marker");
         return 0;
     }
 
@@ -333,6 +339,7 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
             season_end_yyyymmdd,
             today_yyyymmdd);
         last_checked_result = 2u;
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.invalid_marker_serial");
         return 0;
     }
     if (today_serial >= season_end_serial + 20u) {
@@ -345,6 +352,7 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
             season_end_yyyymmdd,
             today_yyyymmdd);
         last_checked_result = 2u;
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.stale_marker");
         return 0;
     }
     if (g_kbo_foreign_waiver_last_seen_yyyymmdd == season_end_yyyymmdd) {
@@ -353,6 +361,7 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
             season_end_yyyymmdd,
             today_yyyymmdd);
         last_checked_result = 2u;
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.already_opened");
         return 0;
     }
 
@@ -366,6 +375,7 @@ static int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t t
         season_end_serial,
         "offseason_starts_event");
     last_checked_result = opened ? 1u : 2u;
+    KBO_PROFILE_END(profile_foreign_waiver_advance, opened ? "foreign_waiver.advance.opened" : "foreign_waiver.advance.open_failed");
     return opened;
 }
 
