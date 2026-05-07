@@ -125,12 +125,18 @@ static int install_kbo_fa_signing_branch_patch(void)
     }
 
     uint8_t* target = resolve_kbo_fa_signing_branch_target();
+    uint8_t* post_target = target != NULL
+        ? target + (OOTP27_FA_SIGNING_BRANCH_POST_SUCCESS_OFFSET - OOTP27_FA_SIGNING_BRANCH_PATCH_OFFSET)
+        : NULL;
     const size_t stolen_len = 16;
     const uint8_t expected[16] = {
         0x45, 0x89, 0x77, 0x60,                         /* mov [r15+0x60],r14d */
         0x41, 0x8B, 0x47, 0x48,                         /* mov eax,[r15+0x48] */
         0x41, 0x89, 0x47, 0x4C,                         /* mov [r15+0x4c],eax */
         0x45, 0x89, 0x77, 0x48                          /* mov [r15+0x48],r14d */
+    };
+    const uint8_t post_expected[5] = {
+        0x41, 0xC6, 0x45, 0x68, 0x01                    /* mov byte ptr [r13+0x68],1 */
     };
 
     if (target == NULL) {
@@ -148,6 +154,43 @@ static int install_kbo_fa_signing_branch_patch(void)
     if (memcmp(target, expected, sizeof(expected)) != 0) {
         log_patch_bytes_mismatch("KBO FA signing branch patch", target, sizeof(expected));
         return 0;
+    }
+
+    if (post_target == NULL || !memory_range_readable(post_target, sizeof(post_expected))) {
+        append_logf("KBO FA signing success post patch target unreadable target=%p", post_target);
+    } else if (post_target[0] == 0xE9) {
+        append_logf("KBO FA signing success post patch already installed target=%p", post_target);
+    } else if (memcmp(post_target, post_expected, sizeof(post_expected)) != 0) {
+        log_patch_bytes_mismatch("KBO FA signing success post patch", post_target, sizeof(post_expected));
+    } else {
+        uint8_t* post_stub = build_kbo_fa_signing_success_post_stub(post_target + sizeof(post_expected), post_target);
+        if (post_stub == NULL) {
+            append_log_line("failed to allocate KBO FA signing success post detour stub");
+        } else {
+            intptr_t rel = (intptr_t)post_stub - ((intptr_t)post_target + 5);
+            if (rel < INT32_MIN || rel > INT32_MAX) {
+                append_logf("KBO FA signing success post patch skipped reason=stub_out_of_range target=%p stub=%p", post_target, post_stub);
+            } else {
+                uint8_t post_patch[5] = {0xE9, 0,0,0,0};
+                int32_t rel32 = (int32_t)rel;
+                memcpy(&post_patch[1], &rel32, sizeof(rel32));
+                DWORD post_old_protect = 0;
+                if (!VirtualProtect(post_target, sizeof(post_patch), PAGE_EXECUTE_READWRITE, &post_old_protect)) {
+                    append_logf("VirtualProtect failed for KBO FA signing success post patch error=%lu", GetLastError());
+                } else {
+                    memcpy(post_target, post_patch, sizeof(post_patch));
+                    FlushInstructionCache(GetCurrentProcess(), post_target, sizeof(post_patch));
+                    DWORD ignored = 0;
+                    VirtualProtect(post_target, sizeof(post_patch), post_old_protect, &ignored);
+                    append_logf(
+                        "installed KBO FA signing success post patch target=%p rva=0x%llx stub=%p wrapper=%p",
+                        post_target,
+                        (unsigned long long)((uintptr_t)post_target - (uintptr_t)exe),
+                        post_stub,
+                        &ootp_kbo_fa_signing_success_post_wrapper);
+                }
+            }
+        }
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
@@ -191,4 +234,3 @@ static int install_kbo_fa_signing_branch_patch(void)
         &ootp_kbo_fa_signing_branch_wrapper);
     return 1;
 }
-

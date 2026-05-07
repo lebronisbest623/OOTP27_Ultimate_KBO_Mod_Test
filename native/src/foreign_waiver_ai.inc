@@ -15,6 +15,7 @@
 #include "foreign/foreign_waiver_events.inc"
 #include "foreign/foreign_waiver_player_eval.inc"
 #include "foreign/intl_established_fa_postscan.inc"
+#include "foreign/intl_established_fa_generation_filter.inc"
 #include "foreign/intl_established_fa_quality_probe.inc"
 #include "foreign/foreign_decision_team.inc"
 #include "foreign/foreign_replacement_seed.inc"

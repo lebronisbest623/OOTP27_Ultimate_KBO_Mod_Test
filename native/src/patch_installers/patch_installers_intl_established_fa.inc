@@ -140,3 +140,95 @@ static int install_kbo_intl_established_fa_player_probe_patch(void)
         &ootp_kbo_intl_established_fa_player_probe_wrapper);
     return 1;
 }
+
+static int install_kbo_intl_established_fa_generation_filter_patch(void)
+{
+    if (read_kbo_localappdata_flag_file("disable_intl_established_fa_generation_filter.txt")) {
+        append_log_line("KBO international established FA generation filter patch disabled: kbo_flags.json disable_intl_established_fa_generation_filter is true");
+        return 1;
+    }
+
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        append_log_line("GetModuleHandleA(NULL) failed for KBO international established FA generation filter patch");
+        return 0;
+    }
+
+    char host[MAX_PATH] = {0};
+    GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
+    if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
+        append_logf("host is not ootp27.exe, skipping KBO international established FA generation filter patch host=%s", host);
+        return 0;
+    }
+
+    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_RVA);
+    const uint8_t expected[OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_STOLEN_LEN] = {
+        0x48, 0x8B, 0xD3,                               /* mov rdx,rbx */
+        0x48, 0x8B, 0x0D, 0x3C, 0x4C, 0xB3, 0x02,       /* mov rcx,[global db] */
+        0xE8, 0xB7, 0xC4, 0xDF, 0xFF                    /* call register player */
+    };
+
+    if (!memory_range_readable(target, sizeof(expected))) {
+        append_logf("KBO international established FA generation filter patch target unreadable target=%p", target);
+        return 0;
+    }
+    if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
+        append_logf("KBO international established FA generation filter patch already installed target=%p", target);
+        return 1;
+    }
+    if (memcmp(target, expected, sizeof(expected)) != 0) {
+        log_patch_bytes_mismatch("KBO international established FA generation filter patch", target, sizeof(expected));
+        return 0;
+    }
+
+    int32_t global_slot_rel = 0;
+    memcpy(&global_slot_rel, target + 6, sizeof(global_slot_rel));
+    void* global_database_slot = target + 10 + global_slot_rel;
+    void* register_player_func = resolve_relative_call_target(target + 10);
+    if (register_player_func == NULL) {
+        append_logf("failed to resolve KBO international established FA register function target=%p", target + 10);
+        return 0;
+    }
+
+    void* continuation = target + sizeof(expected);
+    void* retry_continuation = (uint8_t*)((uintptr_t)exe + OOTP27_INTL_ESTABLISHED_FA_RETRY_LOOP_RVA);
+    uint8_t* stub = build_kbo_intl_established_fa_register_gate_stub(
+        continuation,
+        retry_continuation,
+        global_database_slot,
+        register_player_func);
+    if (stub == NULL) {
+        append_log_line("failed to allocate KBO international established FA generation filter stub");
+        return 0;
+    }
+
+    uint8_t patch[OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_STOLEN_LEN] = {
+        0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+        0,0,0,0,0,0,0,0,
+        0x90
+    };
+    write_u64(&patch[6], (uint64_t)(uintptr_t)stub);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for KBO international established FA generation filter patch error=%lu", GetLastError());
+        return 0;
+    }
+
+    memcpy(target, patch, sizeof(patch));
+    FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+
+    DWORD ignored = 0;
+    VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+
+    append_logf(
+        "installed KBO international established FA generation filter patch target=%p stub=%p continuation=%p retry=%p global_slot=%p register=%p wrapper=%p",
+        target,
+        stub,
+        continuation,
+        retry_continuation,
+        global_database_slot,
+        register_player_func,
+        &ootp_kbo_intl_established_fa_generation_filter_allows_wrapper);
+    return 1;
+}

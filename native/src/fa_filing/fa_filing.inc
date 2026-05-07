@@ -325,6 +325,63 @@ static int kbo_load_fa_filing_records(
     return count;
 }
 
+static int kbo_fa_filing_find_latest_player(
+    uint32_t player_id,
+    uint32_t* out_original_team_id,
+    uint32_t* out_league_id,
+    uint32_t* out_season)
+{
+    if (out_original_team_id != NULL) {
+        *out_original_team_id = 0u;
+    }
+    if (out_league_id != NULL) {
+        *out_league_id = 0u;
+    }
+    if (out_season != NULL) {
+        *out_season = 0u;
+    }
+    if (player_id == 0u) {
+        return 0;
+    }
+
+    KboFaFilingRecord* rows = (KboFaFilingRecord*)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        (SIZE_T)KBO_FA_FILING_MAX * sizeof(KboFaFilingRecord));
+    if (rows == NULL) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    int row_count = kbo_load_fa_filing_records(rows, KBO_FA_FILING_MAX, path, sizeof(path));
+    int best = -1;
+    uint32_t best_date = 0u;
+    for (int i = 0; i < row_count; i++) {
+        if (rows[i].player_id != player_id || rows[i].filing_date == 0u) {
+            continue;
+        }
+        if (best < 0 || rows[i].filing_date >= best_date) {
+            best = i;
+            best_date = rows[i].filing_date;
+        }
+    }
+
+    if (best >= 0) {
+        if (out_original_team_id != NULL) {
+            *out_original_team_id = rows[best].original_team_id;
+        }
+        if (out_league_id != NULL) {
+            *out_league_id = rows[best].league_id;
+        }
+        if (out_season != NULL) {
+            *out_season = rows[best].season;
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, rows);
+    return best >= 0 ? 1 : 0;
+}
+
 static int kbo_fa_filing_is_official_transition_caller(uintptr_t caller_rva)
 {
     return caller_rva == 0x0067D11Eu;

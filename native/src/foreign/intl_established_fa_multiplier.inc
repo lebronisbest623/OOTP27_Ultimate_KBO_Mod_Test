@@ -1,6 +1,7 @@
 /* International established free-agent generation multiplier. Included from native/src/foreign_waiver_ai.inc. */
 
 static LONG g_kbo_intl_established_fa_quality_probe_log_count = 0;
+static LONG g_kbo_intl_established_fa_generation_filter_block_count = 0;
 
 static uint32_t kbo_intl_established_fa_read_league_id(uintptr_t league_ptr, uint32_t offset)
 {
@@ -44,6 +45,7 @@ __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(int32_t 
     }
 
     InterlockedExchange(&g_kbo_intl_established_fa_quality_probe_log_count, 0);
+    InterlockedExchange(&g_kbo_intl_established_fa_generation_filter_block_count, 0);
 
     int multiplier = kbo_get_intl_established_fa_multiplier();
     if (multiplier <= 1) {

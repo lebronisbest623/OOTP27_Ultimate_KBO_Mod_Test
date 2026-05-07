@@ -215,18 +215,21 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     int enable_sangmu_offer_only = enable_sangmu_fa_block_default
         || read_kbo_localappdata_flag_file("enable_kbo_sangmu_offer_only.txt");
     int enable_sangmu_fa_block_core = enable_sangmu_signability_only || enable_sangmu_offer_only;
+    int enable_fa_compensation_core = !read_kbo_localappdata_flag_file("disable_kbo_fa_compensation.txt");
     if (enable_sangmu_fa_block_core) {
         append_logf(
             "KBO Sangmu FA block enabled: signability=%d offer=%d",
             enable_sangmu_signability_only,
             enable_sangmu_offer_only);
+    } else {
+        append_log_line("KBO Sangmu FA block diagnostic disabled: kbo_flags.json enable_kbo_sangmu_signability_only / enable_kbo_sangmu_offer_only are false");
+    }
+    if (enable_sangmu_fa_block_core || enable_fa_compensation_core) {
         if (!read_kbo_localappdata_flag_file("disable_kbo_military_team_add_guard_patch.txt")) {
             install_kbo_military_team_add_guard_patch();
         } else {
             append_log_line("KBO military team-add guard patch disabled: kbo_flags.json disable_kbo_military_team_add_guard_patch is true");
         }
-    } else {
-        append_log_line("KBO Sangmu FA block diagnostic disabled: kbo_flags.json enable_kbo_sangmu_signability_only / enable_kbo_sangmu_offer_only are false");
     }
     start_kbo_delayed_sangmu_fa_hooks_install_thread(
         enable_sangmu_signability_only || read_kbo_localappdata_flag_file("enable_kbo_player_team_signability_patch.txt"),
@@ -249,6 +252,7 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     int enable_fa_requalification = read_kbo_localappdata_flag_file("enable_fa_requalification.txt");
     int enable_fa_signing_branch = enable_fa_requalification
         || enable_sangmu_fa_block_core
+        || enable_fa_compensation_core
         || (kbo_custom_foreign_policy_enabled()
             && !read_kbo_localappdata_flag_file("disable_kbo_foreign_signing_branch_patch.txt"));
     if (enable_fa_signing_branch) {
@@ -280,6 +284,7 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
         append_log_line("KBO salary arbitration no-withdraw patch disabled: kbo_flags.json disable_kbo_salary_arbitration_no_withdraw_patch is true");
     }
     install_kbo_intl_established_fa_multiplier_patch();
+    install_kbo_intl_established_fa_generation_filter_patch();
     start_kbo_intl_established_fa_postscan_thread();
     if (read_kbo_localappdata_flag_file("enable_intl_established_fa_quality_probe_patch.txt")) {
         install_kbo_intl_established_fa_player_probe_patch();

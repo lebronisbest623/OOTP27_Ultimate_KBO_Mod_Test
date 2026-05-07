@@ -142,10 +142,49 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
         }
     }
 
-    kbo_record_fa_compensation_signing(player_ptr, team_id, league_id, "fa_signing_branch");
+    return 1;
+}
+
+__declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t player_ptr, uintptr_t team_ptr)
+{
+    if (!kbo_fix_enabled() || !kbo_player_pointer_plausible(player_ptr)) {
+        return;
+    }
+
+    uint32_t team_id = 0u;
+    uint32_t league_id = 0u;
+    if (!kbo_fa_requalification_team_ptr_is_kbo(team_ptr, &team_id, &league_id)) {
+        return;
+    }
+    if (kbo_team_id_is_military_service_team(team_id)) {
+        return;
+    }
+
+    uint8_t* player = (uint8_t*)player_ptr;
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    uint32_t original_team_id = memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))
+        ? *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET)
+        : 0u;
+
+    static volatile LONG post_log_count = 0;
+    LONG slot = InterlockedIncrement(&post_log_count);
+    if (slot <= 120) {
+        append_logf(
+            "KBO FA signing success post player=%u team=%u league=%u current_team=%u active_team=%u original_team=%u",
+            player_id,
+            team_id,
+            league_id,
+            current_team_id,
+            active_team_id,
+            original_team_id);
+    }
+
+    kbo_record_fa_compensation_signing(player_ptr, team_id, league_id, "fa_signing_success_post");
 
     if (!read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
-        return 1;
+        return;
     }
 
     uint32_t signing_year = kbo_find_league_year_from_id(league_id);
@@ -156,13 +195,12 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
         }
     }
     if (signing_year < 1982u || signing_year > 2200u) {
-        LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
-        if (slot <= 20) {
-            append_logf("KBO FA signing branch skipped reason=no_signing_year player=%u team=%u league=%u", player_id, team_id, league_id);
+        LONG skip_slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
+        if (skip_slot <= 20) {
+            append_logf("KBO FA signing success post skipped reason=no_signing_year player=%u team=%u league=%u", player_id, team_id, league_id);
         }
-        return 1;
+        return;
     }
 
-    kbo_record_fa_requalification_signing(player_id, team_id, signing_year, "fa_signing_branch");
-    return 1;
+    kbo_record_fa_requalification_signing(player_id, team_id, signing_year, "fa_signing_success_post");
 }

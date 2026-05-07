@@ -348,6 +348,7 @@ static int kbo_fa_compensation_build_market_row(
     memset(&history, 0, sizeof(history));
     KboFaMarketClassification history_row = *row;
     kbo_load_fa_market_history_cases(&history_row, 1, &history, 1);
+    kbo_fa_market_overlay_filing_history_cases(&history_row, 1, &history, 1);
 
     kbo_classify_fa_market_row(
         row,
@@ -479,7 +480,22 @@ static int kbo_record_fa_compensation_signing(
         today = 0u;
     }
 
-    uint32_t signing_year = kbo_find_league_year_from_id(league_id);
+    uint32_t signing_year = 0u;
+    uint32_t filing_original_team_id = 0u;
+    uint32_t filing_league_id = 0u;
+    uint32_t filing_season = 0u;
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    if (kbo_fa_filing_find_latest_player(player_id, &filing_original_team_id, &filing_league_id, &filing_season)
+            && filing_season >= 1982u
+            && filing_season <= 2300u) {
+        signing_year = filing_season;
+        if (filing_league_id != 0u) {
+            league_id = filing_league_id;
+        }
+    }
+    if (signing_year == 0u) {
+        signing_year = kbo_find_league_year_from_id_no_scan(league_id);
+    }
     if (signing_year < 1982u || signing_year > 2300u) {
         signing_year = today >= 19820000u ? today / 10000u : 0u;
     }

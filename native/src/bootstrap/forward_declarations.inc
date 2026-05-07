@@ -33,11 +33,18 @@ __declspec(noinline) uint8_t ootp_kbo_player_action_eligibility_wrapper(
 static void start_kbo_no_minor_contract_demand_floor_scanner_thread(void);
 __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(
     uintptr_t player_ptr, uintptr_t team_ptr);
+__declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(
+    uintptr_t player_ptr, uintptr_t team_ptr);
 static int kbo_record_fa_compensation_signing(
     uintptr_t player_ptr,
     uint32_t signing_team_id,
     uint32_t league_id,
     const char* source);
+static int kbo_fa_filing_find_latest_player(
+    uint32_t player_id,
+    uint32_t* out_original_team_id,
+    uint32_t* out_league_id,
+    uint32_t* out_season);
 static int kbo_team_id_is_military_service_team(uint32_t team_id);
 __declspec(noinline) int ootp_kbo_trade_check_foreign_policy_probe(
     uintptr_t trade_ptr,
@@ -47,6 +54,8 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
 __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(
     int32_t original_count, uintptr_t league_ptr);
 __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
+    uintptr_t player_ptr, uintptr_t league_ptr);
+__declspec(noinline) uint8_t ootp_kbo_intl_established_fa_generation_filter_allows_wrapper(
     uintptr_t player_ptr, uintptr_t league_ptr);
 __declspec(noinline) int32_t ootp_kbo_active_foreign_hitter_count_wrapper(
     uintptr_t team_ptr, uintptr_t original_func_ptr);
