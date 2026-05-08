@@ -25,6 +25,7 @@
 #include "../hotkey_window/hotkey_window.h"
 #include "../military_service/military_service.h"
 #include "../military_service/military_service_date.h"
+#include "../military_service/military_service_team_policy.h"
 #include "../patch_installers/arbitration/arbitration_no_withdraw_patch.h"
 #include "../patch_installers/no_minor_contracts/no_minor_experimental_patch.h"
 #include "../patch_installers/patch_installers_allstar_candidate.h"

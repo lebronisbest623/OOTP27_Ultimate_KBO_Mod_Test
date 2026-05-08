@@ -7,6 +7,8 @@ int32_t kbo_military_days_left(uint8_t* player);
 int32_t kbo_military_effective_days_left(uint8_t* player);
 uint32_t kbo_military_effective_return_yyyymmdd(uint8_t* player);
 void kbo_set_military_days_left(uint8_t* player, int32_t days_left);
+void kbo_clear_military_unavailable_flags(uint8_t* player);
+void kbo_clear_military_status_flags(uint8_t* player);
 void complete_kbo_military_service_status(uint8_t* player);
 uint8_t* kbo_military_find_player_by_id(uint32_t player_id);
 int kbo_military_resolve_original_team(
