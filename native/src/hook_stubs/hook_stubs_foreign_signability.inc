@@ -276,6 +276,59 @@ static uint8_t* build_kbo_no_minor_demand_write_floor_1077952_stub(void* continu
     return memory;
 }
 
+static uint8_t* build_kbo_foreign_fa_demand_baseline_prepare_aab624_stub(void* continuation)
+{
+    uint8_t code[112] = {
+        0x50,                                           // push rax
+        0x51,                                           // push rcx
+        0x52,                                           // push rdx
+        0x41, 0x50,                                     // push r8
+        0x41, 0x51,                                     // push r9
+        0x41, 0x52,                                     // push r10
+        0x41, 0x53,                                     // push r11
+        0x48, 0x83, 0xEC, 0x28,                         // sub rsp, 0x28
+        0x49, 0x8B, 0xCD,                               // mov rcx, r13 (financials)
+        0x48, 0x8B, 0xD3,                               // mov rdx, rbx (player)
+        0x41, 0xB8, 0,0,0,0,                            // mov r8d, source rva
+        0x48, 0xB8,                                     // mov rax, wrapper
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xD0,                                     // call rax
+        0x48, 0x83, 0xC4, 0x28,                         // add rsp, 0x28
+        0x41, 0x5B,                                     // pop r11
+        0x41, 0x5A,                                     // pop r10
+        0x41, 0x59,                                     // pop r9
+        0x41, 0x58,                                     // pop r8
+        0x5A,                                           // pop rdx
+        0x59,                                           // pop rcx
+        0x58,                                           // pop rax
+        0x41, 0x8B, 0xBD, 0x74, 0x03, 0x00, 0x00,       // mov edi, [r13+0x374]
+        0x0F, 0xB6, 0xC0,                               // movzx eax, al
+        0x66, 0x0F, 0x6E, 0xCF,                         // movd xmm1, edi
+        0x48, 0xB8,                                     // mov rax, continuation
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xE0,                                     // jmp rax
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC
+    };
+
+    write_u32(&code[23], OOTP27_FOREIGN_FA_DEMAND_BASELINE_PREPARE_AAB624_RVA);
+    write_u64(&code[29], (uint64_t)(uintptr_t)&ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper);
+    write_u64(&code[76], (uint64_t)(uintptr_t)continuation);
+
+    uint8_t* memory = (uint8_t*)VirtualAlloc(NULL, sizeof(code), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    if (memory == NULL) {
+        return NULL;
+    }
+    memcpy(memory, code, sizeof(code));
+    FlushInstructionCache(GetCurrentProcess(), memory, sizeof(code));
+    return memory;
+}
+
 static uint8_t* build_kbo_fa_offer_screen_callback_probe_detour_stub(void* original_trampoline)
 {
     uint8_t code[64] = {

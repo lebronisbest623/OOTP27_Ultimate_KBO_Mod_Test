@@ -244,6 +244,36 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "mod/settings/flag/", 18) == 0) {
+        const char* key = cmd + 18;
+        const char* slash = strchr(key, '/');
+        if (slash != NULL && slash > key) {
+            char key_buffer[128] = {0};
+            size_t key_len = (size_t)(slash - key);
+            if (key_len >= sizeof(key_buffer)) {
+                key_len = sizeof(key_buffer) - 1u;
+            }
+            memcpy(key_buffer, key, key_len);
+            key_buffer[key_len] = '\0';
+
+            const char* value = slash + 1;
+            int enabled = ascii_equals_ignore_case(value, "on")
+                || ascii_equals_ignore_case(value, "1")
+                || ascii_equals_ignore_case(value, "true")
+                || ascii_equals_ignore_case(value, "enabled");
+            const KboModRuntimeFlagSetting* setting = kbo_find_mod_runtime_flag_setting(key_buffer);
+            if (setting != NULL && kbo_set_mod_runtime_flag_enabled(setting, enabled)) {
+                append_logf("mod settings webview: runtime flag %s enabled=%d", key_buffer, enabled ? 1 : 0);
+            } else {
+                append_logf("mod settings webview: failed to write runtime flag %s enabled=%d", key_buffer, enabled ? 1 : 0);
+            }
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "mod/", 4) == 0) {
         int subview = atoi(cmd + 4);
         if (subview >= 0 && subview < KBO_HUB_MOD_SUBVIEW_COUNT) {
@@ -357,6 +387,27 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
             append_logf("settings webview: international established FA multiplier=%d", multiplier);
         } else {
             append_logf("settings webview: failed to write international established FA multiplier=%d", multiplier);
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "settings/foreign-fa-baseline/", 29) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
+        const char* rest = cmd + 29;
+        int index = atoi(rest);
+        const char* slash = strchr(rest, '/');
+        int value = slash != NULL ? atoi(slash + 1) : 0;
+        if (kbo_set_foreign_fa_demand_baseline_value(index, value)) {
+            append_logf("settings webview: foreign FA demand baseline index=%d value=%d", index, kbo_clamp_foreign_fa_demand_baseline_value(value));
+        } else {
+            append_logf("settings webview: failed to write foreign FA demand baseline index=%d value=%d", index, value);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;

@@ -14,6 +14,28 @@ static void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         }
     }
 
+    const char* baseline_labels_ko[9] = {
+        "\xec\xb5\x9c\xec\xa0\x80 \xec\x97\xb0\xeb\xb4\x89",
+        "\xed\x95\x98\xea\xb8\x89",
+        "\xeb\xb3\xb4\xed\x86\xb5 \xec\x9d\xb4\xed\x95\x98",
+        "\xed\x8f\x89\xea\xb7\xa0 \xec\x9d\xb4\xed\x95\x98",
+        "\xed\x8f\x89\xea\xb7\xa0",
+        "\xed\x8f\x89\xea\xb7\xa0 \xec\x9d\xb4\xec\x83\x81",
+        "\xec\xa4\x80\xec\xb2\x99\xea\xb8\x89",
+        "\xec\x8a\xa4\xed\x83\x80\xea\xb8\x89",
+        "\xec\x8a\x88\xed\x8d\xbc\xec\x8a\xa4\xed\x83\x80\xea\xb8\x89"
+    };
+    const char* baseline_labels_en[9] = {
+        "Minimum",
+        "Poor",
+        "Fair",
+        "Below Average",
+        "Average",
+        "Above Average",
+        "Good",
+        "Star",
+        "Superstar"
+    };
     kbo_window_text_appendf(
         buffer,
         "<div class='rights settingsGrid'>"
@@ -47,5 +69,26 @@ static void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
 
     kbo_window_text_appendf(
         buffer,
-        "</select></div></section></div>");
+        "</select></div><div class='settingsDivider'></div><h2 class='cardTitle'>");
+    kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x97\xb0\xeb\xb4\x89 \xeb\xb2\xa0\xec\x9d\xb4\xec\x8a\xa4\xeb\x9d\xbc\xec\x9d\xb8", "FOREIGN PLAYER SALARY BASELINE"));
+    kbo_window_text_appendf(buffer, "</h2>");
+
+    for (int i = 0; i < 9; i++) {
+        int current = kbo_get_foreign_fa_demand_baseline_value(i);
+        kbo_window_text_appendf(
+            buffer,
+            "<div class='settingRow'><label class='settingLabel' for='foreignBaseline%d'>",
+            i);
+        kbo_html_append_escaped(buffer, kbo_hub_text(baseline_labels_ko[i], baseline_labels_en[i]));
+        kbo_window_text_appendf(
+            buffer,
+            "</label><input id='foreignBaseline%d' class='ootpSelect salaryInput' type='number' min='0' max='20000000' step='1000' value='%d' "
+            "onchange=\"location.href='kbo://settings/foreign-fa-baseline/%d/'+this.value\" "
+            "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
+            i,
+            current,
+            i);
+    }
+
+    kbo_window_text_appendf(buffer, "</section></div>");
 }

@@ -4,9 +4,11 @@
 #define KBO_INTL_ESTABLISHED_FA_POSTSCAN_RETRY_MS 2500ull
 #define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_RETRIES 8
 #define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_DETAIL_LOGS 160
-#define KBO_INTL_ESTABLISHED_FA_ASIAN_STARTER_SCORE_CAP 85000
-#define KBO_INTL_ESTABLISHED_FA_ASIAN_BULLPEN_SCORE_CAP 95000
-#define KBO_INTL_ESTABLISHED_FA_ASIAN_UNKNOWN_PITCHER_SCORE_CAP 90000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_STARTER_SCORE_CAP 72000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_BULLPEN_SCORE_CAP 70000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_UNKNOWN_PITCHER_SCORE_CAP 71000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_HITTER_SCORE_CAP 72000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_CATCHER_SCORE_CAP 65000
 #define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_STARTER_SCORE_CAP 125000
 #define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_BULLPEN_SCORE_CAP 95000
 #define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_UNKNOWN_PITCHER_SCORE_CAP 105000
@@ -44,50 +46,87 @@ static int kbo_intl_established_fa_pitcher_role_is_bullpen(uint8_t position_role
     return position_role == 12u || position_role == 13u;
 }
 
-static const char* kbo_intl_established_fa_pitcher_quality_policy_label(
-    int asian_quota,
-    uint8_t position_role)
+static int kbo_intl_established_fa_position_is_catcher(uint8_t position_group, uint8_t position_role)
 {
-    if (asian_quota) {
-        if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
-            return "asian_starter_cap";
-        }
-        if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
-            return "asian_bullpen_cap";
-        }
-        return "asian_pitcher_cap";
-    }
-
-    if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
-        return "non_asian_starter_cap";
-    }
-    if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
-        return "non_asian_bullpen_cap";
-    }
-    return "non_asian_pitcher_cap";
+    return position_group == 2u || (position_group != 1u && position_role == 2u);
 }
 
-static int32_t kbo_intl_established_fa_pitcher_quality_score_cap(
+static const char* kbo_intl_established_fa_quality_policy_label(
     int asian_quota,
+    uint8_t position_group,
     uint8_t position_role)
 {
     if (asian_quota) {
-        if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
-            return KBO_INTL_ESTABLISHED_FA_ASIAN_STARTER_SCORE_CAP;
+        if (position_group == 1u) {
+            if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
+                return "asian_starter_cap";
+            }
+            if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
+                return "asian_bullpen_cap";
+            }
+            return "asian_pitcher_cap";
         }
-        if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
-            return KBO_INTL_ESTABLISHED_FA_ASIAN_BULLPEN_SCORE_CAP;
+        if (kbo_intl_established_fa_position_is_catcher(position_group, position_role)) {
+            return "asian_catcher_cap";
         }
-        return KBO_INTL_ESTABLISHED_FA_ASIAN_UNKNOWN_PITCHER_SCORE_CAP;
+        return "asian_hitter_cap";
     }
 
-    if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
-        return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_STARTER_SCORE_CAP;
+    if (position_group == 1u) {
+        if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
+            return "non_asian_starter_cap";
+        }
+        if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
+            return "non_asian_bullpen_cap";
+        }
+        return "non_asian_pitcher_cap";
     }
-    if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
-        return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_BULLPEN_SCORE_CAP;
+    return "none";
+}
+
+static int32_t kbo_intl_established_fa_quality_score_cap(
+    int asian_quota,
+    uint8_t position_group,
+    uint8_t position_role)
+{
+    if (asian_quota) {
+        if (position_group == 1u) {
+            if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
+                return KBO_INTL_ESTABLISHED_FA_ASIAN_STARTER_SCORE_CAP;
+            }
+            if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
+                return KBO_INTL_ESTABLISHED_FA_ASIAN_BULLPEN_SCORE_CAP;
+            }
+            return KBO_INTL_ESTABLISHED_FA_ASIAN_UNKNOWN_PITCHER_SCORE_CAP;
+        }
+        if (kbo_intl_established_fa_position_is_catcher(position_group, position_role)) {
+            return KBO_INTL_ESTABLISHED_FA_ASIAN_CATCHER_SCORE_CAP;
+        }
+        return KBO_INTL_ESTABLISHED_FA_ASIAN_HITTER_SCORE_CAP;
     }
-    return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_UNKNOWN_PITCHER_SCORE_CAP;
+
+    if (position_group == 1u) {
+        if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
+            return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_STARTER_SCORE_CAP;
+        }
+        if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
+            return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_BULLPEN_SCORE_CAP;
+        }
+        return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_UNKNOWN_PITCHER_SCORE_CAP;
+    }
+    return 0;
+}
+
+static int16_t kbo_intl_established_fa_quality_field_cap(
+    int asian_quota,
+    uint8_t position_group,
+    uint8_t position_role)
+{
+    int32_t score_cap = kbo_intl_established_fa_quality_score_cap(asian_quota, position_group, position_role);
+    if (!asian_quota || score_cap <= 0) {
+        return 0;
+    }
+    return (int16_t)(score_cap / 100);
 }
 
 static int16_t kbo_intl_established_fa_scale_value_i16(int16_t value, int32_t original_score, int32_t cap)
@@ -109,16 +148,25 @@ static int16_t kbo_intl_established_fa_scale_value_i16(int16_t value, int32_t or
     return (int16_t)scaled;
 }
 
-static int kbo_intl_established_fa_apply_pitcher_quality_cap(
+static int16_t kbo_intl_established_fa_clamp_value_i16(int16_t value, int16_t cap)
+{
+    if (cap <= 0 || value <= cap) {
+        return value;
+    }
+    return cap;
+}
+
+static int kbo_intl_established_fa_apply_quality_cap(
     uint8_t* player,
     int32_t cap,
+    int16_t field_cap,
     int32_t original_score,
     int32_t* out_adjusted_score)
 {
     if (out_adjusted_score != NULL) {
         *out_adjusted_score = original_score;
     }
-    if (player == NULL || cap <= 0 || original_score <= cap
+    if (player == NULL || cap <= 0
             || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
         return 0;
     }
@@ -128,14 +176,35 @@ static int kbo_intl_established_fa_apply_pitcher_quality_cap(
     int16_t ratings = kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
     int16_t career = kbo_read_player_i16(player, OOTP27_PLAYER_CAREER_VALUE_OFFSET);
 
-    *(int16_t*)(player + OOTP27_PLAYER_OVERALL_VALUE_OFFSET) =
-        kbo_intl_established_fa_scale_value_i16(overall, original_score, cap);
-    *(int16_t*)(player + OOTP27_PLAYER_TALENT_VALUE_OFFSET) =
-        kbo_intl_established_fa_scale_value_i16(talent, original_score, cap);
-    *(int16_t*)(player + OOTP27_PLAYER_RATINGS_VALUE_OFFSET) =
-        kbo_intl_established_fa_scale_value_i16(ratings, original_score, cap);
-    *(int16_t*)(player + OOTP27_PLAYER_CAREER_VALUE_OFFSET) =
-        kbo_intl_established_fa_scale_value_i16(career, original_score, cap);
+    int needs_score_scale = original_score > cap;
+    int needs_field_clamp = field_cap > 0
+        && (overall > field_cap || talent > field_cap || ratings > field_cap || career > field_cap);
+    if (!needs_score_scale && !needs_field_clamp) {
+        return 0;
+    }
+
+    int16_t adjusted_overall = needs_score_scale
+        ? kbo_intl_established_fa_scale_value_i16(overall, original_score, cap)
+        : overall;
+    int16_t adjusted_talent = needs_score_scale
+        ? kbo_intl_established_fa_scale_value_i16(talent, original_score, cap)
+        : talent;
+    int16_t adjusted_ratings = needs_score_scale
+        ? kbo_intl_established_fa_scale_value_i16(ratings, original_score, cap)
+        : ratings;
+    int16_t adjusted_career = needs_score_scale
+        ? kbo_intl_established_fa_scale_value_i16(career, original_score, cap)
+        : career;
+
+    adjusted_overall = kbo_intl_established_fa_clamp_value_i16(adjusted_overall, field_cap);
+    adjusted_talent = kbo_intl_established_fa_clamp_value_i16(adjusted_talent, field_cap);
+    adjusted_ratings = kbo_intl_established_fa_clamp_value_i16(adjusted_ratings, field_cap);
+    adjusted_career = kbo_intl_established_fa_clamp_value_i16(adjusted_career, field_cap);
+
+    *(int16_t*)(player + OOTP27_PLAYER_OVERALL_VALUE_OFFSET) = adjusted_overall;
+    *(int16_t*)(player + OOTP27_PLAYER_TALENT_VALUE_OFFSET) = adjusted_talent;
+    *(int16_t*)(player + OOTP27_PLAYER_RATINGS_VALUE_OFFSET) = adjusted_ratings;
+    *(int16_t*)(player + OOTP27_PLAYER_CAREER_VALUE_OFFSET) = adjusted_career;
 
     int32_t adjusted_score = kbo_foreign_waiver_value_score(player);
     if (out_adjusted_score != NULL) {
@@ -441,6 +510,7 @@ static void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPosts
         uint8_t position_role = *(uint8_t*)(player + OOTP27_PLAYER_POSITION_ROLE_OFFSET);
         int32_t original_score = score;
         int32_t quality_cap = 0;
+        int16_t quality_field_cap = 0;
         int was_quality_adjusted = 0;
         const char* quality_policy = "none";
 
@@ -462,23 +532,28 @@ static void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPosts
                 }
             }
 
-            quality_policy = kbo_intl_established_fa_pitcher_quality_policy_label(is_asian, position_role);
-            quality_cap = kbo_intl_established_fa_pitcher_quality_score_cap(is_asian, position_role);
-            if (quality_shaping_enabled && quality_cap > 0 && score > quality_cap) {
-                int32_t adjusted_score = score;
-                was_quality_adjusted = kbo_intl_established_fa_apply_pitcher_quality_cap(
-                    player,
-                    quality_cap,
-                    score,
-                    &adjusted_score);
-                if (was_quality_adjusted) {
-                    score = adjusted_score;
-                    quality_adjusted_count++;
-                    if (is_asian) {
-                        asian_pitcher_adjusted_count++;
-                    } else {
-                        non_asian_pitcher_adjusted_count++;
-                    }
+        }
+
+        quality_policy = kbo_intl_established_fa_quality_policy_label(is_asian, position_group, position_role);
+        quality_cap = kbo_intl_established_fa_quality_score_cap(is_asian, position_group, position_role);
+        quality_field_cap = kbo_intl_established_fa_quality_field_cap(is_asian, position_group, position_role);
+        if (quality_shaping_enabled && quality_cap > 0) {
+            int32_t adjusted_score = score;
+            was_quality_adjusted = kbo_intl_established_fa_apply_quality_cap(
+                player,
+                quality_cap,
+                quality_field_cap,
+                score,
+                &adjusted_score);
+            if (was_quality_adjusted) {
+                score = adjusted_score;
+                quality_adjusted_count++;
+                if (is_asian) {
+                    asian_pitcher_adjusted_count++;
+                } else {
+                    non_asian_pitcher_adjusted_count++;
+                }
+                if (position_group == 1u) {
                     if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
                         starter_pitcher_adjusted_count++;
                     } else if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
@@ -539,7 +614,7 @@ static void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPosts
 
         if (logged < KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_DETAIL_LOGS) {
             append_logf(
-                "international established FA postscan player batch=%ld index=%d player=%u nation=%u asian_quota=%d age=%d pos=%u/%u team=%u active=%u league=%u draft_league=%u gen=flags:%u context:%u grade:%u special:%u quality=policy:%s cap:%d original:%d adjusted:%d changed:%d value=overall:%d talent:%d ratings:%d career:%d score=%d",
+                "international established FA postscan player batch=%ld index=%d player=%u nation=%u asian_quota=%d age=%d pos=%u/%u team=%u active=%u league=%u draft_league=%u gen=flags:%u context:%u grade:%u special:%u quality=policy:%s cap:%d field_cap:%d original:%d adjusted:%d changed:%d value=overall:%d talent:%d ratings:%d career:%d score=%d",
                 batch->batch_id,
                 i,
                 player_id,
@@ -558,6 +633,7 @@ static void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPosts
                 generation_special,
                 quality_policy,
                 quality_cap,
+                (int)quality_field_cap,
                 original_score,
                 score,
                 was_quality_adjusted,

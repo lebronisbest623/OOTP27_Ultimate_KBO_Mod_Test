@@ -1184,9 +1184,28 @@ static void kbo_amateur_assignment_append_debug_csv(
     uint32_t after_team_id,
     uint32_t after_league_id)
 {
-    if (!read_kbo_localappdata_flag_file("enable_amateur_assignment_debug_csv.txt")) {
-        return;
-    }
+    (void)phase;
+    (void)source;
+    (void)player_id;
+    (void)league_id;
+    (void)age;
+    (void)quality_score;
+    (void)player_tier;
+    (void)from_team_id;
+    (void)from_reputation;
+    (void)from_tier;
+    (void)from_player_count;
+    (void)to_team_id;
+    (void)to_reputation;
+    (void)to_tier;
+    (void)to_player_count;
+    (void)target_player_count;
+    (void)target_reputation;
+    (void)original_result;
+    (void)after_team_id;
+    (void)after_league_id;
+    return;
+
     if (strcmp(phase != NULL ? phase : "", "original_success") == 0) {
         static volatile LONG success_csv_count = 0;
         if (InterlockedIncrement(&success_csv_count) > 300) {
@@ -1686,6 +1705,7 @@ static uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t t
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     int16_t age = *(int16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
     if (player_id == 0u || !kbo_amateur_player_age_eligible(team_league_id, age)
+            || kbo_player_is_draft_pool_candidate(player)
             || kbo_amateur_assignment_already_processed(player_id, team_id)) {
         return team_ptr;
     }

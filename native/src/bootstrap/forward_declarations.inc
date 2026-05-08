@@ -28,6 +28,8 @@ __declspec(noinline) void ootp_kbo_fa_offer_player_demand_floor_probe(
     uintptr_t player_ptr, uintptr_t screen_ptr, uint32_t source_rva);
 __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
     uintptr_t player_ptr, int32_t proposed_demand, uint32_t source_rva, int32_t salary_floor_hint);
+__declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
+    uintptr_t financials_ptr, uintptr_t player_ptr, uint32_t source_rva);
 __declspec(noinline) uint8_t ootp_kbo_player_action_eligibility_wrapper(
     uintptr_t action_context, int32_t action_id, uint8_t strict_check, uintptr_t original_func_ptr);
 static void start_kbo_no_minor_contract_demand_floor_scanner_thread(void);

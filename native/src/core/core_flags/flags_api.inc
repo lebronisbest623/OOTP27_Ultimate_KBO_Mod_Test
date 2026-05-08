@@ -87,6 +87,55 @@ static int kbo_set_intl_established_fa_multiplier(int value)
         kbo_clamp_intl_established_fa_multiplier(value));
 }
 
+static const char* KBO_FOREIGN_FA_DEMAND_BASELINE_KEYS[9] = {
+    "foreign_fa_demand_minimum_salary",
+    "foreign_fa_demand_poor_salary",
+    "foreign_fa_demand_fair_salary",
+    "foreign_fa_demand_below_average_salary",
+    "foreign_fa_demand_average_salary",
+    "foreign_fa_demand_above_average_salary",
+    "foreign_fa_demand_good_salary",
+    "foreign_fa_demand_star_salary",
+    "foreign_fa_demand_superstar_salary"
+};
+
+static const int32_t KBO_FOREIGN_FA_DEMAND_BASELINE_DEFAULTS[9] = {
+    35000, 36000, 40000, 50000, 100000, 180000, 300000, 550000, 1000000
+};
+
+static int32_t kbo_clamp_foreign_fa_demand_baseline_value(int32_t value)
+{
+    if (value < 0) {
+        return 0;
+    }
+    if (value > 20000000) {
+        return 20000000;
+    }
+    return value;
+}
+
+static int32_t kbo_get_foreign_fa_demand_baseline_value(int index)
+{
+    if (index < 0 || index >= 9) {
+        return 0;
+    }
+    int value = KBO_FOREIGN_FA_DEMAND_BASELINE_DEFAULTS[index];
+    if (!kbo_read_localappdata_json_int_value(KBO_FOREIGN_FA_DEMAND_BASELINE_KEYS[index], &value)) {
+        value = KBO_FOREIGN_FA_DEMAND_BASELINE_DEFAULTS[index];
+    }
+    return kbo_clamp_foreign_fa_demand_baseline_value(value);
+}
+
+static int kbo_set_foreign_fa_demand_baseline_value(int index, int32_t value)
+{
+    if (index < 0 || index >= 9) {
+        return 0;
+    }
+    return kbo_write_localappdata_json_int_value(
+        KBO_FOREIGN_FA_DEMAND_BASELINE_KEYS[index],
+        kbo_clamp_foreign_fa_demand_baseline_value(value));
+}
+
 static int kbo_get_profiler_enabled_setting(void)
 {
     int value = 0;
