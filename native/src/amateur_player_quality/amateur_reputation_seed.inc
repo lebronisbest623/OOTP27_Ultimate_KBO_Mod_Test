@@ -1,4 +1,4 @@
-﻿static void kbo_amateur_reputation_trim_cell(char* value)
+static void kbo_amateur_reputation_trim_cell(char* value)
 {
     if (value == NULL) {
         return;

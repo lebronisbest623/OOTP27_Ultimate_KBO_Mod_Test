@@ -65,7 +65,7 @@ public sealed class OotpBuildGuardTests : IDisposable
     [Fact]
     public void FindSupportedBuild_MatchesVerifiedBuildOnly()
     {
-        var expected = global::OotpSupportedBuilds.All.Single();
+        var expected = global::OotpSupportedBuilds.All.Single(build => !build.ExperimentalSignature);
         var info = new global::OotpBuildInfo(true, expected.Timestamp, expected.SizeOfImage, null);
 
         var supported = global::OotpBuildGuard.FindSupportedBuild(info);
@@ -76,6 +76,24 @@ public sealed class OotpBuildGuardTests : IDisposable
         Assert.Contains("status=supported", global::OotpBuildGuard.FormatLogStatus(info, supported));
         Assert.Contains(
             $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}",
+            global::OotpBuildGuard.SupportedBuildDescriptions());
+    }
+
+    [Fact]
+    public void FindSupportedBuild_MatchesExperimentalSignatureBuild()
+    {
+        var expected = global::OotpSupportedBuilds.All.First(build => build.ExperimentalSignature);
+        var info = new global::OotpBuildInfo(true, expected.Timestamp, expected.SizeOfImage, null);
+
+        var supported = global::OotpBuildGuard.FindSupportedBuild(info);
+
+        Assert.NotNull(supported);
+        Assert.True(supported.ExperimentalSignature);
+        Assert.Equal(expected.Label, supported.Label);
+        Assert.Contains($"experimental signature-supported ({expected.Label})", global::OotpBuildGuard.FormatConsoleStatus(info, supported));
+        Assert.Contains("status=experimental_signature_supported", global::OotpBuildGuard.FormatLogStatus(info, supported));
+        Assert.Contains(
+            $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}[experimental_signature]",
             global::OotpBuildGuard.SupportedBuildDescriptions());
     }
 

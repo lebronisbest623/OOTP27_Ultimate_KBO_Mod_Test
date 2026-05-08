@@ -286,4 +286,3 @@ static int kbo_foreign_waiver_latest_decision_action(
     CloseHandle(file);
     return found;
 }
-

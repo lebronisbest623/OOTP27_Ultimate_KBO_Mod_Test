@@ -52,4 +52,3 @@ static const char* kbo_webview_player_position_label(uint8_t* player, uint8_t fa
         player[OOTP27_PLAYER_POSITION_GROUP_OFFSET],
         player[OOTP27_PLAYER_POSITION_ROLE_OFFSET]);
 }
-

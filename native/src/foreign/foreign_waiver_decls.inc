@@ -19,7 +19,7 @@ static void kbo_intl_established_fa_postscan_schedule(
     uint32_t primary_league_id,
     uint32_t fallback_league_id);
 static uint8_t* kbo_find_player_by_id(uint32_t player_id, uint32_t* out_current_team_id, uint32_t* out_current_league_id);
-static uint32_t kbo_get_foreign_waiver_league_id(void);
+uint32_t kbo_get_foreign_waiver_league_id(void);
 static int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_date);
 static int kbo_is_foreign_waiver_negotiation_window_open(void);
 static uint32_t kbo_get_foreign_waiver_auto_target_team_id(void);

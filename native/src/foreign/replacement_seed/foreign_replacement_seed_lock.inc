@@ -11,4 +11,3 @@ static void kbo_unlock_foreign_replacement_player_seeds(void)
 {
     InterlockedExchange(&g_kbo_foreign_replacement_player_seed_lock, 0);
 }
-

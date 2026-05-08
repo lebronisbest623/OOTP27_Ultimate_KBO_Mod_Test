@@ -29,7 +29,7 @@ static int copy_limited_ascii_string(const char* source, char* out, size_t out_s
     return len > 0;
 }
 
-static int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, char* out, size_t out_size)
+int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, char* out, size_t out_size)
 {
     uint8_t* string_object = object_base + string_offset;
     uint8_t* text_slot     = string_object + OOTP27_KBO_STRING_OBJECT_TEXT_OFFSET;
@@ -87,7 +87,7 @@ static int assign_ootp_string_object_text_if_different(uint8_t* object_base, uin
     return assign_ootp_string_object_text(object_base, string_offset, text);
 }
 
-static int team_has_ootp_string_text(uint8_t* team, const char* expected)
+int team_has_ootp_string_text(uint8_t* team, const char* expected)
 {
     if (team == NULL || expected == NULL || expected[0] == '\0') {
         return 0;

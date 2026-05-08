@@ -1,4 +1,4 @@
-﻿static DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
+static DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
 {
     KboSangmuFaHookInstallRequest request = {0};
     if (parameter != NULL) {

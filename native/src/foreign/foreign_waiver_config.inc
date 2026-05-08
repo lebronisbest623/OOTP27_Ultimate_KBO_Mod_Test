@@ -125,4 +125,3 @@ static int kbo_is_forced_foreign_candidate_id(uint32_t player_id)
 
     return 0;
 }
-

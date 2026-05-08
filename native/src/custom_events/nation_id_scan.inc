@@ -107,4 +107,3 @@ static void kbo_scan_nation_id_offset_once(void)
         }
     }
 }
-

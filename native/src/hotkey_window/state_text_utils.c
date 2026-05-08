@@ -1,4 +1,6 @@
-static int kbo_utf8_to_wide(const char* text, WCHAR* out, int out_count)
+#include "state_text_utils.h"
+
+int kbo_utf8_to_wide(const char* text, WCHAR* out, int out_count)
 {
     if (text == NULL || out == NULL || out_count <= 0) {
         return 0;
@@ -15,7 +17,7 @@ static int kbo_utf8_to_wide(const char* text, WCHAR* out, int out_count)
     return 1;
 }
 
-static void kbo_hub_trim_ascii(char* text)
+void kbo_hub_trim_ascii(char* text)
 {
     if (text == NULL) {
         return;

@@ -1,6 +1,8 @@
+#include "allstar_league_context.h"
+
 /* Scan one vector entry in the global DB for a league matching league_id.
  * Returns the league pointer if found, 0 otherwise. */
-static uintptr_t kbo_scan_league_vec(uintptr_t global, uint32_t vec_off, uint32_t league_id, const KboAllstarLayout* layout)
+uintptr_t kbo_scan_league_vec(uintptr_t global, uint32_t vec_off, uint32_t league_id, const KboAllstarLayout* layout)
 {
     uint32_t cnt_off = vec_off + 8u;
     if (!memory_range_readable((void*)(global + vec_off), 16u)) {
@@ -32,7 +34,7 @@ static uintptr_t kbo_scan_league_vec(uintptr_t global, uint32_t vec_off, uint32_
     return 0;
 }
 
-static uintptr_t kbo_find_allstar_league_ptr(uint32_t league_id)
+uintptr_t kbo_find_allstar_league_ptr(uint32_t league_id)
 {
     if (league_id == 0u) {
         return 0;

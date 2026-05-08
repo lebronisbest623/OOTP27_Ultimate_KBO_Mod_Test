@@ -74,6 +74,3 @@ static void kbo_ensure_military_service_seeds_loaded(void)
         kbo_unlock_military_service_seeds();
     }
 }
-
-
-

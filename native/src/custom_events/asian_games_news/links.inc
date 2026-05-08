@@ -87,4 +87,3 @@ static void kbo_copy_asian_games_player_link(KboAsianGamesRosterEntry* entry, ch
 
     snprintf(out, out_size, "<%s:player#%u>", player_name, entry->player_id);
 }
-

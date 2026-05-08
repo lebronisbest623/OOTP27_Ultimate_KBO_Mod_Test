@@ -45,4 +45,3 @@ static ULONG STDMETHODCALLTYPE kbo_webview_controller_release(ICoreWebView2Creat
     if (value < 1) { ((KboWebViewControllerHandler*)This)->ref = 1; }
     return (ULONG)((KboWebViewControllerHandler*)This)->ref;
 }
-

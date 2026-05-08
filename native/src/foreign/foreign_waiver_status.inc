@@ -66,4 +66,3 @@ static int kbo_get_foreign_waiver_window_status_text(char* out, size_t out_size)
         end_text);
     return 1;
 }
-

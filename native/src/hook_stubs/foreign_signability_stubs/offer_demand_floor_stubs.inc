@@ -102,6 +102,7 @@ static uint8_t* build_kbo_fa_offer_player_demand_floor_17b50b4_stub(void* contin
 }
 
 static uint8_t* build_kbo_no_minor_demand_write_floor_aab739_stub(
+    uint32_t source_rva,
     void* notify_call,
     void* done_target)
 {
@@ -142,7 +143,7 @@ static uint8_t* build_kbo_no_minor_demand_write_floor_aab739_stub(
         0xCC, 0xCC, 0xCC, 0xCC
     };
 
-    write_u32(&code[21], OOTP27_NO_MINOR_CONTRACT_FA_DEMAND_WRITE_AAB739_RVA);
+    write_u32(&code[21], source_rva);
     write_u64(&code[34], (uint64_t)(uintptr_t)&ootp_kbo_no_minor_demand_write_floor_probe);
     write_u64(&code[66], (uint64_t)(uintptr_t)notify_call);
     write_u64(&code[78], (uint64_t)(uintptr_t)done_target);

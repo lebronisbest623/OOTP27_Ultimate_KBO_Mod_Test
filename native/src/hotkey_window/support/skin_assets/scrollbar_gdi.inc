@@ -109,4 +109,3 @@ static void kbo_hub_draw_ootp_scrollbar(HDC hdc)
         g_kbo_hub_asset_sb_slider_bottom,
         &g_kbo_hub_scrollbar_thumb_rect);
 }
-

@@ -1,4 +1,6 @@
-﻿static uint32_t kbo_find_current_kbo_league_year(void)
+#include "league_context_lookup.h"
+
+static uint32_t kbo_find_current_kbo_league_year(void)
 {
     uint32_t year = 0;
     uint32_t month = 0;
@@ -6,7 +8,7 @@
     return kbo_current_date_is_valid(&year, &month, &day) ? year : 0;
 }
 
-static int kbo_league_candidate_matches_id(uintptr_t candidate, uint32_t league_id, uint32_t id_offset)
+int kbo_league_candidate_matches_id(uintptr_t candidate, uint32_t league_id, uint32_t id_offset)
 {
     if (candidate == 0 || league_id == 0
             || !memory_range_readable((void*)candidate, OOTP27_KBO_LEAGUE_ID_OFFSET + 16u)

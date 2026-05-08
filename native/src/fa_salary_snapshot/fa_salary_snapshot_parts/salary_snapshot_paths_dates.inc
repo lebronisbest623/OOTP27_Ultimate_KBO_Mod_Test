@@ -1,4 +1,4 @@
-static int kbo_fa_salary_snapshot_path(uint32_t season, char* out, size_t out_size)
+int kbo_fa_salary_snapshot_path(uint32_t season, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0 || season < 1982u || season > 2200u) {
         return 0;
@@ -9,7 +9,7 @@ static int kbo_fa_salary_snapshot_path(uint32_t season, char* out, size_t out_si
     return kbo_get_save_scoped_data_file(file_name, out, out_size);
 }
 
-static int kbo_fa_salary_snapshot_file_exists(uint32_t season)
+int kbo_fa_salary_snapshot_file_exists(uint32_t season)
 {
     LONG cached_season = InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_cached_exists_season, 0, 0);
     LONG cached_value = InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_cached_exists_value, -1, -1);
@@ -49,7 +49,7 @@ static uint32_t kbo_fa_salary_snapshot_team_league_id(uint32_t team_id)
     return *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
 }
 
-static uint32_t kbo_fa_salary_snapshot_resolve_ranking_team(uint32_t league_id, uint32_t current_team_id, uint32_t active_team_id)
+uint32_t kbo_fa_salary_snapshot_resolve_ranking_team(uint32_t league_id, uint32_t current_team_id, uint32_t active_team_id)
 {
     if (active_team_id != 0u && kbo_fa_salary_snapshot_team_league_id(active_team_id) == league_id) {
         return active_team_id;
@@ -60,7 +60,7 @@ static uint32_t kbo_fa_salary_snapshot_resolve_ranking_team(uint32_t league_id, 
     return 0u;
 }
 
-static int kbo_fa_salary_snapshot_read_opening_day(uintptr_t league_ptr, uint32_t* out_date)
+int kbo_fa_salary_snapshot_read_opening_day(uintptr_t league_ptr, uint32_t* out_date)
 {
     if (out_date != NULL) {
         *out_date = 0u;
@@ -90,7 +90,7 @@ static int kbo_fa_salary_snapshot_read_opening_day(uintptr_t league_ptr, uint32_
     return 1;
 }
 
-static int kbo_fa_salary_snapshot_current_date_in_opening_window(uint32_t date, uint32_t opening_day)
+int kbo_fa_salary_snapshot_current_date_in_opening_window(uint32_t date, uint32_t opening_day)
 {
     if (date == 0u || opening_day == 0u) {
         return 0;
@@ -186,7 +186,7 @@ static int kbo_fa_salary_snapshot_load_schedule_opening_day_from_file(const char
     return 1;
 }
 
-static int kbo_fa_salary_snapshot_load_schedule_opening_day(uint32_t season, uint32_t* out_opening_day)
+int kbo_fa_salary_snapshot_load_schedule_opening_day(uint32_t season, uint32_t* out_opening_day)
 {
     if (out_opening_day != NULL) {
         *out_opening_day = 0u;
@@ -262,7 +262,7 @@ static int kbo_fa_salary_snapshot_file_contains_opening_day_message(const char* 
     return found;
 }
 
-static int kbo_fa_salary_snapshot_today_has_opening_day_message(uint32_t date)
+int kbo_fa_salary_snapshot_today_has_opening_day_message(uint32_t date)
 {
     if (date == 0u) {
         return 0;
@@ -305,4 +305,3 @@ static int kbo_fa_salary_snapshot_today_has_opening_day_message(uint32_t date)
     FindClose(find);
     return found;
 }
-

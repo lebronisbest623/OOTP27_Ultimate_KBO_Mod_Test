@@ -137,4 +137,3 @@ static int kbo_asian_games_apply_wildcard_replacements(
 
     return replacements;
 }
-

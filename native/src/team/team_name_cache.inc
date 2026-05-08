@@ -1,3 +1,5 @@
+#include "team_name_cache.h"
+
 #define KBO_NAME_ID_CACHE_MAX       300000u
 #define KBO_NAME_CACHE_TEXT_BYTES   48u
 #define KBO_NAMES_DAT_MAX_BYTES     (32u * 1024u * 1024u)
@@ -221,7 +223,7 @@ static int kbo_player_uses_eastern_name_order(uint8_t* player)
         || nation_id == OOTP27_KBO_KOREA_NATION_ID;
 }
 
-static void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_size)
+void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return;

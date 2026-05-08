@@ -54,4 +54,3 @@ static int kbo_get_current_players_dat_path_for_military_seed(char* out, size_t 
     attrs = GetFileAttributesA(out);
     return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
-

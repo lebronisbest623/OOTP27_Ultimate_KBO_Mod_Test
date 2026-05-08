@@ -25,4 +25,3 @@ static int kbo_clear_native_player_loan(uint8_t* player)
     player[OOTP27_PLAYER_LOAN_DIRTY_FLAG_OFFSET] = 1;
     return !kbo_player_native_on_loan(player);
 }
-

@@ -23,13 +23,8 @@ static int install_allstar_settings_ui_patch(void)
         value_site = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
         expected = april_expected;
     }
-    if (value_site == NULL) {
-        value_site = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_SETTINGS_ENABLE_VALUE_SITE_RVA);
-        expected = april_expected;
-    }
-
     int ok_value = 0;
-    if (!memory_range_readable(value_site, sizeof(april_expected))) {
+    if (value_site == NULL || !memory_range_readable(value_site, sizeof(april_expected))) {
         append_logf("KBO all-star settings value hook target unreadable target=%p", value_site);
     } else if (is_rip_absolute_jump_patch(value_site) || is_rax_absolute_jump_patch(value_site)) {
         append_logf("KBO all-star settings value hook already installed target=%p", value_site);
@@ -99,19 +94,6 @@ static int install_allstar_settings_ui_patch(void)
         disabled_message_expected_may,
         disabled_message_patch_may,
         sizeof(disabled_message_expected_may));
-    if (!ok_disable) {
-        uint8_t* disable_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_SETTINGS_SINGLE_DIVISION_DISABLE_RVA);
-        const uint8_t expected_disable_gate[2] = {0x74, 0x44};
-        const uint8_t patch_disable_gate[2] = {0xEB, 0x44};
-        if (memory_range_readable(disable_gate, sizeof(expected_disable_gate))) {
-            ok_disable = patch_static_bytes(
-                "KBO all-star settings disabled-message gate",
-                disable_gate,
-                expected_disable_gate,
-                patch_disable_gate,
-                sizeof(expected_disable_gate));
-        }
-    }
 
     const uint8_t game_flag_skip_context_may[] = {
         0x41, 0x80, 0xBD, 0xF0, 0x45, 0x00, 0x00, 0x00,
@@ -152,25 +134,5 @@ static int install_allstar_settings_ui_patch(void)
         one_division_warning_expected_may,
         one_division_warning_patch_may,
         sizeof(one_division_warning_expected_may));
-    if (!ok_warning) {
-        uint8_t* warning_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_SETTINGS_ONE_DIVISION_WARNING_GATE_RVA);
-        const uint8_t expected_warning_gate[14] = {
-            0x66, 0x83, 0xBB, 0xFA, 0x03, 0x00, 0x00, 0x01,
-            0x0F, 0x8C, 0x87, 0x0B, 0x00, 0x00
-        };
-        const uint8_t patch_warning_gate[14] = {
-            0x66, 0x83, 0xBB, 0xFA, 0x03, 0x00, 0x00, 0x01,
-            0x90, 0x90, 0x90, 0x90, 0x90, 0x90
-        };
-        if (memory_range_readable(warning_gate, sizeof(expected_warning_gate))) {
-            ok_warning = patch_static_bytes(
-                "KBO all-star settings one-division warning gate",
-                warning_gate,
-                expected_warning_gate,
-                patch_warning_gate,
-                sizeof(expected_warning_gate));
-        }
-    }
-
     return ok_value || ok_disable || ok_game_flag_skip || ok_warning;
 }

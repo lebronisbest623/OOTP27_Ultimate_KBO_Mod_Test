@@ -70,9 +70,7 @@ __declspec(noinline) uint8_t ootp_kbo_callup_foreign_pitcher_limit_allows_wrappe
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit);
 __declspec(noinline) uint8_t ootp_kbo_callup_foreign_total_limit_allows_wrapper(
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit);
-static int memory_range_readable(const void* address, SIZE_T size);
-static uintptr_t get_ootp_global_database(void);
-static int kbo_player_pointer_plausible(uintptr_t player_ptr);
+int kbo_player_pointer_plausible(uintptr_t player_ptr);
 static int kbo_player_is_foreign_for_kbo_rights(uint8_t* player);
 static int kbo_custom_foreign_policy_enabled(void);
 static int kbo_custom_foreign_policy_team_allows_final_signing(
@@ -86,12 +84,11 @@ static int kbo_custom_foreign_policy_team_allows_final_signing(
 static void kbo_record_recent_custom_foreign_policy_block(uint32_t player_id, uint32_t requester_team_id, uint32_t today);
 static int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_date);
 static const char* kbo_foreign_injury_slot_label(uint8_t slot_type);
-static int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset);
-static int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, char* out, size_t out_size);
+int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset);
 static int kbo_get_current_save_path(char* out, size_t out_size);
-static void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_size);
-static uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allow_deleted);
-static uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted);
+void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_size);
+uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allow_deleted);
+uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted);
 static int16_t kbo_read_player_i16(uint8_t* player, uint32_t offset);
 static int32_t kbo_foreign_waiver_value_score(uint8_t* player);
 static int create_kbo_native_live_news_with_body(
@@ -129,6 +126,7 @@ static int insert_kbo_roster_transaction_sql(
 static void start_kbo_foreign_waiver_scanner_thread(void);
 static void start_kbo_foreign_injury_replacement_thread(void);
 static void start_kbo_fa_salary_snapshot_phase_event_thread(void);
+void start_kbo_fa_salary_snapshot_thread(void);
 static void start_kbo_fa_requalification_thread(void);
 static void kbo_flush_pending_foreign_priority_events(const char* source);
 static int kbo_get_current_yyyymmdd(uint32_t* out_date);
@@ -156,3 +154,4 @@ __declspec(noinline) void ootp_kbo_enable_allstar_setting(uintptr_t league_ptr);
 __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr);
 __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league_ptr, uintptr_t allstar_team_setup_ptr);
 
+int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, char* out, size_t out_size);

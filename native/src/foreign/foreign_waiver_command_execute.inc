@@ -127,4 +127,3 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
     kbo_append_foreign_waiver_decision_record("user", "RETAIN", team_id, player_id, 0, 0, 1);
     return 1;
 }
-

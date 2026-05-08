@@ -1,4 +1,6 @@
-static int kbo_allstar_league_context_enabled(uintptr_t league_ptr)
+#include "allstar_league_context.h"
+
+int kbo_allstar_league_context_enabled(uintptr_t league_ptr)
 {
     if (!kbo_fix_enabled() || league_ptr == 0) {
         return 0;
@@ -36,7 +38,7 @@ static int kbo_allstar_league_context_enabled(uintptr_t league_ptr)
     return 0;
 }
 
-static int kbo_allstar_team_matches_league(uint8_t* team, uint32_t primary_league_id, uint32_t fallback_league_id)
+int kbo_allstar_team_matches_league(uint8_t* team, uint32_t primary_league_id, uint32_t fallback_league_id)
 {
     if (team == NULL || !memory_range_readable(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET, sizeof(uint32_t))) {
         return 0;

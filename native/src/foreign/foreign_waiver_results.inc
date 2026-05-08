@@ -207,4 +207,3 @@ static int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const ch
         body);
     return 1;
 }
-

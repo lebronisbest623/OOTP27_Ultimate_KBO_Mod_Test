@@ -1,6 +1,11 @@
+#include "core_team_collect.h"
+#include "../bootstrap/ootp_offsets.h"
+#include "core_log.h"
+#include "../runtime_memory/runtime_memory.h"
+
 /* Core league team collection helpers. */
 
-static int collect_kbo_league_team_ids(
+int collect_kbo_league_team_ids(
     uint32_t league_id,
     uint32_t* team_ids,
     int max_team_ids,

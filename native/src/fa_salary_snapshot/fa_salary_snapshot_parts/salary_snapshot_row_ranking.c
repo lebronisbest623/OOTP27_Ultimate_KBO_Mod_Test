@@ -1,4 +1,10 @@
-static int32_t kbo_fa_salary_snapshot_player_salary_for_season(uint8_t* player, uint32_t season)
+#include "salary_snapshot_row_ranking.h"
+
+#include <stdlib.h>
+
+#include "../../bootstrap/ootp_offsets.h"
+
+int32_t kbo_fa_salary_snapshot_player_salary_for_season(uint8_t* player, uint32_t season)
 {
     int32_t years[OOTP27_PLAYER_CONTRACT_SALARY_YEARS] = {0};
     for (uint32_t i = 0; i < OOTP27_PLAYER_CONTRACT_SALARY_YEARS; i++) {
@@ -26,7 +32,7 @@ static int32_t kbo_fa_salary_snapshot_player_salary_for_season(uint8_t* player, 
     return 0;
 }
 
-static void kbo_fa_salary_snapshot_copy_contract_years(uint8_t* player, KboFaSalarySnapshotRow* row)
+void kbo_fa_salary_snapshot_copy_contract_years(uint8_t* player, KboFaSalarySnapshotRow* row)
 {
     if (player == NULL || row == NULL) {
         return;
@@ -39,7 +45,7 @@ static void kbo_fa_salary_snapshot_copy_contract_years(uint8_t* player, KboFaSal
     }
 }
 
-static int __cdecl kbo_fa_salary_snapshot_compare_overall(const void* a, const void* b)
+int __cdecl kbo_fa_salary_snapshot_compare_overall(const void* a, const void* b)
 {
     const KboFaSalarySnapshotRow* left = (const KboFaSalarySnapshotRow*)a;
     const KboFaSalarySnapshotRow* right = (const KboFaSalarySnapshotRow*)b;
@@ -84,7 +90,7 @@ static int __cdecl kbo_fa_salary_snapshot_compare_team(const void* a, const void
     return 0;
 }
 
-static void kbo_fa_salary_snapshot_assign_overall_ranks(KboFaSalarySnapshotRow* rows, int count)
+void kbo_fa_salary_snapshot_assign_overall_ranks(KboFaSalarySnapshotRow* rows, int count)
 {
     if (rows == NULL || count <= 0) {
         return;
@@ -112,7 +118,7 @@ static void kbo_fa_salary_snapshot_assign_overall_ranks(KboFaSalarySnapshotRow* 
     }
 }
 
-static void kbo_fa_salary_snapshot_assign_team_ranks(KboFaSalarySnapshotRow* rows, int count)
+void kbo_fa_salary_snapshot_assign_team_ranks(KboFaSalarySnapshotRow* rows, int count)
 {
     if (rows == NULL || count <= 0) {
         return;
@@ -147,4 +153,3 @@ static void kbo_fa_salary_snapshot_assign_team_ranks(KboFaSalarySnapshotRow* row
         rows[i].team_ordinal = ordinal;
     }
 }
-

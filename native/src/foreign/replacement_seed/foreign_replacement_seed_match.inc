@@ -29,4 +29,3 @@ static int kbo_foreign_replacement_player_seed_matches_loaded(uint8_t* player, u
     kbo_unlock_foreign_replacement_player_seeds();
     return matched;
 }
-

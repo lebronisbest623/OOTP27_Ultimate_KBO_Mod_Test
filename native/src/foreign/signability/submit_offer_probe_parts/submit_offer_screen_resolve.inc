@@ -30,4 +30,3 @@ static uint32_t kbo_resolve_submit_offer_screen_player_id(uintptr_t screen_ptr, 
     }
     return direct_player_id;
 }
-

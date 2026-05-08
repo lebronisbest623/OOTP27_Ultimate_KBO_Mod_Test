@@ -229,5 +229,3 @@ static int kbo_load_asian_games_roster_csv(const char* source)
     append_logf("KBO Asian Games roster csv load source=%s year=%u count=%d path=%s", source != NULL ? source : "", loaded_year, loaded_count, path);
     return loaded_count;
 }
-
-

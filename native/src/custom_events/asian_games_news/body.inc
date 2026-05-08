@@ -242,4 +242,3 @@ static void kbo_build_asian_games_news_body(char* out, size_t out_size, const ch
         }
     }
 }
-

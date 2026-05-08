@@ -1,4 +1,4 @@
-﻿static DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
+static DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
 {
     HINSTANCE instance = (HINSTANCE)parameter;
     append_log_line("KBO full runtime marker guard thread started");

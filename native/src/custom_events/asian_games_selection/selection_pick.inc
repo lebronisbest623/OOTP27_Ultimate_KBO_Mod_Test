@@ -127,4 +127,3 @@ static int kbo_asian_games_try_select_candidate_flex_position(
     }
     return 1;
 }
-

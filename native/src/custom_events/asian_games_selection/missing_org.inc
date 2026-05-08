@@ -66,4 +66,3 @@ static int kbo_asian_games_replace_for_missing_org(
         best_loss);
     return 1;
 }
-

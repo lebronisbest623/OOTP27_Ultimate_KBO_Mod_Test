@@ -47,4 +47,3 @@ static int kbo_persist_foreign_injury_replacements_locked(void)
     snprintf(g_kbo_foreign_injury_replacement_loaded_path, sizeof(g_kbo_foreign_injury_replacement_loaded_path), "%s", path);
     return 1;
 }
-

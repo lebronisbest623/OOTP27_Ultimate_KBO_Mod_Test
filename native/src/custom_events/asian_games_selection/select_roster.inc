@@ -333,5 +333,3 @@ static int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* so
     kbo_save_asian_games_roster_csv(source);
     return selected_count;
 }
-
-

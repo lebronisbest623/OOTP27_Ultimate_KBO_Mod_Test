@@ -13,28 +13,60 @@ static int install_kbo_intl_established_fa_multiplier_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_INTL_ESTABLISHED_FA_COUNT_READY_RVA);
     const uint8_t expected[14] = {
         0x45, 0x33, 0xC9,                               /* xor r9d,r9d */
         0x4C, 0x8D, 0x05, 0x76, 0x98, 0x41, 0x02,       /* lea r8,[Creating International Free Agents] */
         0x41, 0x8D, 0x51, 0x01                          /* lea edx,[r9+1] */
     };
+    const uint8_t expected_mask[14] = {
+        1,1,1,1,1,1,0,0,0,0,1,1,1,1
+    };
+    const uint8_t context[64] = {
+        0x00, 0x00, 0x00, 0xE8, 0x40, 0x85, 0xBE, 0x00,
+        0x83, 0xC0, 0xFD, 0x03, 0xF8, 0x89, 0x7D, 0x98,
+        0x45, 0x33, 0xC9, 0x4C, 0x8D, 0x05, 0x76, 0x98,
+        0x41, 0x02, 0x41, 0x8D, 0x51, 0x01, 0xE8, 0xD5,
+        0x56, 0xB1, 0x00, 0x48, 0x8B, 0xD8, 0x45, 0x33,
+        0xC9, 0x4C, 0x8D, 0x05, 0x38, 0x96, 0x3F, 0x02,
+        0x41, 0x8D, 0x51, 0x01, 0xE8, 0xBF, 0x56, 0xB1,
+        0x00, 0x44, 0x89, 0x6C, 0x24, 0x20, 0x45, 0x33
+    };
+    const uint8_t context_mask[64] = {
+        1,1,1,1,0,0,0,0, 1,1,1,1,1,1,1,0,
+        1,1,1,1,1,1,0,0, 0,0,1,1,1,1,1,0,
+        0,0,0,1,1,1,1,1, 1,1,1,1,0,0,0,0,
+        1,1,1,1,1,0,0,0, 0,1,1,1,1,1,1,1
+    };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO international established FA multiplier patch target unreadable target=%p", target);
+    uint8_t* target = resolve_patch_target_by_rva_or_masked_context_and_expected_pattern(
+        exe,
+        OOTP27_INTL_ESTABLISHED_FA_COUNT_READY_RVA,
+        expected,
+        expected_mask,
+        sizeof(expected),
+        context,
+        context_mask,
+        sizeof(context),
+        16u,
+        "KBO international established FA multiplier patch");
+    if (target == NULL) {
         return 0;
     }
     if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
         append_logf("KBO international established FA multiplier patch already installed target=%p", target);
         return 1;
     }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
+    if (!kbo_memory_matches_masked_pattern(target, expected, expected_mask, sizeof(expected))) {
         log_patch_bytes_mismatch("KBO international established FA multiplier patch", target, sizeof(expected));
         return 0;
     }
 
     void* continuation = target + sizeof(expected);
-    void* progress_title = (void*)((uintptr_t)exe + OOTP27_INTL_ESTABLISHED_FA_PROGRESS_TITLE_RVA);
+    void* progress_title = resolve_rip_relative_lea_target(target + 3);
+    if (progress_title == NULL) {
+        append_log_line("failed to resolve KBO international established FA progress title");
+        return 0;
+    }
     uint8_t* stub = build_kbo_intl_established_fa_count_stub(continuation, progress_title);
     if (stub == NULL) {
         append_log_line("failed to allocate KBO international established FA multiplier stub");
@@ -84,7 +116,6 @@ static int install_kbo_intl_established_fa_player_probe_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_INTL_ESTABLISHED_FA_PLAYER_PROBE_RVA);
     const uint8_t expected[OOTP27_INTL_ESTABLISHED_FA_PLAYER_PROBE_STOLEN_LEN] = {
         0x48, 0x8B, 0xD8,                               /* mov rbx,rax */
         0x48, 0x89, 0x45, 0x08,                         /* mov [rbp+0x8],rax */
@@ -92,9 +123,34 @@ static int install_kbo_intl_established_fa_player_probe_patch(void)
         0x33, 0xC0,                                     /* xor eax,eax */
         0x0F, 0x11, 0x83, 0x38, 0x08, 0x00, 0x00        /* movups [rbx+0x838],xmm0 */
     };
+    const uint8_t context[64] = {
+        0xC0, 0x49, 0x8B, 0xD4, 0x48, 0x8B, 0x0D, 0xBC,
+        0x4C, 0xB3, 0x02, 0xE8, 0x17, 0x0D, 0x6A, 0x00,
+        0x48, 0x8B, 0xD8, 0x48, 0x89, 0x45, 0x08, 0x0F,
+        0x57, 0xC0, 0x33, 0xC0, 0x0F, 0x11, 0x83, 0x38,
+        0x08, 0x00, 0x00, 0x0F, 0x11, 0x83, 0x48, 0x08,
+        0x00, 0x00, 0x0F, 0x11, 0x83, 0x58, 0x08, 0x00,
+        0x00, 0x0F, 0x11, 0x83, 0x68, 0x08, 0x00, 0x00,
+        0x0F, 0x11, 0x83, 0x78, 0x08, 0x00, 0x00, 0x0F
+    };
+    const uint8_t context_mask[64] = {
+        1,1,1,1,1,1,1,0, 0,0,0,1,0,0,0,0,
+        1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1, 1,1,1,1,0,1,1,1
+    };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO international established FA player probe patch target unreadable target=%p", target);
+    uint8_t* target = resolve_patch_target_by_rva_or_masked_context_pattern(
+        exe,
+        OOTP27_INTL_ESTABLISHED_FA_PLAYER_PROBE_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        context_mask,
+        sizeof(context),
+        16u,
+        "KBO international established FA player probe patch");
+    if (target == NULL) {
         return 0;
     }
     if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
@@ -161,39 +217,66 @@ static int install_kbo_intl_established_fa_generation_filter_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_RVA);
     const uint8_t expected[OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_STOLEN_LEN] = {
         0x48, 0x8B, 0xD3,                               /* mov rdx,rbx */
         0x48, 0x8B, 0x0D, 0x3C, 0x4C, 0xB3, 0x02,       /* mov rcx,[global db] */
         0xE8, 0xB7, 0xC4, 0xDF, 0xFF                    /* call register player */
     };
+    const uint8_t expected_mask[OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_STOLEN_LEN] = {
+        1,1,1,1,1,1,0,0,0,0,1,0,0,0,0
+    };
+    const uint8_t context[64] = {
+        0x7C, 0x12, 0x0F, 0x9E, 0xC0, 0x66, 0x83, 0xC0,
+        0x04, 0x66, 0x89, 0x83, 0x56, 0x08, 0x00, 0x00,
+        0x48, 0x8B, 0xD3, 0x48, 0x8B, 0x0D, 0x3C, 0x4C,
+        0xB3, 0x02, 0xE8, 0xB7, 0xC4, 0xDF, 0xFF, 0x8B,
+        0x45, 0xCC, 0x8B, 0x55, 0xC8, 0x3B, 0xC2, 0x0F,
+        0x8C, 0xBB, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x4D,
+        0xC0, 0x48, 0x85, 0xC9, 0x74, 0x60, 0x0F, 0xBF,
+        0x45, 0xD0, 0x03, 0xC2, 0x48, 0x63, 0xD0, 0x48
+    };
+    const uint8_t context_mask[64] = {
+        1,0,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,0,0, 0,0,1,0,0,0,0,1,
+        1,1,1,1,1,1,1,1, 1,0,0,0,0,1,1,1,
+        1,1,1,1,1,0,1,1, 1,1,1,1,1,1,1,1
+    };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO international established FA generation filter patch target unreadable target=%p", target);
+    uint8_t* target = resolve_patch_target_by_rva_or_masked_context_and_expected_pattern(
+        exe,
+        OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_RVA,
+        expected,
+        expected_mask,
+        sizeof(expected),
+        context,
+        context_mask,
+        sizeof(context),
+        16u,
+        "KBO international established FA generation filter patch");
+    if (target == NULL) {
         return 0;
     }
     if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
         append_logf("KBO international established FA generation filter patch already installed target=%p", target);
         return 1;
     }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
+    if (!kbo_memory_matches_masked_pattern(target, expected, expected_mask, sizeof(expected))) {
         log_patch_bytes_mismatch("KBO international established FA generation filter patch", target, sizeof(expected));
         return 0;
     }
 
-    int32_t global_slot_rel = 0;
-    memcpy(&global_slot_rel, target + OOTP27_INTL_ESTABLISHED_FA_GLOBAL_SLOT_REL_OFFSET, sizeof(global_slot_rel));
-    void* global_database_slot = target + OOTP27_INTL_ESTABLISHED_FA_REGISTER_CALL_OFFSET + global_slot_rel;
+    void* global_database_slot = resolve_rip_relative_lea_target(target + 3);
     void* register_player_func = resolve_relative_call_target(target + OOTP27_INTL_ESTABLISHED_FA_REGISTER_CALL_OFFSET);
-    if (register_player_func == NULL) {
+    if (global_database_slot == NULL || register_player_func == NULL) {
         append_logf(
-            "failed to resolve KBO international established FA register function target=%p",
+            "failed to resolve KBO international established FA register dependencies global=%p call=%p",
+            global_database_slot,
             target + OOTP27_INTL_ESTABLISHED_FA_REGISTER_CALL_OFFSET);
         return 0;
     }
 
     void* continuation = target + sizeof(expected);
-    void* retry_continuation = (uint8_t*)((uintptr_t)exe + OOTP27_INTL_ESTABLISHED_FA_RETRY_LOOP_RVA);
+    void* retry_continuation = target + (OOTP27_INTL_ESTABLISHED_FA_RETRY_LOOP_RVA - OOTP27_INTL_ESTABLISHED_FA_REGISTER_GATE_RVA);
     uint8_t* stub = build_kbo_intl_established_fa_register_gate_stub(
         continuation,
         retry_continuation,

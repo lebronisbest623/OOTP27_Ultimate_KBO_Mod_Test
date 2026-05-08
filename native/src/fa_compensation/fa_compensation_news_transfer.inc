@@ -1,4 +1,4 @@
-﻿static void kbo_emit_fa_compensation_player_selected_news(
+static void kbo_emit_fa_compensation_player_selected_news(
     const KboFaCompensationRecord* rec,
     const KboFaProtectedCandidate* selected,
     uint32_t decided_yyyymmdd)

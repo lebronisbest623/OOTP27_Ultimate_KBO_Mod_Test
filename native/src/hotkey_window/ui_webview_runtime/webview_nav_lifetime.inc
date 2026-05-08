@@ -21,4 +21,3 @@ static ULONG STDMETHODCALLTYPE kbo_webview_nav_release(ICoreWebView2NavigationSt
     if (value < 1) { ((KboWebViewNavHandler*)This)->ref = 1; }
     return (ULONG)((KboWebViewNavHandler*)This)->ref;
 }
-

@@ -4,7 +4,6 @@ static int install_kbo_no_minor_contract_player_action_eligibility_patch(HMODULE
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_NO_MINOR_CONTRACT_PLAYER_ACTION_ELIGIBILITY_RVA);
     const size_t stolen_len = 21;
     const uint8_t expected[21] = {
         0x48, 0x89, 0x5C, 0x24, 0x08,                   /* mov [rsp+0x8],rbx */
@@ -17,18 +16,28 @@ static int install_kbo_no_minor_contract_player_action_eligibility_patch(HMODULE
         0x41, 0x56,                                     /* push r14 */
         0x41, 0x57                                      /* push r15 */
     };
+    const uint8_t context[48] = {
+        0xB8, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x44, 0x88, 0x44,
+        0x24, 0x18, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
+        0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xEC,
+        0x50, 0x48, 0x63, 0xDA, 0x48, 0x8B, 0xF9, 0x33
+    };
 
-    if (!memory_range_readable(target, stolen_len)) {
-        append_logf("KBO no-minor player action eligibility target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_NO_MINOR_CONTRACT_PLAYER_ACTION_ELIGIBILITY_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO no-minor player action eligibility");
+    if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO no-minor player action eligibility already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO no-minor player action eligibility", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);

@@ -117,5 +117,3 @@ static int kbo_player_is_registered_active_military_loan(uintptr_t player_ptr)
     uint32_t player_id = *(uint32_t*)(player_ptr + OOTP27_PLAYER_ID_OFFSET);
     return find_active_kbo_military_loan_index(player_id) >= 0;
 }
-
-

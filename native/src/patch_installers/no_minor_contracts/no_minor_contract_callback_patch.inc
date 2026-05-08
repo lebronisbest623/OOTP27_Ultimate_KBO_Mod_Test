@@ -4,7 +4,6 @@ static int install_kbo_no_minor_contract_contract_callback_probe_patch(HMODULE e
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_FA_CONTRACT_OFFER_CALLBACK_PROBE_RVA);
     const size_t stolen_len = 21;
     const uint8_t expected[21] = {
         0x48, 0x89, 0x5C, 0x24, 0x08,                   /* mov [rsp+0x8],rbx */
@@ -16,18 +15,28 @@ static int install_kbo_no_minor_contract_contract_callback_probe_patch(HMODULE e
         0x41, 0x57,                                     /* push r15 */
         0x48, 0x8B, 0xEC                                /* mov rbp,rsp */
     };
+    const uint8_t context[48] = {
+        0x00, 0x41, 0x5F, 0x41, 0x5E, 0x41, 0x5D, 0x41,
+        0x5C, 0x5F, 0x5E, 0x5B, 0x5D, 0xC3, 0xCC, 0xCC,
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
+        0x24, 0x10, 0x55, 0x57, 0x41, 0x54, 0x41, 0x56,
+        0x41, 0x57, 0x48, 0x8B, 0xEC, 0x48, 0x83, 0xEC,
+        0x70, 0x48, 0x8B, 0xDA, 0x48, 0x8B, 0xF9, 0x49
+    };
 
-    if (!memory_range_readable(target, stolen_len)) {
-        append_logf("KBO no-minor contract callback probe target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_FA_CONTRACT_OFFER_CALLBACK_PROBE_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO no-minor contract callback probe");
+    if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO no-minor contract callback probe already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO no-minor contract callback probe", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);

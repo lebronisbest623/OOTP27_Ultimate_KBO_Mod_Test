@@ -1,4 +1,4 @@
-﻿static uint32_t kbo_amateur_assignment_candidate_weight(
+static uint32_t kbo_amateur_assignment_candidate_weight(
     uint32_t league_id,
     int32_t quality_score,
     int assignment_tier,

@@ -1,4 +1,4 @@
-﻿static uint8_t* kbo_choose_amateur_assignment_team(
+static uint8_t* kbo_choose_amateur_assignment_team(
     uint8_t* player,
     uint32_t league_id,
     uint32_t current_team_id,

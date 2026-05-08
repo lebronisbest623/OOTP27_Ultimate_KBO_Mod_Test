@@ -40,4 +40,3 @@ static uint32_t kbo_resolve_military_service_seed_key_from_memory(const char* ke
     }
     return first_match;
 }
-

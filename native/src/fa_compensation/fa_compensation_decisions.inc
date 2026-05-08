@@ -1,4 +1,4 @@
-﻿static int kbo_load_fa_compensation_protection_debug_rows(
+static int kbo_load_fa_compensation_protection_debug_rows(
     KboFaCompensationProtectionDebugRow* rows,
     int max_rows)
 {

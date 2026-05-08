@@ -210,30 +210,18 @@ static int install_kbo_military_team_add_guard_patch(void)
         0x48, 0x89, 0x4C, 0x24, 0x08,                  /* mov [rsp+0x8], rcx */
         0x55                                            /* push rbp */
     };
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_TEAM_ADD_PLAYER_RVA);
-    if (!memory_range_readable(target, stolen_len)) {
-        append_logf("KBO military team-add guard target unreadable target=%p", target);
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(
+        exe,
+        OOTP27_TEAM_ADD_PLAYER_RVA,
+        expected,
+        sizeof(expected),
+        "KBO military team-add guard patch");
+    if (target == NULL) {
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO military team-add guard patch already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        uint8_t* signature_target = find_ootp_executable_pattern(expected, sizeof(expected));
-        if (signature_target == NULL) {
-            log_patch_bytes_mismatch("KBO military team-add guard patch", target, sizeof(expected));
-            return 0;
-        }
-        target = signature_target;
-        if (is_rax_absolute_jump_patch(target)) {
-            append_logf("KBO military team-add guard patch already installed target=%p", target);
-            return 1;
-        }
-        if (memcmp(target, expected, sizeof(expected)) != 0) {
-            log_patch_bytes_mismatch("KBO military team-add guard patch", target, sizeof(expected));
-            return 0;
-        }
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);

@@ -68,4 +68,3 @@ static void kbo_emit_foreign_injury_replacement_news(
         rec->league_id,
         created);
 }
-

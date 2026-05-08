@@ -1,4 +1,6 @@
-﻿static uintptr_t kbo_find_league_ptr_from_global_vectors(uint32_t league_id)
+#include "league_context_lookup.h"
+
+uintptr_t kbo_find_league_ptr_from_global_vectors(uint32_t league_id)
 {
     uintptr_t global = get_ootp_global_database();
     if (global == 0 || league_id == 0) {

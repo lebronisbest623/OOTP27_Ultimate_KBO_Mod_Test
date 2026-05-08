@@ -127,4 +127,3 @@ static void kbo_count_foreign_injury_replacements_for_team(
     }
     kbo_unlock_foreign_injury_replacements();
 }
-

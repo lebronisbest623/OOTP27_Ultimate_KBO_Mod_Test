@@ -10,10 +10,10 @@ static const char* kbo_hub_text(const char* ko, const char* en)
 {
     return g_kbo_hub_language == KBO_HUB_LANG_EN ? en : ko;
 }
-#include "state_team_vector.inc"
+#include "state_team_vector.h"
 #include "state_language.inc"
 #include "state_nav.inc"
-#include "state_text_utils.inc"
+#include "state_text_utils.h"
 #include "state_league_lookup/league_lookup_state.inc"
 #include "state_league_lookup/league_display_cache.inc"
 #include "state_league_lookup/league_ptr_cache.inc"

@@ -1,4 +1,4 @@
-﻿static DWORD WINAPI patch_thread(LPVOID parameter)
+static DWORD WINAPI patch_thread(LPVOID parameter)
 {
     append_log_line("KBOFix loaded");
 
@@ -74,4 +74,3 @@
     }
     return 0;
 }
-

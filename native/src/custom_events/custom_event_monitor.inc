@@ -91,4 +91,3 @@ static int start_kbo_custom_event_monitor(void)
     CloseHandle(thread);
     return 1;
 }
-

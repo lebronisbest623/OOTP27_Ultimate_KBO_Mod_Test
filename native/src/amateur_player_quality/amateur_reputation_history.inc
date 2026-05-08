@@ -1,4 +1,4 @@
-﻿static int kbo_get_amateur_reputation_history_path(char* out, size_t out_size)
+static int kbo_get_amateur_reputation_history_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size < 2) {
         return 0;

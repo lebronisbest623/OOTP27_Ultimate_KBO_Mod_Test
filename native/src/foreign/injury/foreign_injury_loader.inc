@@ -27,4 +27,3 @@ static void kbo_ensure_foreign_injury_replacements_loaded(void)
     }
     kbo_unlock_foreign_injury_replacements();
 }
-

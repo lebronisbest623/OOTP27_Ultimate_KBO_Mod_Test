@@ -53,4 +53,3 @@ static int kbo_persist_military_service_resolved_cache_locked(void)
     }
     return 1;
 }
-

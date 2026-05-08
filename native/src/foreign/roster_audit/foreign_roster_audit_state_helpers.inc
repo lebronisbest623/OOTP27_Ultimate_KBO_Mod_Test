@@ -82,4 +82,3 @@ static KboForeignRosterAuditState* kbo_find_foreign_roster_audit_state(uint32_t 
     }
     return NULL;
 }
-

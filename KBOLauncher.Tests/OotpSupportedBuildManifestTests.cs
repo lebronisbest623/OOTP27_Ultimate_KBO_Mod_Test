@@ -11,12 +11,12 @@ public sealed class OotpSupportedBuildManifestTests
     {
         var manifestBuilds = ReadManifestBuilds();
         var managedBuilds = global::OotpSupportedBuilds.All
-            .Select(build => new SupportedBuildRow(build.Timestamp, build.SizeOfImage, build.Label))
+            .Select(build => new SupportedBuildRow(build.Timestamp, build.SizeOfImage, build.Label, build.ExperimentalSignature))
             .ToArray();
         var nativeBuilds = ReadNativeGeneratedBuilds();
 
         Assert.Equal(manifestBuilds, managedBuilds);
-        Assert.Equal(manifestBuilds, nativeBuilds);
+        Assert.Equal(manifestBuilds.Select(build => build.NativeRow).ToArray(), nativeBuilds);
     }
 
     private static SupportedBuildRow[] ReadManifestBuilds()
@@ -27,17 +27,18 @@ public sealed class OotpSupportedBuildManifestTests
             .Select(build => new SupportedBuildRow(
                 ParseHexUInt32(build.GetProperty("timestamp").GetString()!),
                 ParseHexUInt32(build.GetProperty("sizeOfImage").GetString()!),
-                build.GetProperty("label").GetString()!))
+                build.GetProperty("label").GetString()!,
+                build.TryGetProperty("experimentalSignature", out var experimentalSignature) && experimentalSignature.GetBoolean()))
             .ToArray();
     }
 
-    private static SupportedBuildRow[] ReadNativeGeneratedBuilds()
+    private static NativeBuildRow[] ReadNativeGeneratedBuilds()
     {
         var text = File.ReadAllText(RepoPath("native", "src", "build_verify", "supported_builds.generated.inc"));
         return Regex.Matches(
                 text,
                 "\\{0x(?<timestamp>[0-9A-Fa-f]{8})u, 0x(?<size>[0-9A-Fa-f]{8})u, \"(?<label>[^\"]+)\"\\},")
-            .Select(match => new SupportedBuildRow(
+            .Select(match => new NativeBuildRow(
                 Convert.ToUInt32(match.Groups["timestamp"].Value, 16),
                 Convert.ToUInt32(match.Groups["size"].Value, 16),
                 match.Groups["label"].Value))
@@ -66,5 +67,10 @@ public sealed class OotpSupportedBuildManifestTests
         throw new FileNotFoundException("Could not find repository file.", Path.Combine(parts));
     }
 
-    private sealed record SupportedBuildRow(uint Timestamp, uint SizeOfImage, string Label);
+    private sealed record SupportedBuildRow(uint Timestamp, uint SizeOfImage, string Label, bool ExperimentalSignature)
+    {
+        public NativeBuildRow NativeRow => new(Timestamp, SizeOfImage, Label);
+    }
+
+    private sealed record NativeBuildRow(uint Timestamp, uint SizeOfImage, string Label);
 }

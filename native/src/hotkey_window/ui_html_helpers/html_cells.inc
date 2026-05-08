@@ -69,4 +69,3 @@ static void kbo_webview_append_roster_top_bar(KboWindowTextBuffer* buffer, const
     }
     kbo_window_text_appendf(buffer, "</div>");
 }
-

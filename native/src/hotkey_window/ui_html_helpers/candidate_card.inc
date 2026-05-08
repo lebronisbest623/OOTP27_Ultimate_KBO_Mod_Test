@@ -57,4 +57,3 @@ static void kbo_webview_append_candidate_card(
     kbo_html_append_escaped(buffer, flags != NULL && flags[0] != '\0' ? flags : "Active");
     kbo_window_text_appendf(buffer, "</td></tr>");
 }
-

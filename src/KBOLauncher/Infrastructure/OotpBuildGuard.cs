@@ -67,7 +67,9 @@ internal static class OotpBuildGuard
 
         var suffix = supportedBuild is null
             ? "unsupported"
-            : $"supported ({supportedBuild.Label})";
+            : supportedBuild.ExperimentalSignature
+                ? $"experimental signature-supported ({supportedBuild.Label})"
+                : $"supported ({supportedBuild.Label})";
         return $"OOTP build: timestamp=0x{info.Timestamp:X8}, size_of_image=0x{info.SizeOfImage:X8} [{suffix}]";
     }
 
@@ -83,11 +85,13 @@ internal static class OotpBuildGuard
             return $"ootp_build status=unsupported timestamp=0x{info.Timestamp:X8} size_of_image=0x{info.SizeOfImage:X8}";
         }
 
-        return $"ootp_build status=supported label=\"{supportedBuild.Label}\" timestamp=0x{info.Timestamp:X8} size_of_image=0x{info.SizeOfImage:X8}";
+        return $"ootp_build status={supportedBuild.SupportStatus} label=\"{supportedBuild.Label}\" timestamp=0x{info.Timestamp:X8} size_of_image=0x{info.SizeOfImage:X8}";
     }
 
     public static IEnumerable<string> SupportedBuildDescriptions()
     {
-        return OotpSupportedBuilds.All.Select(build => $"{build.Label}:0x{build.Timestamp:X8}/0x{build.SizeOfImage:X8}");
+        return OotpSupportedBuilds.All.Select(build =>
+            $"{build.Label}:0x{build.Timestamp:X8}/0x{build.SizeOfImage:X8}" +
+            (build.ExperimentalSignature ? "[experimental_signature]" : ""));
     }
 }

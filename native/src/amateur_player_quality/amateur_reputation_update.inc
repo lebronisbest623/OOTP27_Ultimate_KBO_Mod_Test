@@ -1,4 +1,4 @@
-﻿static int kbo_compare_amateur_reputation_update_rows(const void* a, const void* b)
+static int kbo_compare_amateur_reputation_update_rows(const void* a, const void* b)
 {
     const KboAmateurReputationUpdateRow* left = (const KboAmateurReputationUpdateRow*)a;
     const KboAmateurReputationUpdateRow* right = (const KboAmateurReputationUpdateRow*)b;

@@ -235,5 +235,3 @@ static int kbo_custom_event_exists_by_title_for_date(
 
     return 0;
 }
-
-

@@ -39,4 +39,3 @@ static void kbo_unlock_foreign_injury_replacements(void)
 {
     InterlockedExchange(&g_kbo_foreign_injury_replacement_lock, 0);
 }
-

@@ -1,6 +1,11 @@
+#include "team_roster_arrays.h"
+#include "../bootstrap/ootp_offsets.h"
+#include "../core/core_log.h"
+#include "../runtime_memory/runtime_memory.h"
+
 /* Roster array helpers */
 
-static int kbo_remove_player_id_from_team_fixed_array(uint8_t* team, uint32_t array_offset, uint32_t player_id)
+int kbo_remove_player_id_from_team_fixed_array(uint8_t* team, uint32_t array_offset, uint32_t player_id)
 {
     if (team == NULL || player_id == 0 || !memory_range_readable(team + array_offset, OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT * sizeof(uint32_t))) {
         return 0;
@@ -17,7 +22,7 @@ static int kbo_remove_player_id_from_team_fixed_array(uint8_t* team, uint32_t ar
     return removed;
 }
 
-static int kbo_add_player_id_to_team_fixed_array(uint8_t* team, uint32_t array_offset, uint32_t player_id)
+int kbo_add_player_id_to_team_fixed_array(uint8_t* team, uint32_t array_offset, uint32_t player_id)
 {
     if (team == NULL || player_id == 0 || !memory_range_readable(team + array_offset, OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT * sizeof(uint32_t))) {
         return 0;
@@ -38,7 +43,7 @@ static int kbo_add_player_id_to_team_fixed_array(uint8_t* team, uint32_t array_o
     return 0;
 }
 
-static int kbo_remove_player_id_from_known_team_roster_arrays(uint8_t* team, uint32_t player_id)
+int kbo_remove_player_id_from_known_team_roster_arrays(uint8_t* team, uint32_t player_id)
 {
     if (team == NULL || player_id == 0) {
         return 0;
@@ -54,7 +59,7 @@ static int kbo_remove_player_id_from_known_team_roster_arrays(uint8_t* team, uin
     return removed;
 }
 
-static int kbo_add_player_id_to_team_assignment_arrays(uint8_t* team, uint32_t player_id)
+int kbo_add_player_id_to_team_assignment_arrays(uint8_t* team, uint32_t player_id)
 {
     int added = 0;
     added += kbo_add_player_id_to_team_fixed_array(team, OOTP27_TEAM_PLAYER_IDS_2760_OFFSET, player_id);

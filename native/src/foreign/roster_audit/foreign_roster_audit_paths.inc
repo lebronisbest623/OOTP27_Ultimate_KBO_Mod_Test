@@ -15,5 +15,3 @@ static int get_kbo_foreign_roster_snapshot_csv_path(char* out, size_t out_size)
     }
     return kbo_get_save_scoped_data_file("foreign_roster_snapshot.csv", out, out_size);
 }
-
-

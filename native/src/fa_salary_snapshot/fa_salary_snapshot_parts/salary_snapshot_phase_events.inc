@@ -175,4 +175,3 @@ static void start_kbo_fa_salary_snapshot_phase_event_thread(void)
         append_logf("KBO FA salary opening-day phase hook event thread failed to start gle=%lu", GetLastError());
     }
 }
-

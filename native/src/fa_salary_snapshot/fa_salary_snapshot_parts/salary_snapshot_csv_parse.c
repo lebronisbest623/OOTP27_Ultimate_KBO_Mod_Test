@@ -1,40 +1,24 @@
-static uint32_t kbo_fa_filing_parse_u32(const char* text)
+#include "salary_snapshot_csv_parse.h"
+
+void kbo_fa_salary_snapshot_write_csv_text(HANDLE file, const char* text)
 {
-    if (text == NULL) {
-        return 0u;
+    DWORD written = 0;
+    WriteFile(file, "\"", 1, &written, NULL);
+    if (text != NULL) {
+        const char* p = text;
+        while (*p != '\0') {
+            if (*p == '"') {
+                WriteFile(file, "\"\"", 2, &written, NULL);
+            } else {
+                WriteFile(file, p, 1, &written, NULL);
+            }
+            ++p;
+        }
     }
-    while (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n') {
-        text++;
-    }
-    if (*text == '\0') {
-        return 0u;
-    }
-    char* tail = NULL;
-    unsigned long value = strtoul(text, &tail, 0);
-    if (tail == text) {
-        return 0u;
-    }
-    return (uint32_t)value;
+    WriteFile(file, "\"", 1, &written, NULL);
 }
 
-static void kbo_fa_filing_copy_text(char* out, size_t out_size, const char* text)
-{
-    if (out == NULL || out_size == 0) {
-        return;
-    }
-    out[0] = '\0';
-    if (text == NULL) {
-        return;
-    }
-    size_t used = 0;
-    while (text[used] != '\0' && used + 1u < out_size) {
-        out[used] = text[used];
-        used++;
-    }
-    out[used] = '\0';
-}
-
-static int kbo_fa_filing_parse_csv_field(char** cursor, char* out, size_t out_size)
+int kbo_fa_salary_snapshot_parse_csv_field(char** cursor, char* out, size_t out_size)
 {
     if (cursor == NULL || *cursor == NULL || out == NULL || out_size == 0) {
         return 0;
@@ -87,4 +71,30 @@ static int kbo_fa_filing_parse_csv_field(char** cursor, char* out, size_t out_si
     }
     *cursor = p;
     return 1;
+}
+
+uint32_t kbo_fa_salary_snapshot_parse_u32(const char* text)
+{
+    if (text == NULL || text[0] == '\0') {
+        return 0u;
+    }
+    char* tail = NULL;
+    unsigned long value = strtoul(text, &tail, 10);
+    if (tail == text || value > 0xfffffffful) {
+        return 0u;
+    }
+    return (uint32_t)value;
+}
+
+int32_t kbo_fa_salary_snapshot_parse_i32(const char* text)
+{
+    if (text == NULL || text[0] == '\0') {
+        return 0;
+    }
+    char* tail = NULL;
+    long value = strtol(text, &tail, 10);
+    if (tail == text) {
+        return 0;
+    }
+    return (int32_t)value;
 }

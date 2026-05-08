@@ -1,4 +1,6 @@
-static void kbo_fa_filing_write_raw(HANDLE file, const char* text)
+#include "fa_filing_csv_write_helpers.h"
+
+void kbo_fa_filing_write_raw(HANDLE file, const char* text)
 {
     if (file == INVALID_HANDLE_VALUE || text == NULL) {
         return;
@@ -7,7 +9,7 @@ static void kbo_fa_filing_write_raw(HANDLE file, const char* text)
     WriteFile(file, text, (DWORD)strlen(text), &written, NULL);
 }
 
-static void kbo_fa_filing_write_csv_text(HANDLE file, const char* text)
+void kbo_fa_filing_write_csv_text(HANDLE file, const char* text)
 {
     kbo_fa_filing_write_raw(file, "\"");
     if (text != NULL) {

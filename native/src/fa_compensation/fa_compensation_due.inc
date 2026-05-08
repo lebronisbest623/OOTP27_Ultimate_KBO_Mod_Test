@@ -1,4 +1,4 @@
-﻿static int kbo_submit_fa_compensation_protected_list_record(
+static int kbo_submit_fa_compensation_protected_list_record(
     KboFaCompensationRecord* rec,
     uint32_t today,
     const KboFaRules* rules,

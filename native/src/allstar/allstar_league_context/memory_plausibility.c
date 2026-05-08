@@ -1,6 +1,9 @@
+#include "allstar_league_context.h"
+#include <Windows.h>
+
 /* All-Star league and team context helpers. */
 
-static uint32_t kbo_allstar_read_u32(uint8_t* base, uint32_t offset)
+uint32_t kbo_allstar_read_u32(uint8_t* base, uint32_t offset)
 {
     if (base == NULL || !memory_range_readable(base + offset, sizeof(uint32_t))) {
         return 0;
@@ -8,7 +11,7 @@ static uint32_t kbo_allstar_read_u32(uint8_t* base, uint32_t offset)
     return *(uint32_t*)(base + offset);
 }
 
-static int kbo_allstar_memory_executable(const void* address)
+int kbo_allstar_memory_executable(const void* address)
 {
     if (address == NULL) {
         return 0;
@@ -26,7 +29,7 @@ static int kbo_allstar_memory_executable(const void* address)
         || protect == PAGE_EXECUTE_WRITECOPY;
 }
 
-static int kbo_allstar_league_vtable_plausible(uintptr_t league_ptr)
+int kbo_allstar_league_vtable_plausible(uintptr_t league_ptr)
 {
     if (league_ptr == 0 || !memory_range_readable((void*)league_ptr, sizeof(uintptr_t))) {
         return 0;
@@ -41,7 +44,7 @@ static int kbo_allstar_league_vtable_plausible(uintptr_t league_ptr)
     return kbo_allstar_memory_executable((void*)method);
 }
 
-static int kbo_allstar_league_core_plausible(uintptr_t league_ptr)
+int kbo_allstar_league_core_plausible(uintptr_t league_ptr)
 {
     if (league_ptr == 0) {
         return 0;

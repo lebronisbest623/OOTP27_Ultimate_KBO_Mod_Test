@@ -1,4 +1,9 @@
-static int kbo_hub_get_team_vector(uintptr_t* out_vector, int32_t* out_count)
+#include "state_team_vector.h"
+#include "../bootstrap/ootp_offsets.h"
+#include "../core/core_log.h"
+#include "../runtime_memory/runtime_memory.h"
+
+int kbo_hub_get_team_vector(uintptr_t* out_vector, int32_t* out_count)
 {
     if (out_vector == NULL || out_count == NULL) {
         return 0;

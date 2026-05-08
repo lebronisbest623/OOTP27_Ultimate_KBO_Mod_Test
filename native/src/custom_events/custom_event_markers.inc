@@ -180,5 +180,3 @@ static void kbo_mark_custom_event_processed(uintptr_t event_ptr)
     }
     g_kbo_processed_event_ptrs[slot] = event_ptr;
 }
-
-

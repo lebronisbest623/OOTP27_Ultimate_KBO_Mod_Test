@@ -29,4 +29,3 @@ static int kbo_get_global_foreign_injury_replacement_seed_path(char* out, size_t
     snprintf(out, out_size, "%s\\OOTP-KBO\\foreign_injury_replacements_seed.csv", local_app_data);
     return out[0] != '\0';
 }
-

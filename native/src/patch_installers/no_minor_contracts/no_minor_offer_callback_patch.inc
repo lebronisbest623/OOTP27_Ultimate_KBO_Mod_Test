@@ -4,7 +4,6 @@ static int install_kbo_no_minor_contract_offer_callback_probe_patch(HMODULE exe)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_FA_OFFER_SCREEN_CALLBACK_PROBE_RVA);
     const size_t stolen_len = 20;
     const uint8_t expected[20] = {
         0x48, 0x89, 0x5C, 0x24, 0x08,                   /* mov [rsp+0x8],rbx */
@@ -13,18 +12,28 @@ static int install_kbo_no_minor_contract_offer_callback_probe_patch(HMODULE exe)
         0x57,                                           /* push rdi */
         0x48, 0x83, 0xEC, 0x20                          /* sub rsp,0x20 */
     };
+    const uint8_t context[48] = {
+        0x00, 0x00, 0x41, 0x5F, 0x41, 0x5E, 0x41, 0x5D,
+        0x41, 0x5C, 0x5F, 0x5E, 0x5D, 0xC3, 0xCC, 0xCC,
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C,
+        0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20, 0x57,
+        0x48, 0x83, 0xEC, 0x20, 0x49, 0x8B, 0xF1, 0x49,
+        0x8B, 0xF8, 0x48, 0x8B, 0xEA, 0x48, 0x8B, 0xD9
+    };
 
-    if (!memory_range_readable(target, stolen_len)) {
-        append_logf("KBO no-minor offer callback probe target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_FA_OFFER_SCREEN_CALLBACK_PROBE_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO no-minor offer callback probe");
+    if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO no-minor offer callback probe already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO no-minor offer callback probe", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
@@ -67,4 +76,3 @@ static int install_kbo_no_minor_contract_offer_callback_probe_patch(HMODULE exe)
         &ootp_kbo_fa_offer_screen_callback_probe_wrapper);
     return 1;
 }
-

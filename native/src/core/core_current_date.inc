@@ -1,6 +1,8 @@
 /* Core current-date readers. */
 
-static int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
+#include "core_current_date.h"
+
+int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
 {
     if (out_year != NULL) {
         *out_year = 0;

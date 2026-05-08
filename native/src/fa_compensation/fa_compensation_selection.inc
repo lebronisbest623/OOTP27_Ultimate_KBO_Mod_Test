@@ -1,4 +1,4 @@
-﻿static int kbo_select_fa_compensation_player_from_candidates(
+static int kbo_select_fa_compensation_player_from_candidates(
     const KboFaCompensationRecord* rec,
     const KboFaProtectedCandidate* candidates,
     int candidate_count,

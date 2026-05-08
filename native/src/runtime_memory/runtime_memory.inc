@@ -12,7 +12,7 @@ static int protect_allows_read(DWORD protect)
         || protect == PAGE_EXECUTE_WRITECOPY;
 }
 
-static int memory_range_readable(const void* address, SIZE_T size)
+int memory_range_readable(const void* address, SIZE_T size)
 {
     if (address == NULL || size == 0) {
         return 0;
@@ -98,7 +98,7 @@ static ULONGLONG g_ootp_last_db_scan_ms   = 0;
  * pointer that satisfies looks_like_ootp_global_db().  This replaces the old
  * hard-coded RVA approach so the DLL keeps working across game patch updates.
  */
-static uintptr_t get_ootp_global_database(void)
+uintptr_t get_ootp_global_database(void)
 {
     /* ---- fast path: cached pointer still valid ---- */
     uintptr_t cached = g_ootp_cached_global_db;
@@ -175,7 +175,7 @@ static uintptr_t get_ootp_global_database(void)
     return 0;
 }
 
-static uint8_t* find_ootp_executable_pattern(const uint8_t* pattern, size_t pattern_len)
+uint8_t* find_ootp_executable_pattern(const uint8_t* pattern, size_t pattern_len)
 {
     if (pattern == NULL || pattern_len == 0 || pattern_len > 0x200) {
         return NULL;
@@ -227,7 +227,7 @@ static uint8_t* find_ootp_executable_pattern(const uint8_t* pattern, size_t patt
     return NULL;
 }
 
-static int is_kbo_historical_league_context(uintptr_t league_ptr)
+int is_kbo_historical_league_context(uintptr_t league_ptr)
 {
     if (league_ptr == 0 || !memory_range_readable((void*)league_ptr, OOTP27_HISTORICAL_LEAGUE_READABLE_BYTES)) {
         return 0;

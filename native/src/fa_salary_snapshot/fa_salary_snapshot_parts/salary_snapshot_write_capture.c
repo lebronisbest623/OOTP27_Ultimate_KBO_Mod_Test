@@ -1,4 +1,20 @@
-static int kbo_fa_salary_snapshot_write_csv(
+#include "salary_snapshot_write_capture.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <windows.h>
+
+#include "../../bootstrap/ootp_offsets.h"
+#include "../../bootstrap/profiler.h"
+#include "../../core/core_log.h"
+#include "../../team/team_lookup.h"
+#include "../../team/team_name_cache.h"
+#include "salary_snapshot_csv_parse.h"
+#include "salary_snapshot_paths_dates.h"
+#include "salary_snapshot_row_ranking.h"
+
+int kbo_fa_salary_snapshot_write_csv(
     const KboFaSalarySnapshotRow* rows,
     int row_count,
     uint32_t date,
@@ -89,14 +105,18 @@ static int kbo_fa_salary_snapshot_write_csv(
     return 1;
 }
 
-static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date, uint32_t season, uint32_t opening_day, uint32_t league_id)
+int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date, uint32_t season, uint32_t opening_day, uint32_t league_id)
 {
-    KBO_PROFILE_BEGIN(profile_snapshot_capture);
+    LARGE_INTEGER profile_snapshot_capture = {0};
+    int profile_snapshot_capture_active = kbo_profiler_begin(&profile_snapshot_capture);
+
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
         append_logf("KBO FA salary snapshot skipped source=%s reason=no_player_vector date=%u", source != NULL ? source : "", date);
-        KBO_PROFILE_END(profile_snapshot_capture, "fa_salary_snapshot.capture.no_player_vector");
+        if (profile_snapshot_capture_active) {
+            kbo_profiler_end("fa_salary_snapshot.capture.no_player_vector", &profile_snapshot_capture);
+        }
         return 0;
     }
 
@@ -106,7 +126,9 @@ static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32
         (SIZE_T)player_count * sizeof(KboFaSalarySnapshotRow));
     if (rows == NULL) {
         append_logf("KBO FA salary snapshot skipped source=%s reason=alloc_failed count=%d", source != NULL ? source : "", player_count);
-        KBO_PROFILE_END(profile_snapshot_capture, "fa_salary_snapshot.capture.alloc_failed");
+        if (profile_snapshot_capture_active) {
+            kbo_profiler_end("fa_salary_snapshot.capture.alloc_failed", &profile_snapshot_capture);
+        }
         return 0;
     }
 
@@ -185,7 +207,8 @@ static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32
     }
 
     HeapFree(GetProcessHeap(), 0, rows);
-    KBO_PROFILE_END(profile_snapshot_capture, "fa_salary_snapshot.capture");
+    if (profile_snapshot_capture_active) {
+        kbo_profiler_end("fa_salary_snapshot.capture", &profile_snapshot_capture);
+    }
     return wrote;
 }
-

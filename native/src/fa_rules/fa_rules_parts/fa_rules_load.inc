@@ -1,4 +1,4 @@
-﻿static int kbo_fa_rules_load(KboFaRules* rules)
+static int kbo_fa_rules_load(KboFaRules* rules)
 {
     if (rules == NULL) {
         return 0;

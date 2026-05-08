@@ -98,4 +98,3 @@ static int kbo_load_foreign_injury_replacements_locked(const char* path)
     append_logf("foreign injury replacement: loaded=%d path=%s", loaded, path);
     return loaded;
 }
-

@@ -62,4 +62,3 @@ static uint8_t* kbo_military_find_player_by_id(uint32_t player_id)
     }
     return NULL;
 }
-

@@ -109,4 +109,3 @@ static int kbo_emit_asian_games_replacement_news(
         created);
     return created;
 }
-

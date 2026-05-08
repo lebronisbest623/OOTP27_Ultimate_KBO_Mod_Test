@@ -204,4 +204,3 @@ static int kbo_write_fa_requalification_records(const KboFaRequalificationRecord
     }
     return 1;
 }
-

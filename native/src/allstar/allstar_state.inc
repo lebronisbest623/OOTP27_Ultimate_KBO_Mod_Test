@@ -4,39 +4,19 @@ typedef void (__fastcall *OotpVectorPushBack)(void* vector, void* value);
 typedef void (__fastcall *OotpMakeAllstarGameEventsFn)(uintptr_t league_ptr, uint8_t force_create);
 typedef void (__fastcall *OotpAllstarTeamSetupFn)(uintptr_t league_ptr);
 
-typedef struct KboAllstarTeamRow {
-    uint16_t year;
-    char team_id[16];
-    char team_name[96];
-    char current_city[64];
-    uint8_t side;
-} KboAllstarTeamRow;
-
-typedef struct KboAllstarLayout {
-    uint32_t rules_flag_offset;
-    uint32_t game_flag_offset;
-    uint32_t auto_schedule_offset;
-    uint32_t team_a_offset;
-    uint32_t team_b_offset;
-    uint32_t subleague_array_offset;
-    uint32_t subleague_count_offset;
-    uint32_t league_id_primary_offset;
-    uint32_t league_id_fallback_offset;
-} KboAllstarLayout;
-
-static KboAllstarTeamRow g_allstar_team_rows[OOTP27_KBO_MAX_ALLSTAR_TEAM_ROWS];
-static int g_allstar_team_row_count = 0;
+KboAllstarTeamRow g_allstar_team_rows[OOTP27_KBO_MAX_ALLSTAR_TEAM_ROWS];
+int g_allstar_team_row_count = 0;
 static LONG g_allstar_team_rules_loaded = 0;
 static LONG g_allstar_candidate_seed_log_count = 0;
 static LONG g_allstar_voting_prepare_log_count = 0;
 static LONG g_allstar_team_name_log_count = 0;
 static volatile LONG g_allstar_native_event_generation_in_progress = 0;
 static volatile LONG g_allstar_native_event_generation_done = 0;
-static volatile uintptr_t g_allstar_schedule_import_league_ptr = 0;
+volatile uintptr_t g_allstar_schedule_import_league_ptr = 0;
 
 static int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* source);
 
-static KboAllstarLayout kbo_get_allstar_layout(void)
+KboAllstarLayout kbo_get_allstar_layout(void)
 {
     OotpBuildInfo info = read_ootp_build_info();
     if (kbo_ootp_build_is_steam_2026_05_04(info)) {

@@ -60,4 +60,3 @@ static int kbo_record_fa_requalification_signing(uint32_t player_id, uint32_t te
     kbo_unlock_fa_requalification_records();
     return ok;
 }
-

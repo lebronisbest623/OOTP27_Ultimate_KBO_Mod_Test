@@ -96,4 +96,3 @@ static int kbo_parse_military_service_seed_line(const char* line, KboMilitarySer
     }
     return out->key[0] != '\0' || out->player_id != 0u;
 }
-

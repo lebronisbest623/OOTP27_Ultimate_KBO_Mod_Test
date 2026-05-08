@@ -1,4 +1,4 @@
-﻿static uint8_t* build_kbo_fa_offer_screen_callback_probe_detour_stub(void* original_trampoline)
+static uint8_t* build_kbo_fa_offer_screen_callback_probe_detour_stub(void* original_trampoline)
 {
     uint8_t code[64] = {
         0x48, 0x83, 0xEC, 0x38,                         // sub rsp, 0x38

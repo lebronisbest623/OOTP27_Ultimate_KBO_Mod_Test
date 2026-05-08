@@ -96,4 +96,3 @@ static void kbo_webview_append_team_dropdown(KboWindowTextBuffer* buffer, uint32
     }
     kbo_window_text_appendf(buffer, "</div>");
 }
-

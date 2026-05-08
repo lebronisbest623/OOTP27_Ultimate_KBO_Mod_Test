@@ -1,4 +1,4 @@
-﻿static int kbo_find_amateur_team_reputation_by_memory_team(uint32_t league_id, uint8_t* team, uint8_t* out_reputation)
+static int kbo_find_amateur_team_reputation_by_memory_team(uint32_t league_id, uint8_t* team, uint8_t* out_reputation)
 {
     if (out_reputation != NULL) {
         *out_reputation = 70u;

@@ -1,4 +1,6 @@
-static uint8_t* kbo_alloc_near_code(void* target, size_t size)
+#include "hook_stubs_near_code.h"
+
+uint8_t* kbo_alloc_near_code(void* target, size_t size)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);

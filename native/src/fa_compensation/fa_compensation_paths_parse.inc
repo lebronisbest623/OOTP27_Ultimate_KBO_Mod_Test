@@ -1,4 +1,4 @@
-﻿static int kbo_get_fa_compensation_path(char* out, size_t out_size)
+static int kbo_get_fa_compensation_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return 0;

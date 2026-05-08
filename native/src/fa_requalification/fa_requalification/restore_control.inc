@@ -109,4 +109,3 @@ static int kbo_restore_fa_requalification_team_control(
     }
     return changed;
 }
-

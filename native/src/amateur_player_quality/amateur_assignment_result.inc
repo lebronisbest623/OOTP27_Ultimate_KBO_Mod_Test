@@ -1,4 +1,4 @@
-﻿static void kbo_amateur_team_add_player_note_original_success(uintptr_t team_ptr, uintptr_t player_ptr, const char* source, int original_result)
+static void kbo_amateur_team_add_player_note_original_success(uintptr_t team_ptr, uintptr_t player_ptr, const char* source, int original_result)
 {
     if (team_ptr == 0
             || player_ptr == 0

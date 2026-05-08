@@ -1,4 +1,4 @@
-﻿static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
+static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
 {
     if (InterlockedCompareExchange(&g_kbo_full_runtime_install_started, 1, 0) != 0) {
         append_log_line("KBO full runtime install skipped: already started");

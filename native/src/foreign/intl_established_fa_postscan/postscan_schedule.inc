@@ -56,4 +56,3 @@ static void kbo_intl_established_fa_postscan_schedule(
         today,
         vector_ready ? 1 : 0);
 }
-

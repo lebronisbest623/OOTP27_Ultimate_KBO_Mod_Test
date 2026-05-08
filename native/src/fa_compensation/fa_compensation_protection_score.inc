@@ -1,4 +1,4 @@
-﻿static int32_t kbo_fa_protection_candidate_score(
+static int32_t kbo_fa_protection_candidate_score(
     uint8_t* player,
     uint32_t signing_team_id,
     char* reason,

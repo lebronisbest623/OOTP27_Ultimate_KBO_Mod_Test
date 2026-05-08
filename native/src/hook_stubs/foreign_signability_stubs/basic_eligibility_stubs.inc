@@ -1,4 +1,4 @@
-﻿static uint8_t* build_kbo_player_team_signability_detour_stub(void* original_trampoline)
+static uint8_t* build_kbo_player_team_signability_detour_stub(void* original_trampoline)
 {
     uint8_t code[32] = {
         0x49, 0xB9,                                     // mov r9, original_trampoline

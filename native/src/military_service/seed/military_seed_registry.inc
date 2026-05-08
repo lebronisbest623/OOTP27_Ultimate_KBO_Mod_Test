@@ -62,4 +62,3 @@ static int kbo_load_military_service_seed_file_locked(const char* path)
     }
     return loaded;
 }
-

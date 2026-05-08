@@ -27,4 +27,3 @@ static int kbo_intl_established_fa_postscan_candidate_matches(
 
     return 1;
 }
-

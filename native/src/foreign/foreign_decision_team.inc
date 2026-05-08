@@ -61,4 +61,3 @@ static int kbo_original_club_priority_window_allows(uint8_t* player, uint32_t te
         priority_team_id);
     return 0;
 }
-

@@ -36,4 +36,3 @@ static int kbo_patch_static_pattern(
     }
     return patch_static_bytes(label, base + patch_offset, expected, patch, patch_size);
 }
-

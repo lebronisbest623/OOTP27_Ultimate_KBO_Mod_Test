@@ -1,4 +1,4 @@
-﻿static int kbo_load_fa_compensation_records(
+static int kbo_load_fa_compensation_records(
     KboFaCompensationRecord* records,
     int max_records,
     char* out_path,

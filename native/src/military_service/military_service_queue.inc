@@ -130,5 +130,3 @@ static int kbo_mark_military_return_history_once(uint32_t player_id, uint32_t hi
     g_kbo_military_return_history_keys[slot].history_yyyymmdd = history_yyyymmdd;
     return 1;
 }
-
-

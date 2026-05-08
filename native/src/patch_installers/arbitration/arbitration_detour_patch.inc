@@ -15,6 +15,13 @@ static uint8_t* build_kbo_salary_arbitration_non_tender_detour_stub(void* origin
     return allocate_kbo_salary_arbitration_stub(code, sizeof(code));
 }
 
+static int patch_kbo_salary_arbitration_r11_detour_at(
+    const char* label,
+    uint8_t* target,
+    const uint8_t* expected,
+    size_t size,
+    uint8_t* stub);
+
 static int patch_kbo_salary_arbitration_r11_detour(
     HMODULE exe,
     const char* label,
@@ -28,8 +35,22 @@ static int patch_kbo_salary_arbitration_r11_detour(
     }
 
     uint8_t* target = (uint8_t*)((uintptr_t)exe + rva);
+    return patch_kbo_salary_arbitration_r11_detour_at(label, target, expected, size, stub);
+}
+
+static int patch_kbo_salary_arbitration_r11_detour_at(
+    const char* label,
+    uint8_t* target,
+    const uint8_t* expected,
+    size_t size,
+    uint8_t* stub)
+{
+    if (label == NULL || target == NULL || expected == NULL || size < 13 || stub == NULL) {
+        return 0;
+    }
+
     if (!memory_range_readable(target, size)) {
-        append_logf("%s target unreadable target=%p rva=0x%x", label, target, rva);
+        append_logf("%s target unreadable target=%p", label, target);
         return 0;
     }
     if (is_r11_absolute_jump_patch(target)) {
@@ -73,7 +94,6 @@ static int install_kbo_salary_arbitration_non_tender_function_patch(HMODULE exe)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_ARBITRATION_NON_TENDER_FUNCTION_RVA);
     const size_t stolen_len = 18;
     const uint8_t expected[18] = {
         0x48, 0x89, 0x54, 0x24, 0x10,                   /* mov [rsp+0x10], rdx */
@@ -85,18 +105,28 @@ static int install_kbo_salary_arbitration_non_tender_function_patch(HMODULE exe)
         0x41, 0x54,                                     /* push r12 */
         0x41, 0x55                                      /* push r13 */
     };
+    const uint8_t context[48] = {
+        0x83, 0x68, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3, 0xCC,
+        0x48, 0x89, 0x54, 0x24, 0x10, 0x48, 0x89, 0x4C,
+        0x24, 0x08, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54,
+        0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D,
+        0x6C, 0x24, 0xE1, 0x48, 0x81, 0xEC, 0x88, 0x00
+    };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO salary arbitration non-tender function target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_ARBITRATION_NON_TENDER_FUNCTION_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO salary arbitration non-tender function");
+    if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO salary arbitration non-tender function already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO salary arbitration non-tender function", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);

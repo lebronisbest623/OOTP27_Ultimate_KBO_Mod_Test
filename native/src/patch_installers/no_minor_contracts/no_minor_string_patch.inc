@@ -108,4 +108,3 @@ static int install_kbo_no_minor_contract_string_patch(HMODULE exe)
         patched);
     return patched > 0;
 }
-

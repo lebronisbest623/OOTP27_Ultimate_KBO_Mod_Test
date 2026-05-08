@@ -152,5 +152,3 @@ static int kbo_schedule_asian_games_custom_events(const char* source)
     }
     return created_selection || created_departure || created_final;
 }
-
-

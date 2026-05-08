@@ -1,4 +1,4 @@
-﻿static const char* kbo_fa_rules_json_value_end(const char* value, const char* end)
+static const char* kbo_fa_rules_json_value_end(const char* value, const char* end)
 {
     value = kbo_json_skip_ws(value, end);
     if (value >= end) {

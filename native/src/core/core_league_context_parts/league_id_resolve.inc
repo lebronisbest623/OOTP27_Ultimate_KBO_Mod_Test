@@ -1,4 +1,6 @@
-﻿static uint32_t kbo_resolve_kbo_league_id(void)
+#include "league_context_lookup.h"
+
+uint32_t kbo_resolve_kbo_league_id(void)
 {
     static uint32_t cached_league_id = 0;
     uint32_t override = kbo_read_kbo_league_id_override();

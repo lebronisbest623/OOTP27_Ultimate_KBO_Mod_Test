@@ -1,4 +1,4 @@
-﻿static int kbo_fa_rules_get_localappdata_file_path(const char* file_name, char* out, size_t out_size)
+static int kbo_fa_rules_get_localappdata_file_path(const char* file_name, char* out, size_t out_size)
 {
     if (file_name == NULL || file_name[0] == '\0' || out == NULL || out_size == 0) {
         return 0;

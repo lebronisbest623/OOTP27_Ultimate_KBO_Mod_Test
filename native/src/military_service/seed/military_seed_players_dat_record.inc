@@ -46,4 +46,3 @@ static uint32_t kbo_military_resolve_player_id_from_players_dat_record_start(
     }
     return 0u;
 }
-

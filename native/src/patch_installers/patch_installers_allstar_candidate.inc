@@ -25,26 +25,16 @@ static int install_allstar_candidate_team_split_patch(void)
         0x45, 0x8B, 0xFD
     };
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_SITE_RVA);
     const uint8_t* expected = april_expected;
-    if (memory_range_readable(target, sizeof(may_expected)) && memcmp(target, may_expected, sizeof(may_expected)) == 0) {
+    uint8_t* target = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
+    if (target != NULL) {
         expected = may_expected;
-    } else if (!memory_range_readable(target, sizeof(april_expected)) || memcmp(target, april_expected, sizeof(april_expected)) != 0) {
-        uint8_t* found = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
-        if (found == NULL) {
-            found = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
-            if (found != NULL) { expected = april_expected; }
-        } else {
-            expected = may_expected;
-        }
-        if (found != NULL) {
-            uintptr_t dist = found > target ? (uintptr_t)(found - target) : (uintptr_t)(target - found);
-            append_logf("KBO all-star candidate team split hook: RVA mismatch, pattern found at %p dist=0x%zx from RVA", found, (size_t)dist);
-            target = found;
-        }
+    } else {
+        target = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
+        expected = april_expected;
     }
 
-    if (!memory_range_readable(target, sizeof(april_expected))) {
+    if (target == NULL || !memory_range_readable(target, sizeof(april_expected))) {
         append_logf("KBO all-star candidate team split hook target unreadable target=%p", target);
         return 0;
     }

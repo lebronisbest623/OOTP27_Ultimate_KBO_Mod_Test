@@ -131,4 +131,3 @@ static int kbo_persist_foreign_replacement_player_resolved_cache_locked(void)
     }
     return 1;
 }
-

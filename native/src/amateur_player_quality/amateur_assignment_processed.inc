@@ -1,4 +1,4 @@
-﻿static uint32_t kbo_amateur_assignment_processed_hash_key(uint32_t player_id, uint32_t team_id)
+static uint32_t kbo_amateur_assignment_processed_hash_key(uint32_t player_id, uint32_t team_id)
 {
     uint32_t hash = 2166136261u;
     hash = (hash ^ player_id) * 16777619u;

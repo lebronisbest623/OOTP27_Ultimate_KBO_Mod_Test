@@ -1,4 +1,4 @@
-﻿static int kbo_fa_rules_case_is_compensable(const KboFaRules* rules, const char* case_label)
+static int kbo_fa_rules_case_is_compensable(const KboFaRules* rules, const char* case_label)
 {
     if (rules == NULL || case_label == NULL || case_label[0] == '\0') {
         return 0;

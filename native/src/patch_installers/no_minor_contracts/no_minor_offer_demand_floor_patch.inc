@@ -60,4 +60,3 @@ static int install_kbo_no_minor_contract_offer_player_demand_floor_patch(
         &ootp_kbo_fa_offer_player_demand_floor_probe);
     return 1;
 }
-

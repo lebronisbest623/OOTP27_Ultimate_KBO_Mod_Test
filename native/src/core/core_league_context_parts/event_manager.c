@@ -1,6 +1,11 @@
-﻿/* Core KBO league context resolution. */
+#include "event_manager.h"
+#include "../../bootstrap/ootp_offsets.h"
+#include "../core_log.h"
+#include "../../runtime_memory/runtime_memory.h"
 
-static uintptr_t get_kbo_league_event_manager(void)
+/* Core KBO league context resolution. */
+
+uintptr_t get_kbo_league_event_manager(void)
 {
     uintptr_t global = get_ootp_global_database();
     if (global == 0 || !memory_range_readable((void*)(global + OOTP27_GLOBAL_CURRENT_DATE_OFFSET), sizeof(uintptr_t))) {

@@ -81,7 +81,7 @@ static void add_allstar_team_row(uint16_t year, const char* team_id, const char*
     snprintf(row->current_city, sizeof(row->current_city), "%s", current_city != NULL ? current_city : "");
 }
 
-static void load_allstar_team_rules_once(void)
+void load_allstar_team_rules_once(void)
 {
     if (InterlockedCompareExchange(&g_allstar_team_rules_loaded, 1, 0) != 0) {
         return;

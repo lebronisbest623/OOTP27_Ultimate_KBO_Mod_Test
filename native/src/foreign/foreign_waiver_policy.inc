@@ -24,7 +24,7 @@ static int kbo_custom_foreign_policy_enabled(void)
     return kbo_fix_enabled() && disabled != 1;
 }
 
-static uint32_t kbo_get_foreign_waiver_league_id(void)
+uint32_t kbo_get_foreign_waiver_league_id(void)
 {
     static uint32_t cached_league_id = 0u;
     if (cached_league_id == 0u) {

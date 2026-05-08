@@ -32,8 +32,12 @@ internal static class LauncherGuardStatus
         }
         else
         {
-            lines.Add("status=supported");
+            lines.Add($"status={supportedBuild.SupportStatus}");
             lines.Add($"label={supportedBuild.Label}");
+            if (supportedBuild.ExperimentalSignature)
+            {
+                lines.Add("support=experimental_signature");
+            }
             lines.Add(injectionRequested ? "kbo_injection=allowed" : "kbo_injection=not_requested");
         }
     

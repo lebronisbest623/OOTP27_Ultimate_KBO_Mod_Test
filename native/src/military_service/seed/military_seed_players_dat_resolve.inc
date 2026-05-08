@@ -76,4 +76,3 @@ static uint32_t kbo_resolve_military_service_seed_key_from_players_dat(const cha
     }
     return matched_player_id;
 }
-

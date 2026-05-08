@@ -1,4 +1,4 @@
-﻿static int kbo_persist_fa_compensation_protected_list(
+static int kbo_persist_fa_compensation_protected_list(
     const KboFaCompensationRecord* rec,
     uint32_t due_yyyymmdd,
     uint32_t generated_yyyymmdd,

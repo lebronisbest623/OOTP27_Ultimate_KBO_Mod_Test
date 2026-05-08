@@ -1,4 +1,4 @@
-﻿static void kbo_fa_rules_parse_cases(KboFaRules* rules, const char* start, const char* end)
+static void kbo_fa_rules_parse_cases(KboFaRules* rules, const char* start, const char* end)
 {
     if (rules == NULL || start == NULL || end == NULL) {
         return;

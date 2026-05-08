@@ -120,4 +120,3 @@ static int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const cha
         already_finalized);
     return 1;
 }
-

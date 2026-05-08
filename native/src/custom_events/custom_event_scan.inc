@@ -133,5 +133,3 @@ static int scan_kbo_custom_events_once(const char* source)
     }
     return triggered;
 }
-
-

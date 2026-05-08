@@ -116,4 +116,3 @@ static void kbo_intl_established_fa_postscan_write_csv_row(
     DWORD written = 0;
     WriteFile(file, line, (DWORD)len, &written, NULL);
 }
-

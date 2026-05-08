@@ -54,4 +54,3 @@ static int kbo_retain_foreign_player_rights(
                team_id, player_id, team_league_id, today_yyyymmdd, expires_yyyymmdd);
     return 1;
 }
-

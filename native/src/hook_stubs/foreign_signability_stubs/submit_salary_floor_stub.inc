@@ -1,4 +1,4 @@
-﻿static uint8_t* build_kbo_no_minor_contract_submit_salary_floor_stub(
+static uint8_t* build_kbo_no_minor_contract_submit_salary_floor_stub(
     void* zero_salary_continuation,
     void* min_check_continuation,
     void* after_min_check_continuation)

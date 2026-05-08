@@ -54,6 +54,7 @@ foreach ($Build in $Manifest.builds) {
         Label = [string]$Build.label
         Timestamp = $Timestamp
         SizeOfImage = $SizeOfImage
+        ExperimentalSignature = [bool]($Build.PSObject.Properties.Name -contains "experimentalSignature" -and $Build.experimentalSignature)
     }
 }
 
@@ -67,7 +68,8 @@ $CsLines = @(
     "    ["
 )
 foreach ($Build in $Builds) {
-    $CsLines += '        new(0x{0:X8}u, 0x{1:X8}u, "{2}"),' -f $Build.Timestamp, $Build.SizeOfImage, ($Build.Label -replace '"', '\"')
+    $ExperimentalSignature = if ($Build.ExperimentalSignature) { "true" } else { "false" }
+    $CsLines += '        new(0x{0:X8}u, 0x{1:X8}u, "{2}", {3}),' -f $Build.Timestamp, $Build.SizeOfImage, ($Build.Label -replace '"', '\"'), $ExperimentalSignature
 }
 $CsLines += @(
     "    ];",

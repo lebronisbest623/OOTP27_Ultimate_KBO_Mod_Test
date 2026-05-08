@@ -25,17 +25,6 @@ static int install_single_division_allstar_patch(void)
         prep_expected,
         prep_patch,
         sizeof(prep_expected));
-    if (!ok) {
-        uint8_t* prep_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_PREP_SINGLE_DIVISION_GATE_RVA);
-        if (memory_range_readable(prep_gate, sizeof(prep_expected))) {
-            ok |= patch_static_bytes(
-                "KBO single-division all-star prep gate",
-                prep_gate,
-                prep_expected,
-                prep_patch,
-                sizeof(prep_expected));
-        }
-    }
 
     const uint8_t roster_context_may[] = {
         0x41, 0x8B, 0x46, 0x4C,
@@ -52,17 +41,6 @@ static int install_single_division_allstar_patch(void)
         roster_expected,
         roster_patch,
         sizeof(roster_expected));
-    if (!roster_ok) {
-        uint8_t* roster_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_ROSTER_SINGLE_DIVISION_GATE_RVA);
-        if (memory_range_readable(roster_gate, sizeof(roster_expected))) {
-            roster_ok = patch_static_bytes(
-                "KBO single-division all-star roster gate",
-                roster_gate,
-                roster_expected,
-                roster_patch,
-                sizeof(roster_expected));
-        }
-    }
     ok |= roster_ok;
 
     /* Search for the schedule import gate with both known exact patterns first,
@@ -143,13 +121,8 @@ static int install_single_division_allstar_patch(void)
             }
         }
     }
-    if (schedule_target == NULL) {
-        schedule_target = (uint8_t*)((uintptr_t)exe + OOTP27_IMPORT_SCHEDULE_ALLSTAR_DAY_GATE_RVA - 8u);
-        schedule_expected = schedule_expected_april;
-    }
-
     int schedule_ok = 0;
-    if (!memory_range_readable(schedule_target, sizeof(schedule_expected_may))) {
+    if (schedule_target == NULL || !memory_range_readable(schedule_target, sizeof(schedule_expected_may))) {
         append_logf("KBO all-star schedule import capture hook target unreadable target=%p", schedule_target);
     } else if (is_rip_absolute_jump_patch(schedule_target) || is_rax_absolute_jump_patch(schedule_target)) {
         append_logf("KBO all-star schedule import capture hook already installed target=%p", schedule_target);
@@ -226,16 +199,6 @@ static int install_allstar_team_setup_single_division_patch(void)
         return 1;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_TEAM_SETUP_SINGLE_DIVISION_BAIL_RVA);
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO all-star team setup single-division bail gate target unreadable target=%p", target);
-        return 0;
-    }
-
-    return patch_static_bytes(
-        "KBO all-star team setup single-division bail gate",
-        target,
-        expected,
-        patch,
-        sizeof(expected));
+    append_log_line("KBO all-star team setup single-division bail gate pattern not found");
+    return 0;
 }

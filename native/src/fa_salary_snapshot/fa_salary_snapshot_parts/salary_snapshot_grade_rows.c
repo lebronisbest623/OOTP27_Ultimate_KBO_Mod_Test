@@ -1,3 +1,12 @@
+#include "salary_snapshot_grade_rows.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "salary_snapshot_csv_parse.h"
+#include "salary_snapshot_paths_dates.h"
+
 static const char* kbo_fa_salary_snapshot_grade_for_ranks(uint32_t overall_rank, uint32_t team_rank, int32_t salary)
 {
     if (salary <= 0 || (overall_rank == 0u && team_rank == 0u)) {
@@ -121,7 +130,7 @@ static void kbo_fa_salary_snapshot_assign_grade_team_ranks(KboFaSalarySnapshotGr
     }
 }
 
-static int kbo_fa_salary_snapshot_load_grade_rows(
+int kbo_fa_salary_snapshot_load_grade_rows(
     uint32_t season,
     KboFaSalarySnapshotGrade* rows,
     int max_rows,
@@ -234,7 +243,7 @@ static int kbo_fa_salary_snapshot_load_grade_rows(
     return count;
 }
 
-static const KboFaSalarySnapshotGrade* kbo_find_fa_salary_snapshot_grade(
+const KboFaSalarySnapshotGrade* kbo_find_fa_salary_snapshot_grade(
     const KboFaSalarySnapshotGrade* rows,
     int row_count,
     uint32_t player_id)
@@ -249,4 +258,3 @@ static const KboFaSalarySnapshotGrade* kbo_find_fa_salary_snapshot_grade(
     }
     return NULL;
 }
-

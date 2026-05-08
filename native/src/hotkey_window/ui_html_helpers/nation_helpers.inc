@@ -90,4 +90,3 @@ static void kbo_webview_append_roster_nation_cell(KboWindowTextBuffer* buffer, u
     kbo_html_append_escaped(buffer, kbo_hub_nation_abbrev_for_id(nation_id));
     kbo_window_text_appendf(buffer, "</span></span></td>");
 }
-

@@ -1,6 +1,8 @@
 /* Team and player lookup (from team_continuity) */
 
-static int kbo_player_pointer_plausible(uintptr_t player_ptr)
+#include "team_lookup.h"
+
+int kbo_player_pointer_plausible(uintptr_t player_ptr)
 {
     if (player_ptr == 0 || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
         return 0;
@@ -33,7 +35,7 @@ static int kbo_player_has_nonzero_evaluation(uint8_t* player)
     return overall > 0 || talent > 0 || ratings > 0 || career > 0;
 }
 
-static int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset)
+int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset)
 {
     if (out_vector != NULL) { *out_vector = 0; }
     if (out_count  != NULL) { *out_count  = 0; }
@@ -90,7 +92,7 @@ static int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_cou
     return 1;
 }
 
-static uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allow_deleted)
+uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allow_deleted)
 {
     if (team_id == NULL || team_id[0] == '\0') {
         return NULL;
@@ -126,7 +128,7 @@ static uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allo
     return NULL;
 }
 
-static uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted)
+uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted)
 {
     if (team_id == 0) {
         return NULL;

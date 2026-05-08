@@ -5,6 +5,8 @@ internal static class OotpSupportedBuilds
 {
     public static readonly OotpSupportedBuild[] All =
     [
-        new(0x69F75E6Bu, 0x03919000u, "2026-05-04 Steam"),
+        new(0x69F75E6Bu, 0x03919000u, "2026-05-04 Steam", false),
+        new(0x69F1E677u, 0x0350C000u, "27.2.59 Official experimental signature", true),
+        new(0x69F7605Bu, 0x034FB000u, "27.2.60 Official experimental signature", true),
     ];
 }

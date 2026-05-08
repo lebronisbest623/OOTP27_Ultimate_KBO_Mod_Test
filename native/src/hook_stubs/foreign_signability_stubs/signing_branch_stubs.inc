@@ -1,4 +1,4 @@
-﻿static uint8_t* build_kbo_fa_signing_branch_detour_stub(void* original_trampoline)
+static uint8_t* build_kbo_fa_signing_branch_detour_stub(void* original_trampoline)
 {
     uint8_t code[96] = {
         0x50,                                           // push rax

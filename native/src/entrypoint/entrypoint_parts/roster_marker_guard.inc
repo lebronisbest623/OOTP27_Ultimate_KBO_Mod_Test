@@ -1,4 +1,4 @@
-﻿static int kbo_current_save_has_required_roster_marker(const char* source, int log_detail)
+static int kbo_current_save_has_required_roster_marker(const char* source, int log_detail)
 {
     char save_path[MAX_PATH] = {0};
     if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {

@@ -1,4 +1,6 @@
-static void kbo_hub_draw_bitmap_alpha(HDC hdc, HBITMAP bitmap, const RECT* rect)
+#include "bitmap_draw.h"
+
+void kbo_hub_draw_bitmap_alpha(HDC hdc, HBITMAP bitmap, const RECT* rect)
 {
     if (hdc == NULL || bitmap == NULL || rect == NULL) {
         return;
@@ -33,7 +35,7 @@ static void kbo_hub_draw_bitmap_alpha(HDC hdc, HBITMAP bitmap, const RECT* rect)
     DeleteDC(memdc);
 }
 
-static void kbo_hub_draw_vertical_three_piece(HDC hdc, HBITMAP top, HBITMAP mid, HBITMAP bottom, const RECT* rect)
+void kbo_hub_draw_vertical_three_piece(HDC hdc, HBITMAP top, HBITMAP mid, HBITMAP bottom, const RECT* rect)
 {
     if (hdc == NULL || rect == NULL || rect->right <= rect->left || rect->bottom <= rect->top) {
         return;

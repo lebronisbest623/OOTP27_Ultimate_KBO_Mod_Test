@@ -52,4 +52,3 @@ static int kbo_get_current_players_dat_path(char* out, size_t out_size)
     attrs = GetFileAttributesA(out);
     return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
-

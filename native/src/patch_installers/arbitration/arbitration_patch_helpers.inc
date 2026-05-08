@@ -1,4 +1,4 @@
-static int patch_kbo_salary_arbitration_bytes(
+static int __attribute__((unused)) patch_kbo_salary_arbitration_bytes(
     HMODULE exe,
     const char* label,
     uint32_t rva,
@@ -34,4 +34,3 @@ static uint8_t* allocate_kbo_salary_arbitration_stub(const uint8_t* code, size_t
     FlushInstructionCache(GetCurrentProcess(), memory, size);
     return memory;
 }
-
