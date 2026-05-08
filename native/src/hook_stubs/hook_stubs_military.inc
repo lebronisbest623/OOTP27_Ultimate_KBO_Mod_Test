@@ -4,18 +4,22 @@ static uint8_t* build_kbo_military_service_entry_trampoline(void* original_addre
         return NULL;
     }
 
-    size_t code_len = stolen_len + 12;
+    size_t code_len = stolen_len + 16;
     uint8_t* memory = (uint8_t*)VirtualAlloc(NULL, code_len, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     if (memory == NULL) {
         return NULL;
     }
 
     memcpy(memory, original_address, stolen_len);
-    memory[stolen_len + 0] = 0x48;                     // mov rax, original + stolen_len
-    memory[stolen_len + 1] = 0xB8;
-    write_u64(&memory[stolen_len + 2], (uint64_t)((uintptr_t)original_address + stolen_len));
-    memory[stolen_len + 10] = 0xFF;                    // jmp rax
-    memory[stolen_len + 11] = 0xE0;
+    memory[stolen_len + 0] = 0x50;                     // push rax
+    memory[stolen_len + 1] = 0x48;                     // mov rax, original + stolen_len
+    memory[stolen_len + 2] = 0xB8;
+    write_u64(&memory[stolen_len + 3], (uint64_t)((uintptr_t)original_address + stolen_len));
+    memory[stolen_len + 11] = 0x48;                    // xchg qword ptr [rsp], rax
+    memory[stolen_len + 12] = 0x87;
+    memory[stolen_len + 13] = 0x04;
+    memory[stolen_len + 14] = 0x24;
+    memory[stolen_len + 15] = 0xC3;                    // ret
     FlushInstructionCache(GetCurrentProcess(), memory, code_len);
     return memory;
 }
