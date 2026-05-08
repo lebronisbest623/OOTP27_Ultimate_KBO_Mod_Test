@@ -2,10 +2,10 @@
 
 static uint32_t kbo_get_player_original_team_id(uint8_t* player)
 {
-    if (player == NULL || !memory_range_readable(player + 0x5cu, sizeof(uint32_t))) {
+    if (player == NULL || !memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))) {
         return 0;
     }
-    return *(uint32_t*)(player + 0x5cu);
+    return *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
 }
 
 static uint32_t kbo_get_foreign_waiver_decision_team_id(uint8_t* player)

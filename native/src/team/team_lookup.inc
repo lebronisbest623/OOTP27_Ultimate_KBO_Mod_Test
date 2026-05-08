@@ -55,7 +55,7 @@ static int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_cou
         }
 
         uintptr_t vector = *(uintptr_t*)(global + offset);
-        int32_t   count  = *(int32_t*)(global + offset + 0x0cu);
+        int32_t   count  = *(int32_t*)(global + offset + OOTP27_GLOBAL_VECTOR_COUNT_DELTA);
         if (vector == 0 || count <= 0 || count > 200000) {
             continue;
         }

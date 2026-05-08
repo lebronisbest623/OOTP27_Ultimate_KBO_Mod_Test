@@ -156,9 +156,9 @@ static int kbo_route_queued_military_draft_candidates(
             &called_register,
             &called_attach);
         *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = original_team_id;
-        *(uint32_t*)(player + 0x5c) = original_team_id;
+        *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET) = original_team_id;
         if (original_league_id != 0u) {
-            *(uint32_t*)(player + 0x4c) = original_league_id;
+            *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET) = original_league_id;
         }
         register_active_kbo_military_loan(
             candidate->player_id,

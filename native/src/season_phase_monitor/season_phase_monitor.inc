@@ -1,5 +1,7 @@
 /* League season-phase diagnostics. Included from native/KBOFix.c. */
 
+static volatile LONG g_kbo_season_phase_monitor_started = 0;
+
 static const char* kbo_league_phase_label(uint8_t phase)
 {
     switch (phase) {
@@ -46,6 +48,8 @@ __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     if (memory_range_readable((void*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET), sizeof(uint32_t))) {
         league_year = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
     }
+
+#define KBO_SEASON_PHASE_PROBE_OFFSET(index) (OOTP27_SEASON_PHASE_PROBE_BASE_OFFSET + ((uint32_t)(index) * sizeof(uint32_t)))
 
     append_logf(
         "KBO season phase write site=0x%x league=%p ids=%u/%u date=%u league_year=%u old=%u new=%u label=%s",
@@ -103,14 +107,15 @@ static void kbo_log_season_phase_league_candidates(uint32_t league_id)
 
         for (int32_t j = 0; j < candidate_count && logged_rows < 40; j++) {
             uintptr_t candidate = *(uintptr_t*)(candidate_vec + (uintptr_t)j * sizeof(uintptr_t));
-            if (candidate == 0 || !memory_range_readable((void*)candidate, 0x4cd0u)) {
+            if (candidate == 0
+                    || !memory_range_readable((void*)candidate, OOTP27_SEASON_PHASE_CANDIDATE_READABLE_BYTES)) {
                 continue;
             }
 
-            uint32_t id_4cc0 = *(uint32_t*)(candidate + 0x4cc0u);
-            uint32_t id_4cc4 = *(uint32_t*)(candidate + 0x4cc4u);
-            uint32_t id_4cc8 = *(uint32_t*)(candidate + 0x4cc8u);
-            uint32_t id_4ccc = *(uint32_t*)(candidate + 0x4cccu);
+            uint32_t id_4cc0 = *(uint32_t*)(candidate + OOTP27_KBO_LEAGUE_ID_OFFSET);
+            uint32_t id_4cc4 = *(uint32_t*)(candidate + OOTP27_SEASON_PHASE_ALT_ID_A_OFFSET);
+            uint32_t id_4cc8 = *(uint32_t*)(candidate + OOTP27_SEASON_PHASE_ALT_ID_B_OFFSET);
+            uint32_t id_4ccc = *(uint32_t*)(candidate + OOTP27_SEASON_PHASE_ALT_ID_C_OFFSET);
             uint32_t league_year = 0;
             uint8_t phase = 0xffu;
             uint32_t phase_year = 0;
@@ -160,7 +165,9 @@ static void kbo_log_season_phase_probe_window(uintptr_t league_ptr, uint32_t dat
     last_ptr = league_ptr;
     last_date_key = date_key;
 
-    if (!memory_range_readable((void*)(league_ptr + 0x44d0u), 0x70u)) {
+    if (!memory_range_readable(
+            (void*)(league_ptr + OOTP27_SEASON_PHASE_PROBE_BASE_OFFSET),
+            OOTP27_SEASON_PHASE_PROBE_BYTES)) {
         return;
     }
 
@@ -173,26 +180,28 @@ static void kbo_log_season_phase_probe_window(uintptr_t league_ptr, uint32_t dat
         "4510=%u/%u/%u 4514=%u/%u/%u 4518=%u/%u/%u 451c=%u/%u/%u",
         (void*)league_ptr,
         date_key,
-        (unsigned)*(uint8_t*)(league_ptr + 0x44d0u), (unsigned)*(uint16_t*)(league_ptr + 0x44d0u), *(uint32_t*)(league_ptr + 0x44d0u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44d4u), (unsigned)*(uint16_t*)(league_ptr + 0x44d4u), *(uint32_t*)(league_ptr + 0x44d4u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44d8u), (unsigned)*(uint16_t*)(league_ptr + 0x44d8u), *(uint32_t*)(league_ptr + 0x44d8u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44dcu), (unsigned)*(uint16_t*)(league_ptr + 0x44dcu), *(uint32_t*)(league_ptr + 0x44dcu),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44e0u), (unsigned)*(uint16_t*)(league_ptr + 0x44e0u), *(uint32_t*)(league_ptr + 0x44e0u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44e4u), (unsigned)*(uint16_t*)(league_ptr + 0x44e4u), *(uint32_t*)(league_ptr + 0x44e4u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44e8u), (unsigned)*(uint16_t*)(league_ptr + 0x44e8u), *(uint32_t*)(league_ptr + 0x44e8u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44ecu), (unsigned)*(uint16_t*)(league_ptr + 0x44ecu), *(uint32_t*)(league_ptr + 0x44ecu),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44f0u), (unsigned)*(uint16_t*)(league_ptr + 0x44f0u), *(uint32_t*)(league_ptr + 0x44f0u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44f4u), (unsigned)*(uint16_t*)(league_ptr + 0x44f4u), *(uint32_t*)(league_ptr + 0x44f4u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44f8u), (unsigned)*(uint16_t*)(league_ptr + 0x44f8u), *(uint32_t*)(league_ptr + 0x44f8u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x44fcu), (unsigned)*(uint16_t*)(league_ptr + 0x44fcu), *(uint32_t*)(league_ptr + 0x44fcu),
-        (unsigned)*(uint8_t*)(league_ptr + 0x4500u), (unsigned)*(uint16_t*)(league_ptr + 0x4500u), *(uint32_t*)(league_ptr + 0x4500u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x4504u), (unsigned)*(uint16_t*)(league_ptr + 0x4504u), *(uint32_t*)(league_ptr + 0x4504u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x4508u), (unsigned)*(uint16_t*)(league_ptr + 0x4508u), *(uint32_t*)(league_ptr + 0x4508u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x450cu), (unsigned)*(uint16_t*)(league_ptr + 0x450cu), *(uint32_t*)(league_ptr + 0x450cu),
-        (unsigned)*(uint8_t*)(league_ptr + 0x4510u), (unsigned)*(uint16_t*)(league_ptr + 0x4510u), *(uint32_t*)(league_ptr + 0x4510u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x4514u), (unsigned)*(uint16_t*)(league_ptr + 0x4514u), *(uint32_t*)(league_ptr + 0x4514u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x4518u), (unsigned)*(uint16_t*)(league_ptr + 0x4518u), *(uint32_t*)(league_ptr + 0x4518u),
-        (unsigned)*(uint8_t*)(league_ptr + 0x451cu), (unsigned)*(uint16_t*)(league_ptr + 0x451cu), *(uint32_t*)(league_ptr + 0x451cu));
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(0)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(0)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(0)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(1)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(1)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(1)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(2)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(2)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(2)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(3)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(3)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(3)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(4)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(4)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(4)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(5)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(5)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(5)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(6)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(6)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(6)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(7)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(7)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(7)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(8)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(8)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(8)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(9)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(9)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(9)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(10)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(10)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(10)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(11)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(11)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(11)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(12)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(12)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(12)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(13)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(13)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(13)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(14)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(14)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(14)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(15)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(15)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(15)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(16)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(16)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(16)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(17)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(17)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(17)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(18)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(18)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(18)),
+        (unsigned)*(uint8_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(19)), (unsigned)*(uint16_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(19)), *(uint32_t*)(league_ptr + KBO_SEASON_PHASE_PROBE_OFFSET(19)));
+
+#undef KBO_SEASON_PHASE_PROBE_OFFSET
 }
 
 static void kbo_log_season_phase_changed_words(uintptr_t league_ptr, uint32_t date_key)
@@ -284,8 +293,10 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
 
     append_log_line("KBO season phase monitor started");
 
-    for (;;) {
-        Sleep(2000);
+    while (kbo_runtime_threads_should_continue()) {
+        if (!kbo_runtime_sleep_should_continue(2000)) {
+            break;
+        }
 
         if (!kbo_fix_enabled()) {
             continue;
@@ -346,21 +357,22 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             last_phase_year = phase_year;
         }
     }
+    append_log_line("KBO season phase monitor stopped");
+    InterlockedExchange(&g_kbo_season_phase_monitor_started, 0);
 
     return 0;
 }
 
 static int start_kbo_season_phase_monitor(void)
 {
-    static volatile LONG started = 0;
-    if (InterlockedCompareExchange(&started, 1, 0) != 0) {
+    if (InterlockedCompareExchange(&g_kbo_season_phase_monitor_started, 1, 0) != 0) {
         return 1;
     }
 
     HANDLE thread = CreateThread(NULL, 0, kbo_season_phase_monitor_thread, NULL, 0, NULL);
     if (thread == NULL) {
         append_logf("KBO season phase monitor failed to start gle=%lu", (unsigned long)GetLastError());
-        InterlockedExchange(&started, 0);
+        InterlockedExchange(&g_kbo_season_phase_monitor_started, 0);
         return 0;
     }
 

@@ -60,10 +60,14 @@ static void kbo_run_fa_requalification_once(const char* source)
 static DWORD WINAPI kbo_fa_requalification_thread(LPVOID parameter)
 {
     (void)parameter;
-    for (;;) {
-        Sleep(5000);
+    while (kbo_runtime_threads_should_continue()) {
+        if (!kbo_runtime_sleep_should_continue(5000)) {
+            break;
+        }
         kbo_run_fa_requalification_once("fa_requalification_monitor");
     }
+    InterlockedExchange(&g_kbo_fa_requalification_thread_started, 0);
+    append_log_line("KBO FA requalification monitor thread stopped");
     return 0;
 }
 

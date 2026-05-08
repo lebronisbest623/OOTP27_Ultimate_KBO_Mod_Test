@@ -37,6 +37,11 @@ static int kbo_path_looks_like_absolute_save_path(const char* path)
 
 typedef LONG (WINAPI* KboNtQuerySystemInformationFn)(ULONG, PVOID, ULONG, PULONG);
 
+#define KBO_SYSTEM_HANDLE_TABLE_ENTRY_ARRAY_OFFSET 16u
+#define KBO_SYSTEM_HANDLE_TABLE_ENTRY_SIZE 40u
+#define KBO_SYSTEM_HANDLE_TABLE_ENTRY_PID_OFFSET 8u
+#define KBO_SYSTEM_HANDLE_TABLE_ENTRY_HANDLE_OFFSET 16u
+
 static char g_kbo_cached_current_save_path[MAX_PATH] = {0};
 static volatile LONG64 g_kbo_cached_current_save_path_tick = 0;
 
@@ -148,18 +153,18 @@ static int kbo_get_current_save_path_from_own_file_handles(char* out, size_t out
 
     DWORD pid = GetCurrentProcessId();
     ULONGLONG handle_count = *(ULONGLONG*)buffer;
-    BYTE* entries = buffer + 16;
-    const SIZE_T entry_size = 40u;
+    BYTE* entries = buffer + KBO_SYSTEM_HANDLE_TABLE_ENTRY_ARRAY_OFFSET;
+    const SIZE_T entry_size = KBO_SYSTEM_HANDLE_TABLE_ENTRY_SIZE;
     int found = 0;
 
     for (ULONGLONG i = 0; i < handle_count; i++) {
         BYTE* entry = entries + (SIZE_T)i * entry_size;
-        DWORD owner_pid = (DWORD)(*(ULONGLONG*)(entry + 8));
+        DWORD owner_pid = (DWORD)(*(ULONGLONG*)(entry + KBO_SYSTEM_HANDLE_TABLE_ENTRY_PID_OFFSET));
         if (owner_pid != pid) {
             continue;
         }
 
-        HANDLE handle = (HANDLE)(uintptr_t)(*(ULONGLONG*)(entry + 16));
+        HANDLE handle = (HANDLE)(uintptr_t)(*(ULONGLONG*)(entry + KBO_SYSTEM_HANDLE_TABLE_ENTRY_HANDLE_OFFSET));
         if (handle == NULL || handle == INVALID_HANDLE_VALUE) {
             continue;
         }

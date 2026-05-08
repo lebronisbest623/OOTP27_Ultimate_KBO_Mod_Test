@@ -61,7 +61,7 @@ static int return_completed_kbo_military_loan_player(
     if (original_league_id == 0u) {
         original_league_id = registered_original_league_id != 0u
             ? registered_original_league_id
-            : *(uint32_t*)(player + 0x4c);
+            : *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET);
     }
     if (original_team_id == 0u
             || original_team_id == service_team_id

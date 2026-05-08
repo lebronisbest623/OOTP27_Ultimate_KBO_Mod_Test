@@ -57,13 +57,17 @@ static DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
 
     uint32_t last_scheduled_yyyymmdd = 0u;
     uint32_t last_scanned_yyyymmdd = 0u;
-    for (;;) {
+    while (kbo_runtime_threads_should_continue()) {
         kbo_custom_event_monitor_tick(
             &last_scheduled_yyyymmdd,
             &last_scanned_yyyymmdd,
             g_kbo_default_event_source);
-        Sleep(5000);
+        if (!kbo_runtime_sleep_should_continue(5000)) {
+            break;
+        }
     }
+    InterlockedExchange(&g_kbo_custom_event_monitor_started, 0);
+    append_log_line("KBO custom event monitor stopped");
 
     return 0;
 }

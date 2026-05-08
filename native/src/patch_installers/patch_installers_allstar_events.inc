@@ -171,7 +171,8 @@ static int install_allstar_events_prepare_patch(void)
         log_extended_context("KBO all-star events prepare hook", target, 16, 96);
     } else {
         void* return_address = target + sizeof(april_expected);
-        void* allstar_prep_address = resolve_relative_call_target(target + 14);
+        void* allstar_prep_address = resolve_relative_call_target(
+            target + OOTP27_MAKE_ALLSTAR_EVENTS_PREP_CALL_OFFSET);
         if (allstar_prep_address == NULL) {
             append_log_line("KBO all-star events prepare hook skipped: prep call target unresolved");
             return 0;

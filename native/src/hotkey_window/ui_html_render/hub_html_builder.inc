@@ -1,0 +1,187 @@
+﻿static WCHAR* kbo_build_webview_hub_html(void)
+{
+    const size_t html_cap = 1572864;
+    char* html = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, html_cap);
+    if (html == NULL) {
+        return NULL;
+    }
+    KboWindowTextBuffer buffer;
+    buffer.data = html;
+    buffer.capacity = html_cap;
+    buffer.length = 0;
+
+    if (g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA) {
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
+    }
+    kbo_hub_ensure_valid_selection();
+    if (!kbo_hub_view_available_for_selected_league(g_kbo_hub_selected_view)) {
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        if (g_kbo_hub_selected_mod_subview < 0
+                || g_kbo_hub_selected_mod_subview >= KBO_HUB_MOD_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_README;
+        }
+    }
+
+    char league_name[96] = {0};
+    char team_name[96] = {0};
+    char league_logo_path[MAX_PATH] = {0};
+    char team_logo_path[MAX_PATH] = {0};
+    char jeju_font_path[MAX_PATH] = {0};
+    char jeju_font_url[MAX_PATH * 3] = {0};
+    char team_bar_primary[8] = "#f04a22";
+    char team_bar_secondary[8] = "#2c2c2c";
+    char current_date_text[64] = {0};
+    char window_status[256] = {0};
+    char scrollbar_css[65536] = {0};
+    const int is_mod_dashboard =
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_MOD_INFO &&
+        (g_kbo_hub_selected_mod_subview == KBO_HUB_MOD_SUBVIEW_README ||
+         g_kbo_hub_selected_mod_subview == KBO_HUB_MOD_SUBVIEW_LICENSE ||
+         g_kbo_hub_selected_mod_subview == KBO_HUB_MOD_SUBVIEW_CREDITS ||
+         g_kbo_hub_selected_mod_subview == KBO_HUB_MOD_SUBVIEW_CONTRIBUTIONS ||
+         g_kbo_hub_selected_mod_subview == KBO_HUB_MOD_SUBVIEW_SETTINGS);
+    const int is_roster_dashboard =
+        (g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY &&
+         (g_kbo_hub_selected_military_subview == KBO_HUB_MILITARY_SUBVIEW_ROSTER ||
+          g_kbo_hub_selected_military_subview == KBO_HUB_MILITARY_SUBVIEW_APPLICANTS ||
+          g_kbo_hub_selected_military_subview == KBO_HUB_MILITARY_SUBVIEW_RESULTS)) ||
+        (g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS) ||
+        (g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_QUOTA &&
+         (g_kbo_hub_selected_foreign_subview == KBO_HUB_FOREIGN_SUBVIEW_ROSTER ||
+          g_kbo_hub_selected_foreign_subview == KBO_HUB_FOREIGN_SUBVIEW_RIGHTS)) ||
+        (g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_GAMES &&
+         (g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_TOURNAMENTS ||
+          g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_SCHEDULE ||
+          g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_ROSTER)) ||
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA ||
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES ||
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_REPUTATION;
+    const int is_dashboard_panel =
+        is_mod_dashboard ||
+        is_roster_dashboard ||
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_SETTINGS;
+    const int has_sub_tabs = kbo_webview_current_view_has_sub_tabs();
+    const char* ui_font_family = g_kbo_hub_language == KBO_HUB_LANG_KO
+        ? "'KBO Jeju Gothic','Jeju Gothic','Malgun Gothic',sans-serif"
+        : "'Malgun Gothic',sans-serif";
+    kbo_hub_copy_league_display_name(g_kbo_hub_selected_league_id, league_name, sizeof(league_name));
+    kbo_hub_copy_team_display_name_by_id(g_kbo_hub_selected_team_id, team_name, sizeof(team_name), "No team");
+    kbo_get_foreign_waiver_window_status_text(window_status, sizeof(window_status));
+
+    uint32_t current_year = 0, current_month = 0, current_day = 0;
+    if (kbo_current_date_is_valid(&current_year, &current_month, &current_day)) {
+        kbo_hub_format_ootp_date(current_year, current_month, current_day, current_date_text, sizeof(current_date_text));
+    } else {
+        snprintf(current_date_text, sizeof(current_date_text), "DATE UNKNOWN");
+    }
+    kbo_hub_get_league_logo_path(g_kbo_hub_selected_league_id, current_year, league_logo_path, sizeof(league_logo_path));
+    kbo_hub_get_team_logo_path(g_kbo_hub_selected_team_id, current_year, team_logo_path, sizeof(team_logo_path));
+    kbo_hub_font_asset_path("JejuGothic-Regular.ttf", jeju_font_path, sizeof(jeju_font_path));
+    kbo_webview_copy_file_url(jeju_font_path, jeju_font_url, sizeof(jeju_font_url));
+    kbo_hub_copy_team_bar_colors(
+        g_kbo_hub_selected_team_id,
+        team_bar_primary,
+        sizeof(team_bar_primary),
+        team_bar_secondary,
+        sizeof(team_bar_secondary));
+    kbo_webview_build_scrollbar_skin_css(scrollbar_css, sizeof(scrollbar_css));
+    KboWindowTextBuffer extra_css;
+    extra_css.data = scrollbar_css;
+    extra_css.capacity = sizeof(scrollbar_css);
+    extra_css.length = strlen(scrollbar_css);
+    kbo_webview_append_roster_table_css(&extra_css);
+
+    kbo_window_text_appendf(&buffer,
+        "<!doctype html><html><head><meta charset='utf-8'><style>"
+        "@font-face{font-family:'KBO Jeju Gothic';font-style:normal;font-weight:400;src:url('%s') format('truetype')}"
+        ":root{--bg:#0a0a0a;--header:#1d556c;--nav:#141414;--active:#1d556c;--panel:#161616;--panel2:#222;--ink:#fcfcfc;--muted:#8f8f8f;--orange:#de6d1f;--gold:#d6a44b;--line:rgba(255,255,255,.12);--team-primary:%s;--team-secondary:%s;--ui-font:%s}"
+        "*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}html,body{height:100%;margin:0;overflow:hidden}body{background:var(--bg);color:var(--ink);font-family:var(--ui-font);font-size:%dpx;cursor:default}a{text-decoration:none;color:inherit;-webkit-user-drag:none}img{-webkit-user-drag:none;user-select:none}input,textarea,select{-webkit-user-select:auto;user-select:auto}.ootpRosterTable th[data-sort-type],a,button,.select,.ddItem,.switch,.action,.mainTab,.subTab{cursor:pointer}"
+        ".app{height:100%;display:grid;grid-template-rows:64px 1fr;background:linear-gradient(135deg,#0a0a0a 0%%,#10171a 45%%,#080808 100%%)}"
+        ".top{background:var(--header);display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 18px;border-bottom:1px solid rgba(255,255,255,.18)}"
+        ".identity{display:flex;align-items:center;gap:10px;min-width:0}.logo{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.65))}.brand{font-family:var(--ui-font);font-weight:800;font-size:%dpx;color:#f5f1e7;line-height:1}.date{font-family:var(--ui-font);font-size:%dpx;font-weight:800;color:#cfd5d6;margin-top:4px;text-transform:uppercase;letter-spacing:0}.brandBlock{min-width:0}"
+        ".selects{display:flex;gap:10px}.select{min-width:162px;height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;border:1px solid rgba(255,255,255,.22);border-radius:4px;background:rgba(0,0,0,.16);color:#e6e6e8;font-family:var(--ui-font);font-weight:800}.select img{width:26px;height:26px;object-fit:contain;flex:none}.select span:first-of-type{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+        ".dropdown{position:absolute;z-index:20;top:72px;max-height:420px;overflow-y:auto;overflow-x:hidden;background:#242424;border:1px solid #333;border-radius:3px;box-shadow:0 8px 18px rgba(0,0,0,.55);padding:4px 0;scrollbar-gutter:stable}.leagueMenu{right:190px;width:304px}.teamMenu{right:12px;width:304px}.ddItem{height:24px;display:flex!important;flex-direction:row!important;align-items:center;justify-content:flex-start;gap:6px;padding:0 10px 0 5px;color:#f2f2f2;font-family:var(--ui-font);font-size:16px;font-weight:800;line-height:24px;white-space:nowrap}.ddItem:hover,.ddItem.selected{background:#30434b}.ddLogo{width:20px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 20px;overflow:hidden}.ddLogo img{display:block;width:auto;height:auto;max-width:18px!important;max-height:18px!important;object-fit:contain}.ddText{display:block;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+        ".panel{margin:18px 16px 16px;background:var(--panel);border:1px solid var(--panel2);border-radius:5px;min-height:0;height:calc(100%% - 34px);display:grid;grid-template-rows:66px 1fr;overflow:hidden}.panelHead{background:var(--panel2);padding:10px 15px}.panelHead h1{margin:0;font-family:var(--ui-font);font-size:%dpx;font-weight:800}.panelHead p{margin:3px 0 0;color:var(--muted)}"
+        ".content{padding:16px;min-height:0;height:100%%;display:flex;flex-direction:column;overflow:hidden}.rights,.card{flex:1;min-height:0;height:100%%}.rights{display:flex;flex-direction:column;gap:10px}.card{overflow-y:auto;overflow-x:hidden;border:1px solid #303030;border-radius:4px;background:#101010;padding:16px}.reportbar{display:none}.muted{color:var(--muted);line-height:1.42}.help{display:flex;gap:8px;align-items:center;color:#b9b9b9}.help span{background:#242424;border:1px solid #343434;border-radius:4px;padding:4px 8px}.actions{display:flex;gap:8px;justify-content:flex-end}.action{display:inline-block;min-width:128px;text-align:center;color:#f4f4f4;border:1px solid #3a3a3a;border-radius:4px;background:#262626;font-family:var(--ui-font);font-weight:800;padding:8px 12px}.keep{background:#8d4b17;border-color:#c46b22}.release{background:#1d556c;border-color:#2e7896}.toggle{width:52px;text-align:center}.switch{display:inline-block;width:18px;height:18px;line-height:16px;margin-right:4px;text-align:center;color:#aaa;border:1px solid #343434;border-radius:3px;background:#181818;font-family:'Segoe UI Symbol',var(--ui-font);font-size:11px;font-weight:400;text-decoration:none}.switch:hover{color:#f0f0f0;border-color:#696969;background:#242424}.switch.keep,.switch.release{background:#181818;border-color:#343434}.tablewrap{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;border:1px solid #303030;border-radius:4px;background:#101010}.modReadme{display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(260px,.85fr);grid-template-rows:minmax(220px,1fr) minmax(150px,.62fr);gap:12px;height:100%%!important;min-height:0}.modReadme .card{height:auto!important;min-height:0;overflow:hidden;scrollbar-gutter:auto;padding:14px 14px 16px;background:linear-gradient(135deg,#1d2020 0%%,#181818 58%%,#202020 100%%);border:1px solid rgba(255,255,255,.04);border-radius:5px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}.modContrib{grid-template-rows:minmax(150px,.68fr) minmax(220px,1fr)}.settingsGrid{display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px;height:100%%!important;min-height:0;align-content:stretch;overflow:hidden!important}.settingsCard{height:100%%!important;min-height:0;padding:14px 14px 16px;background:#181818;border:1px solid #292929;border-radius:5px;box-shadow:none;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable!important}.flagGroup{margin-top:14px;padding-top:12px;border-top:1px solid #2b2b2b}.flagGroup h3{margin:0;color:#d8d8d8;font-size:13px;font-weight:900;text-transform:uppercase}.flagGroup p{margin:4px 0 8px;color:#9a9a9a;font-size:12px;line-height:1.35}.settingRow{display:grid;grid-template-columns:150px minmax(180px,360px);align-items:center;justify-content:start;gap:12px;margin-top:4px}.settingLabel{color:#9c9c9c;font-size:13px;font-weight:800;white-space:nowrap}.ootpSelect{width:100%%;height:28px;border:1px solid #3c3c3c;border-radius:4px;background:#202020;color:#f0f0f0;font-family:var(--ui-font);font-size:13px;font-weight:700;padding:0 8px}.ootpSelect:focus{outline:1px solid #777;outline-offset:0}.modCard{display:flex;flex-direction:column}.modCardMain{grid-row:1/span 2}.cardTitle{margin:0 0 12px;color:#9c9c9c;font-size:16px;font-weight:900;line-height:1.1;text-transform:uppercase}.modCard p{margin:0 0 10px;color:#eeeeee;line-height:1.48;white-space:normal;font-size:14px;font-weight:400}.modCard p:last-child{margin-bottom:0}.modLead{font-size:15px!important;font-weight:400!important;color:#fff!important}.buildList{display:grid;gap:6px;margin-top:2px;align-content:start}.buildRow{display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:baseline;color:#e5e5e5;font-size:13px;line-height:1.35}.buildLabel{color:#8f8f8f;font-weight:900;white-space:nowrap}.buildValue{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.githubHero{display:flex;align-items:center;gap:13px;margin:2px 0 12px}.githubLogo{width:58px;height:58px;object-fit:contain;filter:invert(54%%) grayscale(1);opacity:.78;padding:4px;flex:none}.githubRepo{min-width:0}.githubRepo strong{display:block;font-size:17px;color:#f4f4f4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.githubRepo span{display:block;margin-top:4px;color:#9e9e9e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.githubLink{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;margin-top:auto;min-width:128px;height:32px;border:1px solid #3a3a3a;border-radius:4px;background:#262626;color:#f4f4f4;font-weight:900}.githubLink:hover{border-color:#686868;background:#303030}table{width:100%%;table-layout:fixed;border-collapse:separate;border-spacing:0;font-family:var(--ui-font);font-size:13px}th{position:sticky;top:0;background:#222;color:#dedede;text-align:left;padding:8px 10px;border-bottom:1px solid #393939;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td{padding:7px 10px;border-bottom:1px solid #242424;color:#d8d8d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}thead th:first-child{border-top-left-radius:3px}thead th:last-child{border-top-right-radius:3px}tbody tr:last-child td:first-child{border-bottom-left-radius:3px}tbody tr:last-child td:last-child{border-bottom-right-radius:3px}tr:nth-child(even) td{background:#151515}tr:hover td,tr.selected td{background:#243b45;color:#fff}.sel{width:48px;color:var(--orange);font-weight:900;white-space:nowrap}.pname{width:156px;max-width:156px;overflow:hidden;text-overflow:ellipsis;font-weight:800;color:#f3f0e8}.team{width:64px;max-width:64px;text-align:left;font-weight:800;color:#ddd}.flag{width:44px;text-align:center;cursor:help}.flag .roNatFlag{vertical-align:middle}.empty{border:1px dashed rgba(255,255,255,.22);border-radius:4px;padding:22px;color:var(--muted);background:#141414;white-space:normal}"
+        ".app{height:100vh;grid-template-rows:96px 42px 40px minmax(0,1fr);background:#111}.app.noSubTabs{grid-template-rows:96px 42px minmax(0,1fr)}.top{background:transparent;justify-content:flex-start;gap:18px;padding:0 24px;border-bottom:0}.identity{gap:18px}.logo{width:74px;height:74px}.brand{font-size:%dpx;letter-spacing:0;color:#dcdcdc}.brand span{color:#8f8f8f}.date{font-size:%dpx;color:#c9c9c9}.date a{color:#c9c9c9}.selects{margin-left:auto}.select{height:30px;min-width:150px;border-color:rgba(255,255,255,.16);background:rgba(0,0,0,.24)}.mainTabs{display:flex;align-items:center;align-self:end;height:38px;margin:4px 6px 0;background:var(--team-primary);border-bottom:1px solid rgba(0,0,0,.42);border-radius:5px 5px 0 0;overflow:hidden;padding:0 10px;gap:8px}.mainTab{display:flex;align-items:center;justify-content:center;height:26px;min-width:112px;padding:0 16px;color:#fff;font-family:var(--ui-font);font-size:15px;font-weight:900;text-transform:uppercase;border:1px solid transparent;border-radius:4px}.mainTab.active{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.78);color:#fff}.subTabs{display:flex;align-items:center;align-self:start;height:38px;margin:0 6px 2px;background:var(--team-secondary);border-bottom:1px solid rgba(0,0,0,.58);border-radius:0 0 5px 5px;overflow:hidden;padding:0 16px;gap:16px}.subTab{height:24px;line-height:23px;padding:0 18px;color:#e6e6e6;font-family:var(--ui-font);font-size:15px;font-weight:900;text-transform:uppercase;border:1px solid transparent;border-radius:4px}.subTab.active{border-color:#d8d8d8;background:rgba(255,255,255,.13);color:#fff}.panel{height:auto!important;min-height:0!important;margin:12px 14px 14px;align-self:stretch;grid-template-rows:54px minmax(0,1fr);border-radius:4px}.panelHead{padding:8px 14px}.panelHead h1{font-size:%dpx}.panelHead p{font-size:%dpx}.panel.dashboardPanel{margin:6px 8px 8px;background:transparent;border:0;border-radius:0;box-shadow:none;grid-template-rows:minmax(0,1fr);overflow:visible}.dashboardPanel .panelHead{display:none}.dashboardPanel .content{display:block;height:100%%!important;padding:0;overflow:hidden!important;scrollbar-gutter:auto}.content{height:auto!important;min-height:0;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable}.rights{height:100%%!important;min-height:0}.tablewrap{flex:1 1 auto;min-height:0;scrollbar-gutter:stable}.card{height:100%%!important;min-height:0;scrollbar-gutter:stable}.dropdown{top:92px}.leagueMenu{left:140px;right:auto}.teamMenu{left:140px;right:auto}"
+        "%s</style></head><body><div class='app %s'><header class='top'><div class='identity'>",
+        jeju_font_url,
+        team_bar_primary,
+        team_bar_secondary,
+        ui_font_family,
+        g_kbo_hub_skin_article_font_px - 1,
+        g_kbo_hub_skin_article_font_px + 8,
+        g_kbo_hub_skin_button_font_px - 4,
+        g_kbo_hub_skin_article_font_px + 8,
+        g_kbo_hub_skin_article_font_px + 10,
+        g_kbo_hub_skin_button_font_px - 3,
+        g_kbo_hub_skin_article_font_px + 4,
+        g_kbo_hub_skin_article_font_px - 2,
+        scrollbar_css,
+        has_sub_tabs ? "hasSubTabs" : "noSubTabs");
+    const char* header_logo_path = team_logo_path[0] != '\0' ? team_logo_path : league_logo_path;
+    if (header_logo_path[0] != '\0') {
+        kbo_window_text_appendf(&buffer, "<img class='logo' src='");
+        kbo_webview_append_image_src(&buffer, header_logo_path);
+        kbo_window_text_appendf(&buffer, "'>");
+    }
+    kbo_window_text_appendf(&buffer, "<div class='brandBlock'><a class='brand' href='kbo://team'>");
+    kbo_html_append_escaped(&buffer, team_name);
+    kbo_window_text_appendf(&buffer, " <span>v</span></a><div class='date'><a href='kbo://league'>");
+    kbo_html_append_escaped(&buffer, league_name);
+    kbo_window_text_appendf(&buffer, "</a> / ");
+    kbo_html_append_escaped(&buffer, current_date_text);
+    kbo_window_text_appendf(&buffer, "</div></div></div></header>");
+    if (g_kbo_hub_open_dropdown == 1) {
+        kbo_webview_append_league_dropdown(&buffer, current_year);
+    } else if (g_kbo_hub_open_dropdown == 2) {
+        kbo_webview_append_team_dropdown(&buffer, current_year);
+    }
+
+    kbo_window_text_appendf(&buffer, "<nav class='mainTabs'>");
+    kbo_webview_append_main_tabs(&buffer);
+    kbo_window_text_appendf(&buffer, "</nav>");
+    if (has_sub_tabs) {
+        kbo_window_text_appendf(&buffer, "<nav class='subTabs'>");
+        kbo_webview_append_sub_tabs(&buffer);
+        kbo_window_text_appendf(&buffer, "</nav>");
+    }
+    kbo_window_text_appendf(
+        &buffer,
+        "<main class='panel %s'><div class='panelHead'><h1>",
+        is_dashboard_panel ? "dashboardPanel" : "");
+    kbo_html_append_escaped(&buffer, kbo_hub_current_view_title());
+    kbo_window_text_appendf(&buffer, "</h1><p>");
+    kbo_html_append_escaped(&buffer, kbo_hub_current_view_subtitle());
+    kbo_window_text_appendf(&buffer, "</p></div><section class='content'>");
+
+    kbo_webview_append_selected_view(&buffer, current_year, window_status);
+    kbo_window_text_appendf(&buffer, "</section></main></div>");
+    kbo_webview_append_roster_sort_script(&buffer);
+    kbo_window_text_appendf(&buffer, "</body></html>");
+
+    int wide_len = MultiByteToWideChar(CP_UTF8, 0, html, -1, NULL, 0);
+    WCHAR* wide = NULL;
+    if (wide_len > 0) {
+        wide = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)wide_len * sizeof(WCHAR));
+        if (wide != NULL) {
+            MultiByteToWideChar(CP_UTF8, 0, html, -1, wide, wide_len);
+        }
+    }
+    HeapFree(GetProcessHeap(), 0, html);
+    return wide;
+}
+
+static void kbo_webview_navigate_current(void)
+{
+    if (g_kbo_webview == NULL) {
+        return;
+    }
+    WCHAR* html = kbo_build_webview_hub_html();
+    if (html != NULL) {
+        ICoreWebView2_NavigateToString(g_kbo_webview, html);
+        HeapFree(GetProcessHeap(), 0, html);
+    }
+}
+

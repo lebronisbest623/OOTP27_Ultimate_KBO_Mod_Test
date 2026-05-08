@@ -1,5 +1,7 @@
 /* Foreign injury replacement scanner thread and lifecycle transitions. Included from native/src/foreign_waiver_ai.inc. */
 
+static LONG g_kbo_foreign_injury_replacement_thread_started = 0;
+
 static void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
     if (!kbo_foreign_injury_replacement_enabled()) {
@@ -152,21 +154,24 @@ static void kbo_foreign_injury_replacement_scan_once(const char* source)
 static DWORD WINAPI kbo_foreign_injury_replacement_thread(LPVOID parameter)
 {
     (void)parameter;
-    for (;;) {
-        Sleep(7000);
+    while (kbo_runtime_threads_should_continue()) {
+        if (!kbo_runtime_sleep_should_continue(7000)) {
+            break;
+        }
         kbo_foreign_injury_replacement_scan_once("foreign_injury_replacement_thread");
     }
+    InterlockedExchange(&g_kbo_foreign_injury_replacement_thread_started, 0);
+    append_log_line("foreign injury replacement thread stopped");
     return 0;
 }
 
 static void start_kbo_foreign_injury_replacement_thread(void)
 {
-    static LONG started = 0;
     if (!kbo_foreign_injury_replacement_enabled()) {
         append_log_line("foreign injury replacement: disabled");
         return;
     }
-    if (InterlockedCompareExchange(&started, 1, 0) != 0) {
+    if (InterlockedCompareExchange(&g_kbo_foreign_injury_replacement_thread_started, 1, 0) != 0) {
         return;
     }
 
@@ -175,7 +180,7 @@ static void start_kbo_foreign_injury_replacement_thread(void)
         CloseHandle(thread);
         append_log_line("foreign injury replacement thread started");
     } else {
-        InterlockedExchange(&started, 0);
+        InterlockedExchange(&g_kbo_foreign_injury_replacement_thread_started, 0);
         append_log_line("foreign injury replacement thread failed to start");
     }
 }

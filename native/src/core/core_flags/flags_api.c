@@ -8,6 +8,45 @@
 #include <string.h>
 #include <windows.h>
 
+static volatile LONG g_kbo_runtime_threads_stop_requested = 0;
+
+void kbo_request_runtime_threads_stop(void)
+{
+    InterlockedExchange(&g_kbo_runtime_threads_stop_requested, 1);
+}
+
+int kbo_runtime_threads_should_continue(void)
+{
+    if (InterlockedCompareExchange(&g_kbo_runtime_threads_stop_requested, 0, 0) != 0) {
+        return 0;
+    }
+
+    int configured = 1;
+    if (kbo_read_localappdata_json_flag_value("enable_kbo_fix", "enable_kbo_fix.txt", &configured)
+            && !configured) {
+        return 0;
+    }
+    return 1;
+}
+
+int kbo_runtime_sleep_should_continue(uint32_t total_ms)
+{
+    uint32_t elapsed = 0;
+    while (elapsed < total_ms) {
+        if (!kbo_runtime_threads_should_continue()) {
+            return 0;
+        }
+
+        uint32_t step = total_ms - elapsed;
+        if (step > 250u) {
+            step = 250u;
+        }
+        Sleep(step);
+        elapsed += step;
+    }
+    return kbo_runtime_threads_should_continue();
+}
+
 int read_kbo_localappdata_flag_file(const char* file_name)
 {
     char key[128] = {0};

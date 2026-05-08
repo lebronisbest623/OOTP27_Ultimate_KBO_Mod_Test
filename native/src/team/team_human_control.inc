@@ -1,8 +1,8 @@
 /* Human-controlled team resolver.
  *
  * OOTP stores human managers in the global DB next to the team vector:
- * global+0xf0 is the human-manager pointer vector and global+0xfc is the
- * current count.  The controlled team id lives on the manager object at +0x90.
+ * The human-manager vector, its count, and the manager team id are described by
+ * OOTP27_GLOBAL_HUMAN_MANAGER_* offsets.
  */
 
 #define KBO_HUMAN_CONTROL_MAX_TEAMS 16

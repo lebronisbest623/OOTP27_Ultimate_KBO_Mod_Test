@@ -1,12 +1,16 @@
 /* Foreign reserve-right background scanner thread. Included from native/src/foreign_waiver_ai.inc. */
 
+static LONG g_kbo_foreign_waiver_scanner_started = 0;
+
 static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
 {
     (void)parameter;
     uint32_t tick = 0;
     uint32_t last_ai_run_date = 0u;
-    for (;;) {
-        Sleep(5000);
+    while (kbo_runtime_threads_should_continue()) {
+        if (!kbo_runtime_sleep_should_continue(5000)) {
+            break;
+        }
         KBO_PROFILE_BEGIN(profile_foreign_waiver_scanner_tick);
         tick++;
         uint32_t today = 0u;
@@ -41,17 +45,18 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
         }
         KBO_PROFILE_END(profile_foreign_waiver_scanner_tick, "foreign_waiver.scanner.tick");
     }
+    InterlockedExchange(&g_kbo_foreign_waiver_scanner_started, 0);
+    append_log_line("foreign waiver scanner thread stopped");
     return 0;
 }
 
 static void start_kbo_foreign_waiver_scanner_thread(void)
 {
-    static LONG started = 0;
     if (!kbo_foreign_waiver_ai_enabled()) {
         return;
     }
     int background_scanner_enabled = read_kbo_localappdata_flag_file("enable_foreign_waiver_background_scanner.txt");
-    if (InterlockedCompareExchange(&started, 1, 0) != 0) {
+    if (InterlockedCompareExchange(&g_kbo_foreign_waiver_scanner_started, 1, 0) != 0) {
         return;
     }
 
@@ -64,7 +69,7 @@ static void start_kbo_foreign_waiver_scanner_thread(void)
             append_log_line("foreign waiver lightweight retain worker started; candidate scanner disabled");
         }
     } else {
-        InterlockedExchange(&started, 0);
+        InterlockedExchange(&g_kbo_foreign_waiver_scanner_started, 0);
         append_log_line("foreign waiver scanner thread failed to start");
     }
 }

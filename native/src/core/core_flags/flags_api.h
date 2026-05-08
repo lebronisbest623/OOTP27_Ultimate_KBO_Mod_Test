@@ -26,5 +26,8 @@ int kbo_get_allow_all_ui_team_actions_setting(void);
 int kbo_set_allow_all_ui_team_actions_setting(int enabled);
 
 int kbo_fix_enabled(void);
+void kbo_request_runtime_threads_stop(void);
+int kbo_runtime_threads_should_continue(void);
+int kbo_runtime_sleep_should_continue(uint32_t total_ms);
 
 #endif

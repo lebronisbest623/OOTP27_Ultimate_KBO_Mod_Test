@@ -11,10 +11,20 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
     uint32_t kpb_id  = kpb  != NULL ? *(uint32_t*)(kpb  + OOTP27_KBO_TEAM_ID_OFFSET) : 0u;
     uint32_t today_serial = kbo_current_date_serial();
     int applied = 0;
+    KboMilitaryServiceSeed seeds[KBO_MILITARY_SERVICE_SEED_MAX];
+    int seed_count = 0;
 
     kbo_lock_military_service_seeds();
-    for (int i = 0; i < g_kbo_military_service_seed_count; i++) {
-        KboMilitaryServiceSeed* seed = &g_kbo_military_service_seeds[i];
+    seed_count = g_kbo_military_service_seed_count;
+    if (seed_count < 0) { seed_count = 0; }
+    if (seed_count > KBO_MILITARY_SERVICE_SEED_MAX) { seed_count = KBO_MILITARY_SERVICE_SEED_MAX; }
+    for (int i = 0; i < seed_count; i++) {
+        seeds[i] = g_kbo_military_service_seeds[i];
+    }
+    kbo_unlock_military_service_seeds();
+
+    for (int i = 0; i < seed_count; i++) {
+        KboMilitaryServiceSeed* seed = &seeds[i];
         if (seed->player_id == 0u) {
             continue;
         }
@@ -72,13 +82,13 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
         }
         if (original_team_id == 0u) {
             original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-            original_league_id = *(uint32_t*)(player + 0x4c);
+            original_league_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET);
         }
         if (original_team_id == 0u
                 || original_team_id == service_team_id
                 || original_team_id == sang_id
                 || original_team_id == kpb_id) {
-            original_team_id = *(uint32_t*)(player + 0x5c);
+            original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
         }
         if (original_team_id == 0u
                 || original_team_id == service_team_id
@@ -107,9 +117,9 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
                 &called_register,
                 &called_attach);
             *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = original_team_id;
-            *(uint32_t*)(player + 0x5c) = original_team_id;
+            *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET) = original_team_id;
             if (original_league_id != 0u) {
-                *(uint32_t*)(player + 0x4c) = original_league_id;
+                *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET) = original_league_id;
             }
             append_logf(
                 "KBO military service seed assigned to service key=%s player=%u old_team=%u service_team=%u original_team=%u pre=%d register=%d attach=%d",
@@ -158,7 +168,6 @@ static int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* k
             applied++;
         }
     }
-    kbo_unlock_military_service_seeds();
 
     if (applied > 0) {
         append_logf("KBO military service seed applied source=%s assignments=%d", source != NULL ? source : "", applied);

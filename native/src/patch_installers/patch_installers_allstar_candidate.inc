@@ -59,7 +59,8 @@ static int install_allstar_candidate_team_split_patch(void)
     } else {
         void* return_address = target + sizeof(april_expected);
         void* seeded_address = target + (OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_DONE_RVA - OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_SITE_RVA);
-        void* vector_push_back_address = resolve_relative_call_target(target + 0xA5);
+        void* vector_push_back_address = resolve_relative_call_target(
+            target + OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_VECTOR_CALL_OFFSET);
         if (vector_push_back_address == NULL) {
             OotpBuildInfo info = read_ootp_build_info();
             uint32_t vector_rva = (info.ok && info.timestamp == 0x69F75E6Bu) ? 0x01CBAA40u : OOTP27_VECTOR_PUSH_BACK_RVA;
@@ -106,4 +107,3 @@ static int install_allstar_candidate_team_split_patch(void)
 
     return ok;
 }
-

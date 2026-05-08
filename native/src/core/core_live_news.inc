@@ -16,8 +16,11 @@ static int create_kbo_core_message_news(uint32_t league_id, const char* title, c
 
     uintptr_t current_date = *(uintptr_t*)(global + OOTP27_GLOBAL_CURRENT_DATE_OFFSET);
     void* live_date = NULL;
-    if (current_date != 0 && memory_range_readable((void*)(current_date + 0x1b0u), 16)) {
-        live_date = (void*)(current_date + 0x1b0u);
+    if (current_date != 0
+            && memory_range_readable(
+                (void*)(current_date + OOTP27_LIVE_DATE_OBJECT_OFFSET),
+                OOTP27_LIVE_DATE_OBJECT_READABLE_BYTES)) {
+        live_date = (void*)(current_date + OOTP27_LIVE_DATE_OBJECT_OFFSET);
     }
     if (live_date == NULL) {
         append_logf("core message news skipped source=%s title=%s reason=no_live_date", source != NULL ? source : "", title);

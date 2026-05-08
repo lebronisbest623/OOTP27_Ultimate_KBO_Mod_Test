@@ -182,11 +182,13 @@ static int install_kbo_intl_established_fa_generation_filter_patch(void)
     }
 
     int32_t global_slot_rel = 0;
-    memcpy(&global_slot_rel, target + 6, sizeof(global_slot_rel));
-    void* global_database_slot = target + 10 + global_slot_rel;
-    void* register_player_func = resolve_relative_call_target(target + 10);
+    memcpy(&global_slot_rel, target + OOTP27_INTL_ESTABLISHED_FA_GLOBAL_SLOT_REL_OFFSET, sizeof(global_slot_rel));
+    void* global_database_slot = target + OOTP27_INTL_ESTABLISHED_FA_REGISTER_CALL_OFFSET + global_slot_rel;
+    void* register_player_func = resolve_relative_call_target(target + OOTP27_INTL_ESTABLISHED_FA_REGISTER_CALL_OFFSET);
     if (register_player_func == NULL) {
-        append_logf("failed to resolve KBO international established FA register function target=%p", target + 10);
+        append_logf(
+            "failed to resolve KBO international established FA register function target=%p",
+            target + OOTP27_INTL_ESTABLISHED_FA_REGISTER_CALL_OFFSET);
         return 0;
     }
 

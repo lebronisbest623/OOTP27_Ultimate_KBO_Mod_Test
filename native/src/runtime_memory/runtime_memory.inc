@@ -229,11 +229,11 @@ static uint8_t* find_ootp_executable_pattern(const uint8_t* pattern, size_t patt
 
 static int is_kbo_historical_league_context(uintptr_t league_ptr)
 {
-    if (league_ptr == 0 || !memory_range_readable((void*)league_ptr, 0x4cc8)) {
+    if (league_ptr == 0 || !memory_range_readable((void*)league_ptr, OOTP27_HISTORICAL_LEAGUE_READABLE_BYTES)) {
         return 0;
     }
     uint8_t* league = (uint8_t*)league_ptr;
-    uint8_t  historical_gate = *(uint8_t*)(league + 0x2e5);
-    uint32_t league_year     = *(uint32_t*)(league + 0x44ec);
+    uint8_t  historical_gate = *(uint8_t*)(league + OOTP27_HISTORICAL_LEAGUE_GATE_OFFSET);
+    uint32_t league_year     = *(uint32_t*)(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
     return historical_gate == 1 && league_year >= 1982 && league_year <= 2100;
 }

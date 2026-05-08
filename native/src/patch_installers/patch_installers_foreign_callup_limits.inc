@@ -37,7 +37,7 @@ static int install_kbo_callup_foreign_limit_branch_patch(
     uint8_t* stub = build_kbo_callup_foreign_limit_branch_stub(
         (uint8_t*)((uintptr_t)exe + allow_rva),
         target + patch_len,
-        (uint8_t*)((uintptr_t)exe + 0x0107B2B4u),
+        (uint8_t*)((uintptr_t)exe + OOTP27_FOREIGN_CALLUP_LIMIT_TOTAL_CHECK_FALLBACK_RVA),
         wrapper,
         total_check);
     if (stub == NULL) {
@@ -117,4 +117,3 @@ static int install_kbo_callup_foreign_limit_branch_patches(void)
         1);
     return ok;
 }
-

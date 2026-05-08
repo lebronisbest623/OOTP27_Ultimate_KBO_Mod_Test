@@ -151,7 +151,7 @@ static int install_allstar_settings_ui_patch(void)
         one_division_warning_patch_may,
         sizeof(one_division_warning_expected_may));
     if (!ok_warning) {
-        uint8_t* warning_gate = (uint8_t*)((uintptr_t)exe + 0x01545BB8u);
+        uint8_t* warning_gate = (uint8_t*)((uintptr_t)exe + OOTP27_ALLSTAR_SETTINGS_ONE_DIVISION_WARNING_GATE_RVA);
         const uint8_t expected_warning_gate[14] = {
             0x66, 0x83, 0xBB, 0xFA, 0x03, 0x00, 0x00, 0x01,
             0x0F, 0x8C, 0x87, 0x0B, 0x00, 0x00

@@ -17,9 +17,9 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     uint32_t today = 0;
     uint32_t holder_team_id = 0;
     uint32_t requester_team_id = 0;
-    uintptr_t team_ptr = *(uintptr_t*)(frame_ptr + 0x140u);
-    if (team_ptr != 0 && memory_range_readable((void*)(team_ptr + 0x4450u), sizeof(uint32_t))) {
-        requester_team_id = *(uint32_t*)(team_ptr + 0x4450u);
+    uintptr_t team_ptr = *(uintptr_t*)(frame_ptr + OOTP27_AI_FA_STATUS_FRAME_TEAM_PTR_OFFSET);
+    if (team_ptr != 0 && memory_range_readable((void*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET), sizeof(uint32_t))) {
+        requester_team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
     }
 
     if (requester_team_id != 0u
@@ -104,6 +104,6 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
         return insert_index;
     }
     *(uintptr_t*)(candidate_array + ((uintptr_t)insert_index * sizeof(uintptr_t))) = player_ptr;
-    *(int32_t*)(frame_ptr - 0x2c) = insert_index + 1;
+    *(int32_t*)(frame_ptr - OOTP27_AI_FA_STATUS_FRAME_INSERT_COUNT_DELTA) = insert_index + 1;
     return insert_index + 1;
 }

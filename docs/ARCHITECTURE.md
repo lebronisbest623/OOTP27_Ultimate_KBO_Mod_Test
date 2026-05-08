@@ -13,12 +13,20 @@ The native layer is where most KBO rule emulation lives. Because it patches a cl
 
 ```c
 #include "src/core.inc"
+#include "src/bootstrap/profiler.inc"
+#include "src/bootstrap/perf_probe.inc"
 #include "src/build_verify.inc"
 #include "src/runtime_memory.inc"
 #include "src/team.inc"
+#include "src/amateur_player_quality.inc"
 #include "src/fa_requalification.inc"
 #include "src/military_service_loan.inc"
 #include "src/foreign_waiver_ai.inc"
+#include "src/fa_salary_snapshot.inc"
+#include "src/fa_rules.inc"
+#include "src/fa_filing.inc"
+#include "src/fa_market_classification.inc"
+#include "src/fa_compensation.inc"
 #include "src/custom_events.inc"
 #include "src/allstar.inc"
 #include "src/season_phase_monitor.inc"
@@ -82,9 +90,15 @@ native/src/
   build_verify.inc            -> build_verify/build_verify.inc
   runtime_memory.inc          -> runtime_memory/runtime_memory.inc
   team.inc                    -> team/team.inc
+  amateur_player_quality.inc  -> amateur_player_quality/
   fa_requalification.inc      -> fa_requalification/fa_requalification.inc
   military_service_loan.inc   -> military_service/
   foreign_waiver_ai.inc       -> foreign/
+  fa_salary_snapshot.inc      -> fa_salary_snapshot/
+  fa_rules.inc                -> fa_rules/fa_rules.inc
+  fa_filing.inc               -> fa_filing/fa_filing.inc
+  fa_market_classification.inc -> fa_market_classification/
+  fa_compensation.inc         -> fa_compensation/fa_compensation.inc
   custom_events.inc           -> custom_events/
   allstar.inc                 -> allstar/allstar.inc
   season_phase_monitor.inc    -> season_phase_monitor/season_phase_monitor.inc
@@ -96,6 +110,8 @@ native/src/
 ```
 
 Rule of thumb: if a root `native/src/*.inc` grows beyond include sequencing and tiny constants, move that body into a subfolder and leave the root filename as the stable compatibility wrapper.
+
+The current baseline already contains several FA and draft-adjacent domain entrypoints in `native/KBOFix.c`. That baseline is not a precedent for future broad migrations. Any further split, move, or ownership change must close exactly one subsystem or one responsibility unit per change.
 
 ## Core Modules
 
@@ -754,12 +770,19 @@ UI modules can submit command-file actions and refresh views, but direct gamepla
 ## Remaining Migration Plan
 
 1. Split `fa_requalification/fa_requalification.inc` into state/policy/wrapper files.
-2. Revisit `custom_events/asian_games_selection.inc` and `asian_games_news.inc`; those are the next oversized event-domain files.
-3. Keep actual AI scoring and automatic retain/skip decisions in `foreign_waiver_ai.inc`.
-4. Keep audit/snapshot code observation-only.
-5. Continue splitting `hotkey_window/support.inc`; `state.inc`, `content.inc`, and `ui.inc` are already assemblers.
-6. Continue trimming team assignment helpers only when a new domain owner makes the mutation boundary clearer.
-7. Decide whether `season_phase_monitor.inc` should remain as its own domain module or be folded into a clearer lifecycle owner.
+2. Finish `amateur_player_quality/` as its own draft-quality subsystem; keep the root `amateur_player_quality.inc` as an assembler only.
+3. Finish `fa_salary_snapshot/` as an observation-only subsystem; snapshot code must not mutate gameplay state.
+4. Finish `fa_market_classification/` as a classification/cache subsystem; SQLite cache ownership stays inside that folder.
+5. Finish `patch_installers/no_minor_contracts/` as one patch-installer responsibility unit; do not mix it with unrelated patch families.
+6. Finish `foreign/signability/submit_offer_probe_parts/` as the foreign signability submit-offer responsibility unit.
+7. Finish `foreign/intl_established_fa_postscan/` as the international established FA scan responsibility unit.
+8. Continue splitting `hotkey_window/ui_html_helpers/` and `hotkey_window/ui_webview_runtime/`; UI splits must not change gameplay behavior.
+9. Revisit `custom_events/asian_games_selection.inc` and `asian_games_news.inc`; those are the next oversized event-domain files.
+10. Keep actual AI scoring and automatic retain/skip decisions in `foreign_waiver_ai.inc`.
+11. Continue trimming team assignment helpers only when a new domain owner makes the mutation boundary clearer.
+12. Decide whether `season_phase_monitor.inc` should remain as its own domain module or be folded into a clearer lifecycle owner.
+
+Each numbered item is a separate migration unit. Do not close multiple items in one code-change commit. A docs-only update may mention multiple items only to describe the existing baseline or plan the sequence.
 
 After each step, run:
 
