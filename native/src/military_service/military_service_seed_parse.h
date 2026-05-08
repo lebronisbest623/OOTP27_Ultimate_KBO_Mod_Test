@@ -7,11 +7,14 @@
 #define KBO_MILITARY_SERVICE_DAYS 545
 #endif
 
+#define KBO_MILITARY_SERVICE_SEED_KEY_BYTES  40
+#define KBO_MILITARY_SERVICE_TEAM_BYTES      12
+
 typedef struct KboMilitaryServiceSeed {
-    char key[40];
+    char key[KBO_MILITARY_SERVICE_SEED_KEY_BYTES];
     uint32_t player_id;
-    char service_team_code[12];
-    char original_team_code[12];
+    char service_team_code[KBO_MILITARY_SERVICE_TEAM_BYTES];
+    char original_team_code[KBO_MILITARY_SERVICE_TEAM_BYTES];
     uint32_t service_start_yyyymmdd;
     uint32_t service_return_yyyymmdd;
     int32_t service_total_days;
