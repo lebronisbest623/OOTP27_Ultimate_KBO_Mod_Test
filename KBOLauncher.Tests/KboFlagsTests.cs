@@ -116,6 +116,45 @@ public sealed class KboFlagsTests : IDisposable
     }
 
     [Fact]
+    public void EnsureDefaultKboRuntimeFlags_SeedsFreshInstallCoreFeatureFlags()
+    {
+        global::KboFlags.EnsureDefaultKboRuntimeFlags(ConfigPath);
+
+        var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
+        Assert.True(flags["enable_experimental_runtime_hooks"]);
+        Assert.True(flags["enable_foreign_waiver_ai"]);
+        Assert.True(flags["enable_foreign_waiver_background_scanner"]);
+        Assert.True(flags["enable_single_division_allstar_runtime_patches"]);
+        Assert.True(flags["enable_single_division_allstar_settings_patch"]);
+        Assert.True(flags["enable_single_division_allstar_voting_hook"]);
+        Assert.True(flags["enable_single_division_allstar_events"]);
+        Assert.True(flags["enable_kbo_foreign_trade_check_patch"]);
+        Assert.True(flags["enable_kbo_ai_fa_fallback_patch"]);
+        Assert.True(flags["enable_kbo_player_team_signability_patch"]);
+        Assert.True(flags["enable_kbo_offer_eligibility_patch"]);
+        Assert.True(flags["enable_kbo_callup_foreign_limit_patch"]);
+        Assert.True(flags["enable_intl_established_fa_quality_probe_patch"]);
+        Assert.True(flags["enable_kbo_season_phase_monitor"]);
+    }
+
+    [Fact]
+    public void EnsureDefaultKboRuntimeFlags_DoesNotOverwriteExistingOptOuts()
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(ConfigPath, """
+        {
+          "enable_kbo_foreign_trade_check_patch": false,
+          "enable_experimental_runtime_hooks": false
+        }
+        """);
+
+        global::KboFlags.EnsureDefaultKboRuntimeFlags(ConfigPath);
+
+        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_kbo_foreign_trade_check_patch.txt"));
+        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_experimental_runtime_hooks.txt"));
+    }
+
+    [Fact]
     public void ImportLegacyKboFlagFilesIfMissing_CopiesKnownBooleanFlagsOnly()
     {
         Directory.CreateDirectory(tempDir);

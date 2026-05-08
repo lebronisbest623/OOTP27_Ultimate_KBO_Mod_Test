@@ -78,6 +78,53 @@ internal static class KboFlags
         ImportLegacyKboFlagFilesIfMissing(GetKboFlagConfigPath());
     }
 
+    public static void EnsureDefaultKboRuntimeFlags()
+    {
+        EnsureDefaultKboRuntimeFlags(GetKboFlagConfigPath());
+    }
+
+    internal static void EnsureDefaultKboRuntimeFlags(string configPath)
+    {
+        var raw = ReadKboRawConfig(configPath);
+        var changed = false;
+
+        changed |= EnsureMissingFlag(raw, "enable_experimental_runtime_hooks", true);
+        changed |= EnsureMissingFlag(raw, "enable_foreign_waiver_ai", true);
+        changed |= EnsureMissingFlag(raw, "enable_foreign_waiver_background_scanner", true);
+        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_runtime_patches", true);
+        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_settings_patch", true);
+        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_voting_hook", true);
+        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_events", true);
+        changed |= EnsureMissingFlag(raw, "enable_kbo_foreign_trade_check_patch", true);
+        changed |= EnsureMissingFlag(raw, "enable_kbo_ai_fa_fallback_patch", true);
+        changed |= EnsureMissingFlag(raw, "enable_kbo_player_team_signability_patch", true);
+        changed |= EnsureMissingFlag(raw, "enable_kbo_offer_eligibility_patch", true);
+        changed |= EnsureMissingFlag(raw, "enable_kbo_callup_foreign_limit_patch", true);
+        changed |= EnsureMissingFlag(raw, "enable_intl_established_fa_quality_probe_patch", true);
+        changed |= EnsureMissingFlag(raw, "enable_kbo_season_phase_monitor", true);
+
+        if (!changed)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+        var json = JsonSerializer.Serialize(raw, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(configPath, json + Environment.NewLine);
+    }
+
+    private static bool EnsureMissingFlag(SortedDictionary<string, JsonNode?> flags, string key, bool value)
+    {
+        key = NormalizeKboFlagKey(key);
+        if (flags.ContainsKey(key))
+        {
+            return false;
+        }
+
+        flags[key] = JsonValue.Create(value);
+        return true;
+    }
+
     internal static void ImportLegacyKboFlagFilesIfMissing(string configPath)
     {
         var configDir = Path.GetDirectoryName(configPath);
@@ -131,10 +178,21 @@ internal static class KboFlags
         return ReadKboFlag(GetKboFlagConfigPath(), fileName);
     }
 
+    public static bool ReadKboFlagDefaultEnabled(string fileName)
+    {
+        return ReadKboFlagDefaultEnabled(GetKboFlagConfigPath(), fileName);
+    }
+
     internal static bool ReadKboFlag(string configPath, string fileName)
     {
         return ReadKboFlagConfig(configPath).TryGetValue(NormalizeKboFlagKey(fileName), out var enabled)
             && enabled;
+    }
+
+    internal static bool ReadKboFlagDefaultEnabled(string configPath, string fileName)
+    {
+        return !ReadKboFlagConfig(configPath).TryGetValue(NormalizeKboFlagKey(fileName), out var enabled)
+            || enabled;
     }
 
     public static SortedDictionary<string, bool> ReadKboFlagConfig()

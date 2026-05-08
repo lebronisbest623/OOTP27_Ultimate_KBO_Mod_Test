@@ -8,10 +8,6 @@ internal static class KboSeedFiles
         var localDir = Path.Combine(local, "OOTP-KBO");
         var localPath = Path.Combine(localDir, "kbo_league_id.txt");
     
-        if (File.Exists(localPath)) {
-            return;
-        }
-    
         Directory.CreateDirectory(localDir);
     
         var defaultCandidates = new[]
@@ -30,7 +26,13 @@ internal static class KboSeedFiles
     
             try
             {
-                File.Copy(candidate, localPath, overwrite: true);
+                var shouldCopy = !File.Exists(localPath)
+                    || !File.ReadAllText(localPath).Trim().Equals(File.ReadAllText(candidate).Trim(), StringComparison.OrdinalIgnoreCase);
+                if (shouldCopy)
+                {
+                    File.Copy(candidate, localPath, overwrite: true);
+                    Console.WriteLine($"KBO league id: seeded {localPath}");
+                }
                 return;
             }
             catch (Exception ex)

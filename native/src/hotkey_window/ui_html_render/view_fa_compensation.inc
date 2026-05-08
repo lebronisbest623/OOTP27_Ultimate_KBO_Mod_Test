@@ -93,6 +93,102 @@ static void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer)
     }
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights faCompensation'>");
+
+    if (detail_rec != NULL) {
+        KboFaCompensationDecisionRow board_decision;
+        int board_has_decision = kbo_load_latest_fa_compensation_decision(detail_rec->player_id, &board_decision);
+        int board_detail_rows = kbo_fa_compensation_debug_row_count(debug_rows, debug_count, detail_rec->player_id);
+        int board_is_final = kbo_fa_compensation_record_is_final(detail_rec);
+        char original_team[16] = "-";
+        char signing_team[16] = "-";
+        char previous_salary[32] = "-";
+        char cash_with_player[32] = "-";
+        char cash_only[32] = "-";
+
+        kbo_hub_copy_team_abbrev_by_id(detail_rec->original_team_id, original_team, sizeof(original_team), "-");
+        kbo_hub_copy_team_abbrev_by_id(detail_rec->signing_team_id, signing_team, sizeof(signing_team), "-");
+        kbo_fa_market_format_salary(detail_rec->previous_salary, previous_salary, sizeof(previous_salary));
+        kbo_fa_market_format_salary((int32_t)detail_rec->cash_with_player, cash_with_player, sizeof(cash_with_player));
+        kbo_fa_market_format_salary((int32_t)detail_rec->cash_only, cash_only, sizeof(cash_only));
+
+        kbo_window_text_appendf(buffer, "<section class='faCompBoard'>");
+        kbo_window_text_appendf(buffer, "<div class='faCompBoardLead'><div class='faCompBoardTitle'>");
+        kbo_html_append_escaped(buffer, detail_rec->player_name);
+        kbo_window_text_appendf(buffer, "<span class='faCompBadge'>");
+        kbo_html_append_escaped(buffer, kbo_fa_market_display_grade(detail_rec->grade));
+        kbo_window_text_appendf(buffer, "</span></div><div class='faCompBoardSummary'>");
+        if (detail_rec->requires_player_compensation && detail_rec->protect_count > 0u) {
+            kbo_window_text_appendf(buffer, "Signing this FA requires cash compensation and one eligible player unless cash-only compensation is selected.");
+        } else {
+            kbo_window_text_appendf(buffer, "Signing this FA requires cash-only compensation.");
+        }
+        kbo_window_text_appendf(buffer, "</div></div>");
+
+        kbo_window_text_appendf(buffer, "<div class='faCompBoardPanels'>");
+
+        kbo_window_text_appendf(buffer, "<article class='faCompPanel'><h3>FA PLAYER</h3><dl>");
+        kbo_window_text_appendf(buffer, "<dt>Player</dt><dd>");
+        kbo_html_append_escaped(buffer, detail_rec->player_name);
+        kbo_window_text_appendf(buffer, "</dd><dt>Grade</dt><dd>");
+        kbo_html_append_escaped(buffer, kbo_fa_market_display_grade(detail_rec->grade));
+        kbo_window_text_appendf(buffer, "</dd><dt>Previous Salary</dt><dd>");
+        kbo_html_append_escaped(buffer, previous_salary);
+        kbo_window_text_appendf(buffer, "</dd><dt>Status</dt><dd>");
+        kbo_html_append_escaped(buffer, kbo_fa_compensation_status_label(detail_rec->status));
+        kbo_window_text_appendf(buffer, "</dd></dl></article>");
+
+        kbo_window_text_appendf(buffer, "<article class='faCompPanel faCompPanelFocus'><h3>COMPENSATION</h3><dl>");
+        kbo_window_text_appendf(buffer, "<dt>Player + Cash</dt><dd>");
+        kbo_html_append_escaped(buffer, cash_with_player);
+        kbo_window_text_appendf(buffer, "</dd><dt>Cash Only</dt><dd>");
+        kbo_html_append_escaped(buffer, cash_only);
+        kbo_window_text_appendf(buffer, "</dd><dt>Protected List</dt><dd>%u players</dd><dt>Decision</dt><dd>", detail_rec->protect_count);
+        kbo_html_append_escaped(buffer, kbo_fa_compensation_decision_label(detail_rec, &board_decision, board_has_decision));
+        kbo_window_text_appendf(buffer, "</dd></dl></article>");
+
+        kbo_window_text_appendf(buffer, "<article class='faCompPanel'><h3>TEAM IMPACT</h3><dl>");
+        kbo_window_text_appendf(buffer, "<dt>Original Team</dt><dd>");
+        kbo_html_append_escaped(buffer, original_team);
+        kbo_window_text_appendf(buffer, "</dd><dt>Signing Team</dt><dd>");
+        kbo_html_append_escaped(buffer, signing_team);
+        kbo_window_text_appendf(buffer, "</dd><dt>Board</dt><dd>");
+        if (board_is_final) {
+            kbo_window_text_appendf(buffer, "Finalized");
+        } else if (board_detail_rows <= 0) {
+            kbo_window_text_appendf(buffer, "Protected list needed");
+        } else {
+            kbo_window_text_appendf(buffer, "Ready for decision");
+        }
+        kbo_window_text_appendf(buffer, "</dd><dt>Route</dt><dd>");
+        kbo_html_append_escaped(buffer, signing_team);
+        kbo_window_text_appendf(buffer, " to ");
+        kbo_html_append_escaped(buffer, original_team);
+        kbo_window_text_appendf(buffer, "</dd></dl></article>");
+
+        kbo_window_text_appendf(buffer, "</div><div class='faCompActionBar'><span>");
+        if (board_is_final) {
+            kbo_window_text_appendf(buffer, "This compensation case is finalized.");
+        } else if (board_detail_rows <= 0) {
+            kbo_window_text_appendf(buffer, "Submit the signing team's protected list before selecting compensation.");
+        } else {
+            kbo_window_text_appendf(buffer, "Choose cash-only compensation or select one available player from the list below.");
+        }
+        kbo_window_text_appendf(buffer, "</span><div>");
+        if (board_is_final) {
+            kbo_window_text_appendf(buffer, "<span class='faCompFinal'>Final</span>");
+        } else if (board_detail_rows <= 0) {
+            kbo_window_text_appendf(buffer, "<a class='rightsTextAction' href='kbo://fa-comp/submit/%u'>Submit List</a>", detail_rec->player_id);
+        } else {
+            kbo_window_text_appendf(buffer, "<a class='rightsTextAction cashOnly' href='kbo://fa-comp/cash-only/%u'>Cash Only</a>", detail_rec->player_id);
+        }
+        kbo_window_text_appendf(buffer, "</div></div></section>");
+    } else {
+        kbo_window_text_appendf(
+            buffer,
+            "<section class='faCompBoard faCompBoardEmpty'><div class='faCompBoardLead'><div class='faCompBoardTitle'>FA COMPENSATION</div>"
+            "<div class='faCompBoardSummary'>No active player-compensation case is ready for review.</div></div></section>");
+    }
+
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap faCompLedgerWrap'><table class='ootpRosterTable faCompTable'><thead><tr>"
@@ -166,46 +262,7 @@ static void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer)
     if (detail_rec != NULL) {
         KboFaCompensationDecisionRow decision;
         int has_decision = kbo_load_latest_fa_compensation_decision(detail_rec->player_id, &decision);
-        int detail_rows = kbo_fa_compensation_debug_row_count(debug_rows, debug_count, detail_rec->player_id);
         int is_final = kbo_fa_compensation_record_is_final(detail_rec);
-        char original_team[16] = "-";
-        char signing_team[16] = "-";
-        char cash_with_player[32] = "-";
-        char cash_only[32] = "-";
-
-        kbo_hub_copy_team_abbrev_by_id(detail_rec->original_team_id, original_team, sizeof(original_team), "-");
-        kbo_hub_copy_team_abbrev_by_id(detail_rec->signing_team_id, signing_team, sizeof(signing_team), "-");
-        kbo_fa_market_format_salary((int32_t)detail_rec->cash_with_player, cash_with_player, sizeof(cash_with_player));
-        kbo_fa_market_format_salary((int32_t)detail_rec->cash_only, cash_only, sizeof(cash_only));
-
-        kbo_window_text_appendf(buffer, "<div class='faCompDecisionBar'>");
-        kbo_window_text_appendf(buffer, "<div class='faCompDecisionMain'>");
-        kbo_html_append_escaped(buffer, detail_rec->player_name);
-        kbo_window_text_appendf(buffer, "<span class='faCompBadge'>");
-        kbo_html_append_escaped(buffer, kbo_fa_market_display_grade(detail_rec->grade));
-        kbo_window_text_appendf(buffer, "</span><span class='faCompRoute'>");
-        kbo_html_append_escaped(buffer, signing_team);
-        kbo_window_text_appendf(buffer, " -> ");
-        kbo_html_append_escaped(buffer, original_team);
-        kbo_window_text_appendf(buffer, "</span></div>");
-
-        kbo_window_text_appendf(buffer, "<div class='faCompDecisionMeta'><span>Decision: ");
-        kbo_html_append_escaped(buffer, kbo_fa_compensation_decision_label(detail_rec, &decision, has_decision));
-        kbo_window_text_appendf(buffer, "</span><span>Player + Cash: ");
-        kbo_html_append_escaped(buffer, cash_with_player);
-        kbo_window_text_appendf(buffer, "</span><span>Cash Only: ");
-        kbo_html_append_escaped(buffer, cash_only);
-        kbo_window_text_appendf(buffer, "</span><span>Protected: %u</span></div>", detail_rec->protect_count);
-
-        kbo_window_text_appendf(buffer, "<div class='faCompDecisionActions'>");
-        if (is_final) {
-            kbo_window_text_appendf(buffer, "<span class='faCompFinal'>Final</span>");
-        } else if (detail_rows <= 0) {
-            kbo_window_text_appendf(buffer, "<a class='rightsTextAction' href='kbo://fa-comp/submit/%u'>Submit List</a>", detail_rec->player_id);
-        } else {
-            kbo_window_text_appendf(buffer, "<a class='rightsTextAction cashOnly' href='kbo://fa-comp/cash-only/%u'>Cash Only</a>", detail_rec->player_id);
-        }
-        kbo_window_text_appendf(buffer, "</div></div>");
 
         kbo_window_text_appendf(
             buffer,

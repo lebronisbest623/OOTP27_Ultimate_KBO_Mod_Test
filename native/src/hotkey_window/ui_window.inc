@@ -182,7 +182,7 @@ static LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM w
 
     case WM_TIMER:
         if (wparam == 1u
-                && (GetAsyncKeyState(VK_F2) & 1) != 0
+                && ((GetAsyncKeyState(VK_F2) & 1) != 0 || (GetAsyncKeyState(VK_F9) & 1) != 0)
                 && kbo_foreground_is_this_process()) {
             kbo_queue_hotkey_window_toggle();
             return 0;

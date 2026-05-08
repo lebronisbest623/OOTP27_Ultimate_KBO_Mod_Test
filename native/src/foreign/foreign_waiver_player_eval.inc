@@ -26,10 +26,27 @@ static int32_t kbo_foreign_waiver_value_score(uint8_t* player)
 static int32_t kbo_get_foreign_waiver_value_threshold(void)
 {
     uint32_t configured = read_u32_leading_number_from_file("foreign_waiver_value_threshold.txt");
-    if (configured != 0u && configured <= 20000u) {
+    if (configured != 0u && configured <= 250000u) {
         return (int32_t)configured;
     }
-    return 3500;
+    return 85000;
+}
+
+static int32_t kbo_get_foreign_waiver_asian_value_threshold(void)
+{
+    uint32_t configured = read_u32_leading_number_from_file("foreign_waiver_asian_value_threshold.txt");
+    if (configured != 0u && configured <= 250000u) {
+        return (int32_t)configured;
+    }
+    return 60000;
+}
+
+static int32_t kbo_get_foreign_waiver_value_threshold_for_player(uint8_t* player)
+{
+    if (player != NULL && kbo_player_is_asian_quota_candidate(player)) {
+        return kbo_get_foreign_waiver_asian_value_threshold();
+    }
+    return kbo_get_foreign_waiver_value_threshold();
 }
 
 static uint8_t* kbo_find_player_by_id(uint32_t player_id, uint32_t* out_current_team_id, uint32_t* out_current_league_id)

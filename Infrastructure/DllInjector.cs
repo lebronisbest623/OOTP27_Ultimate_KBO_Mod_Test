@@ -120,6 +120,8 @@ internal static class DllInjector
     
     public static void ThrowWin32(string operation)
     {
-        throw new Win32Exception(Marshal.GetLastWin32Error(), operation);
+        var error = Marshal.GetLastWin32Error();
+        var message = new Win32Exception(error).Message;
+        throw new Win32Exception(error, $"{operation} failed win32={error}: {message}");
     }
 }

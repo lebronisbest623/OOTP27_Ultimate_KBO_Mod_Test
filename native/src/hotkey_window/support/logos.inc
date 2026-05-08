@@ -254,17 +254,17 @@ static int kbo_hub_get_team_logo_path(uint32_t team_id, uint32_t year, char* out
         return 0;
     }
 
-    if (kbo_hub_find_best_logo_file(
-            "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Out of the Park Baseball 27\\data\\logos",
-            prefix, year, out, out_size)) {
+    char data_logo_dir[MAX_PATH] = {0};
+    kbo_hub_ootp_install_path("data\\logos", data_logo_dir, sizeof(data_logo_dir));
+    if (kbo_hub_find_best_logo_file(data_logo_dir, prefix, year, out, out_size)) {
         return 1;
     }
 
     char cap_prefix[112] = {0};
     snprintf(cap_prefix, sizeof(cap_prefix), "caps_%s", prefix);
-    return kbo_hub_find_best_logo_file(
-        "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Out of the Park Baseball 27\\data\\ballcaps",
-        cap_prefix, year, out, out_size);
+    char ballcap_dir[MAX_PATH] = {0};
+    kbo_hub_ootp_install_path("data\\ballcaps", ballcap_dir, sizeof(ballcap_dir));
+    return kbo_hub_find_best_logo_file(ballcap_dir, cap_prefix, year, out, out_size);
 }
 
 static void kbo_hub_ensure_header_logos(uint32_t league_id, uint32_t team_id, uint32_t year)

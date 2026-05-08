@@ -29,8 +29,30 @@ internal static class DllPayloadStager
             File.Copy(loaderSource, loaderTarget, overwrite: true);
             Log(logPath, $"webview2_loader_copy source={loaderSource} target={loaderTarget}");
         }
+
+        var assetSource = Path.Combine(Path.GetDirectoryName(fullDllPath) ?? string.Empty, "assets");
+        if (Directory.Exists(assetSource))
+        {
+            var assetTarget = Path.Combine(runDllDir, "assets");
+            CopyDirectory(assetSource, assetTarget);
+            Log(logPath, $"assets_copy source={assetSource} target={assetTarget}");
+        }
     
         Log(logPath, $"dll_copy source={fullDllPath} target={copyPath}");
         return copyPath;
+    }
+
+    private static void CopyDirectory(string sourceDir, string targetDir)
+    {
+        Directory.CreateDirectory(targetDir);
+        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.TopDirectoryOnly))
+        {
+            File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
+        {
+            CopyDirectory(directory, Path.Combine(targetDir, Path.GetFileName(directory)));
+        }
     }
 }

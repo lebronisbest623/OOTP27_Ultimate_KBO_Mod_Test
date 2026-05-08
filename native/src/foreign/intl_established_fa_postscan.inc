@@ -9,9 +9,11 @@
 #define KBO_INTL_ESTABLISHED_FA_ASIAN_UNKNOWN_PITCHER_SCORE_CAP 71000
 #define KBO_INTL_ESTABLISHED_FA_ASIAN_HITTER_SCORE_CAP 72000
 #define KBO_INTL_ESTABLISHED_FA_ASIAN_CATCHER_SCORE_CAP 65000
-#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_STARTER_SCORE_CAP 125000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_STARTER_SCORE_CAP 115000
 #define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_BULLPEN_SCORE_CAP 95000
 #define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_UNKNOWN_PITCHER_SCORE_CAP 105000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_HITTER_SCORE_CAP 110000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_CATCHER_SCORE_CAP 80000
 
 typedef struct KboIntlEstablishedFaPostscanState {
     LONG pending;
@@ -33,7 +35,7 @@ static volatile LONG g_kbo_intl_established_fa_postscan_worker_started = 0;
 
 static int kbo_intl_established_fa_quality_shaping_enabled(void)
 {
-    return !read_kbo_localappdata_flag_file("disable_intl_established_fa_quality_shaping.txt");
+    return kbo_get_foreign_fa_quality_cap_enabled_setting();
 }
 
 static int kbo_intl_established_fa_pitcher_role_is_starter(uint8_t position_role)
@@ -81,7 +83,10 @@ static const char* kbo_intl_established_fa_quality_policy_label(
         }
         return "non_asian_pitcher_cap";
     }
-    return "none";
+    if (kbo_intl_established_fa_position_is_catcher(position_group, position_role)) {
+        return "non_asian_catcher_cap";
+    }
+    return "non_asian_hitter_cap";
 }
 
 static int32_t kbo_intl_established_fa_quality_score_cap(
@@ -114,7 +119,10 @@ static int32_t kbo_intl_established_fa_quality_score_cap(
         }
         return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_UNKNOWN_PITCHER_SCORE_CAP;
     }
-    return 0;
+    if (kbo_intl_established_fa_position_is_catcher(position_group, position_role)) {
+        return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_CATCHER_SCORE_CAP;
+    }
+    return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_HITTER_SCORE_CAP;
 }
 
 static int16_t kbo_intl_established_fa_quality_field_cap(
@@ -123,7 +131,7 @@ static int16_t kbo_intl_established_fa_quality_field_cap(
     uint8_t position_role)
 {
     int32_t score_cap = kbo_intl_established_fa_quality_score_cap(asian_quota, position_group, position_role);
-    if (!asian_quota || score_cap <= 0) {
+    if (score_cap <= 0) {
         return 0;
     }
     return (int16_t)(score_cap / 100);

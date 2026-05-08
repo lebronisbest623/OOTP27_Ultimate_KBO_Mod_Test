@@ -53,10 +53,7 @@ static void kbo_hub_copy_ootp_install_dir(char* out, size_t out_size)
         }
     }
 
-    snprintf(
-        out,
-        out_size,
-        "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Out of the Park Baseball 27");
+    append_log_line("KBO F2 hub OOTP install dir unavailable; OOTP skin assets disabled");
 }
 
 static void kbo_hub_ootp_install_path(const char* relative_path, char* out, size_t out_size)
@@ -67,7 +64,53 @@ static void kbo_hub_ootp_install_path(const char* relative_path, char* out, size
 
     char install_dir[MAX_PATH] = {0};
     kbo_hub_copy_ootp_install_dir(install_dir, sizeof(install_dir));
+    if (install_dir[0] == '\0') {
+        out[0] = '\0';
+        return;
+    }
     snprintf(out, out_size, "%s\\%s", install_dir, relative_path);
+}
+
+static int kbo_hub_copy_self_module_dir(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    HMODULE self_module = NULL;
+    char path[MAX_PATH] = {0};
+    if (!GetModuleHandleExA(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            (LPCSTR)&kbo_hub_copy_self_module_dir,
+            &self_module)) {
+        return 0;
+    }
+    DWORD len = GetModuleFileNameA(self_module, path, sizeof(path));
+    if (len == 0 || len >= sizeof(path)) {
+        return 0;
+    }
+
+    char* slash = strrchr(path, '\\');
+    if (slash == NULL) {
+        return 0;
+    }
+    *slash = '\0';
+    snprintf(out, out_size, "%s", path);
+    return 1;
+}
+
+static void kbo_hub_local_asset_path_with_type(const char* type, const char* file_name, char* out, size_t out_size)
+{
+    if (type == NULL || file_name == NULL || out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    char module_dir[MAX_PATH] = {0};
+    if (kbo_hub_copy_self_module_dir(module_dir, sizeof(module_dir))) {
+        snprintf(out, out_size, "%s\\assets\\%s\\%s", module_dir, type, file_name);
+    }
 }
 
 static void kbo_hub_load_skin_metrics(void)
@@ -156,26 +199,12 @@ static void kbo_hub_nation_flag_asset_path(const char* file_name, char* out, siz
 
 static void kbo_hub_local_asset_path(const char* file_name, char* out, size_t out_size)
 {
-    if (file_name == NULL || out == NULL || out_size == 0) {
-        return;
-    }
-    snprintf(
-        out,
-        out_size,
-        "C:\\Users\\user\\OOTP27-KBO-Launcher\\assets\\icons\\%s",
-        file_name);
+    kbo_hub_local_asset_path_with_type("icons", file_name, out, out_size);
 }
 
 static void kbo_hub_font_asset_path(const char* file_name, char* out, size_t out_size)
 {
-    if (file_name == NULL || out == NULL || out_size == 0) {
-        return;
-    }
-    snprintf(
-        out,
-        out_size,
-        "C:\\Users\\user\\OOTP27-KBO-Launcher\\assets\\fonts\\%s",
-        file_name);
+    kbo_hub_local_asset_path_with_type("fonts", file_name, out, out_size);
 }
 
 static void kbo_hub_logo_asset_path(const char* file_name, char* out, size_t out_size)

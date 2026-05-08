@@ -55,6 +55,7 @@ internal static class LauncherApp
         EnsureBundledKboDataFile("high_school_reputation_seed.csv", "High-school reputation seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
         ImportLegacyKboFlagFilesIfMissing();
+        EnsureDefaultKboRuntimeFlags();
         
         var existing = Process.GetProcesses()
             .Select(TryDescribe)
@@ -65,7 +66,7 @@ internal static class LauncherApp
         
         if (isDefaultRun)
         {
-            var enableDefaultInjection = ReadKboFlag("enable_launcher_injection.txt");
+            var enableDefaultInjection = ReadKboFlagDefaultEnabled("enable_launcher_injection.txt");
             string? defaultDll = null;
             if (enableDefaultInjection)
             {
@@ -93,7 +94,7 @@ internal static class LauncherApp
         LogLauncherBuild(logPath);
         if (isDefaultRun && options.DllPath is null)
         {
-            Log(logPath, "default_injection=disabled reason=missing_enable_launcher_injection_json_flag");
+            Log(logPath, "default_injection=disabled reason=missing_dll_or_explicit_flag");
         }
         Console.WriteLine($"OOTP: {exePath}");
         Console.WriteLine($"WorkDir: {Path.GetDirectoryName(exePath)}");
@@ -268,7 +269,7 @@ internal static class LauncherApp
             {
                 try
                 {
-                    if (!allstarBootstrapRequested || candidate.HasExited || !earlyInjectedPids.Add(candidate.Id))
+                    if (!allstarBootstrapRequested || candidate.HasExited || earlyInjectedPids.Contains(candidate.Id))
                     {
                         return;
                     }
@@ -281,6 +282,7 @@ internal static class LauncherApp
 
                     earlyInjectableDllPath ??= PrepareInjectableDllCopy(options.DllPath, logPath);
                     InjectDll(candidate.Id, earlyInjectableDllPath, logPath);
+                    earlyInjectedPids.Add(candidate.Id);
                     Log(logPath, $"early_inject pid={candidate.Id} reason=presave_allstar_candidate");
                 }
                 catch (Exception ex)

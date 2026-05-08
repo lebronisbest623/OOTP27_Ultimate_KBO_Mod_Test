@@ -99,8 +99,24 @@ static const char* KBO_FOREIGN_FA_DEMAND_BASELINE_KEYS[9] = {
     "foreign_fa_demand_superstar_salary"
 };
 
+static const char* KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_KEYS[9] = {
+    "asian_quota_fa_demand_minimum_salary",
+    "asian_quota_fa_demand_poor_salary",
+    "asian_quota_fa_demand_fair_salary",
+    "asian_quota_fa_demand_below_average_salary",
+    "asian_quota_fa_demand_average_salary",
+    "asian_quota_fa_demand_above_average_salary",
+    "asian_quota_fa_demand_good_salary",
+    "asian_quota_fa_demand_star_salary",
+    "asian_quota_fa_demand_superstar_salary"
+};
+
 static const int32_t KBO_FOREIGN_FA_DEMAND_BASELINE_DEFAULTS[9] = {
-    35000, 36000, 40000, 50000, 100000, 180000, 300000, 550000, 1000000
+    300000, 300000, 320000, 350000, 450000, 600000, 800000, 1000000, 1500000
+};
+
+static const int32_t KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_DEFAULTS[9] = {
+    80000, 100000, 120000, 150000, 200000, 300000, 450000, 650000, 900000
 };
 
 static int32_t kbo_clamp_foreign_fa_demand_baseline_value(int32_t value)
@@ -126,6 +142,25 @@ static int32_t kbo_get_foreign_fa_demand_baseline_value(int index)
     return kbo_clamp_foreign_fa_demand_baseline_value(value);
 }
 
+static int32_t kbo_get_asian_quota_fa_demand_baseline_value(int index)
+{
+    if (index < 0 || index >= 9) {
+        return 0;
+    }
+    int value = KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_DEFAULTS[index];
+    if (!kbo_read_localappdata_json_int_value(KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_KEYS[index], &value)) {
+        value = KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_DEFAULTS[index];
+    }
+    return kbo_clamp_foreign_fa_demand_baseline_value(value);
+}
+
+static int32_t kbo_get_foreign_fa_demand_baseline_value_for_player(int index, int asian_quota)
+{
+    return asian_quota
+        ? kbo_get_asian_quota_fa_demand_baseline_value(index)
+        : kbo_get_foreign_fa_demand_baseline_value(index);
+}
+
 static int kbo_set_foreign_fa_demand_baseline_value(int index, int32_t value)
 {
     if (index < 0 || index >= 9) {
@@ -134,6 +169,42 @@ static int kbo_set_foreign_fa_demand_baseline_value(int index, int32_t value)
     return kbo_write_localappdata_json_int_value(
         KBO_FOREIGN_FA_DEMAND_BASELINE_KEYS[index],
         kbo_clamp_foreign_fa_demand_baseline_value(value));
+}
+
+static int kbo_set_asian_quota_fa_demand_baseline_value(int index, int32_t value)
+{
+    if (index < 0 || index >= 9) {
+        return 0;
+    }
+    return kbo_write_localappdata_json_int_value(
+        KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_KEYS[index],
+        kbo_clamp_foreign_fa_demand_baseline_value(value));
+}
+
+#define KBO_FOREIGN_FA_QUALITY_CAP_ENABLED_KEY "foreign_fa_quality_cap_enabled"
+
+static int kbo_get_foreign_fa_quality_cap_enabled_setting(void)
+{
+    int value = 1;
+    if (!kbo_read_localappdata_json_flag_value(
+            KBO_FOREIGN_FA_QUALITY_CAP_ENABLED_KEY,
+            "foreign_fa_quality_cap_enabled.txt",
+            &value)) {
+        if (read_kbo_localappdata_flag_file("disable_intl_established_fa_quality_shaping.txt")
+                || read_kbo_localappdata_flag_file("disable_intl_established_fa_generation_filter.txt")) {
+            value = 0;
+        } else {
+            value = 1;
+        }
+    }
+    return value ? 1 : 0;
+}
+
+static int kbo_set_foreign_fa_quality_cap_enabled_setting(int enabled)
+{
+    return kbo_write_localappdata_json_int_value(
+        KBO_FOREIGN_FA_QUALITY_CAP_ENABLED_KEY,
+        enabled ? 1 : 0);
 }
 
 static int kbo_get_profiler_enabled_setting(void)

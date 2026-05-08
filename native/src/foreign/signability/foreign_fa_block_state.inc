@@ -17,7 +17,10 @@ typedef struct KboRecentForeignFaAllow {
     ULONGLONG tick;
 } KboRecentForeignFaAllow;
 
-enum { KBO_RECENT_FOREIGN_FA_ALLOW_MAX = 64 };
+enum {
+    KBO_RECENT_FOREIGN_FA_ALLOW_MAX = 512,
+    KBO_RECENT_FOREIGN_FA_ALLOW_TTL_MS = 10 * 60 * 1000
+};
 
 static KboRecentForeignFaAllow g_kbo_foreign_offer_allow_records[KBO_RECENT_FOREIGN_FA_ALLOW_MAX];
 static KboRecentForeignFaAllow g_kbo_custom_foreign_policy_allow_records[KBO_RECENT_FOREIGN_FA_ALLOW_MAX];
@@ -103,7 +106,9 @@ static int kbo_recent_foreign_allow_matches(
         if (rec.player_id != player_id || rec.requester_team_id == 0u || rec.date_yyyymmdd != today) {
             continue;
         }
-        if (rec.tick == 0 || now < rec.tick || now - rec.tick > 120000ull) {
+        if (rec.tick == 0
+                || now < rec.tick
+                || now - rec.tick > (ULONGLONG)KBO_RECENT_FOREIGN_FA_ALLOW_TTL_MS) {
             continue;
         }
         if (rec.tick >= best_tick) {

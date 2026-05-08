@@ -123,9 +123,12 @@ static void kbo_hub_ensure_valid_selection(void)
 
     int has_selected_team   = 0;
     int has_selected_league = 0;
+    int has_kbo_league      = 0;
+    uint32_t kbo_league_id  = kbo_resolve_kbo_league_id();
     uint32_t first_league_id = 0;
     uint32_t first_team_id   = 0;
     uint32_t first_team_in_selected_league = 0;
+    uint32_t first_team_in_kbo_league      = 0;
 
     for (int32_t i = 0; i < team_count; i++) {
         uintptr_t team_ptr = *(uintptr_t*)(team_vector + ((uintptr_t)i * sizeof(uintptr_t)));
@@ -146,6 +149,10 @@ static void kbo_hub_ensure_valid_selection(void)
         }
         if (first_league_id == 0) { first_league_id = league_id; }
         if (first_team_id   == 0) { first_team_id   = team_id;   }
+        if (kbo_league_id != 0u && league_id == kbo_league_id) {
+            has_kbo_league = 1;
+            if (first_team_in_kbo_league == 0) { first_team_in_kbo_league = team_id; }
+        }
         if (league_id == g_kbo_hub_selected_league_id) {
             has_selected_league = 1;
             if (first_team_in_selected_league == 0) { first_team_in_selected_league = team_id; }
@@ -154,10 +161,13 @@ static void kbo_hub_ensure_valid_selection(void)
     }
 
     if (!has_selected_league) {
-        g_kbo_hub_selected_league_id           = first_league_id;
-        g_kbo_hub_selected_team_id             = 0;
-        first_team_in_selected_league          = 0;
+        g_kbo_hub_selected_league_id = has_kbo_league ? kbo_league_id : first_league_id;
+        g_kbo_hub_selected_team_id   = 0;
+        first_team_in_selected_league = has_kbo_league ? first_team_in_kbo_league : 0;
         for (int32_t i = 0; i < team_count; i++) {
+            if (first_team_in_selected_league != 0) {
+                break;
+            }
             uintptr_t team_ptr = *(uintptr_t*)(team_vector + ((uintptr_t)i * sizeof(uintptr_t)));
             if (team_ptr == 0 || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
                 continue;

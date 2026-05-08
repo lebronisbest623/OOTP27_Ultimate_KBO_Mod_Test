@@ -42,6 +42,43 @@ static int kbo_apply_ai_foreign_waiver_rules(
     return 1;
 }
 
+static int kbo_ai_foreign_waiver_should_retain(
+    uint8_t* player,
+    uint32_t player_id,
+    uint32_t decision_team_id,
+    int value_score,
+    int forced,
+    int32_t* out_threshold,
+    const char** out_reason)
+{
+    if (out_threshold != NULL) {
+        *out_threshold = 0;
+    }
+    if (out_reason != NULL) {
+        *out_reason = "unknown";
+    }
+    if (player == NULL || player_id == 0u || decision_team_id == 0u) {
+        if (out_reason != NULL) { *out_reason = "invalid_candidate"; }
+        return 0;
+    }
+    if (forced) {
+        if (out_reason != NULL) { *out_reason = "forced"; }
+        return 1;
+    }
+
+    int32_t threshold = kbo_get_foreign_waiver_value_threshold_for_player(player);
+    if (out_threshold != NULL) {
+        *out_threshold = threshold;
+    }
+    if (value_score < threshold) {
+        if (out_reason != NULL) { *out_reason = "below_value_threshold"; }
+        return 0;
+    }
+
+    if (out_reason != NULL) { *out_reason = "value_threshold"; }
+    return 1;
+}
+
 static void run_foreign_waiver_ai_core_once(void)
 {
     if (!kbo_foreign_waiver_ai_enabled() || !kbo_fix_enabled()) {
@@ -127,6 +164,29 @@ static void run_foreign_waiver_ai_core_once(void)
         int forced = kbo_is_forced_foreign_candidate_id(player_id);
         int score = kbo_foreign_waiver_value_score(player);
         considered++;
+
+        int32_t retain_threshold = 0;
+        const char* retain_reason = "unknown";
+        if (!kbo_ai_foreign_waiver_should_retain(
+                player,
+                player_id,
+                decision_team_id,
+                score,
+                forced,
+                &retain_threshold,
+                &retain_reason)) {
+            skipped++;
+            append_logf(
+                "foreign waiver auto: SKIP player=%u team=%u value=%d forced=%d threshold=%d reason=%s",
+                player_id,
+                decision_team_id,
+                score,
+                forced,
+                retain_threshold,
+                retain_reason);
+            kbo_append_foreign_waiver_decision_record("ai", "SKIP", decision_team_id, player_id, score, forced, 0);
+            continue;
+        }
 
         if (kbo_apply_ai_foreign_waiver_rules(player_id, current_team_id, score, forced, decision_team_id)) {
             retained++;

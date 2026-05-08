@@ -172,7 +172,7 @@ static LRESULT CALLBACK kbo_hotkey_keyboard_proc(int code, WPARAM wparam, LPARAM
 {
     if (code == HC_ACTION && (wparam == WM_KEYDOWN || wparam == WM_SYSKEYDOWN) && lparam != 0) {
         const KBDLLHOOKSTRUCT* key = (const KBDLLHOOKSTRUCT*)lparam;
-        if (key->vkCode == VK_F2 && kbo_foreground_is_this_process()) {
+        if ((key->vkCode == VK_F2 || key->vkCode == VK_F9) && kbo_foreground_is_this_process()) {
             kbo_queue_hotkey_window_toggle();
             return 1;
         }

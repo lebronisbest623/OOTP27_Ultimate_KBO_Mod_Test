@@ -91,7 +91,7 @@ static int kbo_foreign_fa_demand_remap_candidate(uint8_t* player)
     return demand > 0 && demand < 1000000000;
 }
 
-static int32_t kbo_foreign_fa_remap_demand_from_salary_ladder(int32_t demand, uint8_t* financials)
+static int32_t kbo_foreign_fa_remap_demand_from_salary_ladder(int32_t demand, uint8_t* financials, int asian_quota)
 {
     if (demand <= 0 || financials == NULL) {
         return demand;
@@ -104,7 +104,7 @@ static int32_t kbo_foreign_fa_remap_demand_from_salary_ladder(int32_t demand, ui
             return demand;
         }
         original[i] = *(int32_t*)(financials + KBO_FINANCIALS_SALARY_LADDER_OFFSETS[i]);
-        foreign_values[i] = kbo_get_foreign_fa_demand_baseline_value(i);
+        foreign_values[i] = kbo_get_foreign_fa_demand_baseline_value_for_player(i, asian_quota);
     }
 
     if (demand <= original[0]) {
@@ -226,6 +226,7 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     if (!kbo_player_is_foreign_for_kbo_rights(player)) {
         return;
     }
+    int asian_quota = kbo_player_is_asian_quota_candidate(player);
 
     uint8_t* financials = (uint8_t*)financials_ptr;
     for (int i = 0; i < 9; i++) {
@@ -238,7 +239,7 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     for (int i = 0; i < 9; i++) {
         patched += kbo_write_i32(
             financials + KBO_FINANCIALS_SALARY_LADDER_OFFSETS[i],
-            kbo_get_foreign_fa_demand_baseline_value(i));
+            kbo_get_foreign_fa_demand_baseline_value_for_player(i, asian_quota));
     }
 
     if (patched == 9) {
@@ -251,15 +252,16 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     LONG slot = InterlockedIncrement(&prepare_log_count);
     if (slot <= 120) {
         append_logf(
-            "KBO foreign FA demand baseline prepared source=0x%x player=%u financials=%p patched=%d original_superstar=%d foreign_superstar=%d",
+            "KBO foreign FA demand baseline prepared source=0x%x player=%u asian_quota=%d financials=%p patched=%d original_superstar=%d foreign_superstar=%d",
             source_rva,
             memory_range_readable(player + OOTP27_PLAYER_ID_OFFSET, sizeof(uint32_t))
                 ? *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET)
                 : 0u,
+            asian_quota,
             (void*)financials,
             patched,
             g_kbo_foreign_fa_demand_ladder_snapshot.values[8],
-            kbo_get_foreign_fa_demand_baseline_value(8));
+            kbo_get_foreign_fa_demand_baseline_value_for_player(8, asian_quota));
     }
 }
 
@@ -546,10 +548,10 @@ static int kbo_no_minor_clamp_offer_screen_player_salary(uintptr_t screen_ptr, c
     return kbo_no_minor_clamp_player_demand_salary((uintptr_t)player, screen_ptr, source);
 }
 
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INITIAL_DELAY_MS 250u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_INTERVAL_MS 500u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS 40u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INTERVAL_MS 2500u
+#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INITIAL_DELAY_MS 0u
+#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_INTERVAL_MS 50u
+#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS 240u
+#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INTERVAL_MS 250u
 #define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS 80
 
 static volatile LONG g_kbo_no_minor_contract_demand_floor_scanner_started = 0;
@@ -729,7 +731,8 @@ static int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             if (kbo_foreign_fa_demand_remap_already_applied(player_id, current_demand)) {
                 continue;
             }
-            int32_t mapped_demand = kbo_foreign_fa_remap_demand_from_salary_ladder(current_demand, financials);
+            int asian_quota = kbo_player_is_asian_quota_candidate(player);
+            int32_t mapped_demand = kbo_foreign_fa_remap_demand_from_salary_ladder(current_demand, financials, asian_quota);
             if (mapped_demand > 0 && mapped_demand < current_demand) {
                 *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET) = mapped_demand;
                 kbo_foreign_fa_demand_remap_remember(player_id, current_demand, mapped_demand);
@@ -738,15 +741,16 @@ static int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
                 LONG foreign_detail_slot = InterlockedIncrement(&foreign_detail_log_count);
                 if (foreign_detail_slot <= KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS) {
                     append_logf(
-                        "KBO foreign FA demand remapped: source=%s player=%u old_demand=%d mapped_demand=%d original_superstar=%d foreign_superstar=%d",
+                        "KBO foreign FA demand remapped: source=%s player=%u asian_quota=%d old_demand=%d mapped_demand=%d original_superstar=%d foreign_superstar=%d",
                         source,
                         player_id,
+                        asian_quota,
                         current_demand,
                         mapped_demand,
                         memory_range_readable(financials + 0x29cu, sizeof(int32_t))
                             ? *(int32_t*)(financials + 0x29cu)
                             : 0,
-                        kbo_get_foreign_fa_demand_baseline_value(8));
+                        kbo_get_foreign_fa_demand_baseline_value_for_player(8, asian_quota));
                 }
             }
         }
@@ -765,9 +769,11 @@ static int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         }
     }
 
-    if (changed > 0) {
+    static LONG summary_log_count = 0;
+    LONG summary_slot = changed > 0 ? InterlockedIncrement(&summary_log_count) : 0;
+    if (changed > 0 && (summary_slot <= 20 || (summary_slot % 40) == 0)) {
         append_logf(
-            "KBO no-minor demand floor prescan complete: source=%s league=%u vector_off=0x%x scanned=%d teamless=%d changed=%d demand_fixed=%d foreign_demand_mapped=%d level_fixed=%d floor=%d",
+            "KBO no-minor demand floor prescan complete: source=%s league=%u vector_off=0x%x scanned=%d teamless=%d changed=%d demand_fixed=%d foreign_demand_mapped=%d level_fixed=%d floor=%d summary_slot=%ld",
             source,
             league_id,
             vector_offset,
@@ -777,7 +783,8 @@ static int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             demand_fixed,
             foreign_demand_mapped,
             level_fixed,
-            salary_floor);
+            salary_floor,
+            summary_slot);
     }
     return changed;
 }
@@ -942,6 +949,21 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                 custom_policy_player = player;
                 custom_policy_team_id = allowed_team_id;
                 custom_policy_today = today;
+            }
+        } else if (player_id != 0u && kbo_custom_foreign_policy_enabled()) {
+            uint8_t* player = kbo_find_player_by_id(player_id, NULL, NULL);
+            if (player != NULL
+                    && memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
+                    && kbo_player_is_foreign_for_kbo_rights(player)) {
+                static LONG custom_submit_missing_allow_log_count = 0;
+                LONG missing_slot = InterlockedIncrement(&custom_submit_missing_allow_log_count);
+                if (missing_slot <= 120) {
+                    append_logf(
+                        "custom foreign policy submit-offer missing recent allow: screen=%p player=%u today=%u",
+                        (void*)screen_ptr,
+                        player_id,
+                        today);
+                }
             }
         }
         if (player_id != 0u
