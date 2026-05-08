@@ -9,6 +9,7 @@ static const char* kbo_hub_nav_label(int index)
     case KBO_HUB_VIEW_UPCOMING_FA:    return "";
     case KBO_HUB_VIEW_FA_CASES:       return kbo_hub_text("FA", "FA");
     case KBO_HUB_VIEW_SETTINGS:       return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",    "SETTINGS");
+    case KBO_HUB_VIEW_REPUTATION:     return kbo_hub_text("\xed\x8f\x89\xed\x8c\x90", "REPUTATION");
     default:                          return "";
     }
 }

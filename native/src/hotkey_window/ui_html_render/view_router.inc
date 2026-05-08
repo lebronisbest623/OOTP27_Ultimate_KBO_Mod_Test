@@ -28,6 +28,8 @@ static void kbo_webview_append_selected_view(KboWindowTextBuffer* buffer, uint32
         }
     } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_SETTINGS) {
         kbo_webview_append_settings_view(buffer);
+    } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_REPUTATION) {
+        kbo_webview_append_reputation_view(buffer);
     } else {
         kbo_webview_append_fallback_text_view(buffer);
     }

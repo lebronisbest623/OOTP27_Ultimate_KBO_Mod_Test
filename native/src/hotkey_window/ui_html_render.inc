@@ -6,6 +6,7 @@
 #include "ui_html_render/view_fa_compensation.inc"
 #include "ui_html_render/view_mod_info.inc"
 #include "ui_html_render/view_settings.inc"
+#include "ui_html_render/view_reputation.inc"
 #include "ui_html_render/view_fallback.inc"
 #include "ui_html_render/view_router.inc"
 
@@ -34,6 +35,29 @@ static void kbo_webview_append_js_string(KboWindowTextBuffer* buffer, const char
     kbo_window_text_appendf(buffer, "'");
 }
 
+static int kbo_hub_selected_league_is_kbo(void)
+{
+    uint32_t kbo_league_id = kbo_resolve_kbo_league_id();
+    return kbo_league_id != 0u && g_kbo_hub_selected_league_id == kbo_league_id;
+}
+
+static int kbo_hub_selected_league_is_amateur_reputation_league(void)
+{
+    return g_kbo_hub_selected_league_id == KBO_HIGH_SCHOOL_LEAGUE_ID
+        || g_kbo_hub_selected_league_id == KBO_COLLEGE_LEAGUE_ID;
+}
+
+static int kbo_hub_view_available_for_selected_league(int view)
+{
+    if (view == KBO_HUB_VIEW_MOD_INFO) {
+        return 1;
+    }
+    if (view == KBO_HUB_VIEW_REPUTATION) {
+        return kbo_hub_selected_league_is_amateur_reputation_league();
+    }
+    return kbo_hub_selected_league_is_kbo();
+}
+
 static void kbo_webview_append_main_tabs(KboWindowTextBuffer* buffer)
 {
     if (buffer == NULL) {
@@ -45,10 +69,14 @@ static void kbo_webview_append_main_tabs(KboWindowTextBuffer* buffer)
         KBO_HUB_VIEW_ASIAN_QUOTA,
         KBO_HUB_VIEW_ASIAN_GAMES,
         KBO_HUB_VIEW_FA_CASES,
-        KBO_HUB_VIEW_SETTINGS
+        KBO_HUB_VIEW_SETTINGS,
+        KBO_HUB_VIEW_REPUTATION
     };
     for (size_t i = 0; i < sizeof(main_views) / sizeof(main_views[0]); i++) {
         int view = main_views[i];
+        if (!kbo_hub_view_available_for_selected_league(view)) {
+            continue;
+        }
         kbo_window_text_appendf(buffer, "<a class='mainTab %s' href='kbo://view/%d'>",
             view == g_kbo_hub_selected_view ? "active" : "", view);
         kbo_html_append_escaped(buffer, kbo_hub_nav_label(view));
@@ -414,6 +442,13 @@ static WCHAR* kbo_build_webview_hub_html(void)
         g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
     }
     kbo_hub_ensure_valid_selection();
+    if (!kbo_hub_view_available_for_selected_league(g_kbo_hub_selected_view)) {
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        if (g_kbo_hub_selected_mod_subview < 0
+                || g_kbo_hub_selected_mod_subview >= KBO_HUB_MOD_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_README;
+        }
+    }
 
     char league_name[96] = {0};
     char team_name[96] = {0};
@@ -447,7 +482,8 @@ static WCHAR* kbo_build_webview_hub_html(void)
           g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_SCHEDULE ||
           g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_ROSTER)) ||
         g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA ||
-        g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES ||
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_REPUTATION;
     const int is_dashboard_panel =
         is_mod_dashboard ||
         is_roster_dashboard ||

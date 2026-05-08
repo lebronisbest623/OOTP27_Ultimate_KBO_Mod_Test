@@ -104,6 +104,9 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
     if (strncmp(cmd, "view/", 5) == 0) {
         int view = atoi(cmd + 5);
         if (view >= 0 && view < KBO_HUB_NAV_COUNT) {
+            if (!kbo_hub_view_available_for_selected_league(view)) {
+                view = KBO_HUB_VIEW_MOD_INFO;
+            }
             if (view == KBO_HUB_VIEW_FOREIGN_RIGHTS) {
                 g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_QUOTA;
                 g_kbo_hub_selected_foreign_subview = KBO_HUB_FOREIGN_SUBVIEW_RIGHTS;
@@ -144,6 +147,12 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         return 1;
     }
     if (strncmp(cmd, "military/results/year/", 22) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
         uint32_t year = (uint32_t)strtoul(cmd + 22, NULL, 10);
         if (year >= 1982u && year <= 2300u) {
             g_kbo_hub_selected_military_results_year = year;
@@ -155,6 +164,12 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         return 1;
     }
     if (strncmp(cmd, "military/", 9) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
         int subview = atoi(cmd + 9);
         if (subview >= 0 && subview < KBO_HUB_MILITARY_SUBVIEW_COUNT) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_MILITARY;
@@ -165,6 +180,12 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         return 1;
     }
     if (strncmp(cmd, "foreign/", 8) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
         int subview = atoi(cmd + 8);
         if (subview >= 0 && subview < KBO_HUB_FOREIGN_SUBVIEW_COUNT) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_QUOTA;
@@ -234,6 +255,12 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         return 1;
     }
     if (strncmp(cmd, "agames/", 7) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
         int subview = atoi(cmd + 7);
         if (subview >= 0 && subview < KBO_HUB_AGAMES_SUBVIEW_COUNT) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_GAMES;
@@ -244,6 +271,12 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         return 1;
     }
     if (strncmp(cmd, "fa/", 3) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
         int subview = atoi(cmd + 3);
         if (subview >= 0 && subview < KBO_HUB_FA_SUBVIEW_COUNT) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
@@ -313,6 +346,12 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         return 1;
     }
     if (strncmp(cmd, "settings/intl-fa-multiplier/", 29) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
         int multiplier = kbo_clamp_intl_established_fa_multiplier(atoi(cmd + 29));
         if (kbo_set_intl_established_fa_multiplier(multiplier)) {
             append_logf("settings webview: international established FA multiplier=%d", multiplier);
