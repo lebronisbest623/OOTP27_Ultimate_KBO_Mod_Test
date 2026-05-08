@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>KBOLauncher</AssemblyName>
     <RootNamespace>KBOLauncher</RootNamespace>
+    <Version>0.1.2</Version>
+    <AssemblyVersion>0.1.2.0</AssemblyVersion>
+    <FileVersion>0.1.2.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="..\..\data\seeds\*.csv" Link="data\seeds\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

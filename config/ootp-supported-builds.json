@@ -1,0 +1,10 @@
+{
+  "builds": [
+    {
+      "id": "steam_2026_05_04",
+      "label": "2026-05-04 Steam",
+      "timestamp": "0x69F75E6B",
+      "sizeOfImage": "0x03919000"
+    }
+  ]
+}

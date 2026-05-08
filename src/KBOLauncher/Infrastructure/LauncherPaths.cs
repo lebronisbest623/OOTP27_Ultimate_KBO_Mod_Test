@@ -3,17 +3,85 @@ internal static class LauncherPaths
 {
     public static string? ResolveOotpPath(string? explicitPath)
     {
-        var candidates = new List<string>();
+        return ResolveExistingNewestPath(GetOotpPathCandidates(explicitPath));
+    }
+
+    internal static IEnumerable<string> GetOotpPathCandidates(string? explicitPath)
+    {
         if (!string.IsNullOrWhiteSpace(explicitPath))
         {
-            candidates.Add(explicitPath);
+            yield return explicitPath;
         }
-    
-        candidates.Add(@"C:\Program Files (x86)\Steam\steamapps\common\Out of the Park Baseball 27\ootp27.exe");
-        candidates.Add(@"C:\Program Files\Steam\steamapps\common\Out of the Park Baseball 27\ootp27.exe");
-        candidates.AddRange(ResolveSteamLibraryOotpCandidates());
-    
-        return ResolveExistingNewestPath(candidates);
+
+        foreach (var envVar in new[] { "OOTP27_EXE", "OOTP27_DIR", "OOTP_DIR" })
+        {
+            var value = Environment.GetEnvironmentVariable(envVar);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            yield return value.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                ? value
+                : Path.Combine(value, "ootp27.exe");
+        }
+
+        foreach (var programFilesRoot in ResolveProgramFilesRoots())
+        {
+            yield return Path.Combine(programFilesRoot, "Out of the Park Developments", "OOTP Baseball 27", "ootp27.exe");
+            yield return Path.Combine(programFilesRoot, "Out of the Park Developments", "Out of the Park Baseball 27", "ootp27.exe");
+            yield return Path.Combine(programFilesRoot, "OOTP Baseball 27", "ootp27.exe");
+            yield return Path.Combine(programFilesRoot, "Out of the Park Baseball 27", "ootp27.exe");
+        }
+
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            if (drive.DriveType != DriveType.Fixed && drive.DriveType != DriveType.Removable)
+            {
+                continue;
+            }
+
+            yield return Path.Combine(drive.RootDirectory.FullName, "OOTP 27", "ootp27.exe");
+            yield return Path.Combine(drive.RootDirectory.FullName, "OOTP Baseball 27", "ootp27.exe");
+            yield return Path.Combine(drive.RootDirectory.FullName, "Out of the Park Baseball 27", "ootp27.exe");
+        }
+
+        yield return @"C:\Program Files (x86)\Steam\steamapps\common\Out of the Park Baseball 27\ootp27.exe";
+        yield return @"C:\Program Files\Steam\steamapps\common\Out of the Park Baseball 27\ootp27.exe";
+        foreach (var candidate in ResolveSteamLibraryOotpCandidates())
+        {
+            yield return candidate;
+        }
+    }
+
+    public static void WriteOotpPathDiscoveryStatus(string? explicitPath)
+    {
+        var path = GetKboLocalDataPath("launcher_path_discovery_status.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+        var lines = new List<string>
+        {
+            $"checked_at={DateTimeOffset.Now:O}",
+            $"explicit_path={explicitPath ?? ""}",
+            "status=not_found",
+        };
+
+        foreach (var candidate in GetOotpPathCandidates(explicitPath).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            string fullPath;
+            try
+            {
+                fullPath = Path.GetFullPath(candidate);
+            }
+            catch
+            {
+                fullPath = candidate;
+            }
+
+            lines.Add($"candidate exists={(File.Exists(candidate) ? "1" : "0")} path=\"{fullPath}\"");
+        }
+
+        File.WriteAllLines(path, lines);
     }
 
     internal static string? ResolveExistingNewestPath(IEnumerable<string> candidates)
@@ -63,6 +131,36 @@ internal static class LauncherPaths
         foreach (var candidate in candidates)
         {
             if (!string.IsNullOrWhiteSpace(candidate) && Directory.Exists(candidate))
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    private static IEnumerable<string> ResolveProgramFilesRoots()
+    {
+        var candidates = new List<string?>
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            @"C:\Program Files",
+            @"C:\Program Files (x86)",
+        };
+
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            if (drive.DriveType != DriveType.Fixed && drive.DriveType != DriveType.Removable)
+            {
+                continue;
+            }
+
+            candidates.Add(Path.Combine(drive.RootDirectory.FullName, "Program Files"));
+            candidates.Add(Path.Combine(drive.RootDirectory.FullName, "Program Files (x86)"));
+        }
+
+        foreach (var candidate in candidates)
+        {
+            if (!string.IsNullOrWhiteSpace(candidate))
             {
                 yield return candidate;
             }

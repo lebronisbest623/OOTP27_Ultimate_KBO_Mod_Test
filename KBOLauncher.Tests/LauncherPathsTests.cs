@@ -37,6 +37,49 @@ public sealed class LauncherPathsTests : IDisposable
     }
 
     [Fact]
+    public void GetOotpPathCandidates_IncludesOfficialWebsiteInstallLocations()
+    {
+        var candidates = global::LauncherPaths.GetOotpPathCandidates(null).ToList();
+
+        Assert.Contains(candidates, path =>
+            path.EndsWith(
+                @"Out of the Park Developments\OOTP Baseball 27\ootp27.exe",
+                StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(candidates, path =>
+            path.EndsWith(
+                @"Out of the Park Developments\Out of the Park Baseball 27\ootp27.exe",
+                StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(candidates, path =>
+            path.EndsWith(
+                @"OOTP 27\ootp27.exe",
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void GetOotpPathCandidates_UsesEnvironmentDirectoryAndExeOverrides()
+    {
+        var envDir = Path.Combine(tempDir, "OfficialInstall");
+        var envExe = Path.Combine(tempDir, "Portable", "ootp27.exe");
+        var oldDir = Environment.GetEnvironmentVariable("OOTP27_DIR");
+        var oldExe = Environment.GetEnvironmentVariable("OOTP27_EXE");
+        try
+        {
+            Environment.SetEnvironmentVariable("OOTP27_DIR", envDir);
+            Environment.SetEnvironmentVariable("OOTP27_EXE", envExe);
+
+            var candidates = global::LauncherPaths.GetOotpPathCandidates(null).ToList();
+
+            Assert.Contains(Path.Combine(envDir, "ootp27.exe"), candidates);
+            Assert.Contains(envExe, candidates);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OOTP27_DIR", oldDir);
+            Environment.SetEnvironmentVariable("OOTP27_EXE", oldExe);
+        }
+    }
+
+    [Fact]
     public void ReadSteamLibraryFolders_ParsesExistingPathEntriesAndSkipsMissingOnes()
     {
         var libraryA = Path.Combine(tempDir, "SteamLibraryA");

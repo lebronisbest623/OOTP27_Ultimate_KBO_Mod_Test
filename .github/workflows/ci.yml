@@ -36,7 +36,7 @@ jobs:
           install: mingw-w64-ucrt-x86_64-gcc
 
       - name: Restore
-        run: dotnet restore .\src\KBOLauncher\KBOLauncher.csproj
+        run: dotnet restore .\OOTP27-KBO-Launcher.sln
 
       - name: Restore WebView2 native package
         shell: pwsh
@@ -45,12 +45,23 @@ jobs:
           dotnet add .\.ci\webview2-restore package Microsoft.Web.WebView2 --version 1.0.3065.39
           dotnet restore .\.ci\webview2-restore
 
-      - name: Build launcher
-        run: dotnet build .\src\KBOLauncher\KBOLauncher.csproj --configuration Release --no-restore
+      - name: Generate supported build sources
+        shell: pwsh
+        run: .\tools\generate-supported-builds.ps1
+
+      - name: Build managed solution
+        run: dotnet build .\OOTP27-KBO-Launcher.sln --configuration Release --no-restore
+
+      - name: Test managed solution
+        run: dotnet test .\OOTP27-KBO-Launcher.sln --configuration Release --no-build --verbosity normal
 
       - name: Build native DLL
         shell: pwsh
         run: .\native\build.ps1
+
+      - name: Test native helpers
+        shell: pwsh
+        run: .\native\tests\run_tests.ps1
 
       - name: Publish launcher
         run: dotnet publish .\src\KBOLauncher\KBOLauncher.csproj --configuration Release --no-build --output .\artifacts\KBOLauncher

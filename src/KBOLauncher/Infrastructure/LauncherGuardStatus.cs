@@ -48,6 +48,7 @@ internal static class LauncherGuardStatus
         if (info.Ok)
         {
             Console.Error.WriteLine($"Detected build: timestamp=0x{info.Timestamp:X8}, size_of_image=0x{info.SizeOfImage:X8}");
+            Console.Error.WriteLine("Send these two values with your install source, for example Steam or official website.");
         }
         else
         {

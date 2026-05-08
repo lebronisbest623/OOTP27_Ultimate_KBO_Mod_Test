@@ -41,7 +41,9 @@ static int install_allstar_settings_ui_patch(void)
         void* checkbox_set_bool_address = resolve_relative_call_target(value_site + 11);
         if (checkbox_set_bool_address == NULL) {
             OotpBuildInfo info = read_ootp_build_info();
-            uint32_t checkbox_rva = (info.ok && info.timestamp == 0x69F75E6Bu) ? 0x01E717D0u : OOTP27_UI_CHECKBOX_SET_BOOL_RVA;
+            uint32_t checkbox_rva = (info.ok && info.timestamp == KBO_SUPPORTED_OOTP_BUILD_STEAM_2026_05_04_TIMESTAMP)
+                ? 0x01E717D0u
+                : OOTP27_UI_CHECKBOX_SET_BOOL_RVA;
             checkbox_set_bool_address = (void*)((uintptr_t)exe + checkbox_rva);
         }
 

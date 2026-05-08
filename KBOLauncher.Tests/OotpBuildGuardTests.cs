@@ -65,15 +65,18 @@ public sealed class OotpBuildGuardTests : IDisposable
     [Fact]
     public void FindSupportedBuild_MatchesVerifiedBuildOnly()
     {
-        var info = new global::OotpBuildInfo(true, 0x69F75E6Bu, 0x03919000u, null);
+        var expected = global::OotpSupportedBuilds.All.Single();
+        var info = new global::OotpBuildInfo(true, expected.Timestamp, expected.SizeOfImage, null);
 
         var supported = global::OotpBuildGuard.FindSupportedBuild(info);
 
         Assert.NotNull(supported);
-        Assert.Equal("2026-05-04 Steam", supported.Label);
-        Assert.Contains("supported (2026-05-04 Steam)", global::OotpBuildGuard.FormatConsoleStatus(info, supported));
+        Assert.Equal(expected.Label, supported.Label);
+        Assert.Contains($"supported ({expected.Label})", global::OotpBuildGuard.FormatConsoleStatus(info, supported));
         Assert.Contains("status=supported", global::OotpBuildGuard.FormatLogStatus(info, supported));
-        Assert.Contains("2026-05-04 Steam:0x69F75E6B/0x03919000", global::OotpBuildGuard.SupportedBuildDescriptions());
+        Assert.Contains(
+            $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}",
+            global::OotpBuildGuard.SupportedBuildDescriptions());
     }
 
     [Fact]

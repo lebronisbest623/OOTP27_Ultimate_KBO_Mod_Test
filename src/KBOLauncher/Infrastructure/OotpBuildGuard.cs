@@ -2,11 +2,6 @@ using System.Reflection.PortableExecutable;
 
 internal static class OotpBuildGuard
 {
-    private static readonly OotpSupportedBuild[] SupportedBuilds =
-    [
-        new(0x69F75E6Bu, 0x03919000u, "2026-05-04 Steam"),
-    ];
-
     public static OotpBuildInfo Read(string exePath)
     {
         try
@@ -59,7 +54,7 @@ internal static class OotpBuildGuard
             return null;
         }
 
-        return SupportedBuilds.FirstOrDefault(build =>
+        return OotpSupportedBuilds.All.FirstOrDefault(build =>
             build.Timestamp == info.Timestamp && build.SizeOfImage == info.SizeOfImage);
     }
 
@@ -93,6 +88,6 @@ internal static class OotpBuildGuard
 
     public static IEnumerable<string> SupportedBuildDescriptions()
     {
-        return SupportedBuilds.Select(build => $"{build.Label}:0x{build.Timestamp:X8}/0x{build.SizeOfImage:X8}");
+        return OotpSupportedBuilds.All.Select(build => $"{build.Label}:0x{build.Timestamp:X8}/0x{build.SizeOfImage:X8}");
     }
 }

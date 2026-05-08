@@ -1,16 +1,10 @@
-/* Supported OOTP 27 Steam builds. Update when a new build is verified. */
-#define OOTP27_EXPECTED_BUILD_TIMESTAMP     0x69F75E6Bu
-#define OOTP27_EXPECTED_BUILD_SIZE_OF_IMAGE 0x03919000u
-
 typedef struct OotpSupportedBuild {
     uint32_t timestamp;
     uint32_t size_of_image;
     const char* label;
 } OotpSupportedBuild;
 
-static const OotpSupportedBuild KBO_SUPPORTED_OOTP_BUILDS[] = {
-    {0x69F75E6Bu, 0x03919000u, "2026-05-04 Steam"},
-};
+#include "supported_builds.generated.inc"
 
 typedef struct OotpBuildInfo {
     int      ok;
@@ -54,7 +48,7 @@ static int verify_ootp_build(void)
         return 0;
     }
 
-    if (OOTP27_EXPECTED_BUILD_TIMESTAMP == 0u) {
+    if (KBO_SUPPORTED_OOTP_BUILD_COUNT == 0u) {
         append_logf(
             "build verify: discovery mode; detected timestamp=0x%08X size_of_image=0x%08X",
             info.timestamp, info.size_of_image);
@@ -72,11 +66,10 @@ static int verify_ootp_build(void)
     }
 
     append_logf(
-        "build verify: MISMATCH expected timestamp=0x%08X size_of_image=0x%08X, "
+        "build verify: MISMATCH expected one of %u supported builds, "
         "detected timestamp=0x%08X size_of_image=0x%08X. "
         "All KBO patches DISABLED to prevent crashes or save corruption.",
-        OOTP27_EXPECTED_BUILD_TIMESTAMP,
-        OOTP27_EXPECTED_BUILD_SIZE_OF_IMAGE,
+        (unsigned)(sizeof(KBO_SUPPORTED_OOTP_BUILDS) / sizeof(KBO_SUPPORTED_OOTP_BUILDS[0])),
         info.timestamp,
         info.size_of_image);
 

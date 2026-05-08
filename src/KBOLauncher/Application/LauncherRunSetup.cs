@@ -1,0 +1,192 @@
+using static KboFlags;
+using static KboSeedFiles;
+using static LauncherGuardStatus;
+using static LauncherLog;
+using static LauncherPaths;
+using static OotpScheduleSpoofer;
+
+internal static partial class LauncherApp
+{
+    private sealed record DefaultRunOptions(LauncherOptions Options, int? ExitCode);
+
+    private sealed record BuildGateResult(LauncherOptions Options, OotpSupportedBuild? SupportedBuild, int? ExitCode);
+
+    private sealed record LaunchPlan(bool AllstarBootstrapRequested, LauncherInjectionDecision InjectionDecision);
+
+    private static void EnsureLauncherRuntimeData()
+    {
+        EnsureKboLeagueIdConfig();
+        EnsureBundledKboDataFile("asian_games_schedule_seed.csv", "Asian Games schedule seed");
+        EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
+        EnsureBundledKboDataFile("fa_rules.json", "FA rules");
+        EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
+        EnsureBundledKboDataFile("college_reputation_seed.csv", "College reputation seed");
+        EnsureBundledKboDataFile("high_school_reputation_seed.csv", "High-school reputation seed");
+        EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
+        ImportLegacyKboFlagFilesIfMissing();
+        EnsureDefaultKboRuntimeFlags();
+    }
+
+    private static DefaultRunOptions ApplyDefaultRunOptions(
+        LauncherOptions options,
+        bool isDefaultRun,
+        int existingProcessCount)
+    {
+        if (!isDefaultRun)
+        {
+            return new(options, null);
+        }
+
+        var enableDefaultInjection = ReadKboFlagDefaultEnabled("enable_launcher_injection.txt");
+        string? defaultDll = null;
+        if (enableDefaultInjection)
+        {
+            defaultDll = ResolveDefaultKboFixDllPath();
+            if (defaultDll is null)
+            {
+                Console.Error.WriteLine("Could not find KBOFix.dll next to the launcher.");
+                return new(options, 7);
+            }
+        }
+
+        return new(
+            options with
+            {
+                DllPath = defaultDll,
+                EnableForeignWaiverAi = true,
+                EnableSingleDivisionAllstarEvents = true,
+                AttachExisting = existingProcessCount > 0,
+            },
+            null);
+    }
+
+    private static string InitializeLauncherLog(string exePath, bool isDefaultRun, LauncherOptions options)
+    {
+        var logPath = GetLogPath();
+        Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+
+        Log(logPath, $"resolved_ootp={exePath}");
+        LogLauncherBuild(logPath);
+        if (isDefaultRun && options.DllPath is null)
+        {
+            Log(logPath, "default_injection=disabled reason=missing_dll_or_explicit_flag");
+        }
+
+        Console.WriteLine($"OOTP: {exePath}");
+        Console.WriteLine($"WorkDir: {Path.GetDirectoryName(exePath)}");
+        Console.WriteLine($"Log: {logPath}");
+        if (isDefaultRun && options.DllPath is null)
+        {
+            Console.WriteLine("KBOFix injection is disabled for safe startup.");
+            Console.WriteLine($"To re-enable launcher injection, set enable_launcher_injection=true in: {GetKboFlagConfigPath()}");
+        }
+
+        return logPath;
+    }
+
+    private static BuildGateResult EvaluateOotpBuildGate(
+        string exePath,
+        string logPath,
+        LauncherOptions options,
+        bool isDefaultRun,
+        int existingProcessCount)
+    {
+        var ootpBuildInfo = OotpBuildGuard.Read(exePath);
+        var supportedOotpBuild = OotpBuildGuard.FindSupportedBuild(ootpBuildInfo);
+        Console.WriteLine(OotpBuildGuard.FormatConsoleStatus(ootpBuildInfo, supportedOotpBuild));
+        Log(logPath, OotpBuildGuard.FormatLogStatus(ootpBuildInfo, supportedOotpBuild));
+        WriteLauncherBuildGuardStatus(ootpBuildInfo, supportedOotpBuild, options.DllPath is not null);
+
+        if (options.DllPath is null || supportedOotpBuild is not null)
+        {
+            return new(options, supportedOotpBuild, null);
+        }
+
+        PrintUnsupportedBuildInjectionWarning(ootpBuildInfo);
+        Log(logPath, $"inject_blocked reason=unsupported_ootp_build {OotpBuildGuard.FormatLogStatus(ootpBuildInfo, null)}");
+
+        if (options.DryRun)
+        {
+            Console.WriteLine("Dry-run: KBOFix injection would be blocked for this OOTP build.");
+            return new(options, supportedOotpBuild, null);
+        }
+
+        if (!isDefaultRun)
+        {
+            return new(options, supportedOotpBuild, 8);
+        }
+
+        var safeOptions = options with { DllPath = null, AttachExisting = false };
+        if (existingProcessCount > 0)
+        {
+            Console.WriteLine("Existing OOTP process left unmodified because this build is not supported.");
+            return new(safeOptions, supportedOotpBuild, 0);
+        }
+
+        return new(safeOptions, supportedOotpBuild, null);
+    }
+
+    private static void LogExistingProcesses(IReadOnlyList<ProcessInfo> existing, string logPath)
+    {
+        if (existing.Count == 0)
+        {
+            return;
+        }
+
+        Console.WriteLine("Existing OOTP process:");
+        foreach (var process in existing)
+        {
+            Console.WriteLine($"  pid={process.Id} name={process.Name} path={process.Path}");
+            Log(logPath, $"existing pid={process.Id} name={process.Name} path={process.Path}");
+        }
+    }
+
+    private static void ApplyRuntimeFlagOptions(LauncherOptions options)
+    {
+        if (options.EnableForeignWaiverAi is not null)
+        {
+            WriteKboForeignWaiverAiFlag(options.EnableForeignWaiverAi.Value);
+        }
+        if (options.EnableSingleDivisionAllstarEvents is not null)
+        {
+            WriteKboSingleDivisionAllstarEventsFlag(options.EnableSingleDivisionAllstarEvents.Value);
+        }
+    }
+
+    private static LaunchPlan BuildLaunchPlan(
+        LauncherOptions options,
+        bool isDefaultRun,
+        OotpSupportedBuild? supportedOotpBuild)
+    {
+        var allstarBootstrapRequested = options.DllPath is not null
+            && supportedOotpBuild is not null
+            && ReadKboFlag("enable_single_division_allstar_runtime_patches.txt")
+            && ReadKboFlag("enable_single_division_allstar_events.txt");
+        var injectionDecision = LauncherInjectionPolicy.Decide(
+            isDefaultRun,
+            options.DllPath,
+            supportedOotpBuild is not null,
+            options.AttachPid is not null || options.AttachExisting,
+            allstarBootstrapRequested);
+
+        return new(allstarBootstrapRequested, injectionDecision);
+    }
+
+    private static void PrepareAllstarBootstrapIfRequested(
+        string exePath,
+        string logPath,
+        LauncherOptions options,
+        bool allstarBootstrapRequested)
+    {
+        if (allstarBootstrapRequested && !options.DryRun)
+        {
+            var spoofResult = EnsureAllKboScheduleSpoofFiles(exePath, message => Log(logPath, message));
+            Console.WriteLine(
+                $"All-star schedule spoof: scanned={spoofResult.ScannedYears} written={spoofResult.WrittenFiles} unchanged={spoofResult.UnchangedFiles} failed={spoofResult.FailedFiles}");
+        }
+        else if (allstarBootstrapRequested)
+        {
+            Console.WriteLine("Dry-run: all-star schedule spoof would run before OOTP launch.");
+        }
+    }
+}

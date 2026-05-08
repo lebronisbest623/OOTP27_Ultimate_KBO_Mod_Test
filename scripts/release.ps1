@@ -25,7 +25,12 @@ Copy-Item (Join-Path $RepoRoot "native\bin\WebView2Loader.dll") $Dist -Force
 Copy-Item (Join-Path $RepoRoot "native\kbo_league_id.txt") $Dist -Force
 
 Write-Host "==> Copying UI assets..."
-Copy-Item (Join-Path $RepoRoot "assets") (Join-Path $Dist "assets") -Recurse -Force
+$DistAssets = Join-Path $Dist "assets"
+if (Test-Path -LiteralPath $DistAssets) {
+    Remove-Item -LiteralPath $DistAssets -Recurse -Force
+}
+New-Item -ItemType Directory -Path $DistAssets | Out-Null
+Copy-Item (Join-Path $RepoRoot "assets\*") $DistAssets -Recurse -Force
 
 Write-Host "==> Validating release payload..."
 $RequiredFiles = @(
