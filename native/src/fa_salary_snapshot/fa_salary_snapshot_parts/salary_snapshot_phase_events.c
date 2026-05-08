@@ -1,3 +1,20 @@
+#include "salary_snapshot_phase_events.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <windows.h>
+
+#include "../../bootstrap/ootp_offsets.h"
+#include "../../bootstrap/profiler.h"
+#include "../../core/core_current_date.h"
+#include "../../core/core_flags/flags_api.h"
+#include "../../core/core_league_context_parts/league_context_lookup.h"
+#include "../../core/core_log.h"
+#include "../../runtime_memory/runtime_memory.h"
+#include "salary_snapshot_paths_dates.h"
+#include "salary_snapshot_state.h"
+#include "salary_snapshot_write_capture.h"
+
 static int kbo_fa_salary_snapshot_phase_event_league_is_kbo(uintptr_t league_ptr, uint32_t league_id)
 {
     if (league_ptr == 0 || league_id == 0
@@ -142,15 +159,20 @@ static DWORD WINAPI kbo_fa_salary_snapshot_phase_event_thread(LPVOID parameter)
         if (!kbo_runtime_sleep_should_continue(250)) {
             break;
         }
-        KBO_PROFILE_BEGIN(profile_phase_thread_tick);
+        LARGE_INTEGER profile_phase_thread_tick = {0};
+        int profile_phase_thread_tick_active = kbo_profiler_begin(&profile_phase_thread_tick);
         if (!kbo_fix_enabled()) {
-            KBO_PROFILE_END(profile_phase_thread_tick, "fa_salary_snapshot.phase_thread.disabled_tick");
+            if (profile_phase_thread_tick_active) {
+                kbo_profiler_end("fa_salary_snapshot.phase_thread.disabled_tick", &profile_phase_thread_tick);
+            }
             continue;
         }
 
         kbo_fa_salary_snapshot_drain_phase_events_once();
         kbo_fa_salary_snapshot_try_pending_phase_event();
-        KBO_PROFILE_END(profile_phase_thread_tick, "fa_salary_snapshot.phase_thread.tick");
+        if (profile_phase_thread_tick_active) {
+            kbo_profiler_end("fa_salary_snapshot.phase_thread.tick", &profile_phase_thread_tick);
+        }
     }
     InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_event_thread_started, 0);
     append_log_line("KBO FA salary opening-day phase hook event thread stopped");
@@ -158,7 +180,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_phase_event_thread(LPVOID parameter)
     return 0;
 }
 
-static void start_kbo_fa_salary_snapshot_phase_event_thread(void)
+void start_kbo_fa_salary_snapshot_phase_event_thread(void)
 {
     if (!kbo_fix_enabled()) {
         return;

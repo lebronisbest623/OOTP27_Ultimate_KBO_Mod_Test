@@ -203,7 +203,7 @@
 #include "src/fa_salary_snapshot/fa_salary_snapshot_parts/salary_snapshot_csv_parse.h"
 #include "src/fa_salary_snapshot/fa_salary_snapshot_parts/salary_snapshot_grade_rows.h"
 #include "src/fa_salary_snapshot/fa_salary_snapshot_parts/salary_snapshot_write_capture.h"
-#include "src/fa_salary_snapshot/fa_salary_snapshot_parts/salary_snapshot_phase_events.inc"
+#include "src/fa_salary_snapshot/fa_salary_snapshot_parts/salary_snapshot_phase_events.h"
 #include "src/fa_salary_snapshot/fa_salary_snapshot_parts/salary_snapshot_thread.h"
 #include "src/fa_rules/fa_rules_parts/fa_rules_types_defaults.inc"
 #include "src/fa_rules/fa_rules_parts/fa_rules_paths.inc"

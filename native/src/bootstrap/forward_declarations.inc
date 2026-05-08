@@ -125,7 +125,7 @@ static int insert_kbo_roster_transaction_sql(
     const char* source);
 static void start_kbo_foreign_waiver_scanner_thread(void);
 static void start_kbo_foreign_injury_replacement_thread(void);
-static void start_kbo_fa_salary_snapshot_phase_event_thread(void);
+void start_kbo_fa_salary_snapshot_phase_event_thread(void);
 void start_kbo_fa_salary_snapshot_thread(void);
 static void start_kbo_fa_requalification_thread(void);
 static void kbo_flush_pending_foreign_priority_events(const char* source);
