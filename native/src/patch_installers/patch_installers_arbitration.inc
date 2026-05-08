@@ -582,6 +582,13 @@ static int install_kbo_salary_arbitration_no_withdraw_patch(void)
         0x41, 0x8B, 0x8D, 0x80, 0x08, 0x00, 0x00        /* mov ecx, [r13+0x880] */
     };
 
+    const uint8_t expected_high_limit_skip_rsi_branch[6] = {
+        0x0F, 0x8F, 0xDE, 0x02, 0x00, 0x00              /* jg 0x1406820b3 */
+    };
+    const uint8_t patch_high_limit_skip_rsi_branch[6] = {
+        0x0F, 0x8F, 0xDA, 0x02, 0x00, 0x00              /* jg 0x1406820af */
+    };
+
     const uint8_t expected_high_limit_non_tender_gate_6820af[18] = {
         0x48, 0x8B, 0x75, 0xB8,                         /* mov rsi, [rbp-0x48] */
         0x4C, 0x8B, 0x75, 0xC0,                         /* mov r14, [rbp-0x40] */
@@ -655,6 +662,14 @@ static int install_kbo_salary_arbitration_no_withdraw_patch(void)
     } else {
         append_log_line("failed to allocate KBO salary arbitration AI zero-offer final check 682089 stub");
     }
+
+    ok |= patch_kbo_salary_arbitration_bytes(
+        exe,
+        "KBO salary arbitration high-limit skip-rsi branch retarget",
+        OOTP27_ARBITRATION_HIGH_LIMIT_SKIP_RSI_BRANCH_RVA,
+        expected_high_limit_skip_rsi_branch,
+        patch_high_limit_skip_rsi_branch,
+        sizeof(expected_high_limit_skip_rsi_branch));
 
     uint8_t* high_limit_non_tender_stub_6820af = build_kbo_salary_arbitration_high_limit_non_tender_6820af_stub(
         (void*)((uintptr_t)exe + 0x006821FFu),
