@@ -1,4 +1,4 @@
-/* Foreign injury replacement seed import. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement seed import. Included from native/KBOFix.c. */
 
 static int kbo_parse_foreign_injury_replacement_seed_line(
     const char* line,

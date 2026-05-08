@@ -1,4 +1,4 @@
-/* Military service players.dat record-header resolver. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service players.dat record-header resolver. Included from native/KBOFix.c. */
 
 static uint32_t kbo_military_resolve_player_id_from_players_dat_record_start(
     const uint8_t* raw,

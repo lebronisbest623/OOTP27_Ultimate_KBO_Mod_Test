@@ -1,4 +1,4 @@
-/* Foreign replacement-player seed import table. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player seed import table. Included from native/KBOFix.c. */
 
 static int kbo_add_foreign_replacement_player_seed_locked(const KboForeignReplacementPlayerSeed* seed)
 {

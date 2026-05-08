@@ -1,4 +1,4 @@
-/* Foreign injury replacement labels, slot helpers, and lock helpers. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement labels, slot helpers, and lock helpers. Included from native/KBOFix.c. */
 
 static const char* kbo_foreign_injury_slot_label(uint8_t slot_type)
 {

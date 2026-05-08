@@ -1,4 +1,4 @@
-/* Foreign replacement-player resolved cache IO. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player resolved cache IO. Included from native/KBOFix.c. */
 
 static int kbo_load_foreign_replacement_player_resolved_cache_locked(void)
 {

@@ -13,7 +13,6 @@ static int install_kbo_fa_submit_offer_probe_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_FA_SUBMIT_OFFER_PROBE_RVA);
     const size_t stolen_len = 21;
     const uint8_t expected[21] = {
         0x48, 0x89, 0x5C, 0x24, 0x20,                   /* mov [rsp+0x20],rbx */
@@ -26,18 +25,28 @@ static int install_kbo_fa_submit_offer_probe_patch(void)
         0x41, 0x56,                                     /* push r14 */
         0x41, 0x57                                      /* push r15 */
     };
+    const uint8_t context[48] = {
+        0x8B, 0x7B, 0x48, 0x49, 0x8B, 0xE3, 0x41, 0x5F,
+        0x41, 0x5E, 0x41, 0x5D, 0x41, 0x5C, 0x5D, 0xC3,
+        0x48, 0x89, 0x5C, 0x24, 0x20, 0x48, 0x89, 0x4C,
+        0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
+        0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x6C,
+        0x24, 0xD9, 0x48, 0x81, 0xEC, 0xE0, 0x00, 0x00
+    };
 
-    if (!memory_range_readable(target, stolen_len)) {
-        append_logf("KBO FA submit-offer probe patch target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_FA_SUBMIT_OFFER_PROBE_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO FA submit-offer probe patch");
+    if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO FA submit-offer probe patch already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO FA submit-offer probe patch", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
@@ -80,4 +89,3 @@ static int install_kbo_fa_submit_offer_probe_patch(void)
         &ootp_kbo_fa_submit_offer_probe_wrapper);
     return 1;
 }
-

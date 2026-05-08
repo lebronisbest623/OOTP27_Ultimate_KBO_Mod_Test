@@ -13,25 +13,34 @@ static int install_kbo_ai_fa_status_candidate_insert_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_RVA);
     const uint8_t expected[12] = {
         0x48, 0x63, 0xC1,                               /* movsxd rax,ecx */
         0x4D, 0x89, 0x3C, 0xC6,                         /* mov [r14+rax*8],r15 */
         0xFF, 0xC1,                                     /* inc ecx */
         0x89, 0x4D, 0xD4                                /* mov [rbp-0x2c],ecx */
     };
+    const uint8_t context[48] = {
+        0x8B, 0x9D, 0x58, 0x01, 0x00, 0x00, 0x4C, 0x8B,
+        0xA5, 0x50, 0x01, 0x00, 0x00, 0x8B, 0x4D, 0xD4,
+        0x48, 0x63, 0xC1, 0x4D, 0x89, 0x3C, 0xC6, 0xFF,
+        0xC1, 0x89, 0x4D, 0xD4, 0xEB, 0x19, 0x4C, 0x8B,
+        0x75, 0xC8, 0x48, 0x63, 0xC1, 0x4D, 0x89, 0x3C,
+        0xC6, 0xFF, 0xC1, 0x89, 0x4D, 0xD4, 0xEB, 0x07
+    };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO AI FA status candidate insert patch target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO AI FA status candidate insert patch");
+    if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO AI FA status candidate insert patch already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO AI FA status candidate insert patch", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* stub = build_kbo_ai_fa_status_candidate_insert_stub(target + sizeof(expected));
@@ -66,4 +75,3 @@ static int install_kbo_ai_fa_status_candidate_insert_patch(void)
         &ootp_kbo_ai_fa_status_candidate_insert_wrapper);
     return 1;
 }
-

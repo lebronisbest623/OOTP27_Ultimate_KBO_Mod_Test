@@ -13,7 +13,6 @@ static int install_kbo_trade_check_foreign_policy_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_LEAGUE_TRADE_CHECK_RVA);
     const size_t stolen_len = 18;
     const uint8_t expected[18] = {
         0x48, 0x8B, 0xC4,                               /* mov rax,rsp */
@@ -22,18 +21,28 @@ static int install_kbo_trade_check_foreign_policy_patch(void)
         0x89, 0x50, 0x10,                               /* mov [rax+0x10],edx */
         0x48, 0x89, 0x48, 0x08                          /* mov [rax+0x8],rcx */
     };
+    const uint8_t context[48] = {
+        0x00, 0x44, 0x0F, 0x28, 0x4C, 0x24, 0x60, 0x48,
+        0x81, 0xC4, 0xC0, 0x00, 0x00, 0x00, 0x5E, 0xC3,
+        0x48, 0x8B, 0xC4, 0x44, 0x88, 0x48, 0x20, 0x4C,
+        0x89, 0x40, 0x18, 0x89, 0x50, 0x10, 0x48, 0x89,
+        0x48, 0x08, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54,
+        0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D
+    };
 
-    if (!memory_range_readable(target, stolen_len)) {
-        append_logf("KBO trade foreign policy patch target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_LEAGUE_TRADE_CHECK_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO trade foreign policy patch");
+    if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO trade foreign policy patch already installed target=%p", target);
         return 1;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO trade foreign policy patch", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);

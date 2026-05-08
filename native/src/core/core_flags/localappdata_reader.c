@@ -104,65 +104,6 @@ int kbo_read_localappdata_json_int_value(const char* key, int* out_value)
     return found;
 }
 
-static const char* kbo_json_value_token_end(const char* value, const char* end)
-{
-    value = kbo_json_skip_ws(value, end);
-    if (value >= end) {
-        return value;
-    }
-    if (*value == '"') {
-        const char* stop = kbo_json_find_string_end(value, end);
-        return stop != NULL ? stop + 1 : value;
-    }
-    const char* p = value;
-    while (p < end && *p != ',' && *p != '}') {
-        p++;
-    }
-    while (p > value && (p[-1] == ' ' || p[-1] == '\t' || p[-1] == '\r' || p[-1] == '\n')) {
-        p--;
-    }
-    return p;
-}
-
-static int kbo_find_json_value_span(const char* json, DWORD json_size, const char* key, const char** out_start, const char** out_end)
-{
-    if (json == NULL || key == NULL || out_start == NULL || out_end == NULL) {
-        return 0;
-    }
-
-    const char* p = json;
-    const char* end = json + json_size;
-    while (p < end) {
-        if (*p != '"') {
-            p++;
-            continue;
-        }
-
-        const char* key_start = p + 1;
-        const char* key_stop = kbo_json_find_string_end(p, end);
-        if (key_stop == NULL) {
-            return 0;
-        }
-
-        int matched = kbo_json_string_equals_key(key_start, key_stop, key);
-        p = key_stop + 1;
-        if (!matched) {
-            continue;
-        }
-
-        const char* colon = kbo_json_skip_ws(p, end);
-        if (colon >= end || *colon != ':') {
-            continue;
-        }
-        const char* value_start = kbo_json_skip_ws(colon + 1, end);
-        *out_start = value_start;
-        *out_end = kbo_json_value_token_end(value_start, end);
-        return 1;
-    }
-
-    return 0;
-}
-
 static int kbo_write_all_bytes_to_file(const char* path, const char* data, DWORD size)
 {
     if (path == NULL || data == NULL) {

@@ -13,5 +13,6 @@ int kbo_json_bool_value_at(const char* value, const char* end, int* out_value);
 int kbo_json_int_value_at(const char* value, const char* end, int* out_value);
 int kbo_find_flag_value_in_json(const char* json, DWORD json_size, const char* key, const char* legacy_key, int* out_value);
 int kbo_find_int_value_in_json(const char* json, DWORD json_size, const char* key, int* out_value);
+int kbo_find_json_value_span(const char* json, DWORD json_size, const char* key, const char** out_start, const char** out_end);
 
 #endif

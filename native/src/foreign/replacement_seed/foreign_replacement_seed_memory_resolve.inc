@@ -1,4 +1,4 @@
-/* Foreign replacement-player seed memory-key resolution. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player seed memory-key resolution. Included from native/KBOFix.c. */
 
 static int kbo_player_memory_contains_ascii_seed_key(uint8_t* player, const char* key)
 {

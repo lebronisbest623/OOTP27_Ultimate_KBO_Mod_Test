@@ -1,4 +1,4 @@
-/* Foreign injury replacement file paths. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement file paths. Included from native/KBOFix.c. */
 
 static int kbo_get_foreign_injury_replacement_path(char* out, size_t out_size)
 {

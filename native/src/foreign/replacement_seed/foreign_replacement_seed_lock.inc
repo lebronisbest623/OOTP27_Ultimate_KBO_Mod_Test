@@ -1,4 +1,4 @@
-/* Foreign replacement-player seed lock helpers. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player seed lock helpers. Included from native/KBOFix.c. */
 
 static void kbo_lock_foreign_replacement_player_seeds(void)
 {

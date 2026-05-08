@@ -1,4 +1,4 @@
-/* Foreign injury replacement roster/signing exception policy. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement roster/signing exception policy. Included from native/KBOFix.c. */
 
 static int kbo_foreign_injury_replacement_signing_exception_available(
     uint32_t team_id,

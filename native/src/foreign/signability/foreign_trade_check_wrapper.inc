@@ -1,4 +1,4 @@
-/* League trade validation hook wrapper. Included from native/src/foreign/foreign_signability_hooks.inc. */
+/* League trade validation hook wrapper. Included from native/KBOFix.c. */
 
 #define KBO_TRADE_CHECK_RESULT_FOREIGN_QUOTA_BLOCK (-9)
 

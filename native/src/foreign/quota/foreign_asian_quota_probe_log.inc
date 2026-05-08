@@ -1,4 +1,4 @@
-/* Asian quota signability and offer probe logging. Included from foreign_asian_quota.inc. */
+/* Asian quota signability and offer probe logging. Included from native/KBOFix.c. */
 
 static int kbo_asian_quota_exception_available_for_candidate(
     uint32_t team_id,

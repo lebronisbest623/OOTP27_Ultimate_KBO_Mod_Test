@@ -1,6 +1,8 @@
-/* Shared foreign-policy CSV field parsing. Included from native/src/foreign_waiver_ai.inc. */
+#include "foreign_csv_parse.h"
 
-static int parse_u32_from_csv_field(const char** cursor, uint32_t* out_value)
+#include <stdint.h>
+
+int parse_u32_from_csv_field(const char** cursor, uint32_t* out_value)
 {
     if (cursor == NULL || *cursor == NULL || out_value == NULL) {
         return 0;
@@ -27,4 +29,3 @@ static int parse_u32_from_csv_field(const char** cursor, uint32_t* out_value)
     *cursor = p;
     return 1;
 }
-

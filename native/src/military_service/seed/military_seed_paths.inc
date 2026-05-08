@@ -1,4 +1,4 @@
-/* Military service seed and players.dat path resolution. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service seed and players.dat path resolution. Included from native/KBOFix.c. */
 
 static int kbo_get_save_military_service_seed_path(char* out, size_t out_size)
 {

@@ -1,4 +1,4 @@
-/* Foreign injury replacement native news emission. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement native news emission. Included from native/KBOFix.c. */
 
 static void kbo_emit_foreign_injury_replacement_news(
     const KboForeignInjuryReplacement* rec,

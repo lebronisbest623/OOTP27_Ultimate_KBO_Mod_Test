@@ -1,4 +1,4 @@
-/* AI FA status candidate hook wrapper. Included from native/src/foreign/foreign_signability_hooks.inc. */
+/* AI FA status candidate hook wrapper. Included from native/KBOFix.c. */
 
 __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     uintptr_t frame_ptr,

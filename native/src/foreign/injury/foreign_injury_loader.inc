@@ -1,4 +1,4 @@
-/* Foreign injury replacement lazy-load orchestration. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement lazy-load orchestration. Included from native/KBOFix.c. */
 
 static void kbo_ensure_foreign_injury_replacements_loaded(void)
 {

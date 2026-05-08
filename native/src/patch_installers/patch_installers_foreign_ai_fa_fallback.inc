@@ -13,7 +13,6 @@ static int install_kbo_ai_fa_signability_random_fallback_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_AI_FA_SIGNABILITY_RANDOM_FALLBACK_RVA);
     const uint8_t expected[60] = {
         0x85, 0xC0,                                           /* test eax,eax */
         0x75, 0x38,                                           /* jne +0x38 */
@@ -34,14 +33,13 @@ static int install_kbo_ai_fa_signability_random_fallback_patch(void)
         0x44, 0x0F, 0x45, 0xF0                                /* cmovne r14d,eax */
     };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO AI FA signability fallback patch target unreadable target=%p", target);
-        return 0;
-    }
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO AI FA signability fallback patch", target, sizeof(expected));
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(
+        exe,
+        OOTP27_AI_FA_SIGNABILITY_RANDOM_FALLBACK_RVA,
+        expected,
+        sizeof(expected),
+        "KBO AI FA signability fallback patch");
+    if (target == NULL) { return 0; }
 
     uint8_t patch[60];
     memset(patch, 0x90, sizeof(patch));
@@ -74,4 +72,3 @@ static int install_kbo_ai_fa_signability_random_fallback_patch(void)
     append_logf("installed KBO AI FA signability fallback patch target=%p", target);
     return 1;
 }
-

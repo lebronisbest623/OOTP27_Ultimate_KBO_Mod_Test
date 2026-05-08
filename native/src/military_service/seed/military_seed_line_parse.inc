@@ -1,4 +1,4 @@
-/* Military service seed CSV line parsing. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service seed CSV line parsing. Included from native/KBOFix.c. */
 
 static int kbo_parse_military_service_seed_line(const char* line, KboMilitaryServiceSeed* out)
 {

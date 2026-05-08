@@ -1,4 +1,4 @@
-/* Player/team signability hook wrapper. Included from native/src/foreign/foreign_signability_hooks.inc. */
+/* Player/team signability hook wrapper. Included from native/KBOFix.c. */
 
 typedef int (__fastcall *OotpPlayerTeamSignabilityFn)(void* player, int32_t team_id, uint16_t year_hint);
 

@@ -1,4 +1,4 @@
-/* Foreign-player callup limit policy and wrappers. Included from foreign_asian_quota.inc. */
+/* Foreign-player callup limit policy and wrappers. Included from native/KBOFix.c. */
 
 static uint8_t kbo_custom_foreign_policy_callup_allows(
     uintptr_t team_ptr,

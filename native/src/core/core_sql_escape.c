@@ -1,6 +1,6 @@
-/* Core SQL literal escaping. */
+#include "core_sql_escape.h"
 
-static int kbo_sql_escape_literal(char* out, size_t out_size, const char* in)
+int kbo_sql_escape_literal(char* out, size_t out_size, const char* in)
 {
     if (out == NULL || out_size == 0) {
         return 0;

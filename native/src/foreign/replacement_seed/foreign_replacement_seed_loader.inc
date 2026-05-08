@@ -1,4 +1,4 @@
-/* Foreign replacement-player seed lazy-load and resolve orchestration. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player seed lazy-load and resolve orchestration. Included from native/KBOFix.c. */
 
 static int kbo_resolve_foreign_replacement_player_seeds_locked(void)
 {

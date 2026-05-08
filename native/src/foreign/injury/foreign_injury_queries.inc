@@ -1,4 +1,4 @@
-/* Foreign injury replacement lookup and counting helpers. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement lookup and counting helpers. Included from native/KBOFix.c. */
 
 static int kbo_find_foreign_injury_replacement_locked(uint32_t injured_player_id, int include_closed)
 {

@@ -1,4 +1,4 @@
-/* Foreign injury replacement CSV loading. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement CSV loading. Included from native/KBOFix.c. */
 
 static int kbo_load_foreign_injury_replacements_locked(const char* path)
 {

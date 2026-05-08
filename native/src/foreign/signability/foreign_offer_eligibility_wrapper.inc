@@ -1,4 +1,4 @@
-/* Player offer-eligibility hook wrapper. Included from native/src/foreign/foreign_signability_hooks.inc. */
+/* Player offer-eligibility hook wrapper. Included from native/KBOFix.c. */
 
 __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     uintptr_t player_ptr,

@@ -1,4 +1,4 @@
-/* Military service seed registry mutation and seed-file loading. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service seed registry mutation and seed-file loading. Included from native/KBOFix.c. */
 
 static int kbo_add_military_service_seed_locked(const KboMilitaryServiceSeed* seed)
 {

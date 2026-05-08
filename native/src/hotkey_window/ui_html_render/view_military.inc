@@ -1,6 +1,0 @@
-#include "view_military_parts/military_roster_view.inc"
-#include "view_military_parts/military_applicant_window_helpers.inc"
-#include "view_military_parts/military_applicant_summary.inc"
-#include "view_military_parts/military_applicants_view.inc"
-#include "view_military_parts/military_results_view.inc"
-#include "view_military_parts/military_view_router.inc"

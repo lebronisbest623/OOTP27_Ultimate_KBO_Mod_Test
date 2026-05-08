@@ -1,4 +1,4 @@
-/* Submit-offer probe hook. Included from native/src/foreign/foreign_signability_hooks.inc. */
+/* Submit-offer probe hook. Included from native/KBOFix.c. */
 
 typedef void (__fastcall *OotpFaSubmitOfferProbeFn)(void* screen);
 typedef int (__fastcall *OotpFaOfferScreenCallbackProbeFn)(void* screen, void* sender, uintptr_t callback_id, uintptr_t value);

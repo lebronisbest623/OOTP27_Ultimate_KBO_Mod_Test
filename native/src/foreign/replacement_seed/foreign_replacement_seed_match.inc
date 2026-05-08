@@ -1,4 +1,4 @@
-/* Foreign replacement-player seed match API. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player seed match API. Included from native/KBOFix.c. */
 
 static int kbo_foreign_replacement_player_seed_matches_loaded(uint8_t* player, uint8_t* out_slot_type)
 {

@@ -1,4 +1,4 @@
-/* OOTP active foreign count wrappers. Included from foreign_asian_quota.inc. */
+/* OOTP active foreign count wrappers. Included from native/KBOFix.c. */
 
 __declspec(noinline) int32_t ootp_kbo_active_foreign_hitter_count_wrapper(
     uintptr_t team_ptr,

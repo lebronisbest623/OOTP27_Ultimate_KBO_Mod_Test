@@ -1,4 +1,4 @@
-/* Foreign replacement-player seed players.dat resolution. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player seed players.dat resolution. Included from native/KBOFix.c. */
 
 static int kbo_buffer_contains_u32_le(const uint8_t* data, size_t size, uint32_t value)
 {

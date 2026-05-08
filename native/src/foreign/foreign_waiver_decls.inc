@@ -7,7 +7,6 @@ static int get_kbo_asian_quota_nation_ids_path(char* out, size_t out_size);
 static int kbo_load_foreign_waiver_rights(void);
 static int kbo_persist_foreign_waiver_rights(void);
 static void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd);
-static int parse_u32_from_csv_field(const char** cursor, uint32_t* out_value);
 static int kbo_player_is_foreign_for_kbo_rights(uint8_t* player);
 static int kbo_player_is_asian_quota_candidate(uint8_t* player);
 static int kbo_is_forced_foreign_candidate_id(uint32_t player_id);

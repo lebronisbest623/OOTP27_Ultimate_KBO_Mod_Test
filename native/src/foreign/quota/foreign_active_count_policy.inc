@@ -1,4 +1,4 @@
-/* Active foreign count adjustment policy. Included from foreign_asian_quota.inc. */
+/* Active foreign count adjustment policy. Included from native/KBOFix.c. */
 
 static int32_t kbo_apply_active_asian_quota_count_exception(
     uintptr_t team_ptr,

@@ -1,6 +1,0 @@
-#include "support/player_badges.inc"
-#include "support/skin_assets.inc"
-#include "support/window_hotkey.inc"
-#include "support/names.inc"
-#include "support/logos.inc"
-#include "support/team_colors.inc"

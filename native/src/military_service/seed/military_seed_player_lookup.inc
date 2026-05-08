@@ -1,4 +1,4 @@
-/* Military service player lookup and memory key probes. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service player lookup and memory key probes. Included from native/KBOFix.c. */
 
 static int kbo_military_player_memory_contains_seed_key(uint8_t* player, const char* key)
 {

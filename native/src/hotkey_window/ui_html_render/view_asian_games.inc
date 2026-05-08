@@ -1,6 +1,0 @@
-#include "view_asian_games_parts/asian_games_schedule_date_helpers.inc"
-#include "view_asian_games_parts/asian_games_tournament_status.inc"
-#include "view_asian_games_parts/asian_games_tournaments_view.inc"
-#include "view_asian_games_parts/asian_games_schedule_helpers.inc"
-#include "view_asian_games_parts/asian_games_schedule_view.inc"
-#include "view_asian_games_parts/asian_games_view_router.inc"

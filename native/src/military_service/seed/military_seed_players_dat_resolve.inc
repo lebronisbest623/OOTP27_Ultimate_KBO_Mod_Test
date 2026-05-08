@@ -1,4 +1,4 @@
-/* Military service seed resolution from players.dat. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service seed resolution from players.dat. Included from native/KBOFix.c. */
 
 static uint32_t kbo_resolve_military_service_seed_key_from_players_dat(const char* key)
 {

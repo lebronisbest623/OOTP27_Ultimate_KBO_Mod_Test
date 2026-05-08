@@ -1,4 +1,4 @@
-/* Military service unresolved seed resolution and load orchestration. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service unresolved seed resolution and load orchestration. Included from native/KBOFix.c. */
 
 static int kbo_resolve_military_service_seeds_locked(void)
 {

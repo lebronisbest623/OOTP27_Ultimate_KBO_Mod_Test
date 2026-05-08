@@ -13,7 +13,6 @@ static int install_kbo_player_team_signability_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_PLAYER_TEAM_SIGNABILITY_RVA);
     const size_t stolen_len = 16;
     const uint8_t expected[16] = {
         0x66, 0x44, 0x89, 0x44, 0x24, 0x18,             // mov [rsp + 0x18], r8w
@@ -24,19 +23,17 @@ static int install_kbo_player_team_signability_patch(void)
         0x48, 0x83, 0xEC, 0x28                          // sub rsp, 0x28
     };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO player/team signability patch target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(
+        exe,
+        OOTP27_PLAYER_TEAM_SIGNABILITY_RVA,
+        expected,
+        sizeof(expected),
+        "KBO player/team signability patch");
+    if (target == NULL) { return 0; }
 
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO player/team signability patch already installed target=%p", target);
         return 1;
-    }
-
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO player/team signability patch", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
@@ -95,7 +92,6 @@ static int install_kbo_player_offer_eligibility_patch(void)
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + OOTP27_PLAYER_SIGNABILITY_BLOCK_849320_RVA);
     const size_t stolen_len = 20;
     const uint8_t expected[20] = {
         0x48, 0x89, 0x5C, 0x24, 0x08,                   // mov [rsp + 0x08], rbx
@@ -103,20 +99,29 @@ static int install_kbo_player_offer_eligibility_patch(void)
         0x48, 0x89, 0x74, 0x24, 0x18,                   // mov [rsp + 0x18], rsi
         0x48, 0x89, 0x7C, 0x24, 0x20                    // mov [rsp + 0x20], rdi
     };
+    const uint8_t context[48] = {
+        0x20, 0x5F, 0xC3, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C,
+        0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48,
+        0x89, 0x7C, 0x24, 0x20, 0x41, 0x54, 0x41, 0x56,
+        0x41, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x8D, 0x42
+    };
 
-    if (!memory_range_readable(target, sizeof(expected))) {
-        append_logf("KBO player offer eligibility patch target unreadable target=%p", target);
-        return 0;
-    }
+    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+        exe,
+        OOTP27_PLAYER_SIGNABILITY_BLOCK_849320_RVA,
+        expected,
+        sizeof(expected),
+        context,
+        sizeof(context),
+        16u,
+        "KBO player offer eligibility patch");
+    if (target == NULL) { return 0; }
 
     if (is_rax_absolute_jump_patch(target)) {
         append_logf("KBO player offer eligibility patch already installed target=%p", target);
         return 1;
-    }
-
-    if (memcmp(target, expected, sizeof(expected)) != 0) {
-        log_patch_bytes_mismatch("KBO player offer eligibility patch", target, sizeof(expected));
-        return 0;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
@@ -160,4 +165,3 @@ static int install_kbo_player_offer_eligibility_patch(void)
         &ootp_kbo_player_offer_eligibility_wrapper);
     return 1;
 }
-

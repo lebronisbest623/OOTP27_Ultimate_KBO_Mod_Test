@@ -1,4 +1,4 @@
-/* Asian quota organization and active-roster count helpers. Included from foreign_asian_quota.inc. */
+/* Asian quota organization and active-roster count helpers. Included from native/KBOFix.c. */
 
 static void kbo_count_team_asian_quota_probe(
     uint32_t team_id,

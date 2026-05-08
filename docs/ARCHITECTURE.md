@@ -3,7 +3,7 @@
 This project has two runtime layers:
 
 - `src/KBOLauncher/Program.cs`: the managed launcher. It locates OOTP, prepares local data files and flags, starts or attaches to the game process, and injects the native patch DLL.
-- `native/KBOFix.c`: the native runtime patch shell. Most legacy feature fragments are still included from `native/src/*.inc`, while migrated responsibilities build as explicit `.c/.h` translation units.
+- `native/KBOFix.c`: the native runtime patch shell. Legacy feature fragments are included explicitly from domain folders under `native/src/`, while migrated responsibilities build as explicit `.c/.h` translation units.
 
 The native layer is where most KBO rule emulation lives. Because it patches a closed game process, the architecture favors small, explicit feature modules over generic abstractions.
 
@@ -12,29 +12,33 @@ The native layer is where most KBO rule emulation lives. Because it patches a cl
 `native/KBOFix.c` is now a hybrid native shell. Legacy feature fragments are still included in dependency order, while migrated modules are linked as separate translation units with explicit headers:
 
 ```c
-#include "src/core.inc"
+/* ...core subsystem files... */
 #include "src/bootstrap/profiler.inc"
 #include "src/bootstrap/perf_probe.inc"
 #include "src/build_verify/build_verify.h"
-#include "src/runtime_memory.inc"
-#include "src/team.inc"
-#include "src/amateur_player_quality.inc"
-#include "src/fa_requalification.inc"
-#include "src/military_service_loan.inc"
-#include "src/foreign_waiver_ai.inc"
-#include "src/fa_salary_snapshot.inc"
-#include "src/fa_rules.inc"
-#include "src/fa_filing.inc"
-#include "src/fa_market_classification.inc"
-#include "src/fa_compensation.inc"
-#include "src/custom_events.inc"
-#include "src/allstar.inc"
-#include "src/season_phase_monitor.inc"
-#include "src/patch_helpers.inc"
-#include "src/hook_stubs.inc"
-#include "src/patch_installers.inc"
-#include "src/hotkey_window.inc"
-#include "src/entrypoint.inc"
+#include "src/runtime_memory/runtime_memory.inc"
+#include "src/team/team_string.inc"
+/* ...team subsystem files... */
+#include "src/amateur_player_quality/amateur_player_quality_state.inc"
+/* ...amateur_player_quality subsystem files... */
+/* ...fa_requalification subsystem files... */
+#include "src/military_service/military_service_decls.inc"
+/* ...military_service subsystem files... */
+#include "src/foreign/foreign_waiver_decls.inc"
+/* ...foreign subsystem files... */
+/* ...FA subsystem files... */
+#include "src/custom_events/asian_games_state.inc"
+/* ...custom_events subsystem files... */
+/* ...allstar subsystem files... */
+#include "src/season_phase_monitor/season_phase_monitor.inc"
+#include "src/patch_helpers/patch_helpers.inc"
+/* ...hook_stubs subsystem files... */
+/* ...patch_installers subsystem files... */
+#include "src/hotkey_window/state.inc"
+/* ...hotkey_window support files... */
+/* ...hotkey_window content files... */
+/* ...hotkey_window UI files... */
+/* ...entrypoint subsystem files... */
 ```
 
 For the remaining legacy fragments, `.inc` files can still share `static` functions and state, so file order remains an API. Moving legacy code must preserve declaration order and any cross-module forward declarations in `KBOFix.c` or earlier fragments. Migrated `.c/.h` modules must not rely on include order; they expose only their header contract.
@@ -82,34 +86,40 @@ The launcher treats the single-division All-Star option as a feature suite. Enab
 
 ## Native Source Layout
 
-`native/src/*.inc` is the remaining legacy include layer for `native/KBOFix.c`. Files directly under `native/src/` should be thin feature entrypoints or assemblers only. Migrated responsibilities should expose `.h` interfaces and add `.c` implementations under `native/src/`; `native/build.ps1` discovers those `.c` files recursively and links them automatically. Implementation bodies live in matching domain folders:
+`native/KBOFix.c` no longer includes wrapper `.inc` files directly under `native/src/`; those root wrappers have been removed. Remaining legacy fragments are included from their owning domain folders in dependency order. Migrated responsibilities should expose `.h` interfaces and add `.c` implementations under `native/src/`; `native/build.ps1` discovers those `.c` files recursively and links them automatically. Implementation bodies live in matching domain folders:
 
 ```text
 native/src/
-  core.inc                    -> core/core.inc
+  core/
   build_verify/build_verify.h -> build_verify/build_verify.c
-  runtime_memory.inc          -> runtime_memory/runtime_memory.inc
-  team.inc                    -> team/team.inc
-  amateur_player_quality.inc  -> amateur_player_quality/
-  fa_requalification.inc      -> fa_requalification/fa_requalification.inc
-  military_service_loan.inc   -> military_service/
-  foreign_waiver_ai.inc       -> foreign/
-  fa_salary_snapshot.inc      -> fa_salary_snapshot/
-  fa_rules.inc                -> fa_rules/fa_rules.inc
-  fa_filing.inc               -> fa_filing/fa_filing.inc
-  fa_market_classification.inc -> fa_market_classification/
-  fa_compensation.inc         -> fa_compensation/fa_compensation.inc
-  custom_events.inc           -> custom_events/
-  allstar.inc                 -> allstar/allstar.inc
-  season_phase_monitor.inc    -> season_phase_monitor/season_phase_monitor.inc
-  patch_helpers.inc           -> patch_helpers/patch_helpers.inc
-  hook_stubs.inc              -> hook_stubs/hook_stubs.inc
-  patch_installers.inc        -> patch_installers/patch_installers.inc
-  hotkey_window.inc           -> hotkey_window/
-  entrypoint.inc              -> entrypoint/entrypoint.inc
+  runtime_memory/runtime_memory.inc
+  team/
+  amateur_player_quality/
+  fa_requalification/fa_requalification/
+  military_service/
+  foreign/
+  fa_salary_snapshot/fa_salary_snapshot_parts/
+  fa_rules/fa_rules_parts/
+  fa_filing/fa_filing_parts/
+  fa_market_classification/fa_market_classification_parts/
+  fa_compensation/
+  custom_events/
+  allstar/
+  season_phase_monitor/season_phase_monitor.inc
+  patch_helpers/patch_helpers.inc
+  hook_stubs/
+  patch_installers/
+  hotkey_window/state.inc
+  hotkey_window/support/
+  hotkey_window/content_*.inc
+  hotkey_window/ui_*.inc
+  hotkey_window/ui_html_helpers/
+  hotkey_window/ui_html_render/
+  hotkey_window/ui_webview_runtime/
+  entrypoint/entrypoint_parts/
 ```
 
-Rule of thumb: if a root `native/src/*.inc` grows beyond include sequencing and tiny constants, move that body into a subfolder as a first step. When the responsibility has a clear external contract, migrate it to `.c/.h` and remove the root compatibility wrapper.
+Rule of thumb: do not add new root `native/src/*.inc` wrappers. If a new legacy fragment is still needed before `.c/.h` migration, place it under the owning domain folder and include it explicitly from the native shell or a domain assembler.
 
 ### Migrated Translation Units
 
@@ -125,23 +135,22 @@ The current baseline already contains several FA and draft-adjacent domain entry
 
 ## Core Modules
 
-`native/src/core.inc` is the stable root wrapper, and `native/src/core/core.inc` is the core subsystem assembler. Core should contain shared runtime helpers only; feature-specific policy belongs in the owning subsystem.
+Core files are included explicitly from `native/KBOFix.c`. Core should contain shared runtime helpers only; feature-specific policy belongs in the owning subsystem.
 
 ```text
 native/src/core/
-  core.inc
   core_log.h -> core_log.c
+  core_atomic_file.h -> core_atomic_file.c
   core_text_date.h -> core_text_date.c
-  core_decls.inc
-  core_sql_escape.inc
+  core_sql_escape.h -> core_sql_escape.c
   core_sql_league_news.inc
   core_sql_history_transactions.inc
   core_save_paths.inc
   core_message_body_file.inc
   core_news_object.inc
   core_current_date.inc
-  core_flags.inc -> core_flags/*.h -> core_flags/*.c
-  core_league_context.inc
+  core_flags/*.h -> core_flags/*.c
+  core_league_context_parts/
   core_league_events.inc
   core_team_collect.inc
   core_live_news.inc
@@ -149,17 +158,17 @@ native/src/core/
 ```
 
 - `core_log.h` / `core_log.c`: log file helpers.
+- `core_atomic_file.h` / `core_atomic_file.c`: atomic temp-file write helpers.
 - `core_text_date.h` / `core_text_date.c`: ASCII comparison and YYYYMMDD history-date formatting.
-- `core_decls.inc`: forward declarations needed by single-translation-unit include order.
-- `core_sql_escape.inc`: SQL literal escaping.
+- `core_sql_escape.h` / `core_sql_escape.c`: SQL literal escaping.
 - `core_sql_league_news.inc`: `messages` and `league_news` SQL writes.
 - `core_sql_history_transactions.inc`: player-history and transaction SQL writes.
 - `core_save_paths.inc`: current save detection and save-scoped data paths.
 - `core_message_body_file.inc`: message body text file writes.
 - `core_news_object.inc`: native news object construction helpers.
 - `core_current_date.inc`: current date, year, and history-date reads.
-- `core_flags.inc`: assembler that imports local flag reader headers; implementations live in `core_flags/*.c`.
-- `core_league_context.inc`: event manager and KBO league id resolution.
+- `core_flags/*.h` / `core_flags/*.c`: local flag readers and `kbo_fix_enabled`.
+- `core_league_context_parts/`: event manager and KBO league id resolution.
 - `core_league_events.inc`: league-event existence/create helpers.
 - `core_team_collect.inc`: league team id collection.
 - `core_live_news.inc`: fanout/native live-news helpers.
@@ -167,7 +176,7 @@ native/src/core/
 
 ## Foreign Player Rules
 
-`native/src/foreign_waiver_ai.inc` used to own too many responsibilities:
+The old root foreign assembler used to own too many responsibilities:
 
 - foreign reserve-right negotiation window
 - reserve-right storage, loading, pruning, and memory sync
@@ -180,7 +189,7 @@ native/src/core/
 - foreign roster audit and snapshots
 - helper APIs consumed by the F2 hub UI
 
-The file name said "waiver AI", but the file represented the whole foreign-player policy subsystem. The current direction is to keep `native/src/foreign_waiver_ai.inc` as a thin assembler/orchestrator and move domain responsibilities under `native/src/foreign/`.
+The old root file name said "waiver AI", but the file represented the whole foreign-player policy subsystem. That root assembler has been removed; foreign responsibilities now live under `native/src/foreign/` and are included explicitly in the native shell until each responsibility migrates to `.c/.h`.
 
 ## Foreign Policy Modules
 
@@ -194,28 +203,29 @@ native/src/foreign/
   foreign_waiver_policy.inc
   foreign_waiver_date.inc
   foreign_waiver_paths.inc
-  foreign_csv_parse.inc
-  foreign_waiver_events.inc
+  foreign_csv_parse.h
+  foreign_csv_parse.c
+  foreign_waiver_events_parts/
   foreign_waiver_player_eval.inc
   foreign_decision_team.inc
   foreign_military_service_team_policy.inc
   foreign_waiver_window.inc
   foreign_waiver_results.inc
-  foreign_waiver_rights.inc           -> assembler for rights/
+  rights/
   foreign_waiver_retain.inc
   foreign_waiver_decisions.inc
   foreign_waiver_announcements.inc
   foreign_waiver_io.inc
   foreign_waiver_command_execute.inc
-  foreign_signability_hooks.inc       -> assembler for signability/
+  signability/
   foreign_waiver_status.inc
   foreign_waiver_ai.inc
   foreign_waiver_top_candidate.inc
   foreign_waiver_scanner.inc
-  foreign_replacement_seed.inc        -> assembler for replacement_seed/
-  foreign_injury_replacement.inc      -> assembler for injury/
-  foreign_asian_quota.inc             -> assembler for quota/
-  foreign_roster_audit.inc            -> assembler for roster_audit/
+  replacement_seed/
+  injury/
+  quota/
+  roster_audit/
   rights/
     foreign_waiver_rights_active.inc
     foreign_waiver_rights_persist.inc
@@ -226,18 +236,18 @@ native/src/foreign/
   signability/
     foreign_fa_block_state.inc
     foreign_fa_block_log.inc
-    foreign_fa_block_policy.inc
     foreign_fa_fast_block_policy.inc
     foreign_signability_wrapper.inc
     foreign_signability_block_policy.inc
     foreign_offer_eligibility_wrapper.inc
-    foreign_submit_offer_probe.inc
+    submit_offer_probe_parts/
     foreign_ai_fa_candidate_wrapper.inc
   replacement_seed/
     foreign_replacement_seed_state.inc
     foreign_replacement_seed_paths.inc
     foreign_replacement_seed_lock.inc
-    foreign_replacement_seed_parse.inc
+    foreign_replacement_seed_parse.h
+    foreign_replacement_seed_parse.c
     foreign_replacement_seed_memory_resolve.inc
     foreign_replacement_seed_players_dat.inc
     foreign_replacement_seed_import.inc
@@ -258,7 +268,7 @@ native/src/foreign/
     foreign_injury_scanner.inc
   quota/
     foreign_asian_quota_counts.inc
-    foreign_custom_foreign_signing_policy.inc
+    foreign_custom_foreign_signing_policy_parts/
     foreign_active_count_policy.inc
     foreign_active_count_wrappers.inc
     foreign_callup_policy.inc
@@ -273,7 +283,7 @@ native/src/foreign/
 
 ### Assembly Layer
 
-`native/src/foreign_waiver_ai.inc` includes the foreign subsystem in dependency order. It should own include sequencing and compile-time constants only. New gameplay rules should go into a focused module under `native/src/foreign/`.
+The native shell includes the foreign subsystem from `native/src/foreign/` in dependency order. New gameplay rules should go into a focused module under that folder.
 
 ### `foreign_waiver_decls.inc`
 
@@ -326,11 +336,11 @@ Foreign-player file path ownership:
 - `asian_quota_nation_ids.txt`
 - `foreign_waiver_announcements.txt`
 
-### `foreign_csv_parse.inc`
+### `foreign_csv_parse.h` / `foreign_csv_parse.c`
 
 Shared CSV numeric-field parsing used by foreign-player persistence modules. This is intentionally tiny because several modules read comma-delimited ids and dates, but none of them should depend on command IO just to parse a number.
 
-### `foreign_waiver_events.inc`
+### `foreign_waiver_events_parts/`
 
 The event window and league-event layer:
 
@@ -385,7 +395,7 @@ Announcement idempotency records:
 - append result announcement dates
 - append result announcement bodies for diagnostics
 
-### `foreign_waiver_rights.inc`
+### `rights/`
 
 Assembler for the KBO foreign reserve-right store:
 
@@ -403,7 +413,7 @@ This module owns exercised rights after a retain decision exists. It should not 
 Retain execution for an approved decision:
 
 - compute retained/expires dates
-- update the retained-right table through `foreign_waiver_rights.inc`
+- update the retained-right table through `rights/` helpers
 - persist the new right
 - sync the right into memory
 
@@ -431,19 +441,18 @@ It should not own window rules, rights storage, or signability hooks.
 
 Command execution after `foreign_waiver_io.inc` reads a command line. This module validates retain/skip commands against the current window, decision team, and duplicate-decision rules, then calls the retain or decision-record helpers.
 
-### `foreign_signability_hooks.inc`
+### `signability/`
 
 Assembler for offer/signability and FA candidate hook wrappers:
 
 - `foreign_fa_block_state.inc`: recent UI/AI block caches for F2 hub context
-- `foreign_fa_block_policy.inc`: assembler for signability/FA block policy
 - `foreign_fa_block_log.inc`: callsite diagnostics for new reserve-right blocks
 - `foreign_military_service_team_policy.inc`: military-service team FA block helper
 - `foreign_fa_fast_block_policy.inc`: early FA candidate block decisions before OOTP's original check
 - `foreign_signability_block_policy.inc`: retained-right, custom foreign-policy, and injury-replacement signability decisions
 - `foreign_signability_wrapper.inc`: player/team signability wrapper
 - `foreign_offer_eligibility_wrapper.inc`: offer eligibility wrapper
-- `foreign_submit_offer_probe.inc`: submit-offer screen probe wrapper
+- `submit_offer_probe_parts/`: submit-offer screen probe wrapper and no-minor-demand helpers
 - `foreign_ai_fa_candidate_wrapper.inc`: AI free-agent candidate insert wrapper
 
 ### `foreign_waiver_status.inc`
@@ -469,14 +478,14 @@ F2 hub helper for resolving a team's best current reserve-right candidate. This 
 
 Scanner thread startup and loop for foreign reserve-right processing. The loop invokes window/event processing, command handling, AI decisions, result announcements, and roster audit ticks without owning those domains.
 
-### `foreign_replacement_seed.inc`
+### `replacement_seed/`
 
 Assembler for known replacement-player seed and cache handling:
 
-- `foreign_replacement_seed_state.inc`: seed record type, table state, and shared constants
+- `foreign_replacement_seed_state.inc`: seed table state and forward declarations
 - `foreign_replacement_seed_paths.inc`: save/global seed, resolved-cache, and `players.dat` path resolution
 - `foreign_replacement_seed_lock.inc`: seed table lock helpers
-- `foreign_replacement_seed_parse.inc`: CSV token, slot-type, and seed-line parsing
+- `foreign_replacement_seed_parse.h` / `foreign_replacement_seed_parse.c`: seed record type, shared constants, CSV token, slot-type, and seed-line parsing
 - `foreign_replacement_seed_memory_resolve.inc`: in-memory seed-key lookup helpers
 - `foreign_replacement_seed_players_dat.inc`: `players.dat` fallback resolution
 - `foreign_replacement_seed_import.inc`: seed table import and de-duplication
@@ -486,7 +495,7 @@ Assembler for known replacement-player seed and cache handling:
 
 This module is data-resolution infrastructure. It should not enforce roster rules.
 
-### `foreign_injury_replacement.inc`
+### `injury/`
 
 Assembler for temporary foreign-player injury replacement rules:
 
@@ -502,22 +511,22 @@ Assembler for temporary foreign-player injury replacement rules:
 - `foreign_injury_exceptions.inc`: signing/callup exception policy
 - `foreign_injury_scanner.inc`: scanner thread and injury lifecycle transitions
 
-It may depend on `foreign_replacement_seed.inc` and `foreign_asian_quota.inc` for classification, but it should own only injury-replacement lifecycle and exceptions.
+It may depend on `replacement_seed/` and `quota/` helpers for classification, but it should own only injury-replacement lifecycle and exceptions.
 
-### `foreign_asian_quota.inc`
+### `quota/`
 
 Assembler for Asian quota and foreign roster-count policy:
 
 - `foreign_asian_quota_counts.inc`: organization and active-roster foreign/asian/non-asian counts
-- `foreign_custom_foreign_signing_policy.inc`: signing/offer allow checks for the custom foreign-player limit
+- `foreign_custom_foreign_signing_policy_parts/`: signing/offer allow checks for the custom foreign-player limit
 - `foreign_active_count_policy.inc`: active foreign count adjustment and neutralization policy
 - `foreign_active_count_wrappers.inc`: OOTP active foreign hitter/pitcher count wrappers
 - `foreign_callup_policy.inc`: callup limit policy and OOTP callup wrappers
 - `foreign_asian_quota_probe_log.inc`: signability/offer diagnostic probes
 
-It may ask `foreign_injury_replacement.inc` whether an extra temporary slot exists.
+It may ask `injury/` helpers whether an extra temporary slot exists.
 
-### `foreign_roster_audit.inc`
+### `roster_audit/`
 
 Assembler for foreign roster diagnostics only:
 
@@ -540,26 +549,34 @@ The current foreign include section is:
 #include "foreign/foreign_waiver_policy.inc"
 #include "foreign/foreign_waiver_date.inc"
 #include "foreign/foreign_waiver_paths.inc"
-#include "foreign/foreign_csv_parse.inc"
-#include "foreign/foreign_waiver_events.inc"
+#include "foreign/foreign_csv_parse.h"
+#include "foreign/foreign_waiver_events_parts/priority_event_queue.inc"
+#include "foreign/foreign_waiver_events_parts/offseason_event_detection.inc"
+#include "foreign/foreign_waiver_events_parts/window_persistence.inc"
+#include "foreign/foreign_waiver_events_parts/window_advance.inc"
 #include "foreign/foreign_waiver_player_eval.inc"
 #include "foreign/foreign_decision_team.inc"
-#include "foreign/foreign_replacement_seed.inc"
-#include "foreign/foreign_injury_replacement.inc"
-#include "foreign/foreign_asian_quota.inc"
-#include "foreign/foreign_waiver_rights.inc"
+#include "foreign/replacement_seed/foreign_replacement_seed_state.inc"
+/* ...replacement_seed fragments... */
+#include "foreign/injury/foreign_injury_state.inc"
+/* ...injury fragments... */
+#include "foreign/quota/foreign_asian_quota_counts.inc"
+/* ...quota fragments... */
+#include "foreign/rights/foreign_waiver_rights_active.inc"
+/* ...rights fragments... */
 #include "foreign/foreign_waiver_retain.inc"
 #include "foreign/foreign_waiver_decisions.inc"
 #include "foreign/foreign_waiver_announcements.inc"
 #include "foreign/foreign_waiver_results.inc"
 #include "foreign/foreign_waiver_window.inc"
-#include "foreign/foreign_signability_hooks.inc"
+#include "foreign/signability/foreign_fa_block_state.inc"
+/* ...signability fragments... */
 #include "foreign/foreign_waiver_status.inc"
 #include "foreign/foreign_waiver_command_execute.inc"
 #include "foreign/foreign_waiver_ai.inc"
 #include "foreign/foreign_waiver_io.inc"
 #include "foreign/foreign_waiver_top_candidate.inc"
-#include "foreign/foreign_roster_audit.inc"
+#include "foreign/roster_audit/foreign_roster_audit_scan.inc"
 #include "foreign/foreign_injury_scanner.inc"
 #include "foreign/foreign_waiver_scanner.inc"
 ```
@@ -568,15 +585,15 @@ The exact order can change if compilation proves a different dependency is clean
 
 ## All-Star Modules
 
-`native/src/allstar.inc` is a stable root wrapper, and `native/src/allstar/allstar.inc` is the All-Star subsystem assembler.
+The All-Star subsystem is assembled directly from `native/KBOFix.c` in dependency order.
 
 ```text
 native/src/allstar/
-  allstar.inc
   allstar_state.inc
-  allstar_league_context.inc
+  allstar_league_context/
   allstar_string.inc
-  allstar_csv_parse.inc
+  allstar_csv_parse.h
+  allstar_csv_parse.c
   allstar_csv_store.inc
   allstar_team_patch.inc
   allstar_candidate_seed.inc
@@ -585,9 +602,9 @@ native/src/allstar/
 ```
 
 - `allstar_state.inc`: shared typedefs, tables, counters, and build-specific layout selection
-- `allstar_league_context.inc`: league pointer lookup and KBO All-Star context checks
+- `allstar_league_context/`: league pointer lookup and KBO All-Star context checks
 - `allstar_string.inc`: OOTP string assignment helper resolution
-- `allstar_csv_parse.inc`: All-Star team-split CSV parsing helpers
+- `allstar_csv_parse.h` / `allstar_csv_parse.c`: All-Star team-split CSV parsing helpers
 - `allstar_csv_store.inc`: CSV path resolution, row storage, and lazy loading
 - `allstar_team_patch.inc`: Nanum/Dream and Futures North/South team name assignment
 - `allstar_candidate_seed.inc`: candidate-team seeding wrapper
@@ -598,13 +615,12 @@ All-Star CSV parsing should stay separate from team-memory mutation. Wrappers sh
 
 ## Hook Stub Modules
 
-`native/src/hook_stubs.inc` is the stable root wrapper, and `native/src/hook_stubs/hook_stubs.inc` is the executable stub-builder assembler. Stub builders only assemble trampoline/detour byte buffers and flush instruction cache. Policy decisions belong in wrapper/domain modules; patch-site discovery and installation belong in `patch_installers/`.
+The executable stub-builder fragments are assembled directly from `native/KBOFix.c` in dependency order. Stub builders only assemble trampoline/detour byte buffers and flush instruction cache. Policy decisions belong in wrapper/domain modules; patch-site discovery and installation belong in `patch_installers/`.
 
 ```text
 native/src/hook_stubs/
-  hook_stubs.inc
   hook_stubs_military.inc
-  hook_stubs_foreign_signability.inc
+  foreign_signability_stubs/
   hook_stubs_foreign_ai_status.inc
   hook_stubs_foreign_counts.inc
   hook_stubs_near_code.inc
@@ -615,7 +631,7 @@ native/src/hook_stubs/
 ```
 
 - `hook_stubs_military.inc`: military service entry trampoline and status detour stubs.
-- `hook_stubs_foreign_signability.inc`: foreign signability, offer eligibility, submit-offer probe, and FA signing branch stubs.
+- `foreign_signability_stubs/`: foreign signability, offer eligibility, submit-offer probe, and FA signing branch stubs.
 - `hook_stubs_foreign_ai_status.inc`: AI FA status candidate insertion stub.
 - `hook_stubs_foreign_counts.inc`: active foreign count and callup-limit branch stubs.
 - `hook_stubs_near_code.inc`: near-target executable allocation helper for relative call sites.
@@ -626,11 +642,10 @@ native/src/hook_stubs/
 
 ## Patch Installer Modules
 
-`native/src/patch_installers.inc` is the stable root wrapper, and `native/src/patch_installers/patch_installers.inc` is the patch installer assembler. Installer modules own byte-pattern verification and patch application only; gameplay policy belongs in the hook wrapper or domain subsystem being called.
+Patch installer fragments are assembled directly from `native/KBOFix.c` in dependency order. Installer modules own byte-pattern verification and patch application only; gameplay policy belongs in the hook wrapper or domain subsystem being called.
 
 ```text
 native/src/patch_installers/
-  patch_installers.inc
   patch_installers_military.inc
   patch_installers_foreign_signability_entry.inc
   patch_installers_global_callback_probe.inc
@@ -663,11 +678,10 @@ native/src/patch_installers/
 
 ## Team Modules
 
-`native/src/team.inc` is the stable root wrapper, and `native/src/team/team.inc` is the team subsystem assembler. Team lookup/name helpers are read-only. Roster-array and assignment helpers mutate OOTP memory and should only be used by domain modules that own the state transition being performed.
+The team subsystem is assembled directly from `native/KBOFix.c` in dependency order. Team lookup/name helpers are read-only. Roster-array and assignment helpers mutate OOTP memory and should only be used by domain modules that own the state transition being performed.
 
 ```text
 native/src/team/
-  team.inc
   team_string.inc
   team_name_cache.inc
   team_lookup.inc
@@ -685,7 +699,7 @@ native/src/team/
 
 ## Hotkey Window Modules
 
-`native/src/hotkey_window.inc` is the stable F2 hub entrypoint. It includes state, support helpers, text-content fallback, and the UI assembler.
+The F2 hub is assembled explicitly from `hotkey_window/state.inc` plus content, support, and UI fragments under `hotkey_window/`.
 
 `native/src/hotkey_window/state.inc` is a thin assembler for F2 hub types, global handles, selection state, and small state-adjacent lookup helpers:
 
@@ -698,14 +712,12 @@ native/src/hotkey_window/
   state_view.inc
   state_skin.inc
   state_constants.inc
-  state_text.inc
   state_team_vector.inc
   state_language.inc
   state_nav.inc
   state_text_utils.inc
-  state_league_lookup.inc
+  state_league_lookup/
   state_league_name.inc
-  state_decls.inc
 ```
 
 - `state_types.inc`: shared F2 hub buffer/search structs.
@@ -714,21 +726,18 @@ native/src/hotkey_window/
 - `state_view.inc`: selected view, language, dropdown, selected league/team/player, and legacy hit rectangles.
 - `state_skin.inc`: skin metrics, bitmap assets, and logo cache keys.
 - `state_constants.inc`: hub control ids, view ids, language ids, fixed size, and palette constants.
-- `state_text.inc`: current-language text selection helper.
+- `kbo_hub_text`: current-language text selection helper in `state.inc`.
 - `state_team_vector.inc`: team vector lookup used by hub selection/league filtering.
 - `state_language.inc`: language setting path, load, and save.
 - `state_nav.inc`: localized navigation labels.
 - `state_text_utils.inc`: UTF-8/wide conversion and ASCII trimming helpers.
-- `state_league_lookup.inc`: league pointer cache, miss cache, and global DB league-vector scan.
+- `state_league_lookup/`: league pointer cache, miss cache, and global DB league-vector scan.
 - `state_league_name.inc`: league-name string scan and display-name formatting.
-- `state_decls.inc`: forward declarations for later UI/domain helpers needed by the single translation unit.
 
-`native/src/hotkey_window/content.inc` is a thin assembler for the legacy text-content fallback used by the Win32 edit control:
+Legacy text-content fallback files for the Win32 edit control are included explicitly from `native/KBOFix.c`:
 
 ```text
 native/src/hotkey_window/
-  content.inc
-  content_decls.inc
   content_service_helpers.inc
   content_overview.inc
   content_military.inc
@@ -742,7 +751,6 @@ native/src/hotkey_window/
   content_refresh.inc
 ```
 
-- `content_decls.inc`: local forward declarations for foreign-rights status/candidate helpers.
 - `content_service_helpers.inc`: service-team player counts used by overview and military panels.
 - `content_overview.inc`: overview text panel.
 - `content_military.inc`: military service text panel.
@@ -755,40 +763,39 @@ native/src/hotkey_window/
 - `content_router.inc`: selected-view dispatch for text panels.
 - `content_refresh.inc`: Win32 edit-control refresh and UTF-8 to wide text handoff.
 
-`native/src/hotkey_window/ui.inc` is a thin assembler for the WebView2/Win32 UI surface:
+The WebView2/Win32 UI surface is included explicitly from focused fragments:
 
 ```text
 native/src/hotkey_window/
-  ui.inc
   ui_view_selection.inc
   ui_foreign_controls.inc
-  ui_html_helpers.inc
-  ui_html_render.inc
-  ui_webview_runtime.inc
+  ui_html_helpers/
+  ui_html_render/
+  ui_webview_runtime/
   ui_window.inc
 ```
 
 - `ui_view_selection.inc`: current view titles, league/team visibility rules, selection validation, and league/team dropdown commands.
 - `ui_foreign_controls.inc`: legacy foreign-rights list/edit interaction and retain/skip command submission.
-- `ui_html_helpers.inc`: HTML escaping, table cells, date/flag formatting, file URL/image helpers, and WebView dropdown markup helpers.
-- `ui_html_render.inc`: full F2 hub HTML document rendering and current WebView navigation.
-- `ui_webview_runtime.inc`: WebView2 COM handlers, command URI dispatch, controller creation, settings, and bounds.
+- `ui_html_helpers/`: HTML escaping, table cells, date/flag formatting, file URL/image helpers, and WebView dropdown markup helpers.
+- `ui_html_render/`: full F2 hub HTML document rendering and current WebView navigation.
+- `ui_webview_runtime/`: WebView2 COM handlers, command URI dispatch, controller creation, settings, and bounds.
 - `ui_window.inc`: fixed-size Win32 window layout, window procedure, keyboard hook thread, and startup.
 
 UI modules can submit command-file actions and refresh views, but direct gameplay memory mutation remains outside `hotkey_window/`.
 
 ## Remaining Migration Plan
 
-1. Split `fa_requalification/fa_requalification.inc` into state/policy/wrapper files.
-2. Finish `amateur_player_quality/` as its own draft-quality subsystem; keep the root `amateur_player_quality.inc` as an assembler only.
+1. Continue migrating `fa_requalification/fa_requalification/` fragments into explicit `.c/.h` modules.
+2. Finish `amateur_player_quality/` as its own draft-quality subsystem; do not reintroduce a root assembler wrapper.
 3. Finish `fa_salary_snapshot/` as an observation-only subsystem; snapshot code must not mutate gameplay state.
 4. Finish `fa_market_classification/` as a classification/cache subsystem; SQLite cache ownership stays inside that folder.
 5. Finish `patch_installers/no_minor_contracts/` as one patch-installer responsibility unit; do not mix it with unrelated patch families.
 6. Finish `foreign/signability/submit_offer_probe_parts/` as the foreign signability submit-offer responsibility unit.
 7. Finish `foreign/intl_established_fa_postscan/` as the international established FA scan responsibility unit.
 8. Continue splitting `hotkey_window/ui_html_helpers/` and `hotkey_window/ui_webview_runtime/`; UI splits must not change gameplay behavior.
-9. Revisit `custom_events/asian_games_selection.inc` and `asian_games_news.inc`; those are the next oversized event-domain files.
-10. Keep actual AI scoring and automatic retain/skip decisions in `foreign_waiver_ai.inc`.
+9. Revisit `custom_events/asian_games_selection/` and `asian_games_news/`; those are the next oversized event-domain groups.
+10. Keep actual AI scoring and automatic retain/skip decisions in `foreign/foreign_waiver_ai.inc`.
 11. Continue trimming team assignment helpers only when a new domain owner makes the mutation boundary clearer.
 12. Decide whether `season_phase_monitor.inc` should remain as its own domain module or be folded into a clearer lifecycle owner.
 
@@ -846,7 +853,7 @@ At runtime, `src/KBOLauncher/Program.cs` copies bundled seed files into `%LOCALA
 
 ## Custom Events
 
-`native/src/custom_events.inc` is also a thin assembler. The actual event responsibilities live under `native/src/custom_events/`.
+The custom event responsibilities live under `native/src/custom_events/` and are included explicitly by the native shell until migrated to `.c/.h`.
 
 ```text
 native/src/custom_events/
@@ -857,13 +864,12 @@ native/src/custom_events/
   asian_games_schedule.inc
   asian_games_player_eval.inc
   asian_games_roster_store.inc
-  asian_games_selection.inc
-  asian_games_lifecycle.inc
+  asian_games_selection/
   asian_games_lifecycle_roster.inc
   asian_games_lifecycle_replacement.inc
   asian_games_lifecycle_departure.inc
   asian_games_lifecycle_final.inc
-  asian_games_news.inc
+  asian_games_news/
   custom_event_markers.inc
   foreign_priority_event_schedule.inc
   custom_event_dispatch.inc
@@ -909,7 +915,7 @@ Asian Games roster persistence only:
 - load/save
 - clear memory when save changes
 
-### `asian_games_selection.inc`
+### `asian_games_selection/`
 
 Roster construction:
 
@@ -917,9 +923,9 @@ Roster construction:
 - wildcard replacement
 - required organization coverage
 
-### `asian_games_lifecycle.inc`
+### Asian Games Lifecycle
 
-Assembler for roster lifecycle after selection:
+Roster lifecycle after selection:
 
 - `asian_games_lifecycle_roster.inc`: selected-roster membership, wildcard counts, replacement organization limits, and departure availability checks
 - `asian_games_lifecycle_replacement.inc`: unavailable-player replacement search and roster-slot replacement before departure
@@ -928,7 +934,7 @@ Assembler for roster lifecycle after selection:
 
 The lifecycle assembler may forward-declare news emission, but replacement/departure/final files should not build article bodies themselves.
 
-### `asian_games_news.inc`
+### `asian_games_news/`
 
 News/article text generation and Asian Games event handlers. This module may read roster state but should not choose the roster.
 
@@ -979,7 +985,7 @@ Thread startup and polling loop for scheduling/scanning custom events.
 
 ## Military Service Loans
 
-`native/src/military_service_loan.inc` is a thin assembler for the military-service loan subsystem. The implementation lives under `native/src/military_service/`.
+The military-service loan subsystem implementation lives under `native/src/military_service/` and is included explicitly by the native shell until migrated to `.c/.h`.
 
 ```text
 native/src/military_service/
@@ -995,7 +1001,7 @@ native/src/military_service/
   military_seed_assignments.inc
   military_native_loan.inc
   military_return.inc
-  military_days_tick.inc
+  military_days_tick_parts/
   military_selection_event.inc
   military_hooks.inc
 ```
@@ -1082,9 +1088,9 @@ Tiny helpers around OOTP native loan flags. This module is intentionally small.
 
 Returns completed service players to original clubs and writes return history.
 
-### `military_days_tick.inc`
+### `military_days_tick_parts/`
 
-Daily service-time ticking and the optional background tick thread.
+Daily service-time ticking, invalid-assignment release, and the optional background tick thread.
 
 ### `military_selection_event.inc`
 

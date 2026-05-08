@@ -1,4 +1,4 @@
-/* Custom foreign-player signing policy. Included from foreign_asian_quota.inc. */
+/* Custom foreign-player signing policy. Included from native/KBOFix.c. */
 
 typedef struct KboCustomForeignPendingOffer {
     uint32_t team_id;

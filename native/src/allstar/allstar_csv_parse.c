@@ -1,4 +1,9 @@
-/* All-Star CSV parsing helpers. */
+#include "allstar_csv_parse.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "../core/core_text_date.h"
 
 static void kbo_allstar_trim_cell(char* value)
 {
@@ -106,7 +111,7 @@ static int kbo_is_allstar_team_header_name(const char* name)
         || ascii_equals_ignore_case(name, "kbo_allstar_team");
 }
 
-static uint8_t kbo_parse_allstar_side(const char* text)
+uint8_t kbo_parse_allstar_side(const char* text)
 {
     if (text == NULL || text[0] == '\0') {
         return 0;
@@ -170,7 +175,7 @@ static void kbo_derive_current_city_from_team_name(const char* name, char* out, 
     kbo_allstar_trim_cell(out);
 }
 
-static void kbo_csv_find_allstar_team_columns(
+void kbo_csv_find_allstar_team_columns(
     const char* header,
     int* year_col,
     int* team_id_col,
@@ -206,7 +211,7 @@ static void kbo_csv_find_allstar_team_columns(
     }
 }
 
-static void kbo_csv_extract_allstar_team_fields(
+void kbo_csv_extract_allstar_team_fields(
     const char* line,
     int year_col,
     int team_id_col,

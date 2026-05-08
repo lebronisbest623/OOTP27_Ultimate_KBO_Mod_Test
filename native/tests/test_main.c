@@ -18,14 +18,11 @@ typedef struct KboMilitaryServiceSeed {
     int32_t service_total_days;
 } KboMilitaryServiceSeed;
 
-typedef struct KboForeignReplacementPlayerSeed {
-    char key[40];
-    uint32_t player_id;
-    uint8_t slot_type;
-} KboForeignReplacementPlayerSeed;
-
 #include "../src/core/core_text_date.h"
-#include "../src/core/core_sql_escape.inc"
+#include "../src/core/core_flags/json_bool_parser.h"
+#include "../src/core/core_sql_escape.h"
+#include "../src/foreign/foreign_csv_parse.h"
+#include "../src/foreign/replacement_seed/foreign_replacement_seed_parse.h"
 
 static int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
 {
@@ -44,16 +41,8 @@ static int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, ui
 #include "../src/military_service/military_service_date.inc"
 #include "../src/military_service/military_service_parse.inc"
 #include "../src/military_service/seed/military_seed_line_parse.inc"
-#include "../src/allstar/allstar_csv_parse.inc"
+#include "../src/allstar/allstar_csv_parse.h"
 #include "../src/foreign/foreign_waiver_date.inc"
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-#endif
-#include "../src/foreign/replacement_seed/foreign_replacement_seed_parse.inc"
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
 
 static void test_core_text_and_sql_helpers(void)
 {
@@ -80,6 +69,35 @@ static void test_core_text_and_sql_helpers(void)
     assert(strcmp(escaped, "") == 0);
     assert(!kbo_sql_escape_literal(NULL, sizeof(escaped), "x"));
     printf("test_core_text_and_sql_helpers: PASS\n");
+}
+
+static void test_json_flags_parser(void)
+{
+    const char json[] =
+        "{\r\n"
+        "  \"enable_foreign_waiver_ai\": true,\r\n"
+        "  \"enable_launcher_injection.txt\": \"YES\",\r\n"
+        "  \"disable_foreign_injury_replacement\": 0,\r\n"
+        "  \"intl_established_fa_multiplier\": \" 5 \",\r\n"
+        "  \"nested\": {\"ignored\": false}\r\n"
+        "}\r\n";
+    int value = 0;
+    const char* start = NULL;
+    const char* end = NULL;
+
+    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "enable_foreign_waiver_ai", NULL, &value));
+    assert(value == 1);
+    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "enable_launcher_injection", "enable_launcher_injection.txt", &value));
+    assert(value == 1);
+    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "disable_foreign_injury_replacement", NULL, &value));
+    assert(value == 0);
+    assert(kbo_find_int_value_in_json(json, (DWORD)strlen(json), "intl_established_fa_multiplier", &value));
+    assert(value == 5);
+    assert(kbo_find_json_value_span(json, (DWORD)strlen(json), "intl_established_fa_multiplier", &start, &end));
+    assert((size_t)(end - start) == strlen("\" 5 \""));
+    assert(strncmp(start, "\" 5 \"", (size_t)(end - start)) == 0);
+    assert(!kbo_find_flag_value_in_json("{ nope", 6u, "enable_foreign_waiver_ai", NULL, &value));
+    printf("test_json_flags_parser: PASS\n");
 }
 
 static void test_date_serial(void)
@@ -347,9 +365,31 @@ static void test_foreign_replacement_seed_parse(void)
     printf("test_foreign_replacement_seed_parse: PASS\n");
 }
 
+static void test_foreign_csv_parse(void)
+{
+    const char* cursor = " 123, 456";
+    uint32_t value = 0;
+
+    assert(parse_u32_from_csv_field(&cursor, &value));
+    assert(value == 123u);
+    assert(*cursor == ',');
+    assert(parse_u32_from_csv_field(&cursor, &value));
+    assert(value == 456u);
+
+    cursor = "4294967296";
+    assert(!parse_u32_from_csv_field(&cursor, &value));
+
+    cursor = "abc";
+    assert(!parse_u32_from_csv_field(&cursor, &value));
+    assert(!parse_u32_from_csv_field(NULL, &value));
+    assert(!parse_u32_from_csv_field(&cursor, NULL));
+    printf("test_foreign_csv_parse: PASS\n");
+}
+
 int main(void)
 {
     test_core_text_and_sql_helpers();
+    test_json_flags_parser();
     test_date_serial();
     test_foreign_waiver_date_helpers();
     test_military_csv_parse();
@@ -357,6 +397,7 @@ int main(void)
     test_military_seed_line_parse();
     test_allstar_csv_parse();
     test_foreign_replacement_seed_parse();
+    test_foreign_csv_parse();
     printf("All tests passed.\n");
     return 0;
 }

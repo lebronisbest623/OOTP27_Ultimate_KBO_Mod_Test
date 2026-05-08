@@ -1,4 +1,4 @@
-/* Foreign injury replacement CSV persistence. Included from foreign_injury_replacement.inc. */
+/* Foreign injury replacement CSV persistence. Included from native/KBOFix.c. */
 
 static int kbo_persist_foreign_injury_replacements_locked(void)
 {

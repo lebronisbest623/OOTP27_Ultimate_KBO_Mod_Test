@@ -1,6 +1,10 @@
-/* Foreign replacement-player seed CSV parsing helpers. Included from foreign_replacement_seed.inc. */
+#include "foreign_replacement_seed_parse.h"
 
-static int kbo_ascii_is_seed_id_char(char ch)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int kbo_ascii_is_seed_id_char(char ch)
 {
     return (ch >= 'A' && ch <= 'Z')
         || (ch >= 'a' && ch <= 'z')
@@ -8,7 +12,7 @@ static int kbo_ascii_is_seed_id_char(char ch)
         || ch == '_' || ch == '-';
 }
 
-static void kbo_trim_csv_token_in_place(char* text)
+void kbo_trim_csv_token_in_place(char* text)
 {
     if (text == NULL) {
         return;
@@ -27,7 +31,7 @@ static void kbo_trim_csv_token_in_place(char* text)
     }
 }
 
-static uint8_t kbo_parse_foreign_replacement_seed_slot_type(const char* text)
+uint8_t kbo_parse_foreign_replacement_seed_slot_type(const char* text)
 {
     if (text == NULL || text[0] == '\0') {
         return 0u;
@@ -47,7 +51,7 @@ static uint8_t kbo_parse_foreign_replacement_seed_slot_type(const char* text)
     return 0u;
 }
 
-static int kbo_parse_foreign_replacement_player_seed_line(
+int kbo_parse_foreign_replacement_player_seed_line(
     const char* line,
     KboForeignReplacementPlayerSeed* out)
 {
@@ -91,11 +95,15 @@ static int kbo_parse_foreign_replacement_player_seed_line(
         return 0;
     }
 
-    snprintf(out->key, sizeof(out->key), "%s", first);
+    size_t key_len = strlen(first);
+    if (key_len >= sizeof(out->key)) {
+        key_len = sizeof(out->key) - 1u;
+    }
+    memcpy(out->key, first, key_len);
+    out->key[key_len] = '\0';
     out->slot_type = kbo_parse_foreign_replacement_seed_slot_type(second);
     if (first[0] >= '0' && first[0] <= '9') {
         out->player_id = (uint32_t)strtoul(first, NULL, 10);
     }
     return out->key[0] != '\0' || out->player_id != 0u;
 }
-

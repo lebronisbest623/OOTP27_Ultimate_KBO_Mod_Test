@@ -1,4 +1,4 @@
-/* Military service resolved-cache load and persist logic. Included from native/src/military_service/military_service_seed_store.inc. */
+/* Military service resolved-cache load and persist logic. Included from native/KBOFix.c. */
 
 static int kbo_load_military_service_resolved_cache_locked(void)
 {

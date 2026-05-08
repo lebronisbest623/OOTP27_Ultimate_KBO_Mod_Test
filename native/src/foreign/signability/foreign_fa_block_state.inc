@@ -1,4 +1,4 @@
-/* Recent foreign FA block cache. Included from native/src/foreign/foreign_signability_hooks.inc. */
+/* Recent foreign FA block cache. Included from native/KBOFix.c. */
 
 static volatile LONG g_kbo_foreign_offer_block_player_id = 0;
 static volatile LONG g_kbo_foreign_offer_block_requester_team_id = 0;

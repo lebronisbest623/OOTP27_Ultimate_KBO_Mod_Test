@@ -1,4 +1,4 @@
-/* Foreign replacement-player seed path helpers. Included from foreign_replacement_seed.inc. */
+/* Foreign replacement-player seed path helpers. Included from native/KBOFix.c. */
 
 static int kbo_get_save_foreign_replacement_players_seed_path(char* out, size_t out_size)
 {

@@ -1,5 +1,12 @@
 #include "json_bool_parser.h"
 
+#define JSMN_STATIC
+#include "../../../third_party/jsmn/jsmn.h"
+
+#include <string.h>
+
+#define KBO_JSON_MAX_TOKENS 512
+
 static int kbo_ascii_lower_char(int c)
 {
     return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c;
@@ -53,16 +60,48 @@ int kbo_json_string_equals_key(const char* start, const char* stop, const char* 
         return 0;
     }
 
-    const char* p = start;
-    const char* k = key;
-    while (p < stop && *k != '\0') {
-        if (*p == '\\' || *p != *k) {
-            return 0;
-        }
-        p++;
-        k++;
+    size_t len = (size_t)(stop - start);
+    return strlen(key) == len && memcmp(start, key, len) == 0;
+}
+
+static int kbo_token_equals_key(const char* json, const jsmntok_t* token, const char* key)
+{
+    if (json == NULL || token == NULL || key == NULL || token->type != JSMN_STRING || token->start < 0 || token->end < token->start) {
+        return 0;
     }
-    return p == stop && *k == '\0';
+
+    size_t len = (size_t)(token->end - token->start);
+    return strlen(key) == len && memcmp(json + token->start, key, len) == 0;
+}
+
+static int kbo_parse_json_tokens(const char* json, DWORD json_size, jsmntok_t* tokens, unsigned int token_count)
+{
+    if (json == NULL || tokens == NULL || json_size == 0 || json_size > KBO_FLAGS_JSON_MAX_BYTES) {
+        return -1;
+    }
+
+    jsmn_parser parser;
+    jsmn_init(&parser);
+    int parsed = jsmn_parse(&parser, json, (size_t)json_size, tokens, token_count);
+    if (parsed <= 0 || tokens[0].type != JSMN_OBJECT) {
+        return -1;
+    }
+    return parsed;
+}
+
+static int kbo_json_token_span_value(const char* json, const jsmntok_t* token, const char** out_start, const char** out_end)
+{
+    if (json == NULL || token == NULL || out_start == NULL || out_end == NULL || token->start < 0 || token->end < token->start) {
+        return 0;
+    }
+
+    *out_start = json + token->start;
+    *out_end = json + token->end;
+    if (token->type == JSMN_STRING) {
+        *out_start = json + token->start - 1;
+        *out_end = json + token->end + 1;
+    }
+    return 1;
 }
 
 static int kbo_json_bool_text_value(const char* text, size_t len, int* out_value)
@@ -70,6 +109,15 @@ static int kbo_json_bool_text_value(const char* text, size_t len, int* out_value
     if (out_value == NULL) {
         return 0;
     }
+
+    while (len > 0 && (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n')) {
+        text++;
+        len--;
+    }
+    while (len > 0 && (text[len - 1] == ' ' || text[len - 1] == '\t' || text[len - 1] == '\r' || text[len - 1] == '\n')) {
+        len--;
+    }
+
     if (kbo_text_equals_ignore_case_n(text, len, "1")
             || kbo_text_equals_ignore_case_n(text, len, "true")
             || kbo_text_equals_ignore_case_n(text, len, "yes")
@@ -86,46 +134,6 @@ static int kbo_json_bool_text_value(const char* text, size_t len, int* out_value
         *out_value = 0;
         return 1;
     }
-    return 0;
-}
-
-int kbo_json_bool_value_at(const char* value, const char* end, int* out_value)
-{
-    value = kbo_json_skip_ws(value, end);
-    if (value >= end || out_value == NULL) {
-        return 0;
-    }
-
-    if (*value == '"') {
-        const char* stop = kbo_json_find_string_end(value, end);
-        return stop != NULL && kbo_json_bool_text_value(value + 1, (size_t)(stop - value - 1), out_value);
-    }
-    if (end - value >= 4 && kbo_text_equals_ignore_case_n(value, 4, "true")) {
-        *out_value = 1;
-        return 1;
-    }
-    if (end - value >= 5 && kbo_text_equals_ignore_case_n(value, 5, "false")) {
-        *out_value = 0;
-        return 1;
-    }
-    if ((*value >= '0' && *value <= '9') || *value == '-' || *value == '+') {
-        int digit_seen = 0;
-        int nonzero = 0;
-        const char* p = value;
-        if (p < end && (*p == '-' || *p == '+')) {
-            p++;
-        }
-        while (p < end && *p >= '0' && *p <= '9') {
-            digit_seen = 1;
-            if (*p != '0') {
-                nonzero = 1;
-            }
-            p++;
-        }
-        *out_value = nonzero ? 1 : 0;
-        return digit_seen;
-    }
-
     return 0;
 }
 
@@ -174,6 +182,76 @@ static int kbo_json_int_text_value(const char* text, size_t len, int* out_value)
     return 1;
 }
 
+static int kbo_json_bool_token_value(const char* json, const jsmntok_t* token, int* out_value)
+{
+    if (json == NULL || token == NULL || out_value == NULL || token->start < 0 || token->end < token->start) {
+        return 0;
+    }
+
+    const char* start = json + token->start;
+    size_t len = (size_t)(token->end - token->start);
+    if (token->type == JSMN_STRING) {
+        return kbo_json_bool_text_value(start, len, out_value);
+    }
+    if (token->type == JSMN_PRIMITIVE) {
+        if (kbo_text_equals_ignore_case_n(start, len, "true")) {
+            *out_value = 1;
+            return 1;
+        }
+        if (kbo_text_equals_ignore_case_n(start, len, "false")) {
+            *out_value = 0;
+            return 1;
+        }
+        if (len > 0 && ((*start >= '0' && *start <= '9') || *start == '-' || *start == '+')) {
+            int digit_seen = 0;
+            int nonzero = 0;
+            const char* p = start;
+            const char* end = start + len;
+            if (p < end && (*p == '-' || *p == '+')) {
+                p++;
+            }
+            while (p < end && *p >= '0' && *p <= '9') {
+                digit_seen = 1;
+                if (*p != '0') {
+                    nonzero = 1;
+                }
+                p++;
+            }
+            if (digit_seen && p == end) {
+                *out_value = nonzero ? 1 : 0;
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+static int kbo_json_int_token_value(const char* json, const jsmntok_t* token, int* out_value)
+{
+    if (json == NULL || token == NULL || out_value == NULL || token->start < 0 || token->end < token->start) {
+        return 0;
+    }
+    if (token->type != JSMN_STRING && token->type != JSMN_PRIMITIVE) {
+        return 0;
+    }
+
+    return kbo_json_int_text_value(json + token->start, (size_t)(token->end - token->start), out_value);
+}
+
+int kbo_json_bool_value_at(const char* value, const char* end, int* out_value)
+{
+    value = kbo_json_skip_ws(value, end);
+    if (value >= end || out_value == NULL) {
+        return 0;
+    }
+
+    jsmntok_t token = {0};
+    jsmn_parser parser;
+    jsmn_init(&parser);
+    int parsed = jsmn_parse(&parser, value, (size_t)(end - value), &token, 1);
+    return parsed == 1 && kbo_json_bool_token_value(value, &token, out_value);
+}
+
 int kbo_json_int_value_at(const char* value, const char* end, int* out_value)
 {
     value = kbo_json_skip_ws(value, end);
@@ -181,94 +259,55 @@ int kbo_json_int_value_at(const char* value, const char* end, int* out_value)
         return 0;
     }
 
-    if (*value == '"') {
-        const char* stop = kbo_json_find_string_end(value, end);
-        return stop != NULL && kbo_json_int_text_value(value + 1, (size_t)(stop - value - 1), out_value);
+    jsmntok_t token = {0};
+    jsmn_parser parser;
+    jsmn_init(&parser);
+    int parsed = jsmn_parse(&parser, value, (size_t)(end - value), &token, 1);
+    return parsed == 1 && kbo_json_int_token_value(value, &token, out_value);
+}
+
+static int kbo_find_value_token_in_json(const char* json, DWORD json_size, const char* key, const char* legacy_key, jsmntok_t* out_value)
+{
+    if (json == NULL || key == NULL || out_value == NULL) {
+        return 0;
     }
 
-    const char* stop = value;
-    if (stop < end && (*stop == '-' || *stop == '+')) {
-        stop++;
+    jsmntok_t tokens[KBO_JSON_MAX_TOKENS];
+    int parsed = kbo_parse_json_tokens(json, json_size, tokens, KBO_JSON_MAX_TOKENS);
+    if (parsed < 3) {
+        return 0;
     }
-    while (stop < end && *stop >= '0' && *stop <= '9') {
-        stop++;
+
+    for (int i = 1; i + 1 < parsed; i++) {
+        if (tokens[i].type != JSMN_STRING) {
+            continue;
+        }
+        if (kbo_token_equals_key(json, &tokens[i], key)
+                || (legacy_key != NULL && kbo_token_equals_key(json, &tokens[i], legacy_key))) {
+            *out_value = tokens[i + 1];
+            return 1;
+        }
     }
-    return kbo_json_int_text_value(value, (size_t)(stop - value), out_value);
+    return 0;
 }
 
 int kbo_find_flag_value_in_json(const char* json, DWORD json_size, const char* key, const char* legacy_key, int* out_value)
 {
-    if (json == NULL || key == NULL || out_value == NULL) {
-        return 0;
-    }
-
-    const char* p = json;
-    const char* end = json + json_size;
-    while (p < end) {
-        if (*p != '"') {
-            p++;
-            continue;
-        }
-
-        const char* key_start = p + 1;
-        const char* key_stop = kbo_json_find_string_end(p, end);
-        if (key_stop == NULL) {
-            return 0;
-        }
-
-        int matched = kbo_json_string_equals_key(key_start, key_stop, key)
-            || (legacy_key != NULL && kbo_json_string_equals_key(key_start, key_stop, legacy_key));
-        p = key_stop + 1;
-        if (!matched) {
-            continue;
-        }
-
-        const char* colon = kbo_json_skip_ws(p, end);
-        if (colon >= end || *colon != ':') {
-            continue;
-        }
-        if (kbo_json_bool_value_at(colon + 1, end, out_value)) {
-            return 1;
-        }
-    }
-
-    return 0;
+    jsmntok_t value = {0};
+    return kbo_find_value_token_in_json(json, json_size, key, legacy_key, &value)
+        && kbo_json_bool_token_value(json, &value, out_value);
 }
 
 int kbo_find_int_value_in_json(const char* json, DWORD json_size, const char* key, int* out_value)
 {
-    if (json == NULL || key == NULL || out_value == NULL) {
-        return 0;
-    }
+    jsmntok_t value = {0};
+    return kbo_find_value_token_in_json(json, json_size, key, NULL, &value)
+        && kbo_json_int_token_value(json, &value, out_value);
+}
 
-    const char* p = json;
-    const char* end = json + json_size;
-    while (p < end) {
-        if (*p != '"') {
-            p++;
-            continue;
-        }
-
-        const char* key_start = p + 1;
-        const char* key_stop = kbo_json_find_string_end(p, end);
-        if (key_stop == NULL) {
-            return 0;
-        }
-
-        int matched = kbo_json_string_equals_key(key_start, key_stop, key);
-        p = key_stop + 1;
-        if (!matched) {
-            continue;
-        }
-
-        const char* colon = kbo_json_skip_ws(p, end);
-        if (colon >= end || *colon != ':') {
-            continue;
-        }
-        if (kbo_json_int_value_at(colon + 1, end, out_value)) {
-            return 1;
-        }
-    }
-
-    return 0;
+int kbo_find_json_value_span(const char* json, DWORD json_size, const char* key, const char** out_start, const char** out_end)
+{
+    jsmntok_t value = {0};
+    return kbo_find_value_token_in_json(json, json_size, key, NULL, &value)
+        && kbo_json_token_span_value(json, &value, out_start, out_end);
 }
