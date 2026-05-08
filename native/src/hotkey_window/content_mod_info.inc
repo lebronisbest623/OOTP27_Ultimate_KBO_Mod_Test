@@ -28,8 +28,11 @@ static void kbo_build_mod_info_hub_text(char* out, size_t out_size)
         kbo_hub_text(
             "\xeb\xb3\xb8 \xeb\xaa\xa8\xeb\x93\x9c\xeb\x8a\x94 OOTPD\xec\x9d\x98 \xea\xb3\xb5\xec\x8b\x9d \xec\xa0\x9c\xed\x92\x88\xec\x9d\xb4 \xec\x95\x84\xeb\x8b\x99\xeb\x8b\x88\xeb\x8b\xa4.",
             "This mod is not an official OOTPD product."));
-    for (size_t i = 0; i < sizeof(KBO_SUPPORTED_OOTP_BUILDS) / sizeof(KBO_SUPPORTED_OOTP_BUILDS[0]); i++) {
-        const OotpSupportedBuild* build = &KBO_SUPPORTED_OOTP_BUILDS[i];
+    for (size_t i = 0; i < kbo_supported_ootp_build_count(); i++) {
+        const OotpSupportedBuild* build = kbo_supported_ootp_build_at(i);
+        if (build == NULL) {
+            continue;
+        }
         kbo_window_text_appendf(
             &buffer,
             "Supported build: OOTP 27 %s / timestamp 0x%08X / image 0x%08X\r\n",

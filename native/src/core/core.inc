@@ -1,8 +1,8 @@
 /* KBO core subsystem assembler. */
 
-#include "core_log.inc"
+#include "core_log.h"
 #include "core_atomic_file.inc"
-#include "core_text_date.inc"
+#include "core_text_date.h"
 #include "core_decls.inc"
 #include "core_sql_escape.inc"
 #include "core_sql_league_news.inc"

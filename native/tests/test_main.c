@@ -24,7 +24,7 @@ typedef struct KboForeignReplacementPlayerSeed {
     uint8_t slot_type;
 } KboForeignReplacementPlayerSeed;
 
-#include "../src/core/core_text_date.inc"
+#include "../src/core/core_text_date.h"
 #include "../src/core/core_sql_escape.inc"
 
 static int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)

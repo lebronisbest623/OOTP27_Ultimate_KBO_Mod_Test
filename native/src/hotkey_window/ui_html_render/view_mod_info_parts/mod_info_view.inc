@@ -132,8 +132,11 @@ static void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer)
             "</p><a class='githubLink' href='kbo://github'>GitHub</a>"
             "</section><section class='card modCard'><h2 class='cardTitle'>SUPPORTED BUILD</h2>"
             "<div class='buildList'>");
-        for (size_t i = 0; i < sizeof(KBO_SUPPORTED_OOTP_BUILDS) / sizeof(KBO_SUPPORTED_OOTP_BUILDS[0]); i++) {
-            const OotpSupportedBuild* build = &KBO_SUPPORTED_OOTP_BUILDS[i];
+        for (size_t i = 0; i < kbo_supported_ootp_build_count(); i++) {
+            const OotpSupportedBuild* build = kbo_supported_ootp_build_at(i);
+            if (build == NULL) {
+                continue;
+            }
             kbo_window_text_appendf(
                 buffer,
                 "<div class='buildRow'><span class='buildLabel'>%s</span><span class='buildValue'>OOTP 27 %s</span></div>"

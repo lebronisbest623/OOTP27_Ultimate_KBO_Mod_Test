@@ -3,19 +3,19 @@
 This project has two runtime layers:
 
 - `src/KBOLauncher/Program.cs`: the managed launcher. It locates OOTP, prepares local data files and flags, starts or attaches to the game process, and injects the native patch DLL.
-- `native/KBOFix.c`: the native runtime patch. It is built as one translation unit and includes feature fragments from `native/src/*.inc`.
+- `native/KBOFix.c`: the native runtime patch shell. Most legacy feature fragments are still included from `native/src/*.inc`, while migrated responsibilities build as explicit `.c/.h` translation units.
 
 The native layer is where most KBO rule emulation lives. Because it patches a closed game process, the architecture favors small, explicit feature modules over generic abstractions.
 
 ## Current Native Shape
 
-`native/KBOFix.c` is a single-translation-unit build. Feature fragments are included in dependency order:
+`native/KBOFix.c` is now a hybrid native shell. Legacy feature fragments are still included in dependency order, while migrated modules are linked as separate translation units with explicit headers:
 
 ```c
 #include "src/core.inc"
 #include "src/bootstrap/profiler.inc"
 #include "src/bootstrap/perf_probe.inc"
-#include "src/build_verify.inc"
+#include "src/build_verify/build_verify.h"
 #include "src/runtime_memory.inc"
 #include "src/team.inc"
 #include "src/amateur_player_quality.inc"
@@ -37,9 +37,9 @@ The native layer is where most KBO rule emulation lives. Because it patches a cl
 #include "src/entrypoint.inc"
 ```
 
-This means `.inc` files can share `static` functions and state, but it also means file order is an API. Moving code must preserve declaration order and any cross-module forward declarations in `KBOFix.c` or earlier fragments.
+For the remaining legacy fragments, `.inc` files can still share `static` functions and state, so file order remains an API. Moving legacy code must preserve declaration order and any cross-module forward declarations in `KBOFix.c` or earlier fragments. Migrated `.c/.h` modules must not rely on include order; they expose only their header contract.
 
-`native/KBOFix.c` should stay as the translation-unit shell: offsets, OOTP ABI typedefs, hook prototypes, shared low-level helpers, and include order. Domain state belongs in the owning subsystem state module, not in the root file.
+`native/KBOFix.c` should stay as the native shell: offsets, OOTP ABI typedefs, hook prototypes, shared low-level helpers, legacy include order, and explicit migrated-module headers. Domain state belongs in the owning subsystem state module, not in the root file.
 
 ## Launcher Build Guard
 
@@ -52,7 +52,7 @@ If the build is unknown or unreadable:
 - the launcher writes `launcher_build_guard_status.txt` under `%LOCALAPPDATA%\OOTP-KBO\`
 - the native `verify_ootp_build()` check remains as a second line of defense if a DLL is loaded by another path
 
-When OOTP patches, do not change offsets or installers speculatively. First record the detected timestamp/size pair, verify the patch behavior on that exact build, then update both the launcher supported-build list in `src/KBOLauncher/Program.cs` and the native supported-build list in `native/src/build_verify/build_verify.inc`.
+When OOTP patches, do not change offsets or installers speculatively. First record the detected timestamp/size pair, verify the patch behavior on that exact build, then update `config/ootp-supported-builds.json` and regenerate the managed/native supported-build sources.
 
 ## Roster Marker Guard
 
@@ -82,12 +82,12 @@ The launcher treats the single-division All-Star option as a feature suite. Enab
 
 ## Native Source Layout
 
-`native/src/*.inc` is the public include layer for `native/KBOFix.c`. Files directly under `native/src/` should be thin feature entrypoints or assemblers only. Implementation bodies live in matching domain folders:
+`native/src/*.inc` is the remaining legacy include layer for `native/KBOFix.c`. Files directly under `native/src/` should be thin feature entrypoints or assemblers only. Migrated responsibilities should expose `.h` interfaces and add `.c` implementations under `native/src/`; `native/build.ps1` discovers those `.c` files recursively and links them automatically. Implementation bodies live in matching domain folders:
 
 ```text
 native/src/
   core.inc                    -> core/core.inc
-  build_verify.inc            -> build_verify/build_verify.inc
+  build_verify/build_verify.h -> build_verify/build_verify.c
   runtime_memory.inc          -> runtime_memory/runtime_memory.inc
   team.inc                    -> team/team.inc
   amateur_player_quality.inc  -> amateur_player_quality/
@@ -109,7 +109,17 @@ native/src/
   entrypoint.inc              -> entrypoint/entrypoint.inc
 ```
 
-Rule of thumb: if a root `native/src/*.inc` grows beyond include sequencing and tiny constants, move that body into a subfolder and leave the root filename as the stable compatibility wrapper.
+Rule of thumb: if a root `native/src/*.inc` grows beyond include sequencing and tiny constants, move that body into a subfolder as a first step. When the responsibility has a clear external contract, migrate it to `.c/.h` and remove the root compatibility wrapper.
+
+### Migrated Translation Units
+
+`native/src/build_verify/build_verify.c` is the first migrated native module. It owns:
+
+- reading the host OOTP PE timestamp and image size
+- fail-closed supported-build verification
+- exposing supported-build metadata to the F2 hub through accessor functions
+
+Its generated supported-build table remains private to the module. Other native code includes `build_verify.h` and must not depend on the generated array or include order.
 
 The current baseline already contains several FA and draft-adjacent domain entrypoints in `native/KBOFix.c`. That baseline is not a precedent for future broad migrations. Any further split, move, or ownership change must close exactly one subsystem or one responsibility unit per change.
 
@@ -120,8 +130,8 @@ The current baseline already contains several FA and draft-adjacent domain entry
 ```text
 native/src/core/
   core.inc
-  core_log.inc
-  core_text_date.inc
+  core_log.h -> core_log.c
+  core_text_date.h -> core_text_date.c
   core_decls.inc
   core_sql_escape.inc
   core_sql_league_news.inc
@@ -130,7 +140,7 @@ native/src/core/
   core_message_body_file.inc
   core_news_object.inc
   core_current_date.inc
-  core_flags.inc
+  core_flags.inc -> core_flags/*.h -> core_flags/*.c
   core_league_context.inc
   core_league_events.inc
   core_team_collect.inc
@@ -138,8 +148,8 @@ native/src/core/
   core_history_stubs.inc
 ```
 
-- `core_log.inc`: log file helpers.
-- `core_text_date.inc`: ASCII comparison and YYYYMMDD history-date formatting.
+- `core_log.h` / `core_log.c`: log file helpers.
+- `core_text_date.h` / `core_text_date.c`: ASCII comparison and YYYYMMDD history-date formatting.
 - `core_decls.inc`: forward declarations needed by single-translation-unit include order.
 - `core_sql_escape.inc`: SQL literal escaping.
 - `core_sql_league_news.inc`: `messages` and `league_news` SQL writes.
@@ -148,7 +158,7 @@ native/src/core/
 - `core_message_body_file.inc`: message body text file writes.
 - `core_news_object.inc`: native news object construction helpers.
 - `core_current_date.inc`: current date, year, and history-date reads.
-- `core_flags.inc`: local flag readers and `kbo_fix_enabled`.
+- `core_flags.inc`: assembler that imports local flag reader headers; implementations live in `core_flags/*.c`.
 - `core_league_context.inc`: event manager and KBO league id resolution.
 - `core_league_events.inc`: league-event existence/create helpers.
 - `core_team_collect.inc`: league team id collection.

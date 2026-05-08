@@ -39,9 +39,7 @@ static int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const c
 static KboAllstarLayout kbo_get_allstar_layout(void)
 {
     OotpBuildInfo info = read_ootp_build_info();
-    if (info.ok
-            && info.timestamp == KBO_SUPPORTED_OOTP_BUILD_STEAM_2026_05_04_TIMESTAMP
-            && info.size_of_image == KBO_SUPPORTED_OOTP_BUILD_STEAM_2026_05_04_SIZE_OF_IMAGE) {
+    if (kbo_ootp_build_is_steam_2026_05_04(info)) {
         KboAllstarLayout may_layout = {
             0x242u, 0x45f0u, 0x45f1u, 0x45f8u, 0x45fcu,
             0x4a38u, 0x4a44u, 0x4cc8u, 0x4cc0u

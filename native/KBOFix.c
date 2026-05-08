@@ -18,12 +18,13 @@
 #include "src/bootstrap/forward_declarations.inc"
 
 /*
- * Single-translation-unit build: feature areas split into source fragments.
+ * Hybrid native shell: legacy feature fragments remain include-ordered here,
+ * while migrated responsibilities are linked as explicit .c/.h modules.
  */
 #include "src/core.inc"
 #include "src/bootstrap/profiler.inc"
 #include "src/bootstrap/perf_probe.inc"
-#include "src/build_verify.inc"
+#include "src/build_verify/build_verify.h"
 #include "src/runtime_memory.inc"
 #include "src/team.inc"
 #include "src/amateur_player_quality.inc"
