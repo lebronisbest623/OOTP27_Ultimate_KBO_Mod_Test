@@ -251,43 +251,18 @@ static int kbo_military_daily_roster_mutation_window_ready(
     uint32_t today_serial,
     int32_t player_count)
 {
-    static uint32_t last_today_serial = 0u;
-    static int32_t last_player_count = 0;
-    static int stable_ticks = 0;
-    static char last_save_path[MAX_PATH] = {0};
-
     char save_path[MAX_PATH] = {0};
     if (today_serial == 0u
             || player_count <= 0
             || !kbo_get_current_save_path(save_path, sizeof(save_path))) {
-        last_today_serial = 0u;
-        last_player_count = 0;
-        stable_ticks = 0;
-        last_save_path[0] = '\0';
-        return 0;
-    }
-
-    if (last_today_serial == today_serial
-            && last_player_count == player_count
-            && _stricmp(last_save_path, save_path) == 0) {
-        stable_ticks++;
-    } else {
-        last_today_serial = today_serial;
-        last_player_count = player_count;
-        stable_ticks = 1;
-        snprintf(last_save_path, sizeof(last_save_path), "%s", save_path);
-    }
-
-    if (stable_ticks < 3) {
         return 0;
     }
 
     LONG slot = InterlockedIncrement(&g_military_daily_mutation_ready_log_count);
     if (slot <= 20 || (slot % 100) == 0) {
         append_logf(
-            "KBO military daily roster mutation window ready date_serial=%u stable_ticks=%d player_count=%d save=%s slot=%ld",
+            "KBO military daily roster mutation window immediate date_serial=%u player_count=%d save=%s slot=%ld",
             today_serial,
-            stable_ticks,
             player_count,
             save_path,
             slot);
