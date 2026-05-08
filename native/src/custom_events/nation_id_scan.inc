@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 /* Diagnostic nation id offset scanner. Included from native/src/custom_events.inc. */
 
 static void kbo_scan_nation_id_offset_once(void)

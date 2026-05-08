@@ -131,7 +131,7 @@ static uint8_t* kbo_resolve_current_league_financials(uint32_t* out_league_id)
     }
 
     OotpLeagueFinancialsLookupFn lookup =
-        (OotpLeagueFinancialsLookupFn)((uintptr_t)exe + OOTP27_LEAGUE_FINANCIALS_LOOKUP_RVA);
+        (OotpLeagueFinancialsLookupFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_LEAGUE_FINANCIALS_LOOKUP_RVA);
     if (!memory_range_readable((void*)lookup, 16)) {
         return NULL;
     }

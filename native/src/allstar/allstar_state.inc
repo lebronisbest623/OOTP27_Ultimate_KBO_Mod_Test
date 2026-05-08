@@ -13,6 +13,7 @@ static LONG g_allstar_team_name_log_count = 0;
 static volatile LONG g_allstar_native_event_generation_in_progress = 0;
 static volatile LONG g_allstar_native_event_generation_done = 0;
 volatile uintptr_t g_allstar_schedule_import_league_ptr = 0;
+volatile uintptr_t g_allstar_make_events_ptr = 0;
 
 static int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* source);
 

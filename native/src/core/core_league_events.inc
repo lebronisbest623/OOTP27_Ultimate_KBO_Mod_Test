@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 /* Core league event creation helpers. */
 
 static int kbo_league_event_exists(
@@ -103,9 +105,10 @@ static int create_kbo_league_event(
         return 0;
     }
 
-    OotpCreateLeagueEventFn create_event = (OotpCreateLeagueEventFn)((uintptr_t)exe + OOTP27_CREATE_LEAGUE_EVENT_RVA);
+    OotpCreateLeagueEventFn create_event =
+        (OotpCreateLeagueEventFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_CREATE_LEAGUE_EVENT_RVA);
     if (!memory_range_readable((void*)create_event, 16)) {
-        append_logf("league event create skipped source=%s title=%s reason=create_func_unreadable fn=%p", source != NULL ? source : "", title, (void*)create_event);
+        append_logf("league event create skipped source=%s title=%s reason=build_specific_create_func_unavailable fn=%p", source != NULL ? source : "", title, (void*)create_event);
         return 0;
     }
 

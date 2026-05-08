@@ -52,11 +52,8 @@ static int install_allstar_candidate_team_split_patch(void)
         void* vector_push_back_address = resolve_relative_call_target(
             target + OOTP27_ALLSTAR_CANDIDATE_TEAM_SPLIT_VECTOR_CALL_OFFSET);
         if (vector_push_back_address == NULL) {
-            OotpBuildInfo info = read_ootp_build_info();
-            uint32_t vector_rva = kbo_ootp_build_is_steam_2026_05_04(info)
-                ? 0x01CBAA40u
-                : OOTP27_VECTOR_PUSH_BACK_RVA;
-            vector_push_back_address = (void*)((uintptr_t)exe + vector_rva);
+            append_log_line("KBO all-star candidate team split hook skipped: vector push helper target unresolved");
+            return 0;
         }
 
         uint8_t* stub = build_allstar_candidate_team_split_stub(

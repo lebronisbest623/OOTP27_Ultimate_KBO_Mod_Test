@@ -27,9 +27,10 @@ static int create_kbo_core_message_news(uint32_t league_id, const char* title, c
         return 0;
     }
 
-    OotpCreateMessageCoreFn create_core = (OotpCreateMessageCoreFn)((uintptr_t)exe + OOTP27_CREATE_MESSAGE_CORE_RVA);
+    OotpCreateMessageCoreFn create_core =
+        (OotpCreateMessageCoreFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_CREATE_MESSAGE_CORE_RVA);
     if (!memory_range_readable((void*)create_core, 16)) {
-        append_logf("core message news skipped source=%s title=%s reason=func_unreadable fn=%p", source != NULL ? source : "", title, (void*)create_core);
+        append_logf("core message news skipped source=%s title=%s reason=build_specific_func_unavailable fn=%p", source != NULL ? source : "", title, (void*)create_core);
         return 0;
     }
 

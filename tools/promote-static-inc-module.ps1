@@ -128,12 +128,22 @@ foreach ($IncFile in $IncFiles) {
     $SourceDir = [IO.Path]::GetDirectoryName($SourcePath)
     $OffsetsInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\bootstrap\ootp_offsets.h")
     $LogInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\core\core_log.h")
+    $CurrentDateInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\core\core_current_date.h")
+    $SavePathsInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\core\core_save_paths.h")
+    $TextDateInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\core\core_text_date.h")
+    $FlagsInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\core\core_flags\flags_api.h")
     $RuntimeMemoryInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\runtime_memory\runtime_memory.h")
     $SourceText = $Text -replace '(?m)^(\s*)static\s+', '$1'
     $SourceText = @(
         "#include `"$([IO.Path]::GetFileName($HeaderPath))`"",
+        "#include <stdio.h>",
+        "#include <string.h>",
         "#include `"$OffsetsInclude`"",
         "#include `"$LogInclude`"",
+        "#include `"$CurrentDateInclude`"",
+        "#include `"$SavePathsInclude`"",
+        "#include `"$TextDateInclude`"",
+        "#include `"$FlagsInclude`"",
         "#include `"$RuntimeMemoryInclude`"",
         "",
         $SourceText

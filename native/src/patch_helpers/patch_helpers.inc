@@ -84,13 +84,7 @@ static uint8_t* resolve_patch_target_by_rva_or_pattern(
         return NULL;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + rva);
-    if (memory_range_readable(target, 12u) && is_rax_absolute_jump_patch(target)) {
-        return target;
-    }
-    if (memory_range_readable(target, expected_size) && memcmp(target, expected, expected_size) == 0) {
-        return target;
-    }
+    uint8_t* target = NULL;
 
     uint8_t* found = find_ootp_executable_pattern(expected, expected_size);
     if (found != NULL) {
@@ -103,7 +97,7 @@ static uint8_t* resolve_patch_target_by_rva_or_pattern(
         return found;
     }
 
-    if (memory_range_readable(target, expected_size)) {
+    if (target != NULL && memory_range_readable(target, expected_size)) {
         log_patch_bytes_mismatch(label != NULL ? label : "patch target", target, expected_size);
     } else {
         append_logf("%s target unreadable target=%p", label != NULL ? label : "patch target", target);
@@ -189,13 +183,7 @@ static uint8_t* resolve_patch_target_by_rva_or_context_pattern(
         return NULL;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + rva);
-    if (memory_range_readable(target, 12u) && is_rax_absolute_jump_patch(target)) {
-        return target;
-    }
-    if (memory_range_readable(target, expected_size) && memcmp(target, expected, expected_size) == 0) {
-        return target;
-    }
+    uint8_t* target = NULL;
 
     uint8_t* base = (uint8_t*)exe;
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;
@@ -248,7 +236,7 @@ static uint8_t* resolve_patch_target_by_rva_or_context_pattern(
     }
 
     if (hits != 1 || found == NULL) {
-        if (memory_range_readable(target, expected_size)) {
+        if (target != NULL && memory_range_readable(target, expected_size)) {
             log_patch_bytes_mismatch(patch_label, target, expected_size);
         } else {
             append_logf("%s target unreadable target=%p", patch_label, target);
@@ -316,13 +304,7 @@ static uint8_t* resolve_patch_target_by_rva_or_masked_context_pattern(
         return NULL;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + rva);
-    if (memory_range_readable(target, 12u) && (is_rax_absolute_jump_patch(target) || is_r11_absolute_jump_patch(target) || is_rip_absolute_jump_patch(target))) {
-        return target;
-    }
-    if (memory_range_readable(target, expected_size) && memcmp(target, expected, expected_size) == 0) {
-        return target;
-    }
+    uint8_t* target = NULL;
 
     uint8_t* base = (uint8_t*)exe;
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;
@@ -375,7 +357,7 @@ static uint8_t* resolve_patch_target_by_rva_or_masked_context_pattern(
     }
 
     if (hits != 1 || found == NULL) {
-        if (memory_range_readable(target, expected_size)) {
+        if (target != NULL && memory_range_readable(target, expected_size)) {
             log_patch_bytes_mismatch(patch_label, target, expected_size);
         } else {
             append_logf("%s target unreadable target=%p", patch_label, target);
@@ -431,13 +413,7 @@ static uint8_t* resolve_patch_target_by_rva_or_masked_context_and_expected_patte
         return NULL;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + rva);
-    if (memory_range_readable(target, 12u) && (is_rax_absolute_jump_patch(target) || is_r11_absolute_jump_patch(target) || is_rip_absolute_jump_patch(target))) {
-        return target;
-    }
-    if (memory_range_readable(target, expected_size) && kbo_memory_matches_masked_pattern(target, expected, expected_mask, expected_size)) {
-        return target;
-    }
+    uint8_t* target = NULL;
 
     uint8_t* base = (uint8_t*)exe;
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;

@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include "build_verify.h"
+#include "../bootstrap/ootp_offsets.h"
 #include "../core/core_log.h"
 
 #include "supported_builds.generated.inc"
@@ -52,6 +53,49 @@ int kbo_ootp_build_is_steam_2026_05_04(OotpBuildInfo info)
     return info.ok
         && info.timestamp == KBO_SUPPORTED_OOTP_BUILD_STEAM_2026_05_04_TIMESTAMP
         && info.size_of_image == KBO_SUPPORTED_OOTP_BUILD_STEAM_2026_05_04_SIZE_OF_IMAGE;
+}
+
+void* kbo_resolve_build_specific_rva_ptr(HMODULE exe, uint32_t steam_rva)
+{
+    if (exe == NULL) {
+        return NULL;
+    }
+
+    OotpBuildInfo info = read_ootp_build_info();
+    uint32_t rva = 0u;
+    if (kbo_ootp_build_is_steam_2026_05_04(info)) {
+        rva = steam_rva;
+    } else if (info.ok
+            && info.timestamp == KBO_SUPPORTED_OOTP_BUILD_OFFICIAL_27_2_60_TIMESTAMP
+            && info.size_of_image == KBO_SUPPORTED_OOTP_BUILD_OFFICIAL_27_2_60_SIZE_OF_IMAGE) {
+        switch (steam_rva) {
+            case OOTP27_CREATE_LEAGUE_EVENT_RVA: rva = 0x00A49EB0u; break;
+            case OOTP27_PISD_STRING_ASSIGN_RVA: rva = 0x01B990F0u; break;
+            case OOTP27_LEAGUE_NEWS_REAL_ADD_RVA: rva = 0x003A0E10u; break;
+            case OOTP27_NEWS_OBJECT_CTOR_RVA: rva = 0x005C3030u; break;
+            case OOTP27_NEWS_STRING_ENSURE_RVA: rva = 0x005C5AA0u; break;
+            case OOTP27_CREATE_MESSAGE_CORE_RVA: rva = 0x011DCDE0u; break;
+            case OOTP27_UI_OPERATOR_NEW_RVA: rva = 0x024872C4u; break;
+            case OOTP27_LEAGUE_FINANCIALS_LOOKUP_RVA: rva = 0x00414330u; break;
+            default: break;
+        }
+    } else if (info.ok
+            && info.timestamp == KBO_SUPPORTED_OOTP_BUILD_OFFICIAL_27_2_59_TIMESTAMP
+            && info.size_of_image == KBO_SUPPORTED_OOTP_BUILD_OFFICIAL_27_2_59_SIZE_OF_IMAGE) {
+        switch (steam_rva) {
+            case OOTP27_CREATE_LEAGUE_EVENT_RVA: rva = 0x00A4A890u; break;
+            case OOTP27_PISD_STRING_ASSIGN_RVA: rva = 0x01BA62E0u; break;
+            case OOTP27_LEAGUE_NEWS_REAL_ADD_RVA: rva = 0x003A0E10u; break;
+            case OOTP27_NEWS_OBJECT_CTOR_RVA: rva = 0x005C3030u; break;
+            case OOTP27_NEWS_STRING_ENSURE_RVA: rva = 0x005C5AA0u; break;
+            case OOTP27_CREATE_MESSAGE_CORE_RVA: rva = 0x011DDD90u; break;
+            case OOTP27_UI_OPERATOR_NEW_RVA: rva = 0x024957D4u; break;
+            case OOTP27_LEAGUE_FINANCIALS_LOOKUP_RVA: rva = 0x00414330u; break;
+            default: break;
+        }
+    }
+
+    return rva != 0u ? (void*)((uint8_t*)exe + rva) : NULL;
 }
 
 int verify_ootp_build(void)

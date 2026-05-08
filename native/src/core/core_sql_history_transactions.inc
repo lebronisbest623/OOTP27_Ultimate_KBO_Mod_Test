@@ -13,18 +13,14 @@ static int insert_kbo_player_history_sql(
         return 0;
     }
 
-    HMODULE exe = GetModuleHandleA(NULL);
     uintptr_t global = get_ootp_global_database();
-    if (exe == NULL || global == 0
-            || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
-        append_logf("player history sql skipped source=%s player=%u reason=no_exe_or_global", source != NULL ? source : "", player_id);
+    if (global == 0 || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
+        append_logf("player history sql skipped source=%s player=%u reason=no_global", source != NULL ? source : "", player_id);
         return 0;
     }
 
     uintptr_t database = *(uintptr_t*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET);
-    OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
-    if (database == 0 || !memory_range_readable((void*)database, 0x10)
-            || !memory_range_readable((void*)sql_exec, 16)) {
+    if (database == 0 || !memory_range_readable((void*)database, 0x10) || kbo_get_sqlite3_exec_fn() == NULL) {
         append_logf("player history sql skipped source=%s player=%u reason=db_or_exec_unavailable", source != NULL ? source : "", player_id);
         return 0;
     }
@@ -61,9 +57,9 @@ static int insert_kbo_player_history_sql(
         escaped_text,
         year);
 
-    int create_result = sql_exec((void*)database, create_sql);
-    int delete_result = sql_exec((void*)database, delete_sql);
-    int insert_result = sql_exec((void*)database, insert_sql);
+    int create_result = kbo_sqlite_exec_direct((void*)database, create_sql);
+    int delete_result = kbo_sqlite_exec_direct((void*)database, delete_sql);
+    int insert_result = kbo_sqlite_exec_direct((void*)database, insert_sql);
     append_logf(
         "player history sql insert source=%s player=%u date=%s create=%d delete=%d insert=%d",
         source != NULL ? source : "",
@@ -92,18 +88,14 @@ static int insert_kbo_roster_transaction_sql(
         return 0;
     }
 
-    HMODULE exe = GetModuleHandleA(NULL);
     uintptr_t global = get_ootp_global_database();
-    if (exe == NULL || global == 0
-            || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
-        append_logf("roster transaction sql skipped source=%s reason=no_exe_or_global", source != NULL ? source : "");
+    if (global == 0 || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
+        append_logf("roster transaction sql skipped source=%s reason=no_global", source != NULL ? source : "");
         return 0;
     }
 
     uintptr_t database = *(uintptr_t*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET);
-    OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
-    if (database == 0 || !memory_range_readable((void*)database, 0x10)
-            || !memory_range_readable((void*)sql_exec, 16)) {
+    if (database == 0 || !memory_range_readable((void*)database, 0x10) || kbo_get_sqlite3_exec_fn() == NULL) {
         append_logf("roster transaction sql skipped source=%s reason=db_or_exec_unavailable", source != NULL ? source : "");
         return 0;
     }
@@ -121,8 +113,8 @@ static int insert_kbo_roster_transaction_sql(
         "CREATE TABLE IF NOT EXISTS league_transactions (transaction_id INTEGER PRIMARY KEY AUTOINCREMENT, league_id INTEGER, transaction_date VARCHAR(8), transaction_type INTEGER DEFAULT 0, transaction_text TEXT, season INTEGER);";
     const char* create_team_sql =
         "CREATE TABLE IF NOT EXISTS team_transactions (transaction_id INTEGER PRIMARY KEY AUTOINCREMENT, team_id INTEGER, transaction_date VARCHAR(8), transaction_type INTEGER DEFAULT 0, transaction_text TEXT, season INTEGER);";
-    int create_league = sql_exec((void*)database, create_league_sql);
-    int create_team = sql_exec((void*)database, create_team_sql);
+    int create_league = kbo_sqlite_exec_direct((void*)database, create_league_sql);
+    int create_team = kbo_sqlite_exec_direct((void*)database, create_team_sql);
 
     int league_insert = 0;
     int team_insert = 0;
@@ -137,7 +129,7 @@ static int insert_kbo_roster_transaction_sql(
             transaction_type,
             escaped_league,
             year);
-        league_insert = sql_exec((void*)database, sql);
+        league_insert = kbo_sqlite_exec_direct((void*)database, sql);
     }
     if (escaped_team[0] != '\0') {
         char sql[2600] = {0};
@@ -150,7 +142,7 @@ static int insert_kbo_roster_transaction_sql(
             transaction_type,
             escaped_team,
             year);
-        team_insert = sql_exec((void*)database, sql);
+        team_insert = kbo_sqlite_exec_direct((void*)database, sql);
     }
 
     append_logf(

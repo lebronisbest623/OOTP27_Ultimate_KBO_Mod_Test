@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 static uint32_t kbo_org_team_id_for_team_id(uint32_t team_id)
 {
     if (team_id == 0u) {

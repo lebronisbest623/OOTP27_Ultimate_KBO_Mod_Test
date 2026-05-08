@@ -12,7 +12,10 @@ static int install_kbo_season_phase_opening_day_snapshot_hook_patch(
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + site_rva);
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(exe, site_rva, expected, expected_size, label);
+    if (target == NULL) {
+        return 0;
+    }
     if (!memory_range_readable(target, expected_size)) {
         append_logf("%s skipped target=%p reason=unreadable", label, target);
         return 0;

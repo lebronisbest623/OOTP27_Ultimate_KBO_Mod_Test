@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 static uintptr_t kbo_find_league_ptr_from_id(uint32_t league_id)
 {
     uintptr_t league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);

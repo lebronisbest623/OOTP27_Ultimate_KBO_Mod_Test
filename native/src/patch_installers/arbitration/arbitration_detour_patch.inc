@@ -22,22 +22,6 @@ static int patch_kbo_salary_arbitration_r11_detour_at(
     size_t size,
     uint8_t* stub);
 
-static int patch_kbo_salary_arbitration_r11_detour(
-    HMODULE exe,
-    const char* label,
-    uint32_t rva,
-    const uint8_t* expected,
-    size_t size,
-    uint8_t* stub)
-{
-    if (exe == NULL || label == NULL || expected == NULL || size < 13 || stub == NULL) {
-        return 0;
-    }
-
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + rva);
-    return patch_kbo_salary_arbitration_r11_detour_at(label, target, expected, size, stub);
-}
-
 static int patch_kbo_salary_arbitration_r11_detour_at(
     const char* label,
     uint8_t* target,

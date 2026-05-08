@@ -48,7 +48,8 @@ static OotpCoreStringAssignFn get_ootp_string_assign_fn(void)
         return NULL;
     }
 
-    OotpCoreStringAssignFn assign_string = (OotpCoreStringAssignFn)((uintptr_t)exe + OOTP27_PISD_STRING_ASSIGN_RVA);
+    OotpCoreStringAssignFn assign_string =
+        (OotpCoreStringAssignFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_PISD_STRING_ASSIGN_RVA);
     if (!memory_range_readable((void*)assign_string, 16)) {
         return NULL;
     }

@@ -1,6 +1,20 @@
+#include "core_news_object.h"
+#include <stdio.h>
+#include <string.h>
+#include "../bootstrap/ootp_offsets.h"
+#include "../bootstrap/ootp_typedefs.h"
+#include "../build_verify/build_verify.h"
+#include "core_log.h"
+#include "core_message_body_file.h"
+#include "core_current_date.h"
+#include "core_save_paths.h"
+#include "core_text_date.h"
+#include "core_flags/flags_api.h"
+#include "../runtime_memory/runtime_memory.h"
+
 /* Core native news object construction helpers. */
 
-static int assign_kbo_news_pointer_string(void* news_object, uint32_t offset, const char* text)
+int assign_kbo_news_pointer_string(void* news_object, uint32_t offset, const char* text)
 {
     if (news_object == NULL || text == NULL
             || !memory_range_readable((uint8_t*)news_object + offset, sizeof(void*))) {
@@ -17,7 +31,8 @@ static int assign_kbo_news_pointer_string(void* news_object, uint32_t offset, co
         return 0;
     }
 
-    OotpCoreStringAssignFn assign_string = (OotpCoreStringAssignFn)((uintptr_t)exe + OOTP27_PISD_STRING_ASSIGN_RVA);
+    OotpCoreStringAssignFn assign_string =
+        (OotpCoreStringAssignFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_PISD_STRING_ASSIGN_RVA);
     if (!memory_range_readable((void*)assign_string, 16)) {
         return 0;
     }
@@ -26,7 +41,7 @@ static int assign_kbo_news_pointer_string(void* news_object, uint32_t offset, co
     return 1;
 }
 
-static uint32_t kbo_read_news_u32(void* object, uint32_t offset)
+uint32_t kbo_read_news_u32(void* object, uint32_t offset)
 {
     if (object == NULL || !memory_range_readable((uint8_t*)object + offset, sizeof(uint32_t))) {
         return 0;
@@ -34,7 +49,7 @@ static uint32_t kbo_read_news_u32(void* object, uint32_t offset)
     return *(uint32_t*)((uint8_t*)object + offset);
 }
 
-static int create_kbo_real_add_news(
+int create_kbo_real_add_news(
     uint32_t year,
     uint32_t month,
     uint32_t day,
@@ -58,16 +73,20 @@ static int create_kbo_real_add_news(
         return 0;
     }
 
-    OotpOperatorNewFn ootp_new = (OotpOperatorNewFn)((uintptr_t)exe + OOTP27_UI_OPERATOR_NEW_RVA);
-    OotpNewsObjectCtorFn ctor = (OotpNewsObjectCtorFn)((uintptr_t)exe + OOTP27_NEWS_OBJECT_CTOR_RVA);
-    OotpNewsStringEnsureFn ensure_strings = (OotpNewsStringEnsureFn)((uintptr_t)exe + OOTP27_NEWS_STRING_ENSURE_RVA);
-    OotpLeagueNewsRealAddFn real_add = (OotpLeagueNewsRealAddFn)((uintptr_t)exe + OOTP27_LEAGUE_NEWS_REAL_ADD_RVA);
+    OotpOperatorNewFn ootp_new =
+        (OotpOperatorNewFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_UI_OPERATOR_NEW_RVA);
+    OotpNewsObjectCtorFn ctor =
+        (OotpNewsObjectCtorFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_NEWS_OBJECT_CTOR_RVA);
+    OotpNewsStringEnsureFn ensure_strings =
+        (OotpNewsStringEnsureFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_NEWS_STRING_ENSURE_RVA);
+    OotpLeagueNewsRealAddFn real_add =
+        (OotpLeagueNewsRealAddFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_LEAGUE_NEWS_REAL_ADD_RVA);
     if (!memory_range_readable((void*)ootp_new, 16)
             || !memory_range_readable((void*)ctor, 16)
             || !memory_range_readable((void*)ensure_strings, 16)
             || !memory_range_readable((void*)real_add, 16)) {
         append_logf(
-            "league news real_add skipped source=%s title=%s reason=func_unreadable new=%p ctor=%p ensure=%p add=%p",
+            "league news real_add skipped source=%s title=%s reason=build_specific_func_unavailable new=%p ctor=%p ensure=%p add=%p",
             source != NULL ? source : "",
             title,
             (void*)ootp_new,

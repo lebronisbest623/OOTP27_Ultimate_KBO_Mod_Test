@@ -8,33 +8,8 @@ static int32_t kbo_salary_arbitration_resolve_minimum_salary(uint32_t league_id)
         return current_floor > 0 ? current_floor : 35600;
     }
 
-    uintptr_t global_db = get_ootp_global_database();
-    HMODULE exe = GetModuleHandleA(NULL);
-    if (global_db == 0 || exe == NULL) {
-        int32_t current_floor = kbo_no_minor_resolve_current_league_minimum_salary();
-        return current_floor > 0 ? current_floor : 35600;
-    }
-
-    KboArbitrationLeagueFinancialsLookupFn lookup =
-        (KboArbitrationLeagueFinancialsLookupFn)((uintptr_t)exe + OOTP27_LEAGUE_FINANCIALS_LOOKUP_RVA);
-    if (!memory_range_readable((void*)lookup, 16)) {
-        int32_t current_floor = kbo_no_minor_resolve_current_league_minimum_salary();
-        return current_floor > 0 ? current_floor : 35600;
-    }
-
-    uint8_t* financials = lookup((void*)global_db, (int32_t)league_id);
-    if (financials == NULL
-            || !memory_range_readable(financials + OOTP27_LEAGUE_MINIMUM_SALARY_OFFSET, sizeof(int32_t))) {
-        int32_t current_floor = kbo_no_minor_resolve_current_league_minimum_salary();
-        return current_floor > 0 ? current_floor : 35600;
-    }
-
-    int32_t minimum_salary = *(int32_t*)(financials + OOTP27_LEAGUE_MINIMUM_SALARY_OFFSET);
-    if (minimum_salary <= 0 || minimum_salary > 1000000000) {
-        int32_t current_floor = kbo_no_minor_resolve_current_league_minimum_salary();
-        return current_floor > 0 ? current_floor : 35600;
-    }
-    return minimum_salary;
+    int32_t current_floor = kbo_no_minor_resolve_current_league_minimum_salary();
+    return current_floor > 0 ? current_floor : 35600;
 }
 
 static uintptr_t kbo_salary_arbitration_caller_rva(void* return_address)

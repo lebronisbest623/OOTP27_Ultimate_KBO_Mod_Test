@@ -1,4 +1,15 @@
-static int patch_kbo_no_minor_contract_scan_byte(uint8_t* imm_ptr)
+#include "no_minor_scan_patch.h"
+#include <stdio.h>
+#include <string.h>
+#include "../../bootstrap/ootp_offsets.h"
+#include "../../core/core_log.h"
+#include "../../core/core_current_date.h"
+#include "../../core/core_save_paths.h"
+#include "../../core/core_text_date.h"
+#include "../../core/core_flags/flags_api.h"
+#include "../../runtime_memory/runtime_memory.h"
+
+int patch_kbo_no_minor_contract_scan_byte(uint8_t* imm_ptr)
 {
     if (imm_ptr == NULL || !memory_range_readable(imm_ptr, 1)) {
         return 0;
@@ -29,7 +40,7 @@ static int patch_kbo_no_minor_contract_scan_byte(uint8_t* imm_ptr)
     return 1;
 }
 
-static int install_kbo_no_minor_contract_scan_patch(HMODULE exe)
+int install_kbo_no_minor_contract_scan_patch(HMODULE exe)
 {
     if (exe == NULL) {
         return 0;

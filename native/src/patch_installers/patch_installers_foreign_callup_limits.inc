@@ -1,7 +1,8 @@
 static int install_kbo_callup_foreign_limit_branch_patch(
     const char* label,
     uint32_t target_rva,
-    uint32_t allow_rva,
+    int32_t allow_delta,
+    int32_t fallback_delta,
     const uint8_t* expected,
     size_t patch_len,
     void* wrapper,
@@ -20,7 +21,10 @@ static int install_kbo_callup_foreign_limit_branch_patch(
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + target_rva);
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(exe, target_rva, expected, patch_len, label);
+    if (target == NULL) {
+        return 0;
+    }
     if (!memory_range_readable(target, patch_len)) {
         append_logf("%s target unreadable target=%p", label, target);
         return 0;
@@ -34,10 +38,21 @@ static int install_kbo_callup_foreign_limit_branch_patch(
         return 0;
     }
 
+    uint8_t* allow_target = target + allow_delta;
+    uint8_t* fallback_target = target + fallback_delta;
+    if (!memory_range_readable(allow_target, 1u) || !memory_range_readable(fallback_target, 1u)) {
+        append_logf(
+            "%s branch destination unreadable allow=%p fallback=%p",
+            label,
+            allow_target,
+            fallback_target);
+        return 0;
+    }
+
     uint8_t* stub = build_kbo_callup_foreign_limit_branch_stub(
-        (uint8_t*)((uintptr_t)exe + allow_rva),
+        allow_target,
         target + patch_len,
-        (uint8_t*)((uintptr_t)exe + OOTP27_FOREIGN_CALLUP_LIMIT_TOTAL_CHECK_FALLBACK_RVA),
+        fallback_target,
         wrapper,
         total_check);
     if (stub == NULL) {
@@ -94,7 +109,8 @@ static int install_kbo_callup_foreign_limit_branch_patches(void)
     ok &= install_kbo_callup_foreign_limit_branch_patch(
         "KBO callup foreign hitter limit branch patch",
         OOTP27_CALLUP_FOREIGN_HITTER_LIMIT_BRANCH_RVA,
-        0x01079B18u,
+        0x93,
+        0x182F,
         hitter_expected,
         sizeof(hitter_expected),
         &ootp_kbo_callup_foreign_hitter_limit_allows_wrapper,
@@ -102,7 +118,8 @@ static int install_kbo_callup_foreign_limit_branch_patches(void)
     ok &= install_kbo_callup_foreign_limit_branch_patch(
         "KBO callup foreign pitcher limit branch patch",
         OOTP27_CALLUP_FOREIGN_PITCHER_LIMIT_BRANCH_RVA,
-        0x01079BC8u,
+        0x56,
+        0x1742,
         pitcher_expected,
         sizeof(pitcher_expected),
         &ootp_kbo_callup_foreign_pitcher_limit_allows_wrapper,
@@ -110,7 +127,8 @@ static int install_kbo_callup_foreign_limit_branch_patches(void)
     ok &= install_kbo_callup_foreign_limit_branch_patch(
         "KBO callup foreign total limit branch patch",
         OOTP27_CALLUP_FOREIGN_TOTAL_LIMIT_BRANCH_RVA,
-        0x01079C78u,
+        0x56,
+        0x1692,
         total_expected,
         sizeof(total_expected),
         &ootp_kbo_callup_foreign_total_limit_allows_wrapper,

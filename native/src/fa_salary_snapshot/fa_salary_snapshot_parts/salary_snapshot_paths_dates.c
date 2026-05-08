@@ -1,3 +1,16 @@
+#include "salary_snapshot_paths_dates.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <windows.h>
+
+#include "../../bootstrap/ootp_offsets.h"
+#include "../../core/core_save_paths.h"
+#include "../../core/core_text_date.h"
+#include "../../runtime_memory/runtime_memory.h"
+#include "../../team/team_lookup.h"
+#include "salary_snapshot_state.h"
+
 int kbo_fa_salary_snapshot_path(uint32_t season, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0 || season < 1982u || season > 2200u) {

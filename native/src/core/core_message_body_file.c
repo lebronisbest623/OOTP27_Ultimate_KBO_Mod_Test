@@ -1,6 +1,17 @@
+#include "core_message_body_file.h"
+#include <stdio.h>
+#include <string.h>
+#include "../bootstrap/ootp_offsets.h"
+#include "core_log.h"
+#include "core_current_date.h"
+#include "core_save_paths.h"
+#include "core_text_date.h"
+#include "core_flags/flags_api.h"
+#include "../runtime_memory/runtime_memory.h"
+
 /* Core message body file persistence. */
 
-static int write_kbo_message_body_file(uint32_t message_id, const char* title, const char* body, const char* source)
+int write_kbo_message_body_file(uint32_t message_id, const char* title, const char* body, const char* source)
 {
     if (message_id == 0 || title == NULL || title[0] == '\0') {
         return 0;

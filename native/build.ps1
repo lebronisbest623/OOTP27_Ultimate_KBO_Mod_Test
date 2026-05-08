@@ -1,8 +1,14 @@
+param(
+    [switch] $Clean
+)
+
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $OutDir = Join-Path $Root "bin"
+$ObjDir = Join-Path $Root "obj"
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+New-Item -ItemType Directory -Force -Path $ObjDir | Out-Null
 
 function Resolve-CommandPath {
     param(
@@ -95,6 +101,126 @@ function Get-MingwGccCandidates {
     return $Candidates
 }
 
+function Convert-ToObjectStem {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $SourcePath
+    )
+
+    $Relative = Get-PathRelativeToRoot -Path $SourcePath
+    return ($Relative -replace '[:\\/]+', '_' -replace '\.c$', '')
+}
+
+function Get-PathRelativeToRoot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path
+    )
+
+    $ResolvedRoot = (Resolve-Path -LiteralPath $Root).Path.TrimEnd('\') + '\'
+    $ResolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $RootUri = [Uri]$ResolvedRoot
+    $PathUri = [Uri]$ResolvedPath
+    return [Uri]::UnescapeDataString($RootUri.MakeRelativeUri($PathUri).ToString()).Replace('/', '\')
+}
+
+function Read-DependencyPaths {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $DepPath
+    )
+
+    if (-not (Test-Path -LiteralPath $DepPath)) {
+        return @()
+    }
+
+    $Text = Get-Content -LiteralPath $DepPath -Raw
+    $Text = $Text -replace "\\\r?\n", " "
+    $ColonMatch = [regex]::Match($Text, ":\s")
+    if (-not $ColonMatch.Success) {
+        return @()
+    }
+
+    $DependencyText = $Text.Substring($ColonMatch.Index + $ColonMatch.Length)
+    return $DependencyText -split "\s+" |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { $_ -replace "\\ ", " " } |
+        Where-Object { Test-Path -LiteralPath $_ }
+}
+
+function Test-ObjectOutOfDate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $SourcePath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ObjectPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $DepPath
+    )
+
+    if (-not (Test-Path -LiteralPath $ObjectPath)) {
+        return $true
+    }
+
+    if (-not (Test-Path -LiteralPath $DepPath)) {
+        return $true
+    }
+
+    $ObjectTime = (Get-Item -LiteralPath $ObjectPath).LastWriteTimeUtc
+    if ((Get-Item -LiteralPath $SourcePath).LastWriteTimeUtc -gt $ObjectTime) {
+        return $true
+    }
+
+    foreach ($Dependency in Read-DependencyPaths -DepPath $DepPath) {
+        if ((Get-Item -LiteralPath $Dependency).LastWriteTimeUtc -gt $ObjectTime) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Test-LinkOutOfDate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $OutputPath,
+
+        [Parameter(Mandatory = $true)]
+        [string[]] $ObjectPaths,
+
+        [Parameter(Mandatory = $true)]
+        [string] $LoaderPath
+    )
+
+    if (-not (Test-Path -LiteralPath $OutputPath)) {
+        return $true
+    }
+
+    $OutputTime = (Get-Item -LiteralPath $OutputPath).LastWriteTimeUtc
+    if ((Get-Item -LiteralPath $LoaderPath).LastWriteTimeUtc -gt $OutputTime) {
+        return $true
+    }
+
+    foreach ($ObjectPath in $ObjectPaths) {
+        if ((Get-Item -LiteralPath $ObjectPath).LastWriteTimeUtc -gt $OutputTime) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Convert-ToGccResponsePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path
+    )
+
+    return (Resolve-Path -LiteralPath $Path).Path.Replace('\', '/')
+}
+
 $Gcc = Resolve-CommandPath -Name "gcc.exe" -Candidates @(
     Get-MingwGccCandidates
 )
@@ -102,6 +228,12 @@ $Gcc = Resolve-CommandPath -Name "gcc.exe" -Candidates @(
 $WebView2Root = Resolve-WebView2Root
 $WebView2Include = Join-Path $WebView2Root "build\native\include"
 $WebView2Loader = Join-Path $WebView2Root "runtimes\win-x64\native\WebView2Loader.dll"
+
+if ($Clean) {
+    Remove-Item -LiteralPath $ObjDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $OutDir "KBOFix.dll") -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $ObjDir | Out-Null
+}
 
 Copy-Item -LiteralPath $WebView2Loader -Destination (Join-Path $OutDir "WebView2Loader.dll") -Force
 
@@ -115,18 +247,61 @@ $NativeSources += Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -F
     Sort-Object FullName |
     ForEach-Object { $_.FullName }
 
-& $Gcc -shared -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
-    -I $WebView2Include `
-    -o (Join-Path $OutDir "KBOFix.dll") `
-    @NativeSources `
-    -lgdi32 `
-    -lmsimg32 `
-    -lole32 `
-    -luuid `
-    -lshell32 `
-    -lwindowscodecs
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to build KBOFix.dll"
+$Objects = @()
+$CompiledCount = 0
+foreach ($Source in $NativeSources) {
+    $Stem = Convert-ToObjectStem -SourcePath $Source
+    $ObjectPath = Join-Path $ObjDir "$Stem.o"
+    $DepPath = Join-Path $ObjDir "$Stem.d"
+    $Objects += $ObjectPath
+
+    if (-not (Test-ObjectOutOfDate -SourcePath $Source -ObjectPath $ObjectPath -DepPath $DepPath)) {
+        continue
+    }
+
+    Write-Host "Compiling $(Get-PathRelativeToRoot -Path $Source)"
+    & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
+        -I $WebView2Include `
+        -MMD -MP -MF $DepPath `
+        -c $Source `
+        -o $ObjectPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to compile $Source"
+    }
+    $CompiledCount += 1
 }
 
-Write-Host "Built $(Join-Path $OutDir 'KBOFix.dll')"
+$DllPath = Join-Path $OutDir "KBOFix.dll"
+if (Test-LinkOutOfDate -OutputPath $DllPath -ObjectPaths $Objects -LoaderPath $WebView2Loader) {
+    Write-Host "Linking KBOFix.dll ($($Objects.Count) objects, $CompiledCount compiled)"
+    $ResponsePath = Join-Path $ObjDir "KBOFix.link.rsp"
+    $ResponseArgs = @(
+        "-shared"
+        "-o"
+        "`"$($DllPath.Replace('\', '/'))`""
+    )
+    $ResponseArgs += $Objects | ForEach-Object { "`"$(Convert-ToGccResponsePath -Path $_)`"" }
+    $ResponseArgs += @(
+        "-lgdi32"
+        "-lmsimg32"
+        "-lole32"
+        "-luuid"
+        "-lshell32"
+        "-lwindowscodecs"
+    )
+    Set-Content -LiteralPath $ResponsePath -Value ($ResponseArgs -join " ") -Encoding ASCII
+    & $Gcc -shared `
+        "@$ResponsePath"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to link KBOFix.dll"
+    }
+}
+else {
+    Write-Host "KBOFix.dll is up to date ($($Objects.Count) objects, $CompiledCount compiled)"
+}
+
+if ($CompiledCount -eq 0) {
+    Write-Host "No native sources changed."
+}
+
+Write-Host "Built $DllPath"

@@ -1,5 +1,42 @@
 /* Core league news SQL persistence. */
 
+typedef int (__cdecl *KboSqlite3ExecFn)(void* database, const char* sql, void* callback, void* callback_arg, char** errmsg);
+
+static KboSqlite3ExecFn kbo_get_sqlite3_exec_fn(void)
+{
+    static KboSqlite3ExecFn cached_exec = NULL;
+    static LONG attempted = 0;
+    if (InterlockedCompareExchange(&attempted, 1, 1) != 0) {
+        return cached_exec;
+    }
+
+    HMODULE module = GetModuleHandleA("sqlite3.dll");
+    if (module == NULL) {
+        module = GetModuleHandleA("SQLite3.dll");
+    }
+    if (module == NULL) {
+        module = GetModuleHandleA(NULL);
+    }
+
+    if (module != NULL) {
+        FARPROC proc = GetProcAddress(module, "sqlite3_exec");
+        if (proc != NULL) {
+            cached_exec = (KboSqlite3ExecFn)proc;
+        }
+    }
+    InterlockedExchange(&attempted, 1);
+    return cached_exec;
+}
+
+static int kbo_sqlite_exec_direct(void* database, const char* sql)
+{
+    KboSqlite3ExecFn sqlite_exec = kbo_get_sqlite3_exec_fn();
+    if (sqlite_exec == NULL || database == NULL || sql == NULL) {
+        return 0;
+    }
+    return sqlite_exec(database, sql, NULL, NULL, NULL) == 0 ? 1 : 0;
+}
+
 static int kbo_copy_log_string_safe(const char* source, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
@@ -48,12 +85,6 @@ static int insert_kbo_league_news_sql(
     kbo_copy_log_string_safe(title, log_title, sizeof(log_title));
     kbo_copy_log_string_safe(source != NULL ? source : "", log_source, sizeof(log_source));
 
-    HMODULE exe = GetModuleHandleA(NULL);
-    if (exe == NULL) {
-        append_logf("league news sql skipped source=%s title=%s reason=no_exe_module", log_source, log_title);
-        return 0;
-    }
-
     uintptr_t global = get_ootp_global_database();
     if (global == 0 || !memory_range_readable((void*)global, OOTP27_GLOBAL_SQL_ENABLED_OFFSET + sizeof(uint8_t))) {
         append_logf("league news sql skipped source=%s title=%s reason=no_global_database", log_source, log_title);
@@ -76,9 +107,9 @@ static int insert_kbo_league_news_sql(
         return 0;
     }
 
-    OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
-    if (!memory_range_readable((void*)sql_exec, 16)) {
-        append_logf("league news sql skipped source=%s title=%s reason=sql_exec_unreadable fn=%p", log_source, log_title, (void*)sql_exec);
+    KboSqlite3ExecFn sqlite_exec = kbo_get_sqlite3_exec_fn();
+    if (sqlite_exec == NULL) {
+        append_logf("league news sql skipped source=%s title=%s reason=sqlite3_exec_unavailable", log_source, log_title);
         return 0;
     }
 
@@ -126,8 +157,8 @@ static int insert_kbo_league_news_sql(
         news_date,
         escaped_body);
 
-    int delete_result = sql_exec((void*)database, delete_sql);
-    int insert_result = sql_exec((void*)database, insert_sql);
+    int delete_result = sqlite_exec((void*)database, delete_sql, NULL, NULL, NULL) == 0 ? 1 : 0;
+    int insert_result = sqlite_exec((void*)database, insert_sql, NULL, NULL, NULL) == 0 ? 1 : 0;
     int body_file = 0;
     if (insert_result != 0) {
         body_file = write_kbo_message_body_file(message_id, title, body, source);
@@ -167,11 +198,9 @@ static int insert_kbo_league_news_table_sql(
     kbo_copy_log_string_safe(title, log_title, sizeof(log_title));
     kbo_copy_log_string_safe(source != NULL ? source : "", log_source, sizeof(log_source));
 
-    HMODULE exe = GetModuleHandleA(NULL);
     uintptr_t global = get_ootp_global_database();
-    if (exe == NULL || global == 0
-            || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
-        append_logf("league_news table sql skipped source=%s title=%s reason=no_exe_or_global", log_source, log_title);
+    if (global == 0 || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
+        append_logf("league_news table sql skipped source=%s title=%s reason=no_global", log_source, log_title);
         return 0;
     }
 
@@ -181,9 +210,9 @@ static int insert_kbo_league_news_table_sql(
         return 0;
     }
 
-    OotpSqlExecFn sql_exec = (OotpSqlExecFn)((uintptr_t)exe + OOTP27_SQL_EXEC_DIRECT_RVA);
-    if (!memory_range_readable((void*)sql_exec, 16)) {
-        append_logf("league_news table sql skipped source=%s title=%s reason=exec_unreadable fn=%p", log_source, log_title, (void*)sql_exec);
+    KboSqlite3ExecFn sqlite_exec = kbo_get_sqlite3_exec_fn();
+    if (sqlite_exec == NULL) {
+        append_logf("league_news table sql skipped source=%s title=%s reason=sqlite3_exec_unavailable", log_source, log_title);
         return 0;
     }
 
@@ -230,9 +259,9 @@ static int insert_kbo_league_news_table_sql(
         escaped_text,
         year);
 
-    int create_result = sql_exec((void*)database, create_sql);
-    int delete_result = sql_exec((void*)database, delete_sql);
-    int insert_result = sql_exec((void*)database, insert_sql);
+    int create_result = sqlite_exec((void*)database, create_sql, NULL, NULL, NULL) == 0 ? 1 : 0;
+    int delete_result = sqlite_exec((void*)database, delete_sql, NULL, NULL, NULL) == 0 ? 1 : 0;
+    int insert_result = sqlite_exec((void*)database, insert_sql, NULL, NULL, NULL) == 0 ? 1 : 0;
     append_logf(
         "league_news table sql insert source=%s title=%s date=%s league_id=%u create=%d delete=%d insert=%d db=%p exec=%p",
         source != NULL ? source : "",
@@ -243,6 +272,6 @@ static int insert_kbo_league_news_table_sql(
         delete_result,
         insert_result,
         (void*)database,
-        (void*)sql_exec);
+        (void*)sqlite_exec);
     return insert_result != 0;
 }

@@ -1,4 +1,14 @@
-static int kbo_get_fa_compensation_path(char* out, size_t out_size)
+#include "fa_compensation_paths_parse.h"
+#include <stdio.h>
+#include <string.h>
+#include "../bootstrap/ootp_offsets.h"
+#include "../core/core_log.h"
+#include "../core/core_save_paths.h"
+#include "../core/core_text_date.h"
+#include "../core/core_flags/flags_api.h"
+#include "../runtime_memory/runtime_memory.h"
+
+int kbo_get_fa_compensation_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return 0;
@@ -7,7 +17,7 @@ static int kbo_get_fa_compensation_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("fa_compensation.csv", out, out_size);
 }
 
-static int kbo_get_fa_compensation_protected_lists_path(char* out, size_t out_size)
+int kbo_get_fa_compensation_protected_lists_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return 0;
@@ -16,7 +26,7 @@ static int kbo_get_fa_compensation_protected_lists_path(char* out, size_t out_si
     return kbo_get_save_scoped_data_file("fa_compensation_protected_lists.csv", out, out_size);
 }
 
-static int kbo_get_fa_compensation_decisions_path(char* out, size_t out_size)
+int kbo_get_fa_compensation_decisions_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return 0;
@@ -25,7 +35,7 @@ static int kbo_get_fa_compensation_decisions_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("fa_compensation_decisions.csv", out, out_size);
 }
 
-static int kbo_get_fa_compensation_protection_debug_path(char* out, size_t out_size)
+int kbo_get_fa_compensation_protection_debug_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return 0;
@@ -34,7 +44,7 @@ static int kbo_get_fa_compensation_protection_debug_path(char* out, size_t out_s
     return kbo_get_save_scoped_data_file("fa_compensation_protection_debug.csv", out, out_size);
 }
 
-static uint32_t kbo_fa_compensation_parse_u32(const char* text)
+uint32_t kbo_fa_compensation_parse_u32(const char* text)
 {
     if (text == NULL || text[0] == '\0') {
         return 0u;
@@ -44,7 +54,7 @@ static uint32_t kbo_fa_compensation_parse_u32(const char* text)
     return end != text ? (uint32_t)value : 0u;
 }
 
-static int32_t kbo_fa_compensation_parse_i32(const char* text)
+int32_t kbo_fa_compensation_parse_i32(const char* text)
 {
     if (text == NULL || text[0] == '\0') {
         return 0;
@@ -54,7 +64,7 @@ static int32_t kbo_fa_compensation_parse_i32(const char* text)
     return end != text ? (int32_t)value : 0;
 }
 
-static void kbo_fa_compensation_copy_token(const char* value, char* out, size_t out_size)
+void kbo_fa_compensation_copy_token(const char* value, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return;

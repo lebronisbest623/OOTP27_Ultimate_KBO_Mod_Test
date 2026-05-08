@@ -1,4 +1,15 @@
-static int patch_kbo_no_minor_contract_string_at(uint8_t* target, const char* from, const char* to, size_t len)
+#include "no_minor_string_patch.h"
+#include <stdio.h>
+#include <string.h>
+#include "../../bootstrap/ootp_offsets.h"
+#include "../../core/core_log.h"
+#include "../../core/core_current_date.h"
+#include "../../core/core_save_paths.h"
+#include "../../core/core_text_date.h"
+#include "../../core/core_flags/flags_api.h"
+#include "../../runtime_memory/runtime_memory.h"
+
+int patch_kbo_no_minor_contract_string_at(uint8_t* target, const char* from, const char* to, size_t len)
 {
     if (target == NULL || from == NULL || to == NULL || len == 0 || !memory_range_readable(target, len)) {
         return 0;
@@ -22,7 +33,7 @@ static int patch_kbo_no_minor_contract_string_at(uint8_t* target, const char* fr
     return 1;
 }
 
-static int install_kbo_no_minor_contract_string_patch(HMODULE exe)
+int install_kbo_no_minor_contract_string_patch(HMODULE exe)
 {
     if (exe == NULL) {
         return 0;

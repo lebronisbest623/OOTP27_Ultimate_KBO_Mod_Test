@@ -1,6 +1,17 @@
+#include "foreign_waiver_announcements.h"
+#include <stdio.h>
+#include <string.h>
+#include "../bootstrap/ootp_offsets.h"
+#include "../core/core_log.h"
+#include "../core/core_current_date.h"
+#include "../core/core_save_paths.h"
+#include "../core/core_text_date.h"
+#include "../core/core_flags/flags_api.h"
+#include "../runtime_memory/runtime_memory.h"
+
 /* Foreign waiver announcement idempotency records. Included from native/src/foreign_waiver_ai.inc. */
 
-static int kbo_foreign_waiver_announcement_recorded(uint32_t event_yyyymmdd)
+int kbo_foreign_waiver_announcement_recorded(uint32_t event_yyyymmdd)
 {
     if (event_yyyymmdd == 0u) {
         return 0;
@@ -43,7 +54,7 @@ static int kbo_foreign_waiver_announcement_recorded(uint32_t event_yyyymmdd)
     return found;
 }
 
-static void kbo_record_foreign_waiver_announcement(uint32_t event_yyyymmdd)
+void kbo_record_foreign_waiver_announcement(uint32_t event_yyyymmdd)
 {
     if (event_yyyymmdd == 0u) {
         return;
@@ -76,7 +87,7 @@ static void kbo_record_foreign_waiver_announcement(uint32_t event_yyyymmdd)
     CloseHandle(file);
 }
 
-static void kbo_record_foreign_waiver_announcement_body(uint32_t event_yyyymmdd, const char* source, const char* body)
+void kbo_record_foreign_waiver_announcement_body(uint32_t event_yyyymmdd, const char* source, const char* body)
 {
     if (event_yyyymmdd == 0u) {
         return;

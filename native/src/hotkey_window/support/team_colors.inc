@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 static int kbo_hub_argb_team_color_to_hex(uint32_t argb, char* out, size_t out_size)
 {
     if (out == NULL || out_size < 8) {

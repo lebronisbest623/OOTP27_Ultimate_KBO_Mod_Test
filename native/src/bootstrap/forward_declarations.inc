@@ -85,7 +85,7 @@ static void kbo_record_recent_custom_foreign_policy_block(uint32_t player_id, ui
 static int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_date);
 static const char* kbo_foreign_injury_slot_label(uint8_t slot_type);
 int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset);
-static int kbo_get_current_save_path(char* out, size_t out_size);
+int kbo_get_current_save_path(char* out, size_t out_size);
 void kbo_copy_player_display_name(uint8_t* player, char* out, size_t out_size);
 uint8_t* find_kbo_team_by_csv_id_any_league(const char* team_id, int allow_deleted);
 uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted);

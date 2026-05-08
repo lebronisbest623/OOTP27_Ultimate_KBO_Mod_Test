@@ -1,4 +1,15 @@
-static const char* kbo_webview_position_label_from_values(uint8_t position, uint8_t role)
+#include "position_helpers.h"
+#include <stdio.h>
+#include <string.h>
+#include "../../bootstrap/ootp_offsets.h"
+#include "../../core/core_log.h"
+#include "../../core/core_current_date.h"
+#include "../../core/core_save_paths.h"
+#include "../../core/core_text_date.h"
+#include "../../core/core_flags/flags_api.h"
+#include "../../runtime_memory/runtime_memory.h"
+
+const char* kbo_webview_position_label_from_values(uint8_t position, uint8_t role)
 {
     if (position == 1u) {
         if (role == 11u) {
@@ -43,7 +54,7 @@ static const char* kbo_webview_position_label_from_values(uint8_t position, uint
     }
 }
 
-static const char* kbo_webview_player_position_label(uint8_t* player, uint8_t fallback_position)
+const char* kbo_webview_player_position_label(uint8_t* player, uint8_t fallback_position)
 {
     if (player == NULL || !memory_range_readable(player + OOTP27_PLAYER_POSITION_ROLE_OFFSET, sizeof(uint8_t))) {
         return kbo_webview_position_label_from_values(fallback_position, 0u);

@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 static void kbo_hub_delete_bitmap(HBITMAP* bitmap)
 {
     if (bitmap != NULL && *bitmap != NULL) {

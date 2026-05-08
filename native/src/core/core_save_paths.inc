@@ -1,5 +1,7 @@
 /* Core save-path and save-scoped data directory helpers. */
 
+#include "core_save_paths.h"
+
 static int kbo_path_looks_like_absolute_save_path(const char* path)
 {
     if (path == NULL || path[0] == '\0') {
@@ -191,7 +193,7 @@ static int kbo_get_current_save_path_from_own_file_handles(char* out, size_t out
     return found;
 }
 
-static int kbo_get_current_save_path(char* out, size_t out_size)
+int kbo_get_current_save_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
         return 0;
@@ -352,7 +354,7 @@ static int kbo_get_save_scoped_data_dir(char* out, size_t out_size)
     return out[0] != '\0';
 }
 
-static int kbo_get_save_scoped_data_file(const char* file_name, char* out, size_t out_size)
+int kbo_get_save_scoped_data_file(const char* file_name, char* out, size_t out_size)
 {
     if (file_name == NULL || file_name[0] == '\0' || out == NULL || out_size == 0) {
         return 0;

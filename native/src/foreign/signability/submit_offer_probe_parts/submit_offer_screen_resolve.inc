@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 static uint32_t kbo_resolve_submit_offer_screen_player_id(uintptr_t screen_ptr, uint32_t today, uint32_t* out_offset)
 {
     if (out_offset != NULL) {

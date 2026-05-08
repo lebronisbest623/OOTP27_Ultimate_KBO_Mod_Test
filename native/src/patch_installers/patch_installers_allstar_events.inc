@@ -152,6 +152,9 @@ static int install_allstar_events_prepare_patch(void)
             append_log_line("KBO all-star events prepare hook skipped: prep call target unresolved");
             return 0;
         }
+        InterlockedExchangePointer(
+            (PVOID volatile*)&g_allstar_make_events_ptr,
+            allstar_prep_address);
 
         uint8_t* stub = build_allstar_events_prepare_stub(return_address, allstar_prep_address, layout.game_flag_offset);
         if (stub == NULL) {

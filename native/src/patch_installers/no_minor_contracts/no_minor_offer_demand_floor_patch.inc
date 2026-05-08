@@ -10,7 +10,10 @@ static int install_kbo_no_minor_contract_offer_player_demand_floor_patch(
         return 0;
     }
 
-    uint8_t* target = (uint8_t*)((uintptr_t)exe + rva);
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(exe, rva, expected, stolen_len, label);
+    if (target == NULL) {
+        return 0;
+    }
     if (!memory_range_readable(target, stolen_len)) {
         append_logf("%s target unreadable target=%p", label, target);
         return 0;

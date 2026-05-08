@@ -24,7 +24,7 @@ typedef struct KboMilitaryServiceSeed {
 #include "../src/foreign/foreign_csv_parse.h"
 #include "../src/foreign/replacement_seed/foreign_replacement_seed_parse.h"
 
-static int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
+int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
 {
     if (out_year != NULL) {
         *out_year = 0u;
@@ -38,7 +38,7 @@ static int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, ui
     return 0;
 }
 
-#include "../src/military_service/military_service_date.inc"
+#include "../src/military_service/military_service_date.h"
 #include "../src/military_service/military_service_parse.inc"
 #include "../src/military_service/seed/military_seed_line_parse.inc"
 #include "../src/allstar/allstar_csv_parse.h"

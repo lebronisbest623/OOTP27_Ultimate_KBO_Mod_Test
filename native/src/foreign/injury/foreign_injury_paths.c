@@ -1,6 +1,16 @@
+#include "foreign_injury_paths.h"
+#include <stdio.h>
+#include <string.h>
+#include "../../bootstrap/ootp_offsets.h"
+#include "../../core/core_log.h"
+#include "../../core/core_save_paths.h"
+#include "../../core/core_text_date.h"
+#include "../../core/core_flags/flags_api.h"
+#include "../../runtime_memory/runtime_memory.h"
+
 /* Foreign injury replacement file paths. Included from native/KBOFix.c. */
 
-static int kbo_get_foreign_injury_replacement_path(char* out, size_t out_size)
+int kbo_get_foreign_injury_replacement_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size < 2) {
         return 0;
@@ -8,7 +18,7 @@ static int kbo_get_foreign_injury_replacement_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("foreign_injury_replacements.csv", out, out_size);
 }
 
-static int kbo_get_save_foreign_injury_replacement_seed_path(char* out, size_t out_size)
+int kbo_get_save_foreign_injury_replacement_seed_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size < 2) {
         return 0;
@@ -16,7 +26,7 @@ static int kbo_get_save_foreign_injury_replacement_seed_path(char* out, size_t o
     return kbo_get_save_scoped_data_file("foreign_injury_replacements_seed.csv", out, out_size);
 }
 
-static int kbo_get_global_foreign_injury_replacement_seed_path(char* out, size_t out_size)
+int kbo_get_global_foreign_injury_replacement_seed_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size < 2) {
         return 0;
