@@ -113,6 +113,9 @@ foreach ($File in Get-ChildItem -LiteralPath (Join-Path $NativeRoot "src") -Recu
     if ($Text -match '\b(find_kbo_global_player_vector|kbo_resolve_kbo_league_id|kbo_player_pointer_plausible)\s*\(') {
         continue
     }
+    if ($Text -match '\b(kbo_json_skip_ws|kbo_json_find_string_end|kbo_json_string_equals_key|kbo_json_bool_value_at|kbo_json_int_value_at)\s*\(') {
+        continue
+    }
 
     $DependsOnSiblingStatic = $false
     foreach ($Match in [regex]::Matches($Text, '\b([A-Za-z_][A-Za-z0-9_]*)\s*\(')) {
