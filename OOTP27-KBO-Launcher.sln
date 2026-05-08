@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KBOLauncher", "KBOLauncher.csproj", "{AD6696B2-72F7-F6E5-20E2-C0C95B7F59F0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KBOLauncher", "src\KBOLauncher\KBOLauncher.csproj", "{AD6696B2-72F7-F6E5-20E2-C0C95B7F59F0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KBOLauncher.Tests", "KBOLauncher.Tests\KBOLauncher.Tests.csproj", "{15DA3E75-28E2-4188-A5BF-99FDC7B165DD}"
 EndProject

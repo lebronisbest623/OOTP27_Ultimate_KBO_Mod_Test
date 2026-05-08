@@ -112,6 +112,12 @@ Write-Host "WebView2: $WebView2Root"
     -I $WebView2Include `
     -o (Join-Path $OutDir "KBOFix.dll") `
     (Join-Path $Root "KBOFix.c") `
+    (Join-Path $Root "src\core\core_log.c") `
+    (Join-Path $Root "src\core\core_text_date.c") `
+    (Join-Path $Root "src\core\core_flags\json_bool_parser.c") `
+    (Join-Path $Root "src\core\core_flags\flag_key.c") `
+    (Join-Path $Root "src\core\core_flags\localappdata_reader.c") `
+    (Join-Path $Root "src\core\core_flags\flags_api.c") `
     -lgdi32 `
     -lmsimg32 `
     -lole32 `

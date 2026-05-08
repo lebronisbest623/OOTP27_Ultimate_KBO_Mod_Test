@@ -2,7 +2,7 @@
 
 This project has two runtime layers:
 
-- `Program.cs`: the managed launcher. It locates OOTP, prepares local data files and flags, starts or attaches to the game process, and injects the native patch DLL.
+- `src/KBOLauncher/Program.cs`: the managed launcher. It locates OOTP, prepares local data files and flags, starts or attaches to the game process, and injects the native patch DLL.
 - `native/KBOFix.c`: the native runtime patch. It is built as one translation unit and includes feature fragments from `native/src/*.inc`.
 
 The native layer is where most KBO rule emulation lives. Because it patches a closed game process, the architecture favors small, explicit feature modules over generic abstractions.
@@ -44,7 +44,7 @@ If the build is unknown or unreadable:
 - the launcher writes `launcher_build_guard_status.txt` under `%LOCALAPPDATA%\OOTP-KBO\`
 - the native `verify_ootp_build()` check remains as a second line of defense if a DLL is loaded by another path
 
-When OOTP patches, do not change offsets or installers speculatively. First record the detected timestamp/size pair, verify the patch behavior on that exact build, then update both the launcher supported-build list in `Program.cs` and the native supported-build list in `native/src/build_verify/build_verify.inc`.
+When OOTP patches, do not change offsets or installers speculatively. First record the detected timestamp/size pair, verify the patch behavior on that exact build, then update both the launcher supported-build list in `src/KBOLauncher/Program.cs` and the native supported-build list in `native/src/build_verify/build_verify.inc`.
 
 ## Roster Marker Guard
 
@@ -802,7 +802,7 @@ data/seeds/
   military_service_seed.csv
 ```
 
-At runtime, `Program.cs` copies bundled seed files into `%LOCALAPPDATA%\OOTP-KBO\`. Native modules then read save-scoped seed files first and global `%LOCALAPPDATA%\OOTP-KBO\` seed files as fallback. New seed files should follow the same rule: source bundle under `data/seeds/`, runtime copy under local app data, resolved/cache/output files under save-scoped or module-owned paths.
+At runtime, `src/KBOLauncher/Program.cs` copies bundled seed files into `%LOCALAPPDATA%\OOTP-KBO\`. Native modules then read save-scoped seed files first and global `%LOCALAPPDATA%\OOTP-KBO\` seed files as fallback. New seed files should follow the same rule: source bundle under `data/seeds/`, runtime copy under local app data, resolved/cache/output files under save-scoped or module-owned paths.
 
 ## Open Questions
 

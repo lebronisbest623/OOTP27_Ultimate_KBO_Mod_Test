@@ -36,7 +36,7 @@ jobs:
           install: mingw-w64-ucrt-x86_64-gcc
 
       - name: Restore
-        run: dotnet restore .\KBOLauncher.csproj
+        run: dotnet restore .\src\KBOLauncher\KBOLauncher.csproj
 
       - name: Restore WebView2 native package
         shell: pwsh
@@ -46,14 +46,14 @@ jobs:
           dotnet restore .\.ci\webview2-restore
 
       - name: Build launcher
-        run: dotnet build .\KBOLauncher.csproj --configuration Release --no-restore
+        run: dotnet build .\src\KBOLauncher\KBOLauncher.csproj --configuration Release --no-restore
 
       - name: Build native DLL
         shell: pwsh
         run: .\native\build.ps1
 
       - name: Publish launcher
-        run: dotnet publish .\KBOLauncher.csproj --configuration Release --no-build --output .\artifacts\KBOLauncher
+        run: dotnet publish .\src\KBOLauncher\KBOLauncher.csproj --configuration Release --no-build --output .\artifacts\KBOLauncher
 
       - name: Collect native artifacts
         shell: pwsh

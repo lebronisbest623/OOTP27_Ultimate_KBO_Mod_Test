@@ -314,7 +314,7 @@ static void kbo_profiler_record_us(const char* name, unsigned long long elapsed_
     kbo_profiler_flush_if_due();
 }
 
-static int kbo_profiler_begin(LARGE_INTEGER* out_start)
+int kbo_profiler_begin(LARGE_INTEGER* out_start)
 {
     if (out_start == NULL || !kbo_profiler_is_enabled()) {
         return 0;
@@ -322,7 +322,7 @@ static int kbo_profiler_begin(LARGE_INTEGER* out_start)
     return QueryPerformanceCounter(out_start) ? 1 : 0;
 }
 
-static void kbo_profiler_end(const char* name, const LARGE_INTEGER* start)
+void kbo_profiler_end(const char* name, const LARGE_INTEGER* start)
 {
     if (start == NULL || !kbo_profiler_is_enabled()) {
         return;

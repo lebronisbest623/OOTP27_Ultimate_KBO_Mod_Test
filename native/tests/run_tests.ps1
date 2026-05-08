@@ -49,7 +49,13 @@ Write-Host "GCC: $Gcc"
 
 & $Gcc -O0 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
     -I $Root `
-    -o $TestExe $TestSrc
+    -I (Join-Path $Root "src") `
+    -o $TestExe `
+    $TestSrc `
+    (Join-Path $Root "src\core\core_text_date.c") `
+    (Join-Path $Root "src\core\core_flags\flag_key.c") `
+    (Join-Path $Root "src\core\core_flags\json_bool_parser.c") `
+    (Join-Path $Root "src\core\core_flags\localappdata_reader.c")
 if ($LASTEXITCODE -ne 0) {
     throw "Build failed"
 }

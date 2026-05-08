@@ -197,12 +197,30 @@ public sealed class KboFlagsTests : IDisposable
     {
         Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));
         Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
 
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, "{ nope");
 
         Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));
         Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+    }
+
+    [Fact]
+    public void ReadKboFlagDefaultEnabled_OnlyDisablesWhenConfigExplicitlySaysFalse()
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(ConfigPath, """
+        {
+          "enable_launcher_injection": false,
+          "enable_foreign_waiver_ai": true
+        }
+        """);
+
+        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_foreign_waiver_ai.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "missing_flag.txt"));
     }
 
     [Theory]
@@ -220,6 +238,22 @@ public sealed class KboFlagsTests : IDisposable
         """);
 
         Assert.Equal(expected, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20));
+    }
+
+    [Theory]
+    [InlineData("\"nope\"")]
+    [InlineData("true")]
+    [InlineData("{}")]
+    public void ReadKboIntSetting_IgnoresUnsupportedValues(string jsonValue)
+    {
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(ConfigPath, $$"""
+        {
+          "intl_established_fa_multiplier": {{jsonValue}}
+        }
+        """);
+
+        Assert.Equal(7, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 7, 1, 20));
     }
 
     [Theory]

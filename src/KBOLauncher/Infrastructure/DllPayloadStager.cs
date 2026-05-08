@@ -5,13 +5,17 @@ internal static class DllPayloadStager
 {
     public static string PrepareInjectableDllCopy(string dllPath, string logPath)
     {
+        return PrepareInjectableDllCopy(dllPath, GetKboLocalDataPath("run_dlls"), logPath);
+    }
+
+    internal static string PrepareInjectableDllCopy(string dllPath, string runDllDir, string logPath)
+    {
         var fullDllPath = Path.GetFullPath(dllPath);
         if (!File.Exists(fullDllPath))
         {
             throw new FileNotFoundException("Native DLL was not found.", fullDllPath);
         }
     
-        var runDllDir = GetKboLocalDataPath("run_dlls");
         Directory.CreateDirectory(runDllDir);
     
         var extension = Path.GetExtension(fullDllPath);

@@ -12,6 +12,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\KBOLauncher.csproj" />
+    <ProjectReference Include="..\src\KBOLauncher\KBOLauncher.csproj" />
   </ItemGroup>
 </Project>

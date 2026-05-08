@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Dist = Join-Path $RepoRoot "dist"
 
 if (Test-Path -LiteralPath $Dist) {
@@ -13,7 +13,7 @@ Write-Host "==> Building native DLL..."
 if ($LASTEXITCODE -ne 0) { throw "Native build failed" }
 
 Write-Host "==> Publishing launcher..."
-& dotnet publish (Join-Path $RepoRoot "KBOLauncher.csproj") `
+& dotnet publish (Join-Path $RepoRoot "src\KBOLauncher\KBOLauncher.csproj") `
     -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $Dist
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
 

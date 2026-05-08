@@ -4,6 +4,56 @@ using static LauncherPaths;
 
 internal static class KboFlags
 {
+    private enum RuntimeFlagLifecycle
+    {
+        User,
+        Recovery,
+        Diagnostic,
+        Legacy,
+    }
+
+    private sealed record RuntimeFlagDefinition(
+        string Key,
+        bool? DefaultValue,
+        bool ImportLegacy,
+        RuntimeFlagLifecycle Lifecycle);
+
+    private static readonly RuntimeFlagDefinition[] RuntimeFlags =
+    [
+        new("disable_foreign_injury_replacement", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_foreign_waiver_legacy_auto_detector", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_ai_fa_status_candidate_insert_hook", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_custom_foreign_policy", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_foreign_signing_branch_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_foreign_trade_check_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_sangmu_fa_block_core", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_submit_offer_probe_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_experimental_runtime_hooks", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_fa_requalification", null, true, RuntimeFlagLifecycle.Legacy),
+        new("enable_foreign_waiver_ai", true, true, RuntimeFlagLifecycle.User),
+        new("enable_foreign_waiver_background_scanner", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_foreign_waiver_event_probe", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_ai_fa_fallback_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_asian_quota_probe_logs", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_callup_foreign_limit_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_custom_foreign_offer_logs", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_diagnostic_minimal_runtime", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_fa_signability_hooks", null, true, RuntimeFlagLifecycle.Legacy),
+        new("enable_kbo_fix", null, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_foreign_trade_check_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_offer_eligibility_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_player_team_signability_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_sangmu_offer_only", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_sangmu_signability_only", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_season_phase_monitor", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_submit_offer_probe_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_launcher_injection", null, true, RuntimeFlagLifecycle.User),
+        new("enable_single_division_allstar_events", true, true, RuntimeFlagLifecycle.User),
+        new("enable_single_division_allstar_runtime_patches", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_single_division_allstar_settings_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_single_division_allstar_voting_hook", true, true, RuntimeFlagLifecycle.Recovery),
+    ];
+
     private static readonly string[] SingleDivisionAllstarFlagFiles =
     [
         "enable_single_division_allstar_runtime_patches.txt",
@@ -12,41 +62,10 @@ internal static class KboFlags
         "enable_single_division_allstar_events.txt",
     ];
 
-    private static readonly HashSet<string> LegacyImportFlagKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "disable_foreign_injury_replacement",
-        "disable_foreign_waiver_legacy_auto_detector",
-        "disable_kbo_ai_fa_status_candidate_insert_hook",
-        "disable_kbo_custom_foreign_policy",
-        "disable_kbo_foreign_signing_branch_patch",
-        "disable_kbo_foreign_trade_check_patch",
-        "disable_kbo_sangmu_fa_block_core",
-        "disable_kbo_submit_offer_probe_patch",
-        "enable_experimental_runtime_hooks",
-        "enable_fa_requalification",
-        "enable_foreign_waiver_ai",
-        "enable_foreign_waiver_background_scanner",
-        "enable_foreign_waiver_event_probe",
-        "enable_kbo_ai_fa_fallback_patch",
-        "enable_kbo_asian_quota_probe_logs",
-        "enable_kbo_callup_foreign_limit_patch",
-        "enable_kbo_custom_foreign_offer_logs",
-        "enable_kbo_diagnostic_minimal_runtime",
-        "enable_kbo_fa_signability_hooks",
-        "enable_kbo_foreign_trade_check_patch",
-        "enable_kbo_fix",
-        "enable_kbo_offer_eligibility_patch",
-        "enable_kbo_player_team_signability_patch",
-        "enable_kbo_sangmu_offer_only",
-        "enable_kbo_sangmu_signability_only",
-        "enable_kbo_season_phase_monitor",
-        "enable_kbo_submit_offer_probe_patch",
-        "enable_launcher_injection",
-        "enable_single_division_allstar_events",
-        "enable_single_division_allstar_runtime_patches",
-        "enable_single_division_allstar_settings_patch",
-        "enable_single_division_allstar_voting_hook",
-    };
+    private static readonly HashSet<string> LegacyImportFlagKeys = RuntimeFlags
+        .Where(flag => flag.ImportLegacy)
+        .Select(flag => flag.Key)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public static void WriteKboFlag(string fileName, string label, bool enabled)
     {
@@ -88,20 +107,14 @@ internal static class KboFlags
         var raw = ReadKboRawConfig(configPath);
         var changed = false;
 
-        changed |= EnsureMissingFlag(raw, "enable_experimental_runtime_hooks", true);
-        changed |= EnsureMissingFlag(raw, "enable_foreign_waiver_ai", true);
-        changed |= EnsureMissingFlag(raw, "enable_foreign_waiver_background_scanner", true);
-        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_runtime_patches", true);
-        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_settings_patch", true);
-        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_voting_hook", true);
-        changed |= EnsureMissingFlag(raw, "enable_single_division_allstar_events", true);
-        changed |= EnsureMissingFlag(raw, "enable_kbo_foreign_trade_check_patch", true);
-        changed |= EnsureMissingFlag(raw, "enable_kbo_ai_fa_fallback_patch", true);
-        changed |= EnsureMissingFlag(raw, "enable_kbo_player_team_signability_patch", true);
-        changed |= EnsureMissingFlag(raw, "enable_kbo_offer_eligibility_patch", true);
-        changed |= EnsureMissingFlag(raw, "enable_kbo_callup_foreign_limit_patch", true);
+        foreach (var flag in RuntimeFlags)
+        {
+            if (flag.DefaultValue is not null)
+            {
+                changed |= EnsureMissingFlag(raw, flag.Key, flag.DefaultValue.Value);
+            }
+        }
         changed |= EnsureMissingFlag(raw, "enable_intl_established_fa_quality_probe_patch", true);
-        changed |= EnsureMissingFlag(raw, "enable_kbo_season_phase_monitor", true);
 
         if (!changed)
         {

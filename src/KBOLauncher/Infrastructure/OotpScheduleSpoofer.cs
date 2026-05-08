@@ -8,6 +8,15 @@ internal static partial class OotpScheduleSpoofer
 
     public static Result EnsureAllKboScheduleSpoofFiles(string ootpExePath, Action<string>? log = null)
     {
+        var backupDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OOTP-KBO",
+            "schedule_backups");
+        return EnsureAllKboScheduleSpoofFiles(ootpExePath, backupDir, log);
+    }
+
+    internal static Result EnsureAllKboScheduleSpoofFiles(string ootpExePath, string backupDir, Action<string>? log = null)
+    {
         var installDir = Path.GetDirectoryName(Path.GetFullPath(ootpExePath));
         if (string.IsNullOrWhiteSpace(installDir))
         {
@@ -22,10 +31,6 @@ internal static partial class OotpScheduleSpoofer
             return new Result(0, 0, 0, 1);
         }
 
-        var backupDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "OOTP-KBO",
-            "schedule_backups");
         Directory.CreateDirectory(backupDir);
 
         var scanned = 0;

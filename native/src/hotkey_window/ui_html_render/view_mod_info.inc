@@ -4,42 +4,53 @@ typedef struct KboModRuntimeFlagSetting {
     int enabled_value;
     int default_enabled;
     const char* companion_enable_key;
+    int category;
 } KboModRuntimeFlagSetting;
 
+enum {
+    KBO_MOD_FLAG_USER = 0,
+    KBO_MOD_FLAG_RECOVERY = 1,
+    KBO_MOD_FLAG_DIAGNOSTIC = 2,
+    KBO_MOD_FLAG_LEGACY = 3
+};
+
 static const KboModRuntimeFlagSetting KBO_MOD_RUNTIME_FLAG_SETTINGS[] = {
-    { "enable_experimental_runtime_hooks", "Experimental runtime hooks", 1, 1, NULL },
-    { "enable_foreign_waiver_ai", "Foreign waiver AI", 1, 1, NULL },
-    { "enable_foreign_waiver_background_scanner", "Foreign waiver background scanner", 1, 1, NULL },
-    { "disable_foreign_waiver_legacy_auto_detector", "Foreign waiver legacy detector", 0, 1, NULL },
-    { "disable_kbo_foreign_trade_check_patch", "Foreign trade quota guard", 0, 1, "enable_kbo_foreign_trade_check_patch" },
-    { "disable_kbo_custom_foreign_policy", "Custom foreign policy", 0, 1, NULL },
-    { "disable_foreign_injury_replacement", "Foreign injury replacement", 0, 1, NULL },
-    { "disable_intl_established_fa_generation_filter", "International FA generation filter", 0, 1, NULL },
-    { "disable_kbo_fa_compensation", "FA compensation", 0, 1, NULL },
-    { "disable_kbo_salary_arbitration_no_withdraw_patch", "Salary arbitration no-withdraw", 0, 1, NULL },
-    { "disable_kbo_no_minor_contract_experimental_patch", "No minor-contract patch", 0, 1, NULL },
-    { "disable_kbo_sangmu_fa_block_core", "Military team FA block", 0, 1, NULL },
-    { "disable_kbo_military_team_add_guard_patch", "Military team add guard", 0, 1, NULL },
-    { "disable_amateur_assignment_reroute", "Amateur reputation assignment", 0, 1, NULL },
-    { "enable_single_division_allstar_runtime_patches", "Single-division All-Star runtime", 1, 1, NULL },
-    { "enable_single_division_allstar_voting_hook", "Single-division All-Star voting", 1, 1, NULL },
-    { "enable_single_division_allstar_events", "Single-division All-Star events", 1, 1, NULL },
-    { "enable_single_division_allstar_settings_patch", "Single-division All-Star settings", 1, 1, NULL },
-    { "disable_kbo_fa_salary_opening_day_snapshot", "FA salary opening-day snapshot", 0, 1, NULL },
-    { "disable_kbo_fa_salary_opening_day_phase_hook", "FA salary phase hook", 0, 1, NULL },
-    { "enable_fa_requalification", "FA requalification", 1, 0, NULL },
-    { "disable_kbo_ai_fa_status_candidate_insert_hook", "AI FA candidate hook", 0, 1, NULL },
-    { "enable_kbo_ai_fa_fallback_patch", "AI FA fallback patch", 1, 1, NULL },
-    { "enable_kbo_fa_signability_hooks", "Legacy FA signability hooks", 1, 0, NULL },
-    { "enable_kbo_player_team_signability_patch", "Player-team signability patch", 1, 1, NULL },
-    { "enable_kbo_offer_eligibility_patch", "Offer eligibility patch", 1, 1, NULL },
-    { "disable_kbo_submit_offer_probe_patch", "Submit-offer probe", 0, 1, "enable_kbo_submit_offer_probe_patch" },
-    { "disable_kbo_foreign_signing_branch_patch", "Foreign signing branch hook", 0, 1, NULL },
-    { "disable_kbo_runtime_roster_marker_guard", "Runtime roster marker guard", 0, 1, NULL },
-    { "enable_kbo_callup_foreign_limit_patch", "Foreign call-up limit patch", 1, 1, NULL },
-    { "enable_intl_established_fa_quality_probe_patch", "International FA quality probe", 1, 1, NULL },
-    { "enable_kbo_season_phase_monitor", "Season phase monitor", 1, 1, NULL },
-    { "enable_amateur_assignment_verbose_log", "Amateur assignment verbose log", 1, 0, NULL }
+    { "enable_foreign_waiver_ai", "Foreign waiver AI", 1, 1, NULL, KBO_MOD_FLAG_USER },
+    { "enable_single_division_allstar_events", "Single-division All-Star events", 1, 1, NULL, KBO_MOD_FLAG_USER },
+
+    { "enable_experimental_runtime_hooks", "Runtime patch engine", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_foreign_waiver_background_scanner", "Foreign waiver background scanner", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_foreign_waiver_legacy_auto_detector", "Foreign waiver legacy detector", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_foreign_trade_check_patch", "Foreign trade quota guard", 0, 1, "enable_kbo_foreign_trade_check_patch", KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_custom_foreign_policy", "Custom foreign policy", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_foreign_injury_replacement", "Foreign injury replacement", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_intl_established_fa_generation_filter", "International FA generation filter", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_fa_compensation", "FA compensation", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_salary_arbitration_no_withdraw_patch", "Salary arbitration no-withdraw", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_no_minor_contract_experimental_patch", "No minor-contract patch", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_sangmu_fa_block_core", "Military team FA block", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_military_team_add_guard_patch", "Military team add guard", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_amateur_assignment_reroute", "Amateur reputation assignment", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_single_division_allstar_runtime_patches", "Single-division All-Star runtime", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_single_division_allstar_voting_hook", "Single-division All-Star voting", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_single_division_allstar_settings_patch", "Single-division All-Star settings", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_fa_salary_opening_day_snapshot", "FA salary opening-day snapshot", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_fa_salary_opening_day_phase_hook", "FA salary phase hook", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_ai_fa_status_candidate_insert_hook", "AI FA candidate hook", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_kbo_ai_fa_fallback_patch", "AI FA fallback patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_kbo_player_team_signability_patch", "Player-team signability patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_kbo_offer_eligibility_patch", "Offer eligibility patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_submit_offer_probe_patch", "Submit-offer probe", 0, 1, "enable_kbo_submit_offer_probe_patch", KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_foreign_signing_branch_patch", "Foreign signing branch hook", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_runtime_roster_marker_guard", "Runtime roster marker guard", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_kbo_callup_foreign_limit_patch", "Foreign call-up limit patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_intl_established_fa_quality_probe_patch", "International FA quality probe", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "enable_kbo_season_phase_monitor", "Season phase monitor", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+
+    { "enable_amateur_assignment_verbose_log", "Amateur assignment verbose log", 1, 0, NULL, KBO_MOD_FLAG_DIAGNOSTIC },
+
+    { "enable_fa_requalification", "FA requalification", 1, 0, NULL, KBO_MOD_FLAG_LEGACY },
+    { "enable_kbo_fa_signability_hooks", "Legacy FA signability hooks", 1, 0, NULL, KBO_MOD_FLAG_LEGACY }
 };
 
 static const KboModRuntimeFlagSetting* kbo_find_mod_runtime_flag_setting(const char* key)
@@ -103,6 +114,31 @@ static void kbo_webview_append_mod_runtime_flag_row(KboWindowTextBuffer* buffer,
         enabled ? "" : "selected");
 }
 
+static void kbo_webview_append_mod_runtime_flag_group(
+    KboWindowTextBuffer* buffer,
+    int category,
+    const char* title,
+    const char* help_text)
+{
+    if (buffer == NULL || title == NULL) {
+        return;
+    }
+    kbo_window_text_appendf(buffer, "<div class='flagGroup'><h3>");
+    kbo_html_append_escaped(buffer, title);
+    kbo_window_text_appendf(buffer, "</h3>");
+    if (help_text != NULL && help_text[0] != '\0') {
+        kbo_window_text_appendf(buffer, "<p>");
+        kbo_html_append_escaped(buffer, help_text);
+        kbo_window_text_appendf(buffer, "</p>");
+    }
+    for (size_t i = 0; i < sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS) / sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS[0]); i++) {
+        if (KBO_MOD_RUNTIME_FLAG_SETTINGS[i].category == category) {
+            kbo_webview_append_mod_runtime_flag_row(buffer, &KBO_MOD_RUNTIME_FLAG_SETTINGS[i]);
+        }
+    }
+    kbo_window_text_appendf(buffer, "</div>");
+}
+
 static void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer)
 {
     if (buffer == NULL) {
@@ -157,9 +193,26 @@ static void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer)
             allow_all_team_actions ? "" : "selected",
             kbo_hub_text("\xeb\x82\xb4 \xed\x8c\x80\xeb\xa7\x8c \xed\x97\x88\xec\x9a\xa9", "Controlled team only"));
         kbo_window_text_appendf(buffer, "<div class='settingsDivider'></div>");
-        for (size_t i = 0; i < sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS) / sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS[0]); i++) {
-            kbo_webview_append_mod_runtime_flag_row(buffer, &KBO_MOD_RUNTIME_FLAG_SETTINGS[i]);
-        }
+        kbo_webview_append_mod_runtime_flag_group(
+            buffer,
+            KBO_MOD_FLAG_USER,
+            "User settings",
+            "Regular gameplay options intended for normal use.");
+        kbo_webview_append_mod_runtime_flag_group(
+            buffer,
+            KBO_MOD_FLAG_RECOVERY,
+            "Recovery switches",
+            "Use these when a feature causes errors and you need to keep playing without editing JSON.");
+        kbo_webview_append_mod_runtime_flag_group(
+            buffer,
+            KBO_MOD_FLAG_DIAGNOSTIC,
+            "Developer diagnostics",
+            "Extra logging and probes for troubleshooting.");
+        kbo_webview_append_mod_runtime_flag_group(
+            buffer,
+            KBO_MOD_FLAG_LEGACY,
+            "Legacy compatibility",
+            "Older runtime paths kept available while saves and workflows migrate.");
         kbo_window_text_appendf(buffer, "</section></div>");
         return;
     }

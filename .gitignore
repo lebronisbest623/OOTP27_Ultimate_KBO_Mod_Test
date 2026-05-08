@@ -41,6 +41,7 @@ coverage.cobertura.xml
 
 # Logs and temporary files
 *.log
+*.log.*
 *.tmp
 *.temp
 *.bak

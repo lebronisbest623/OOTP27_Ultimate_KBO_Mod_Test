@@ -158,6 +158,13 @@ internal static class LauncherApp
             && supportedOotpBuild is not null
             && ReadKboFlag("enable_single_division_allstar_runtime_patches.txt")
             && ReadKboFlag("enable_single_division_allstar_events.txt");
+        var injectionDecision = LauncherInjectionPolicy.Decide(
+            isDefaultRun,
+            options.DllPath,
+            supportedOotpBuild is not null,
+            options.AttachPid is not null || options.AttachExisting,
+            allstarBootstrapRequested);
+        Log(logPath, $"injection_policy mode={injectionDecision.Mode} reason={injectionDecision.Reason}");
         if (allstarBootstrapRequested && !options.DryRun)
         {
             var spoofResult = EnsureAllKboScheduleSpoofFiles(exePath, message => Log(logPath, message));
@@ -300,6 +307,22 @@ internal static class LauncherApp
                 TimeSpan.FromSeconds(30),
                 logPath,
                 TryPresaveEarlyInject);
+
+            if (!injectionDecision.AllowsPresaveInjection)
+            {
+                var rosterMarkerInfo = WaitForMarkedCurrentSave(
+                    injectionTarget.Id,
+                    MarkedSaveWaitTimeout,
+                    MarkedSavePollInterval,
+                    logPath);
+                if (!rosterMarkerInfo.Ok)
+                {
+                    PrintMissingRosterMarkerWarning(rosterMarkerInfo);
+                    Log(logPath, $"inject_blocked pid={injectionTarget.Id} reason=missing_roster_marker {KboRosterMarkerGuard.FormatLogStatus(rosterMarkerInfo)}");
+                    return 9;
+                }
+            }
+
             if (IsKboFixAlreadyLoaded(injectionTarget.Id, logPath))
             {
                 Console.WriteLine($"KBOFix is already loaded in pid={injectionTarget.Id}; skipping injection.");
@@ -312,16 +335,19 @@ internal static class LauncherApp
                 Log(logPath, $"early_inject pid={injectionTarget.Id} reason=presave_allstar_bootstrap");
             }
 
-            var rosterMarkerInfo = WaitForMarkedCurrentSave(
-                injectionTarget.Id,
-                MarkedSaveWaitTimeout,
-                MarkedSavePollInterval,
-                logPath);
-            if (!rosterMarkerInfo.Ok)
+            if (injectionDecision.AllowsPresaveInjection)
             {
-                PrintMissingRosterMarkerWarning(rosterMarkerInfo);
-                Log(logPath, $"inject_blocked pid={injectionTarget.Id} reason=missing_roster_marker {KboRosterMarkerGuard.FormatLogStatus(rosterMarkerInfo)}");
-                return 9;
+                var rosterMarkerInfo = WaitForMarkedCurrentSave(
+                    injectionTarget.Id,
+                    MarkedSaveWaitTimeout,
+                    MarkedSavePollInterval,
+                    logPath);
+                if (!rosterMarkerInfo.Ok)
+                {
+                    PrintMissingRosterMarkerWarning(rosterMarkerInfo);
+                    Log(logPath, $"inject_blocked pid={injectionTarget.Id} reason=missing_roster_marker {KboRosterMarkerGuard.FormatLogStatus(rosterMarkerInfo)}");
+                    return 9;
+                }
             }
         }
 

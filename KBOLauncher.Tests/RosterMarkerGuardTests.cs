@@ -56,8 +56,27 @@ public sealed class RosterMarkerGuardTests : IDisposable
 
         Assert.True(info.Ok);
         Assert.Equal("marked", info.Status);
+        Assert.Equal(Path.GetFullPath(savePath), info.SavePath);
+        Assert.Equal(Path.Combine(Path.GetFullPath(savePath), "description.txt"), info.DescriptionPath);
         Assert.Contains("ok=1", global::KboRosterMarkerGuard.FormatLogStatus(info));
         Assert.Contains("current save marked", global::KboRosterMarkerGuard.FormatConsoleStatus(info));
+    }
+
+    [Fact]
+    public void FormatStatuses_IncludeFailureContextForInjectionLogs()
+    {
+        var savePath = Path.Combine(tempDir, "Plain.lg");
+        var descriptionPath = Path.Combine(savePath, "description.txt");
+        var info = global::RosterMarkerInfo.Fail("marker_missing", savePath, descriptionPath, "required marker missing");
+
+        var log = global::KboRosterMarkerGuard.FormatLogStatus(info);
+
+        Assert.Equal("KBO roster marker: blocked (marker_missing)", global::KboRosterMarkerGuard.FormatConsoleStatus(info));
+        Assert.Contains("status=marker_missing", log);
+        Assert.Contains("ok=0", log);
+        Assert.Contains($"save=\"{savePath}\"", log);
+        Assert.Contains($"description=\"{descriptionPath}\"", log);
+        Assert.Contains("required marker missing", log);
     }
 
     public void Dispose()

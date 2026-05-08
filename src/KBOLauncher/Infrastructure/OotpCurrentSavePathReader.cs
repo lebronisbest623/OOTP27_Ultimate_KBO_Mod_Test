@@ -230,7 +230,7 @@ internal static class OotpCurrentSavePathReader
         return new string(buffer, 0, checked((int)length));
     }
 
-    private static string? ExtractLgSavePath(string? path)
+    internal static string? ExtractLgSavePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -424,7 +424,7 @@ internal static class OotpCurrentSavePathReader
         return buffer;
     }
 
-    private static bool LooksLikeAbsoluteLgSavePath(string? path)
+    internal static bool LooksLikeAbsoluteLgSavePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {

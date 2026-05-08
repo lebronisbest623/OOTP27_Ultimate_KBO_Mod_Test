@@ -13,6 +13,11 @@ internal static class LauncherPaths
         candidates.Add(@"C:\Program Files\Steam\steamapps\common\Out of the Park Baseball 27\ootp27.exe");
         candidates.AddRange(ResolveSteamLibraryOotpCandidates());
     
+        return ResolveExistingNewestPath(candidates);
+    }
+
+    internal static string? ResolveExistingNewestPath(IEnumerable<string> candidates)
+    {
         return candidates
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Where(File.Exists)
@@ -64,7 +69,7 @@ internal static class LauncherPaths
         }
     }
 
-    private static IEnumerable<string> ReadSteamLibraryFolders(string libraryFoldersPath)
+    internal static IEnumerable<string> ReadSteamLibraryFolders(string libraryFoldersPath)
     {
         if (!File.Exists(libraryFoldersPath))
         {

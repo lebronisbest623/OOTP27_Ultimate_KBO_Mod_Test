@@ -6,18 +6,21 @@ internal static class KboSeedFiles
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var localDir = Path.Combine(local, "OOTP-KBO");
-        var localPath = Path.Combine(localDir, "kbo_league_id.txt");
-    
-        Directory.CreateDirectory(localDir);
-    
-        var defaultCandidates = new[]
-        {
+        EnsureKboLeagueIdConfig(localDir,
+        [
             Path.Combine(AppContext.BaseDirectory, "kbo_league_id.txt"),
             Path.Combine(Environment.CurrentDirectory, "kbo_league_id.txt"),
             Path.Combine(AppContext.BaseDirectory, "native", "kbo_league_id.txt")
-        };
-    
-        foreach (var candidate in defaultCandidates)
+        ]);
+    }
+
+    internal static void EnsureKboLeagueIdConfig(string localDir, IReadOnlyList<string> candidates)
+    {
+        var localPath = Path.Combine(localDir, "kbo_league_id.txt");
+
+        Directory.CreateDirectory(localDir);
+
+        foreach (var candidate in candidates)
         {
             if (!File.Exists(candidate))
             {
@@ -50,19 +53,26 @@ internal static class KboSeedFiles
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var localDir = Path.Combine(local, "OOTP-KBO");
-        var localPath = Path.Combine(localDir, fileName);
-    
-        Directory.CreateDirectory(localDir);
-    
-        var candidates = new[]
-        {
+        EnsureBundledKboDataFile(localDir, fileName, label,
+        [
             Path.Combine(AppContext.BaseDirectory, "data", "seeds", fileName),
             Path.Combine(Environment.CurrentDirectory, "data", "seeds", fileName),
             Path.Combine(AppContext.BaseDirectory, fileName),
             Path.Combine(Environment.CurrentDirectory, fileName),
             Path.Combine(AppContext.BaseDirectory, "native", fileName)
-        };
-    
+        ]);
+    }
+
+    internal static void EnsureBundledKboDataFile(
+        string localDir,
+        string fileName,
+        string label,
+        IReadOnlyList<string> candidates)
+    {
+        var localPath = Path.Combine(localDir, fileName);
+
+        Directory.CreateDirectory(localDir);
+
         foreach (var candidate in candidates)
         {
             if (!File.Exists(candidate))
@@ -91,5 +101,4 @@ internal static class KboSeedFiles
 
         Console.WriteLine($"{label}: bundled seed not found for {fileName}");
     }
-    
 }
