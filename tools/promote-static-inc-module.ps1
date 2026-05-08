@@ -69,6 +69,52 @@ function Get-FunctionSignatures {
     return $Signatures
 }
 
+function Get-CalledFunctionNames {
+    param([string] $Text)
+
+    $Names = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($Match in [regex]::Matches($Text, '\b([A-Za-z_][A-Za-z0-9_]*)\s*\(')) {
+        $Name = $Match.Groups[1].Value
+        if ($Name -in @("if", "for", "while", "switch", "return", "sizeof")) {
+            continue
+        }
+        [void]$Names.Add($Name)
+    }
+    foreach ($Match in [regex]::Matches($Text, '\b(build_[A-Za-z_][A-Za-z0-9_]*)\b')) {
+        [void]$Names.Add($Match.Groups[1].Value)
+    }
+    return $Names
+}
+
+function Get-HeadersForCalls {
+    param(
+        [string] $Text,
+        [string] $SourceDir,
+        [string] $HeaderPath
+    )
+
+    $CalledNames = Get-CalledFunctionNames -Text $Text
+    if ($CalledNames.Count -eq 0) {
+        return @()
+    }
+
+    $Includes = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($Header in Get-ChildItem -LiteralPath (Join-Path $NativeRoot "src") -Recurse -Filter "*.h") {
+        if ($Header.FullName -eq $HeaderPath) {
+            continue
+        }
+        $HeaderText = Get-Content -LiteralPath $Header.FullName -Raw
+        foreach ($Name in $CalledNames) {
+            if ($HeaderText -match "\b$([regex]::Escape($Name))\s*\(") {
+                [void]$Includes.Add((Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath $Header.FullName))
+                break
+            }
+        }
+    }
+
+    return @($Includes | Sort-Object)
+}
+
 function Assert-SimpleInc {
     param(
         [string] $Path,
@@ -133,8 +179,12 @@ foreach ($IncFile in $IncFiles) {
     $TextDateInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\core\core_text_date.h")
     $FlagsInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\core\core_flags\flags_api.h")
     $RuntimeMemoryInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\runtime_memory\runtime_memory.h")
+    $PatchHelpersInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\patch_helpers\patch_helpers.h")
+    $ArbitrationPatchHelpersInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\patch_installers\arbitration\arbitration_patch_helpers.h")
+    $HookEntrypointsInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\bootstrap\hook_entrypoints.h")
+    $NearCodeInclude = Get-RelativeIncludePath -FromDirectory $SourceDir -ToPath (Join-Path $NativeRoot "src\hook_stubs\hook_stubs_near_code.h")
     $SourceText = $Text -replace '(?m)^(\s*)static\s+', '$1'
-    $SourceText = @(
+    $SourceLines = @(
         "#include `"$([IO.Path]::GetFileName($HeaderPath))`"",
         "#include <stdio.h>",
         "#include <string.h>",
@@ -144,10 +194,29 @@ foreach ($IncFile in $IncFiles) {
         "#include `"$SavePathsInclude`"",
         "#include `"$TextDateInclude`"",
         "#include `"$FlagsInclude`"",
-        "#include `"$RuntimeMemoryInclude`"",
-        "",
-        $SourceText
-    ) -join "`r`n"
+        "#include `"$RuntimeMemoryInclude`""
+    )
+    if ($Text -match '\b(write_u32|write_u64|patch_static_bytes|resolve_patch_target_by_rva_or_[A-Za-z0-9_]+)\s*\(') {
+        $SourceLines += "#include `"$PatchHelpersInclude`""
+    }
+    if ($Text -match '\ballocate_kbo_salary_arbitration_stub\s*\(') {
+        $SourceLines += "#include `"$ArbitrationPatchHelpersInclude`""
+    }
+    if ($Text -match '&\s*ootp_kbo_[A-Za-z0-9_]+') {
+        $SourceLines += "#include `"$HookEntrypointsInclude`""
+    }
+    if ($Text -match '\bkbo_alloc_near_code\s*\(') {
+        $SourceLines += "#include `"$NearCodeInclude`""
+    }
+    foreach ($AutoHeaderInclude in Get-HeadersForCalls -Text $Text -SourceDir $SourceDir -HeaderPath $HeaderPath) {
+        $Line = "#include `"$AutoHeaderInclude`""
+        if ($SourceLines -notcontains $Line) {
+            $SourceLines += $Line
+        }
+    }
+    $SourceLines += ""
+    $SourceLines += $SourceText
+    $SourceText = $SourceLines -join "`r`n"
 
     $IncludePatterns = @(
         "#include `"$RelativeInc`"",

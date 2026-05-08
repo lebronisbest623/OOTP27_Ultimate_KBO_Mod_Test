@@ -1,0 +1,10 @@
+#ifndef KBOFIX_SRC_FOREIGN_SIGNABILITY_SUBMIT_OFFER_PROBE_STATE_H_
+#define KBOFIX_SRC_FOREIGN_SIGNABILITY_SUBMIT_OFFER_PROBE_STATE_H_
+
+#include <stdint.h>
+
+void kbo_enable_no_minor_contract_demand_floor(void);
+int32_t kbo_no_minor_current_league_minimum_salary(void);
+void start_kbo_no_minor_contract_demand_floor_scanner_thread(void);
+
+#endif

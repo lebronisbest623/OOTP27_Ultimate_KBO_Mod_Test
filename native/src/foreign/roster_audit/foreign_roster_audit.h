@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_FOREIGN_ROSTER_AUDIT_FOREIGN_ROSTER_AUDIT_H_
+#define KBOFIX_SRC_FOREIGN_ROSTER_AUDIT_FOREIGN_ROSTER_AUDIT_H_
+
+void audit_foreign_roster_state(const char* source, int write_snapshot);
+
+#endif

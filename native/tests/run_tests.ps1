@@ -54,8 +54,10 @@ Write-Host "GCC: $Gcc"
     $TestSrc `
     (Join-Path $Root "src\allstar\allstar_csv_parse.c") `
     (Join-Path $Root "src\foreign\foreign_csv_parse.c") `
+    (Join-Path $Root "src\foreign\foreign_waiver_date.c") `
     (Join-Path $Root "src\foreign\replacement_seed\foreign_replacement_seed_parse.c") `
     (Join-Path $Root "src\military_service\military_service_date.c") `
+    (Join-Path $Root "src\military_service\military_service_seed_parse.c") `
     (Join-Path $Root "src\core\core_text_date.c") `
     (Join-Path $Root "src\core\core_sql_escape.c") `
     (Join-Path $Root "src\core\core_flags\flag_key.c") `

@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_FOREIGN_FOREIGN_PRIORITY_EVENTS_H_
+#define KBOFIX_SRC_FOREIGN_FOREIGN_PRIORITY_EVENTS_H_
+
+void kbo_flush_pending_foreign_priority_events(const char* source);
+
+#endif

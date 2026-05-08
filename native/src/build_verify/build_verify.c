@@ -5,7 +5,7 @@
 #include "../bootstrap/ootp_offsets.h"
 #include "../core/core_log.h"
 
-#include "supported_builds.generated.inc"
+#include "supported_builds.generated.h"
 
 OotpBuildInfo read_ootp_build_info(void)
 {

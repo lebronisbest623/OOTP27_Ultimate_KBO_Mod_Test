@@ -1,0 +1,36 @@
+#ifndef KBOFIX_SRC_CUSTOM_EVENTS_CUSTOM_EVENT_STATE_H_
+#define KBOFIX_SRC_CUSTOM_EVENTS_CUSTOM_EVENT_STATE_H_
+
+#include <stdint.h>
+#include <windows.h>
+
+extern LONG g_kbo_custom_event_monitor_started;
+extern uint32_t g_kbo_foreign_priority_last_scheduled_date;
+extern uint32_t g_kbo_military_selection_last_scheduled_date;
+extern uint32_t g_kbo_asian_games_last_scheduled_year;
+extern uint32_t g_kbo_custom_event_last_observed_league_year;
+extern uint32_t g_kbo_foreign_priority_last_open_event_fired_date;
+extern uint32_t g_kbo_foreign_priority_last_close_event_fired_date;
+extern uint32_t g_kbo_asian_games_last_selection_fired_date;
+extern uint32_t g_kbo_asian_games_last_departure_fired_date;
+extern uint32_t g_kbo_asian_games_last_final_fired_date;
+extern uint32_t g_kbo_custom_event_last_phase_league_id;
+extern uintptr_t g_kbo_custom_event_last_phase_league_ptr;
+extern uint32_t g_kbo_custom_event_last_phase_date;
+extern uint32_t g_kbo_custom_event_last_phase_league_year;
+extern uint32_t g_kbo_custom_event_last_phase_year;
+extern uint8_t g_kbo_custom_event_last_seen_league_phase;
+extern uint32_t g_kbo_custom_event_pending_offseason_transition_anchor;
+extern uint32_t g_kbo_custom_event_last_offseason_transition_anchor;
+extern uintptr_t g_kbo_processed_event_ptrs[256];
+extern LONG g_kbo_processed_event_count;
+
+extern const char g_kbo_default_event_source[];
+extern const char g_kbo_foreign_priority_open_event_title[];
+extern const char g_kbo_foreign_priority_close_event_title[];
+extern const char g_kbo_military_selection_event_title[];
+extern const char g_kbo_asian_games_selection_event_title[];
+extern const char g_kbo_asian_games_departure_event_title[];
+extern const char g_kbo_asian_games_final_event_title[];
+
+#endif

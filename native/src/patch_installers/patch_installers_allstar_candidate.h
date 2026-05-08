@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_ALLSTAR_CANDIDATE_H_
+#define KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_ALLSTAR_CANDIDATE_H_
+
+int install_allstar_candidate_team_split_patch(void);
+
+#endif

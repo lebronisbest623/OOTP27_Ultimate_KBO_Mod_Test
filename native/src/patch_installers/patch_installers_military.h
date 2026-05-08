@@ -1,0 +1,8 @@
+#ifndef KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_MILITARY_H_
+#define KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_MILITARY_H_
+
+int install_kbo_military_service_entry_patch(void);
+int install_kbo_military_status_update_patch(void);
+int install_kbo_military_team_add_guard_patch(void);
+
+#endif

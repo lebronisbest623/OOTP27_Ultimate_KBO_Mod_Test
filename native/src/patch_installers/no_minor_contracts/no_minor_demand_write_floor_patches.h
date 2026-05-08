@@ -1,0 +1,11 @@
+#ifndef KBOFIX_SRC_PATCH_INSTALLERS_NO_MINOR_CONTRACTS_NO_MINOR_DEMAND_WRITE_FLOOR_PATCHES_H_
+#define KBOFIX_SRC_PATCH_INSTALLERS_NO_MINOR_CONTRACTS_NO_MINOR_DEMAND_WRITE_FLOOR_PATCHES_H_
+
+#include <stddef.h>
+#include <stdint.h>
+#include <windows.h>
+
+int install_kbo_no_minor_contract_demand_write_floor_aab739_patch(HMODULE exe);
+int install_kbo_no_minor_contract_demand_write_floor_1077952_patch(HMODULE exe);
+
+#endif

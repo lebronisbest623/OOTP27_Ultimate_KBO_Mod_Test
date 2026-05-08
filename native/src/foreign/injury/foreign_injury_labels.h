@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_FOREIGN_INJURY_FOREIGN_INJURY_LABELS_H_
+#define KBOFIX_SRC_FOREIGN_INJURY_FOREIGN_INJURY_LABELS_H_
+
+#include "foreign_injury.h"
+
+#endif

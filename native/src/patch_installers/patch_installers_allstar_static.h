@@ -1,0 +1,7 @@
+#ifndef KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_ALLSTAR_STATIC_H_
+#define KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_ALLSTAR_STATIC_H_
+
+int install_single_division_allstar_patch(void);
+int install_allstar_team_setup_single_division_patch(void);
+
+#endif

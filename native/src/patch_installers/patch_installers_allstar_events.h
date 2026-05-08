@@ -1,0 +1,7 @@
+#ifndef KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_ALLSTAR_EVENTS_H_
+#define KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_ALLSTAR_EVENTS_H_
+
+int install_allstar_voting_begin_prepare_patch(void);
+int install_allstar_events_prepare_patch(void);
+
+#endif

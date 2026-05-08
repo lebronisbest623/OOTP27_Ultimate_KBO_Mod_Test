@@ -4,19 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define KBO_MILITARY_SERVICE_DAYS 545
 #define KBO_FOREIGN_INJURY_SLOT_REGULAR 1
 #define KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA 2
-
-typedef struct KboMilitaryServiceSeed {
-    char key[40];
-    uint32_t player_id;
-    char service_team_code[12];
-    char original_team_code[12];
-    uint32_t service_start_yyyymmdd;
-    uint32_t service_return_yyyymmdd;
-    int32_t service_total_days;
-} KboMilitaryServiceSeed;
 
 #include "../src/core/core_text_date.h"
 #include "../src/core/core_flags/json_bool_parser.h"
@@ -39,10 +28,9 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 }
 
 #include "../src/military_service/military_service_date.h"
-#include "../src/military_service/military_service_parse.inc"
-#include "../src/military_service/seed/military_seed_line_parse.inc"
+#include "../src/military_service/military_service_seed_parse.h"
 #include "../src/allstar/allstar_csv_parse.h"
-#include "../src/foreign/foreign_waiver_date.inc"
+#include "../src/foreign/foreign_waiver_date.h"
 
 static void test_core_text_and_sql_helpers(void)
 {

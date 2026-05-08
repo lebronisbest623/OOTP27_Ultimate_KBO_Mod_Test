@@ -1,0 +1,82 @@
+#ifndef KBOFIX_SRC_AMATEUR_PLAYER_QUALITY_AMATEUR_PLAYER_QUALITY_H_
+#define KBOFIX_SRC_AMATEUR_PLAYER_QUALITY_AMATEUR_PLAYER_QUALITY_H_
+
+#include <stdint.h>
+#include <stddef.h>
+#include <windows.h>
+
+#define KBO_COLLEGE_LEAGUE_ID 201u
+#define KBO_HIGH_SCHOOL_LEAGUE_ID 203u
+#define KBO_AMATEUR_REPUTATION_SEED_MAX 384
+#define KBO_AMATEUR_ASSIGNMENT_PROCESSED_MAX 16384
+#define KBO_AMATEUR_ASSIGNMENT_PROCESSED_HASH_MAX 32768
+#define KBO_AMATEUR_ASSIGNMENT_PROCESSED_HASH_MASK (KBO_AMATEUR_ASSIGNMENT_PROCESSED_HASH_MAX - 1)
+#define KBO_AMATEUR_ASSIGNMENT_REJECTED_TARGET_MAX 128
+#define KBO_AMATEUR_REPUTATION_UPDATE_MIN_GAMES 10u
+#define KBO_HIGH_SCHOOL_ASSIGNMENT_SOURCE_MIN_PLAYERS 18
+#define KBO_COLLEGE_ASSIGNMENT_SOURCE_MIN_PLAYERS 24
+#define KBO_AMATEUR_ASSIGNMENT_SOURCE_MIN_HITTERS 9
+#define KBO_HIGH_SCHOOL_ASSIGNMENT_TARGET_MAX_PLAYERS 36
+#define KBO_COLLEGE_ASSIGNMENT_TARGET_MAX_PLAYERS 40
+#define KBO_AMATEUR_TEAM_REGULAR_WINS_OFFSET   0x400cu
+#define KBO_AMATEUR_TEAM_REGULAR_LOSSES_OFFSET 0x4018u
+#define KBO_AMATEUR_TEAM_REGULAR_TIES_OFFSET   0x401cu
+#define KBO_AMATEUR_ASSIGNMENT_TEAM_MAX 512
+
+typedef struct KboAmateurReputationSeed {
+    uint32_t league_id;
+    uint32_t team_id;
+    char team_abbr[32];
+    char team_name[96];
+    char nick_name[64];
+    uint8_t reputation;
+} KboAmateurReputationSeed;
+
+typedef struct KboAmateurReputationUpdateRow {
+    uint32_t league_id;
+    uint32_t team_id;
+    uint8_t old_reputation;
+    uint8_t new_reputation;
+    uint16_t wins;
+    uint16_t losses;
+    uint16_t ties;
+    int32_t score;
+} KboAmateurReputationUpdateRow;
+
+typedef struct KboAmateurAssignmentProcessed {
+    uint32_t player_id;
+    uint32_t team_id;
+} KboAmateurAssignmentProcessed;
+
+typedef struct KboAmateurAssignmentCandidate {
+    uint8_t* team;
+    uint32_t team_id;
+    uint8_t reputation;
+    int32_t player_count;
+    int32_t hitter_count;
+} KboAmateurAssignmentCandidate;
+
+typedef struct KboAmateurResolvedTeamReputation {
+    uint8_t* team;
+    uint32_t league_id;
+    uint8_t reputation;
+} KboAmateurResolvedTeamReputation;
+
+extern KboAmateurReputationSeed g_kbo_amateur_reputation_seeds[KBO_AMATEUR_REPUTATION_SEED_MAX];
+extern int g_kbo_amateur_reputation_seed_count;
+
+void kbo_lock_amateur_reputation_seeds(void);
+void kbo_unlock_amateur_reputation_seeds(void);
+void kbo_ensure_amateur_reputation_seeds_loaded(void);
+int kbo_get_amateur_reputation_history_path(char* out, size_t out_size);
+int kbo_read_amateur_reputation_seed_file(const char* path, char** out_buffer, DWORD* out_size);
+void kbo_amateur_reputation_read_cell(const char** cursor, char* out, size_t out_size);
+uint32_t kbo_amateur_reputation_parse_u32(const char* text);
+
+void kbo_update_amateur_reputation_from_team_records(const char* source);
+uint32_t kbo_resolve_amateur_assignment_league_id_for_team_ptr(uint8_t* team);
+void kbo_amateur_assignment_mark_rejected_target(uint32_t league_id, uint32_t team_id);
+uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr, uintptr_t player_ptr, const char* source);
+void kbo_amateur_team_add_player_note_original_success(uintptr_t team_ptr, uintptr_t player_ptr, const char* source, int original_result);
+
+#endif

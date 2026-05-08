@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 int kbo_get_current_save_path(char* out, size_t out_size);
+int kbo_get_save_scoped_data_dir(char* out, size_t out_size);
 int kbo_get_save_scoped_data_file(const char* file_name, char* out, size_t out_size);
 
 #endif

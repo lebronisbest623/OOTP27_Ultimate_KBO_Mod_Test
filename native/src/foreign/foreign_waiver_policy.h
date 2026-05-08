@@ -1,0 +1,75 @@
+#ifndef KBOFIX_SRC_FOREIGN_FOREIGN_WAIVER_POLICY_H_
+#define KBOFIX_SRC_FOREIGN_FOREIGN_WAIVER_POLICY_H_
+
+#include <stdint.h>
+
+#ifndef KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT
+#define KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT 3u
+#endif
+
+int kbo_foreign_waiver_ai_enabled(void);
+int kbo_custom_foreign_policy_enabled(void);
+uint32_t kbo_get_foreign_waiver_league_id(void);
+int kbo_foreign_waiver_legacy_auto_detector_enabled(void);
+void kbo_count_team_asian_quota_probe(
+    uint32_t team_id,
+    uint32_t* out_foreign_count,
+    uint32_t* out_asian_quota_count,
+    uint32_t* out_non_asian_foreign_count);
+uint32_t kbo_effective_foreign_count_with_asian_quota(
+    uint32_t asian_count,
+    uint32_t non_asian_foreign_count);
+void kbo_count_active_foreign_for_asian_quota(
+    uintptr_t team_ptr,
+    uint32_t* out_asian_hitters,
+    uint32_t* out_asian_pitchers,
+    uint32_t* out_non_asian_hitters,
+    uint32_t* out_non_asian_pitchers);
+int kbo_custom_foreign_policy_team_allows_candidate(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t* out_effective_before,
+    uint32_t* out_effective_after,
+    uint32_t* out_effective_limit,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id);
+int kbo_custom_foreign_policy_can_override_original_block(uint8_t* candidate, uint32_t team_id);
+int kbo_custom_foreign_policy_team_allows_final_signing(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t* out_effective_before,
+    uint32_t* out_effective_after,
+    uint32_t* out_effective_limit,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id);
+void kbo_record_recent_custom_foreign_policy_block(
+    uint32_t player_id,
+    uint32_t requester_team_id,
+    uint32_t today);
+void kbo_record_custom_foreign_pending_offer(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t today);
+int kbo_custom_foreign_policy_trade_allows(
+    uintptr_t trade_ptr,
+    int32_t requested_side,
+    int* out_blocked_side,
+    uint32_t* out_team_id,
+    uint32_t* out_incoming_player_id,
+    uint32_t* out_effective_before,
+    uint32_t* out_effective_after,
+    uint32_t* out_effective_limit);
+void kbo_log_asian_quota_signability_probe(
+    uint8_t* player,
+    uint32_t player_id,
+    int32_t team_id,
+    int original_signability,
+    uintptr_t caller_rva);
+void kbo_log_asian_quota_offer_probe(
+    uint8_t* player,
+    uint32_t player_id,
+    int32_t team_id,
+    uint8_t original_result,
+    int32_t flag);
+
+#endif
