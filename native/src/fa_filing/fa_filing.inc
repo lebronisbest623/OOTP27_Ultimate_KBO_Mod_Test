@@ -16,6 +16,42 @@ typedef struct KboFaFilingRecord {
 } KboFaFilingRecord;
 
 static volatile LONG g_kbo_fa_filing_lock = 0;
+static volatile LONG g_kbo_fa_filing_cache_dirty = 1;
+static KboFaFilingRecord* g_kbo_fa_filing_cache_rows = NULL;
+static int g_kbo_fa_filing_cache_count = 0;
+static char g_kbo_fa_filing_cache_path[MAX_PATH] = {0};
+
+#define KBO_FA_FILING_NEGATIVE_CACHE_MAX 512
+static uint32_t g_kbo_fa_filing_negative_cache[KBO_FA_FILING_NEGATIVE_CACHE_MAX];
+static volatile LONG g_kbo_fa_filing_negative_cache_cursor = 0;
+
+static int kbo_fa_filing_negative_cache_contains(uint32_t player_id)
+{
+    if (player_id == 0u) {
+        return 0;
+    }
+    for (int i = 0; i < KBO_FA_FILING_NEGATIVE_CACHE_MAX; i++) {
+        if (g_kbo_fa_filing_negative_cache[i] == player_id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void kbo_fa_filing_negative_cache_add(uint32_t player_id)
+{
+    if (player_id == 0u) {
+        return;
+    }
+    LONG slot = InterlockedIncrement(&g_kbo_fa_filing_negative_cache_cursor);
+    g_kbo_fa_filing_negative_cache[(uint32_t)slot % KBO_FA_FILING_NEGATIVE_CACHE_MAX] = player_id;
+}
+
+static void kbo_fa_filing_negative_cache_clear(void)
+{
+    memset(g_kbo_fa_filing_negative_cache, 0, sizeof(g_kbo_fa_filing_negative_cache));
+    InterlockedExchange(&g_kbo_fa_filing_negative_cache_cursor, 0);
+}
 
 static int kbo_get_fa_filing_csv_path(char* out, size_t out_size)
 {
@@ -344,16 +380,49 @@ static int kbo_fa_filing_find_latest_player(
         return 0;
     }
 
-    KboFaFilingRecord* rows = (KboFaFilingRecord*)HeapAlloc(
-        GetProcessHeap(),
-        HEAP_ZERO_MEMORY,
-        (SIZE_T)KBO_FA_FILING_MAX * sizeof(KboFaFilingRecord));
-    if (rows == NULL) {
+    KBO_PROFILE_BEGIN(profile_fa_filing_find_latest);
+
+    char current_path[MAX_PATH] = {0};
+    if (!kbo_get_fa_filing_csv_path(current_path, sizeof(current_path))) {
+        KBO_PROFILE_END(profile_fa_filing_find_latest, "fa_filing.find_latest.no_path");
         return 0;
     }
 
-    char path[MAX_PATH] = {0};
-    int row_count = kbo_load_fa_filing_records(rows, KBO_FA_FILING_MAX, path, sizeof(path));
+    if (InterlockedCompareExchange(&g_kbo_fa_filing_cache_dirty, 0, 0) == 0
+            && strcmp(g_kbo_fa_filing_cache_path, current_path) == 0
+            && kbo_fa_filing_negative_cache_contains(player_id)) {
+        KBO_PROFILE_END(profile_fa_filing_find_latest, "fa_filing.find_latest.negative_cache");
+        return 0;
+    }
+
+    kbo_fa_filing_enter_lock();
+    int needs_reload = g_kbo_fa_filing_cache_rows == NULL
+        || InterlockedCompareExchange(&g_kbo_fa_filing_cache_dirty, 0, 0) != 0
+        || strcmp(g_kbo_fa_filing_cache_path, current_path) != 0;
+    if (needs_reload) {
+        if (g_kbo_fa_filing_cache_rows == NULL) {
+            g_kbo_fa_filing_cache_rows = (KboFaFilingRecord*)HeapAlloc(
+                GetProcessHeap(),
+                HEAP_ZERO_MEMORY,
+                (SIZE_T)KBO_FA_FILING_MAX * sizeof(KboFaFilingRecord));
+        }
+        if (g_kbo_fa_filing_cache_rows == NULL) {
+            kbo_fa_filing_leave_lock();
+            KBO_PROFILE_END(profile_fa_filing_find_latest, "fa_filing.find_latest.alloc_failed");
+            return 0;
+        }
+        memset(g_kbo_fa_filing_cache_rows, 0, (SIZE_T)KBO_FA_FILING_MAX * sizeof(KboFaFilingRecord));
+        g_kbo_fa_filing_cache_count = kbo_load_fa_filing_records_unlocked(
+            g_kbo_fa_filing_cache_rows,
+            KBO_FA_FILING_MAX,
+            g_kbo_fa_filing_cache_path,
+            sizeof(g_kbo_fa_filing_cache_path));
+        kbo_fa_filing_negative_cache_clear();
+        InterlockedExchange(&g_kbo_fa_filing_cache_dirty, 0);
+    }
+
+    KboFaFilingRecord* rows = g_kbo_fa_filing_cache_rows;
+    int row_count = g_kbo_fa_filing_cache_count;
     int best = -1;
     uint32_t best_date = 0u;
     for (int i = 0; i < row_count; i++) {
@@ -378,7 +447,11 @@ static int kbo_fa_filing_find_latest_player(
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, rows);
+    kbo_fa_filing_leave_lock();
+    if (best < 0) {
+        kbo_fa_filing_negative_cache_add(player_id);
+    }
+    KBO_PROFILE_END(profile_fa_filing_find_latest, best >= 0 ? "fa_filing.find_latest.hit" : "fa_filing.find_latest.miss");
     return best >= 0 ? 1 : 0;
 }
 
@@ -467,6 +540,10 @@ static int kbo_record_fa_filing_transition(
     snprintf(rec->source, sizeof(rec->source), "%s", source != NULL ? source : "fa_filing_transition");
 
     int wrote = kbo_write_fa_filing_records_unlocked(rows, row_count, path, sizeof(path));
+    if (wrote) {
+        InterlockedExchange(&g_kbo_fa_filing_cache_dirty, 1);
+        kbo_fa_filing_negative_cache_clear();
+    }
     kbo_fa_filing_leave_lock();
     HeapFree(GetProcessHeap(), 0, rows);
 

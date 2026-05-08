@@ -189,6 +189,8 @@
 #define OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT          200u
 
 /* ---- Global DB offsets ---- */
+#define OOTP27_GLOBAL_HUMAN_MANAGER_VECTOR_OFFSET 0xf0u
+#define OOTP27_GLOBAL_HUMAN_MANAGER_COUNT_OFFSET  0xfcu
 #define OOTP27_GLOBAL_CURRENT_DATE_OFFSET          0x2d8u
 #define OOTP27_GLOBAL_CURRENT_LEAGUE_OFFSET        0x2e0u
 #define OOTP27_GLOBAL_SQL_DATABASE_OFFSET          0x2d78u
@@ -198,6 +200,10 @@
 #define OOTP27_CURRENT_DATE_YEAR_OFFSET            0x1b8u
 #define OOTP27_CURRENT_DATE_MONTH_OFFSET           0x1bbu
 #define OOTP27_CURRENT_DATE_DAY_OFFSET             0x1bau
+
+/* ---- Human manager offsets ---- */
+#define OOTP27_HUMAN_MANAGER_READABLE_BYTES        0xa8u
+#define OOTP27_HUMAN_MANAGER_CONTROLLED_TEAM_OFFSET 0x90u
 
 /* ---- League custom events ---- */
 #define OOTP27_KBO_MAIN_LEAGUE_ID                  100u

@@ -80,6 +80,11 @@ static int kbo_profiler_is_enabled(void)
     return enabled;
 }
 
+static void kbo_profiler_reset_enabled_cache(void)
+{
+    InterlockedExchange(&g_kbo_profiler_enabled_cache, -1);
+}
+
 static int kbo_profiler_get_output_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {

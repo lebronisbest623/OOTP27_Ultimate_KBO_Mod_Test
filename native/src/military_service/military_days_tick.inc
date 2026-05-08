@@ -107,6 +107,8 @@ static int tick_kbo_military_service_days(const char* source, int* out_seeded_as
         return 0;
     }
 
+    kbo_update_amateur_reputation_from_team_records(source);
+
     uint8_t* sang = find_kbo_team_by_csv_id_any_league("SANG", 0);
     uint8_t* kpb  = find_kbo_team_by_csv_id_any_league("KPB",  0);
     uint32_t sang_id = sang != NULL ? *(uint32_t*)(sang + OOTP27_KBO_TEAM_ID_OFFSET) : 0;

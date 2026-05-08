@@ -51,6 +51,7 @@ internal static class LauncherApp
         EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
         EnsureBundledKboDataFile("fa_rules.json", "FA rules");
         EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
+        EnsureBundledKboDataFile("college_reputation_seed.csv", "College reputation seed");
         EnsureBundledKboDataFile("high_school_reputation_seed.csv", "High-school reputation seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
         ImportLegacyKboFlagFilesIfMissing();

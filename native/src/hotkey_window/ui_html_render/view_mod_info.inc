@@ -5,11 +5,13 @@ static void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer)
     }
 
     if (g_kbo_hub_selected_mod_subview == KBO_HUB_MOD_SUBVIEW_SETTINGS) {
+        int profiler_enabled = kbo_get_profiler_enabled_setting();
+        int allow_all_team_actions = kbo_get_allow_all_ui_team_actions_setting();
         kbo_window_text_appendf(
             buffer,
             "<div class='rights settingsGrid'>"
             "<section class='card modCard settingsCard'><h2 class='cardTitle'>");
-        kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x96\xb8\xec\x96\xb4", "LANGUAGE"));
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\x84\xa4\xec\xa0\x95", "MOD SETTINGS"));
         kbo_window_text_appendf(
             buffer,
             "</h2><div class='settingRow'><label class='settingLabel' for='languageSelect'>");
@@ -19,10 +21,36 @@ static void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer)
             "</label><select id='languageSelect' class='ootpSelect' onchange=\"if(this.value){location.href='kbo://mod/settings/lang/'+this.value}\">"
             "<option value='ko' %s>%s</option>"
             "<option value='en' %s>English</option>"
-            "</select></div></section></div>",
+            "</select></div>",
             g_kbo_hub_language == KBO_HUB_LANG_KO ? "selected" : "",
             "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4",
             g_kbo_hub_language == KBO_HUB_LANG_EN ? "selected" : "");
+        kbo_window_text_appendf(
+            buffer,
+            "<div class='settingRow'><label class='settingLabel' for='profilerSelect'>");
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xed\x94\x84\xeb\xa1\x9c\xed\x8c\x8c\xec\x9d\xbc\xeb\x9f\xac", "Profiler"));
+        kbo_window_text_appendf(
+            buffer,
+            "</label><select id='profilerSelect' class='ootpSelect' onchange=\"if(this.value){location.href='kbo://mod/settings/profiler/'+this.value}\">"
+            "<option value='off' %s>Off</option>"
+            "<option value='on' %s>On</option>"
+            "</select></div>",
+            profiler_enabled ? "" : "selected",
+            profiler_enabled ? "selected" : "");
+        kbo_window_text_appendf(
+            buffer,
+            "<div class='settingRow'><label class='settingLabel' for='uiTeamActionsSelect'>");
+        kbo_html_append_escaped(buffer, kbo_hub_text("UI \xed\x8c\x80 \xec\x95\xa1\xec\x85\x98", "UI team actions"));
+        kbo_window_text_appendf(
+            buffer,
+            "</label><select id='uiTeamActionsSelect' class='ootpSelect' onchange=\"if(this.value){location.href='kbo://mod/settings/ui-team-actions/'+this.value}\">"
+            "<option value='all' %s>%s</option>"
+            "<option value='controlled' %s>%s</option>"
+            "</select></div></section></div>",
+            allow_all_team_actions ? "selected" : "",
+            kbo_hub_text("\xeb\xaa\xa8\xeb\x93\xa0 \xed\x8c\x80 \xed\x97\x88\xec\x9a\xa9 (\xea\xb0\x9c\xeb\xb0\x9c)", "All teams (development)"),
+            allow_all_team_actions ? "" : "selected",
+            kbo_hub_text("\xeb\x82\xb4 \xed\x8c\x80\xeb\xa7\x8c \xed\x97\x88\xec\x9a\xa9", "Controlled team only"));
         return;
     }
 

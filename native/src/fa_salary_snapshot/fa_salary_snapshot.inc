@@ -56,6 +56,8 @@ static volatile LONG g_kbo_fa_salary_snapshot_phase_pending_active = 0;
 static uintptr_t g_kbo_fa_salary_snapshot_phase_pending_league_ptr = 0;
 static volatile LONG g_kbo_fa_salary_snapshot_phase_pending_value = 0;
 static volatile LONG g_kbo_fa_salary_snapshot_phase_pending_site_rva = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_cached_exists_season = 0;
+static volatile LONG g_kbo_fa_salary_snapshot_cached_exists_value = -1;
 
 static int kbo_fa_salary_snapshot_path(uint32_t season, char* out, size_t out_size)
 {
@@ -70,6 +72,12 @@ static int kbo_fa_salary_snapshot_path(uint32_t season, char* out, size_t out_si
 
 static int kbo_fa_salary_snapshot_file_exists(uint32_t season)
 {
+    LONG cached_season = InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_cached_exists_season, 0, 0);
+    LONG cached_value = InterlockedCompareExchange(&g_kbo_fa_salary_snapshot_cached_exists_value, -1, -1);
+    if (cached_season == (LONG)season && cached_value != -1) {
+        return cached_value == 1;
+    }
+
     char path[MAX_PATH] = {0};
     if (!kbo_fa_salary_snapshot_path(season, path, sizeof(path))) {
         return 0;
@@ -77,10 +85,15 @@ static int kbo_fa_salary_snapshot_file_exists(uint32_t season)
 
     WIN32_FILE_ATTRIBUTE_DATA attrs;
     if (!GetFileAttributesExA(path, GetFileExInfoStandard, &attrs)) {
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_season, (LONG)season);
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_value, 0);
         return 0;
     }
 
-    return attrs.nFileSizeHigh != 0u || attrs.nFileSizeLow != 0u;
+    int exists = attrs.nFileSizeHigh != 0u || attrs.nFileSizeLow != 0u;
+    InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_season, (LONG)season);
+    InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_value, exists ? 1 : 0);
+    return exists;
 }
 
 static uint32_t kbo_fa_salary_snapshot_team_league_id(uint32_t team_id)
@@ -1025,6 +1038,8 @@ static int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32
     char path[MAX_PATH] = {0};
     int wrote = kbo_fa_salary_snapshot_write_csv(rows, row_count, date, season, opening_day, league_id, source, path, sizeof(path));
     if (wrote) {
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_season, (LONG)season);
+        InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_value, 1);
         append_logf(
             "KBO FA salary opening-day snapshot written source=%s date=%u season=%u opening_day=%u league=%u scanned=%d rows=%d salary_rows=%d zero_salary_rows=%d csv=%s",
             source != NULL ? source : "",
@@ -1226,6 +1241,14 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
     uint32_t last_log_date = 0u;
     uint32_t last_log_opening_day = 0u;
     uint32_t captured_season = 0u;
+    uint32_t cached_schedule_year = 0u;
+    uint32_t cached_schedule_opening_day = 0u;
+    int cached_schedule_found = 0;
+    DWORD cached_schedule_checked_ms = 0u;
+    uint32_t cached_message_date = 0u;
+    int cached_message_found = 0;
+    DWORD cached_message_checked_ms = 0u;
+    uint32_t quiet_opening_unavailable_year = 0u;
     for (;;) {
         Sleep(KBO_FA_SALARY_SNAPSHOT_THREAD_SLEEP_MS);
         KBO_PROFILE_BEGIN(profile_snapshot_thread_tick);
@@ -1247,11 +1270,38 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
         uintptr_t league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);
         uint32_t opening_day = 0u;
         if (league_ptr == 0 || !kbo_fa_salary_snapshot_read_opening_day(league_ptr, &opening_day)) {
-            if (!kbo_fa_salary_snapshot_load_schedule_opening_day(year, &opening_day)
-                    && !kbo_fa_salary_snapshot_today_has_opening_day_message(date)) {
-                if (date != last_log_date) {
+            DWORD now_ms = GetTickCount();
+            int schedule_found = cached_schedule_year == year ? cached_schedule_found : 0;
+            if (cached_schedule_year != year
+                    || (!cached_schedule_found && (cached_schedule_checked_ms == 0u || now_ms - cached_schedule_checked_ms >= 30000u))) {
+                cached_schedule_year = year;
+                cached_schedule_opening_day = 0u;
+                cached_schedule_checked_ms = now_ms;
+                cached_schedule_found = kbo_fa_salary_snapshot_load_schedule_opening_day(year, &cached_schedule_opening_day);
+                schedule_found = cached_schedule_found;
+            }
+            if (schedule_found) {
+                opening_day = cached_schedule_opening_day;
+            }
+
+            int message_found = 0;
+            if (!schedule_found) {
+                if (cached_message_date != date
+                        && (cached_message_checked_ms == 0u || now_ms - cached_message_checked_ms >= 30000u)) {
+                    cached_message_date = date;
+                    cached_message_checked_ms = now_ms;
+                    cached_message_found = kbo_fa_salary_snapshot_today_has_opening_day_message(date);
+                }
+                message_found = cached_message_found;
+            }
+
+            if (!schedule_found && !message_found) {
+                if (quiet_opening_unavailable_year != year && date != last_log_date) {
                     append_logf("KBO FA salary snapshot waiting date=%u league=%u reason=opening_day_unavailable", date, league_id);
                     last_log_date = date;
+                    if (month >= 5u) {
+                        quiet_opening_unavailable_year = year;
+                    }
                 }
                 KBO_PROFILE_END(profile_snapshot_thread_tick, "fa_salary_snapshot.thread.opening_day_unavailable");
                 continue;

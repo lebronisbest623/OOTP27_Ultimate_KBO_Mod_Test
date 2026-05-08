@@ -216,7 +216,8 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
         || read_kbo_localappdata_flag_file("enable_kbo_sangmu_offer_only.txt");
     int enable_sangmu_fa_block_core = enable_sangmu_signability_only || enable_sangmu_offer_only;
     int enable_fa_compensation_core = !read_kbo_localappdata_flag_file("disable_kbo_fa_compensation.txt");
-    int enable_high_school_freshman_quality_core = !read_kbo_localappdata_flag_file("disable_high_school_freshman_quality_shaping.txt");
+    int enable_amateur_assignment_core =
+        !read_kbo_localappdata_flag_file("disable_amateur_assignment_reroute.txt");
     if (enable_sangmu_fa_block_core) {
         append_logf(
             "KBO Sangmu FA block enabled: signability=%d offer=%d",
@@ -225,7 +226,7 @@ static void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         append_log_line("KBO Sangmu FA block diagnostic disabled: kbo_flags.json enable_kbo_sangmu_signability_only / enable_kbo_sangmu_offer_only are false");
     }
-    if (enable_sangmu_fa_block_core || enable_fa_compensation_core || enable_high_school_freshman_quality_core) {
+    if (enable_sangmu_fa_block_core || enable_fa_compensation_core || enable_amateur_assignment_core) {
         if (!read_kbo_localappdata_flag_file("disable_kbo_military_team_add_guard_patch.txt")) {
             install_kbo_military_team_add_guard_patch();
         } else {

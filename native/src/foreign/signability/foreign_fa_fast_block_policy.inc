@@ -49,7 +49,7 @@ static int kbo_fast_block_fa_candidate_before_original(
 
             static volatile LONG rights_fast_block_log_count = 0;
             LONG slot = InterlockedIncrement(&rights_fast_block_log_count);
-            if (slot <= 200) {
+            if (slot <= 40) {
                 append_logf(
                     "FA fast-block source=%s reason=foreign_reserve player=%u requester_team=%u holder_team=%u today=%u",
                     context != NULL ? context : "",
@@ -57,6 +57,8 @@ static int kbo_fast_block_fa_candidate_before_original(
                     requester_team_id,
                     holder_team_id,
                     today);
+            } else if (slot == 41) {
+                append_log_line("FA fast-block foreign_reserve log suppressed after 40 entries");
             }
             return 1;
         }
@@ -80,7 +82,7 @@ static int kbo_fast_block_fa_candidate_before_original(
             kbo_record_recent_custom_foreign_policy_block(player_id, requester_team_id, today);
             static volatile LONG custom_fast_block_log_count = 0;
             LONG slot = InterlockedIncrement(&custom_fast_block_log_count);
-            if (slot <= 200) {
+            if (slot <= 40) {
                 append_logf(
                     "FA fast-block source=%s reason=custom_foreign_policy player=%u requester_team=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u",
                     context != NULL ? context : "",
@@ -92,6 +94,8 @@ static int kbo_fast_block_fa_candidate_before_original(
                     slot_type != 0u ? kbo_foreign_injury_slot_label(slot_type) : "none",
                     injured_player_id,
                     today);
+            } else if (slot == 41) {
+                append_log_line("FA fast-block custom_foreign_policy log suppressed after 40 entries");
             }
             return 1;
         }

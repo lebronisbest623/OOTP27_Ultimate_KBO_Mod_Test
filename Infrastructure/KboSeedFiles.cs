@@ -86,6 +86,8 @@ internal static class KboSeedFiles
                 return;
             }
         }
+
+        Console.WriteLine($"{label}: bundled seed not found for {fileName}");
     }
     
 }

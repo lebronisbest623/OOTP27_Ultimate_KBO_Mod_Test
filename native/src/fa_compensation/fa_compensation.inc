@@ -13,6 +13,7 @@ static volatile LONG g_kbo_fa_compensation_ledger_lock = 0;
 
 static void kbo_fa_compensation_lock_ledger(const char* source)
 {
+    KBO_PROFILE_BEGIN(profile_fa_comp_lock_wait);
     DWORD start = GetTickCount();
     while (InterlockedCompareExchange(&g_kbo_fa_compensation_ledger_lock, 1, 0) != 0) {
         if ((GetTickCount() - start) > 5000u) {
@@ -24,6 +25,7 @@ static void kbo_fa_compensation_lock_ledger(const char* source)
         }
         Sleep(1);
     }
+    KBO_PROFILE_END(profile_fa_comp_lock_wait, "fa_comp.ledger.lock_wait");
 }
 
 static void kbo_fa_compensation_unlock_ledger(void)
@@ -97,6 +99,15 @@ typedef struct KboFaCompensationDecisionRow {
     uint32_t cash_only;
     char source[48];
 } KboFaCompensationDecisionRow;
+
+typedef struct KboFaCompensationDueTask {
+    KboFaCompensationRecord rec;
+    uint8_t action;
+} KboFaCompensationDueTask;
+
+#define KBO_FA_COMPENSATION_DUE_TASK_SUBMIT_LIST 1u
+#define KBO_FA_COMPENSATION_DUE_TASK_RECORD_CASH 2u
+#define KBO_FA_COMPENSATION_DUE_TASK_TRANSFER_PLAYER 3u
 
 static int kbo_get_fa_compensation_path(char* out, size_t out_size)
 {
@@ -361,6 +372,90 @@ static int kbo_persist_fa_compensation_records(const KboFaCompensationRecord* re
     return 1;
 }
 
+static int kbo_append_fa_compensation_record(const KboFaCompensationRecord* rec)
+{
+    if (rec == NULL || rec->player_id == 0u || rec->season == 0u) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_get_fa_compensation_path(path, sizeof(path))) {
+        append_log_line("KBO FA compensation append skipped reason=path_unavailable");
+        return 0;
+    }
+
+    char dir[MAX_PATH] = {0};
+    snprintf(dir, sizeof(dir), "%s", path);
+    char* slash = strrchr(dir, '\\');
+    if (slash != NULL) {
+        *slash = '\0';
+        CreateDirectoryA(dir, NULL);
+    }
+
+    DWORD attrs = GetFileAttributesA(path);
+    int needs_header = (attrs == INVALID_FILE_ATTRIBUTES);
+    HANDLE file = CreateFileA(
+        path,
+        FILE_APPEND_DATA,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        append_logf("KBO FA compensation append failed reason=open gle=%lu path=%s", GetLastError(), path);
+        return 0;
+    }
+
+    DWORD written = 0;
+    if (needs_header) {
+        const char* header =
+            "player_id,signed_on,season,league_id,original_team_id,signing_team_id,grade,"
+            "previous_salary,cash_with_player,cash_only,protect_count,requires_player_compensation,"
+            "status,kbo_case,player_name,source\r\n";
+        WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
+    }
+
+    char prefix[192] = {0};
+    int len = snprintf(
+        prefix,
+        sizeof(prefix),
+        "%u,%u,%u,%u,%u,%u,",
+        rec->player_id,
+        rec->signed_on_yyyymmdd,
+        rec->season,
+        rec->league_id,
+        rec->original_team_id,
+        rec->signing_team_id);
+    if (len > 0 && len < (int)sizeof(prefix)) {
+        WriteFile(file, prefix, (DWORD)len, &written, NULL);
+    }
+    kbo_fa_market_write_csv_text(file, rec->grade);
+
+    char middle[192] = {0};
+    len = snprintf(
+        middle,
+        sizeof(middle),
+        ",%d,%u,%u,%u,%u,%u,",
+        rec->previous_salary,
+        rec->cash_with_player,
+        rec->cash_only,
+        rec->protect_count,
+        (uint32_t)rec->requires_player_compensation,
+        (uint32_t)rec->status);
+    if (len > 0 && len < (int)sizeof(middle)) {
+        WriteFile(file, middle, (DWORD)len, &written, NULL);
+    }
+    kbo_fa_market_write_csv_text(file, rec->case_label);
+    WriteFile(file, ",", 1, &written, NULL);
+    kbo_fa_market_write_csv_text(file, rec->player_name);
+    WriteFile(file, ",", 1, &written, NULL);
+    kbo_fa_market_write_csv_text(file, rec->source);
+    WriteFile(file, "\r\n", 2, &written, NULL);
+    CloseHandle(file);
+    return 1;
+}
+
 static int kbo_fa_compensation_find_existing(
     const KboFaCompensationRecord* records,
     int record_count,
@@ -382,6 +477,42 @@ static int kbo_fa_compensation_find_existing(
         }
     }
     return -1;
+}
+
+static uint32_t kbo_fa_compensation_team_for_player(uint32_t fa_player_id, int signing_team)
+{
+    if (fa_player_id == 0u) {
+        return 0u;
+    }
+
+    KboFaCompensationRecord* records = (KboFaCompensationRecord*)HeapAlloc(
+        GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_COMPENSATION_MAX * sizeof(KboFaCompensationRecord));
+    if (records == NULL) {
+        return 0u;
+    }
+
+    char path[MAX_PATH] = {0};
+    int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
+    uint32_t team_id = 0u;
+    for (int i = 0; i < record_count; i++) {
+        if (records[i].player_id == fa_player_id) {
+            team_id = signing_team ? records[i].signing_team_id : records[i].original_team_id;
+            break;
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, records);
+    return team_id;
+}
+
+static uint32_t kbo_fa_compensation_original_team_for_player(uint32_t fa_player_id)
+{
+    return kbo_fa_compensation_team_for_player(fa_player_id, 0);
+}
+
+static uint32_t kbo_fa_compensation_signing_team_for_player(uint32_t fa_player_id)
+{
+    return kbo_fa_compensation_team_for_player(fa_player_id, 1);
 }
 
 static int kbo_fa_compensation_build_market_row(
@@ -1974,51 +2105,32 @@ static int kbo_process_due_fa_compensation_protected_lists(const char* source)
         GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_COMPENSATION_PROTECTED_LIST_MAX * sizeof(KboFaProtectedCandidate));
     KboFaProtectedCandidate* auto_protected = (KboFaProtectedCandidate*)HeapAlloc(
         GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_COMPENSATION_PROTECTED_LIST_MAX * sizeof(KboFaProtectedCandidate));
-    if (records == NULL || candidates == NULL || auto_protected == NULL) {
+    KboFaCompensationDueTask* tasks = (KboFaCompensationDueTask*)HeapAlloc(
+        GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_COMPENSATION_MAX * sizeof(KboFaCompensationDueTask));
+    if (records == NULL || candidates == NULL || auto_protected == NULL || tasks == NULL) {
         if (records != NULL) { HeapFree(GetProcessHeap(), 0, records); }
         if (candidates != NULL) { HeapFree(GetProcessHeap(), 0, candidates); }
         if (auto_protected != NULL) { HeapFree(GetProcessHeap(), 0, auto_protected); }
+        if (tasks != NULL) { HeapFree(GetProcessHeap(), 0, tasks); }
         return 0;
     }
 
     kbo_fa_compensation_lock_ledger(source != NULL ? source : "process_due");
     char path[MAX_PATH] = {0};
     int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
-    int generated = 0;
+    int task_count = 0;
     for (int i = 0; i < record_count; i++) {
         KboFaCompensationRecord* rec = &records[i];
         if (rec->status == KBO_FA_COMPENSATION_STATUS_CASH_ONLY_SELECTED) {
-            KboFaCompensationDecisionRow decision;
-            if (kbo_load_latest_fa_compensation_decision(rec->player_id, &decision)
-                    && strcmp(decision.action, "CASH_ONLY") == 0) {
-                append_logf(
-                    "KBO FA compensation cash-only recorded fa_player=%u original_team=%u signing_team=%u cash_only=%u source=%s",
-                    rec->player_id,
-                    rec->original_team_id,
-                    rec->signing_team_id,
-                    rec->cash_only,
-                    source != NULL ? source : "");
-                rec->status = KBO_FA_COMPENSATION_STATUS_CASH_ONLY_RECORDED;
-                generated++;
-            }
+            tasks[task_count].rec = *rec;
+            tasks[task_count].action = KBO_FA_COMPENSATION_DUE_TASK_RECORD_CASH;
+            task_count++;
             continue;
         }
         if (rec->status == KBO_FA_COMPENSATION_STATUS_PLAYER_SELECTED) {
-            KboFaCompensationDecisionRow decision;
-            if (kbo_load_latest_fa_compensation_decision(rec->player_id, &decision)
-                    && strcmp(decision.action, "PLAYER") == 0) {
-                KboFaProtectedCandidate selected;
-                memset(&selected, 0, sizeof(selected));
-                selected.player_id = decision.selected_player_id;
-                selected.team_id = rec->signing_team_id;
-                selected.score = decision.selected_player_score;
-                snprintf(selected.player_name, sizeof(selected.player_name), "%s", decision.selected_player_name);
-                if (kbo_transfer_fa_compensation_player_to_original_team(rec, &selected, today, source)) {
-                    kbo_emit_fa_compensation_player_selected_news(rec, &selected, today);
-                    rec->status = KBO_FA_COMPENSATION_STATUS_PLAYER_TRANSFERRED;
-                    generated++;
-                }
-            }
+            tasks[task_count].rec = *rec;
+            tasks[task_count].action = KBO_FA_COMPENSATION_DUE_TASK_TRANSFER_PLAYER;
+            task_count++;
             continue;
         }
         if (rec->status != KBO_FA_COMPENSATION_STATUS_PENDING
@@ -2032,21 +2144,84 @@ static int kbo_process_due_fa_compensation_protected_lists(const char* source)
             continue;
         }
 
-        if (kbo_submit_fa_compensation_protected_list_record(
-                rec,
-                today,
-                &rules,
-                candidates,
-                auto_protected,
-                source)) {
-            generated++;
-        }
+        tasks[task_count].rec = *rec;
+        tasks[task_count].action = KBO_FA_COMPENSATION_DUE_TASK_SUBMIT_LIST;
+        task_count++;
     }
-    if (generated > 0) {
-        kbo_persist_fa_compensation_records(records, record_count);
+    kbo_fa_compensation_unlock_ledger();
+
+    int generated = 0;
+    for (int t = 0; t < task_count; t++) {
+        KboFaCompensationRecord task_rec = tasks[t].rec;
+        uint8_t new_status = task_rec.status;
+        int changed = 0;
+
+        if (tasks[t].action == KBO_FA_COMPENSATION_DUE_TASK_RECORD_CASH) {
+            KboFaCompensationDecisionRow decision;
+            if (kbo_load_latest_fa_compensation_decision(task_rec.player_id, &decision)
+                    && strcmp(decision.action, "CASH_ONLY") == 0) {
+                append_logf(
+                    "KBO FA compensation cash-only recorded fa_player=%u original_team=%u signing_team=%u cash_only=%u source=%s",
+                    task_rec.player_id,
+                    task_rec.original_team_id,
+                    task_rec.signing_team_id,
+                    task_rec.cash_only,
+                    source != NULL ? source : "");
+                new_status = KBO_FA_COMPENSATION_STATUS_CASH_ONLY_RECORDED;
+                changed = 1;
+            }
+        } else if (tasks[t].action == KBO_FA_COMPENSATION_DUE_TASK_TRANSFER_PLAYER) {
+            KboFaCompensationDecisionRow decision;
+            if (kbo_load_latest_fa_compensation_decision(task_rec.player_id, &decision)
+                    && strcmp(decision.action, "PLAYER") == 0) {
+                KboFaProtectedCandidate selected;
+                memset(&selected, 0, sizeof(selected));
+                selected.player_id = decision.selected_player_id;
+                selected.team_id = task_rec.signing_team_id;
+                selected.score = decision.selected_player_score;
+                snprintf(selected.player_name, sizeof(selected.player_name), "%s", decision.selected_player_name);
+                if (kbo_transfer_fa_compensation_player_to_original_team(&task_rec, &selected, today, source)) {
+                    kbo_emit_fa_compensation_player_selected_news(&task_rec, &selected, today);
+                    new_status = KBO_FA_COMPENSATION_STATUS_PLAYER_TRANSFERRED;
+                    changed = 1;
+                }
+            }
+        } else if (tasks[t].action == KBO_FA_COMPENSATION_DUE_TASK_SUBMIT_LIST) {
+            if (kbo_submit_fa_compensation_protected_list_record(
+                    &task_rec,
+                    today,
+                    &rules,
+                    candidates,
+                    auto_protected,
+                    source)) {
+                new_status = task_rec.status;
+                changed = 1;
+            }
+        }
+
+        if (!changed) {
+            continue;
+        }
+
+        kbo_fa_compensation_lock_ledger(source != NULL ? source : "process_due_update");
+        memset(records, 0, (SIZE_T)KBO_FA_COMPENSATION_MAX * sizeof(KboFaCompensationRecord));
+        record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
+        for (int i = 0; i < record_count; i++) {
+            KboFaCompensationRecord* current = &records[i];
+            if (current->player_id == task_rec.player_id
+                    && current->season == task_rec.season
+                    && current->original_team_id == task_rec.original_team_id
+                    && current->signing_team_id == task_rec.signing_team_id) {
+                current->status = new_status;
+                kbo_persist_fa_compensation_records(records, record_count);
+                generated++;
+                break;
+            }
+        }
+        kbo_fa_compensation_unlock_ledger();
     }
 
-    kbo_fa_compensation_unlock_ledger();
+    HeapFree(GetProcessHeap(), 0, tasks);
     HeapFree(GetProcessHeap(), 0, auto_protected);
     HeapFree(GetProcessHeap(), 0, candidates);
     HeapFree(GetProcessHeap(), 0, records);
@@ -2102,21 +2277,28 @@ static int kbo_record_fa_compensation_signing(
     uint32_t league_id,
     const char* source)
 {
+    KBO_PROFILE_BEGIN(profile_fa_comp_record_signing);
     if (!kbo_fix_enabled()) {
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.disabled");
         return 0;
     }
     if (read_kbo_localappdata_flag_file("disable_kbo_fa_compensation.txt")) {
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.flag_disabled");
         return 0;
     }
     if (!kbo_player_pointer_plausible(player_ptr) || signing_team_id == 0u || league_id == 0u) {
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.bad_input");
         return 0;
     }
 
+    KBO_PROFILE_BEGIN(profile_fa_comp_rules_load);
     KboFaRules fa_rules;
     kbo_fa_rules_load(&fa_rules);
+    KBO_PROFILE_END(profile_fa_comp_rules_load, "fa_comp.record_signing.rules_load");
 
     uint8_t* player = (uint8_t*)player_ptr;
     if (fa_rules.exclude_foreign_players && kbo_player_is_foreign_for_kbo_rights(player)) {
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.foreign_excluded");
         return 0;
     }
 
@@ -2145,6 +2327,7 @@ static int kbo_record_fa_compensation_signing(
         signing_year = today >= 19820000u ? today / 10000u : 0u;
     }
     if (signing_year < 1982u || signing_year > 2300u) {
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.no_year");
         return 0;
     }
     if (today == 0u) {
@@ -2152,9 +2335,13 @@ static int kbo_record_fa_compensation_signing(
     }
 
     KboFaMarketClassification row;
+    KBO_PROFILE_BEGIN(profile_fa_comp_market_row);
     if (!kbo_fa_compensation_build_market_row(player, &row, league_id, signing_year, today, &fa_rules)) {
+        KBO_PROFILE_END(profile_fa_comp_market_row, "fa_comp.record_signing.market_row_failed");
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.market_row_failed");
         return 0;
     }
+    KBO_PROFILE_END(profile_fa_comp_market_row, "fa_comp.record_signing.market_row");
 
     if (!kbo_fa_rules_case_is_compensable(&fa_rules, row.case_label)
             || (fa_rules.exclude_foreign_players && row.foreign_player)
@@ -2175,6 +2362,7 @@ static int kbo_record_fa_compensation_signing(
                 row.fa_grade_salary,
                 (uint32_t)row.foreign_player);
         }
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.not_compensable");
         return 0;
     }
 
@@ -2191,6 +2379,7 @@ static int kbo_record_fa_compensation_signing(
         &protect_count,
         &requires_player);
     if (cash_only == 0u) {
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.no_cash_only");
         return 0;
     }
 
@@ -2198,9 +2387,11 @@ static int kbo_record_fa_compensation_signing(
         GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_COMPENSATION_MAX * sizeof(KboFaCompensationRecord));
     if (records == NULL) {
         append_log_line("KBO FA compensation skipped reason=allocation_failed");
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.alloc_failed");
         return 0;
     }
 
+    KBO_PROFILE_BEGIN(profile_fa_comp_ledger);
     kbo_fa_compensation_lock_ledger(source != NULL ? source : "record_signing");
     char path[MAX_PATH] = {0};
     int record_count = kbo_load_fa_compensation_records(records, KBO_FA_COMPENSATION_MAX, path, sizeof(path));
@@ -2213,6 +2404,8 @@ static int kbo_record_fa_compensation_signing(
             signing_team_id) >= 0) {
         kbo_fa_compensation_unlock_ledger();
         HeapFree(GetProcessHeap(), 0, records);
+        KBO_PROFILE_END(profile_fa_comp_ledger, "fa_comp.record_signing.ledger_existing");
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.existing");
         return 0;
     }
 
@@ -2220,6 +2413,8 @@ static int kbo_record_fa_compensation_signing(
         append_logf("KBO FA compensation skipped reason=ledger_full player=%u path=%s", row.player_id, path);
         kbo_fa_compensation_unlock_ledger();
         HeapFree(GetProcessHeap(), 0, records);
+        KBO_PROFILE_END(profile_fa_comp_ledger, "fa_comp.record_signing.ledger_full");
+        KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.ledger_full");
         return 0;
     }
 
@@ -2242,25 +2437,32 @@ static int kbo_record_fa_compensation_signing(
     snprintf(rec->player_name, sizeof(rec->player_name), "%s", row.player_name);
     snprintf(rec->source, sizeof(rec->source), "%s", source != NULL ? source : "fa_signing");
 
-    int persisted = kbo_persist_fa_compensation_records(records, record_count);
-    if (persisted) {
-        kbo_fa_compensation_record_history(rec);
-        append_logf(
-            "KBO FA compensation recorded player=%u name=%s grade=%s signing_team=%u original_team=%u salary=%d cash_with_player=%u cash_only=%u protect=%u ledger=%s",
-            rec->player_id,
-            rec->player_name,
-            rec->grade,
-            rec->signing_team_id,
-            rec->original_team_id,
-            rec->previous_salary,
-            rec->cash_with_player,
-            rec->cash_only,
-            rec->protect_count,
-            path);
-    }
+    KBO_PROFILE_BEGIN(profile_fa_comp_append);
+    int persisted = kbo_append_fa_compensation_record(rec);
+    KBO_PROFILE_END(profile_fa_comp_append, persisted ? "fa_comp.record_signing.appended" : "fa_comp.record_signing.append_failed");
+    KboFaCompensationRecord recorded = *rec;
 
     kbo_fa_compensation_unlock_ledger();
+    KBO_PROFILE_END(profile_fa_comp_ledger, persisted ? "fa_comp.record_signing.ledger_persisted" : "fa_comp.record_signing.ledger_not_persisted");
     HeapFree(GetProcessHeap(), 0, records);
+    if (persisted) {
+        KBO_PROFILE_BEGIN(profile_fa_comp_history);
+        kbo_fa_compensation_record_history(&recorded);
+        KBO_PROFILE_END(profile_fa_comp_history, "fa_comp.record_signing.history");
+        append_logf(
+            "KBO FA compensation recorded player=%u name=%s grade=%s signing_team=%u original_team=%u salary=%d cash_with_player=%u cash_only=%u protect=%u ledger=%s",
+            recorded.player_id,
+            recorded.player_name,
+            recorded.grade,
+            recorded.signing_team_id,
+            recorded.original_team_id,
+            recorded.previous_salary,
+            recorded.cash_with_player,
+            recorded.cash_only,
+            recorded.protect_count,
+            path);
+    }
+    KBO_PROFILE_END(profile_fa_comp_record_signing, persisted ? "fa_comp.record_signing.persisted" : "fa_comp.record_signing.not_persisted");
     return persisted;
 }
 

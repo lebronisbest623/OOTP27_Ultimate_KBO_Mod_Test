@@ -89,11 +89,15 @@ static int kbo_schedule_foreign_priority_custom_events_at_anchor(
             && open_exists
             && close_exists
             && military_exists) {
-        append_logf(
-            "KBO custom event schedule skipped source=%s reason=already_scheduled_for_season_end today=%u season_end=%u",
-            source != NULL ? source : "",
-            today,
-            offseason_starts_yyyymmdd);
+        static uint32_t last_logged_already_scheduled = 0u;
+        if (last_logged_already_scheduled != offseason_starts_yyyymmdd) {
+            last_logged_already_scheduled = offseason_starts_yyyymmdd;
+            append_logf(
+                "KBO custom event schedule skipped source=%s reason=already_scheduled_for_season_end today=%u season_end=%u",
+                source != NULL ? source : "",
+                today,
+                offseason_starts_yyyymmdd);
+        }
         return 0;
     }
 
@@ -228,10 +232,14 @@ static int kbo_schedule_foreign_priority_custom_events(const char* source)
         }
     }
     if (offseason_starts_yyyymmdd == 0u) {
-        append_logf(
-            "KBO custom event schedule skipped source=%s reason=no_offseason_starts_event today=%u",
-            source != NULL ? source : "",
-            today);
+        static uint32_t last_logged_no_event_today = 0u;
+        if (last_logged_no_event_today != today) {
+            last_logged_no_event_today = today;
+            append_logf(
+                "KBO custom event schedule skipped source=%s reason=no_offseason_starts_event today=%u",
+                source != NULL ? source : "",
+                today);
+        }
         return -1;
     }
 

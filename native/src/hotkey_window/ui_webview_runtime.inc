@@ -22,6 +22,23 @@ typedef struct KboWebViewNavHandler {
     HWND hwnd;
 } KboWebViewNavHandler;
 
+static int kbo_webview_team_action_allowed(uint32_t team_id, const char* source)
+{
+    if (kbo_get_allow_all_ui_team_actions_setting()) {
+        return 1;
+    }
+
+    if (team_id != 0 && kbo_team_is_human_controlled(team_id, source)) {
+        return 1;
+    }
+
+    append_logf(
+        "webview team action blocked reason=team_not_human_controlled source=%s team=%u",
+        source != NULL ? source : "",
+        team_id);
+    return 0;
+}
+
 static HRESULT STDMETHODCALLTYPE kbo_webview_nav_qi(ICoreWebView2NavigationStartingEventHandler* This, REFIID riid, void** ppv)
 {
     if (ppv == NULL) { return E_POINTER; }
@@ -77,7 +94,9 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         uint32_t player_id = (uint32_t)strtoul(id_text, NULL, 10);
         if (player_id != 0u) {
             g_kbo_hub_selected_foreign_player_id = player_id;
-            kbo_apply_foreign_rights_button(retain);
+            if (kbo_webview_team_action_allowed(g_kbo_hub_selected_team_id, retain ? "hub_foreign_retain" : "hub_foreign_release")) {
+                kbo_apply_foreign_rights_button(retain);
+            }
         }
         kbo_webview_navigate_current();
         return 1;
@@ -170,6 +189,40 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "mod/settings/profiler/", 22) == 0) {
+        const char* value = cmd + 22;
+        int enabled = ascii_equals_ignore_case(value, "on")
+            || ascii_equals_ignore_case(value, "1")
+            || ascii_equals_ignore_case(value, "true");
+        if (kbo_set_profiler_enabled_setting(enabled)) {
+            kbo_profiler_reset_enabled_cache();
+            append_logf("mod settings webview: profiler enabled=%d", enabled ? 1 : 0);
+        } else {
+            append_logf("mod settings webview: failed to write profiler enabled=%d", enabled ? 1 : 0);
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "mod/settings/ui-team-actions/", 29) == 0) {
+        const char* value = cmd + 29;
+        int allow_all = ascii_equals_ignore_case(value, "all")
+            || ascii_equals_ignore_case(value, "on")
+            || ascii_equals_ignore_case(value, "1")
+            || ascii_equals_ignore_case(value, "true");
+        if (kbo_set_allow_all_ui_team_actions_setting(allow_all)) {
+            append_logf("mod settings webview: allow all UI team actions=%d", allow_all ? 1 : 0);
+        } else {
+            append_logf("mod settings webview: failed to write allow all UI team actions=%d", allow_all ? 1 : 0);
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "mod/", 4) == 0) {
         int subview = atoi(cmd + 4);
         if (subview >= 0 && subview < KBO_HUB_MOD_SUBVIEW_COUNT) {
@@ -206,7 +259,10 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
         const char* slash = strchr(text, '/');
         uint32_t selected_player_id = slash != NULL ? (uint32_t)strtoul(slash + 1, NULL, 10) : 0u;
         if (fa_player_id != 0u && selected_player_id != 0u) {
-            kbo_manual_select_fa_compensation_player(fa_player_id, selected_player_id, "hub_manual_compensation_select");
+            uint32_t action_team_id = kbo_fa_compensation_original_team_for_player(fa_player_id);
+            if (kbo_webview_team_action_allowed(action_team_id, "hub_manual_compensation_select")) {
+                kbo_manual_select_fa_compensation_player(fa_player_id, selected_player_id, "hub_manual_compensation_select");
+            }
             g_kbo_hub_selected_fa_compensation_player_id = fa_player_id;
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
@@ -218,7 +274,10 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
     if (strncmp(cmd, "fa-comp/cash-only/", 18) == 0) {
         uint32_t fa_player_id = (uint32_t)strtoul(cmd + 18, NULL, 10);
         if (fa_player_id != 0u) {
-            kbo_manual_select_fa_compensation_cash_only(fa_player_id, "hub_cash_only_select");
+            uint32_t action_team_id = kbo_fa_compensation_original_team_for_player(fa_player_id);
+            if (kbo_webview_team_action_allowed(action_team_id, "hub_cash_only_select")) {
+                kbo_manual_select_fa_compensation_cash_only(fa_player_id, "hub_cash_only_select");
+            }
             g_kbo_hub_selected_fa_compensation_player_id = fa_player_id;
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
@@ -230,7 +289,10 @@ static int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
     if (strncmp(cmd, "fa-comp/submit/", 15) == 0) {
         uint32_t fa_player_id = (uint32_t)strtoul(cmd + 15, NULL, 10);
         if (fa_player_id != 0u) {
-            kbo_manual_submit_fa_compensation_protected_list(fa_player_id, "hub_protected_list_submit");
+            uint32_t action_team_id = kbo_fa_compensation_signing_team_for_player(fa_player_id);
+            if (kbo_webview_team_action_allowed(action_team_id, "hub_protected_list_submit")) {
+                kbo_manual_submit_fa_compensation_protected_list(fa_player_id, "hub_protected_list_submit");
+            }
             g_kbo_hub_selected_fa_compensation_player_id = fa_player_id;
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
