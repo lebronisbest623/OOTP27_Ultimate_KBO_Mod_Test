@@ -1,6 +1,17 @@
+#include "foreign_waiver_config.h"
+#include <stdio.h>
+#include <string.h>
+#include "../bootstrap/ootp_offsets.h"
+#include "../core/core_log.h"
+#include "../core/core_current_date.h"
+#include "../core/core_save_paths.h"
+#include "../core/core_text_date.h"
+#include "../core/core_flags/flags_api.h"
+#include "../runtime_memory/runtime_memory.h"
+
 /* Foreign waiver local config readers and manual candidate overrides. Included from native/src/foreign_waiver_ai.inc. */
 
-static uint32_t read_u32_leading_number_from_file(const char* filename)
+uint32_t read_u32_leading_number_from_file(const char* filename)
 {
     if (filename == NULL) {
         return 0;
@@ -51,13 +62,13 @@ static uint32_t read_u32_leading_number_from_file(const char* filename)
     return (uint32_t)raw;
 }
 
-static uint32_t kbo_get_foreign_waiver_auto_target_team_id(void)
+uint32_t kbo_get_foreign_waiver_auto_target_team_id(void)
 {
     return read_u32_leading_number_from_file("foreign_waiver_ai_targets.txt");
 }
 
 
-static int kbo_is_forced_foreign_candidate_id(uint32_t player_id)
+int kbo_is_forced_foreign_candidate_id(uint32_t player_id)
 {
     if (player_id == 0) {
         return 0;

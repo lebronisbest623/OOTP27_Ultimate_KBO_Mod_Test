@@ -107,7 +107,7 @@
 #include "src/military_service/military_hooks.inc"
 #define KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT 3u
 #include "src/foreign/foreign_waiver_decls.inc"
-#include "src/foreign/foreign_waiver_config.inc"
+#include "src/foreign/foreign_waiver_config.h"
 #include "src/foreign/foreign_waiver_state.inc"
 #include "src/foreign/foreign_waiver_policy.inc"
 #include "src/foreign/intl_established_fa_multiplier.inc"

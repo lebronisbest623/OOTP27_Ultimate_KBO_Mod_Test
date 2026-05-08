@@ -8,6 +8,7 @@
 #include "../core/core_text_date.h"
 #include "../core/core_flags/flags_api.h"
 #include "../runtime_memory/runtime_memory.h"
+#include "foreign_waiver_paths.h"
 
 /* Foreign waiver announcement idempotency records. Included from native/src/foreign_waiver_ai.inc. */
 

@@ -1,13 +1,11 @@
 /* Foreign waiver forward declarations. Included from native/src/foreign_waiver_ai.inc. */
 
-static uint32_t read_u32_leading_number_from_file(const char* filename);
 static int get_kbo_foreign_waiver_cmd_path(char* out, size_t out_size);
 static int kbo_load_foreign_waiver_rights(void);
 static int kbo_persist_foreign_waiver_rights(void);
 static void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd);
 static int kbo_player_is_foreign_for_kbo_rights(uint8_t* player);
 static int kbo_player_is_asian_quota_candidate(uint8_t* player);
-static int kbo_is_forced_foreign_candidate_id(uint32_t player_id);
 static int32_t kbo_foreign_waiver_value_score(uint8_t* player);
 static int32_t kbo_get_foreign_waiver_value_threshold(void);
 static void kbo_intl_established_fa_postscan_schedule(
@@ -20,7 +18,6 @@ static uint8_t* kbo_find_player_by_id(uint32_t player_id, uint32_t* out_current_
 uint32_t kbo_get_foreign_waiver_league_id(void);
 static int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_date);
 static int kbo_is_foreign_waiver_negotiation_window_open(void);
-static uint32_t kbo_get_foreign_waiver_auto_target_team_id(void);
 static int kbo_read_foreign_waiver_window(uint32_t* out_start, uint32_t* out_end);
 static int kbo_get_foreign_waiver_window_status_text(char* out, size_t out_size);
 static int kbo_set_foreign_waiver_right(uint32_t team_id, uint32_t player_id, uint32_t league_id, uint32_t retained_on, uint32_t expires_on);
