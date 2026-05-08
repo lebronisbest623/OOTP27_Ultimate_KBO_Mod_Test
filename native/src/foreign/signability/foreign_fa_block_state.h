@@ -10,19 +10,36 @@ extern volatile LONG g_kbo_foreign_offer_block_holder_team_id;
 extern volatile LONG g_kbo_custom_foreign_policy_block_player_id;
 extern volatile LONG g_kbo_custom_foreign_policy_block_requester_team_id;
 
+void kbo_record_recent_foreign_offer_allow(
+    uint32_t player_id,
+    uint32_t requester_team_id,
+    uint32_t today);
 int kbo_recent_foreign_offer_allow_matches(
     uint32_t player_id,
     uint32_t today,
     uint32_t* out_requester_team_id);
+void kbo_record_recent_custom_foreign_policy_allow(
+    uint32_t player_id,
+    uint32_t requester_team_id,
+    uint32_t today);
 int kbo_recent_custom_foreign_policy_allow_matches(
     uint32_t player_id,
     uint32_t today,
     uint32_t* out_requester_team_id);
+void kbo_record_recent_foreign_offer_block(
+    uint32_t player_id,
+    uint32_t requester_team_id,
+    uint32_t holder_team_id,
+    uint32_t today);
 int kbo_recent_foreign_offer_block_matches(
     uint32_t player_id,
     uint32_t today,
     uint32_t* out_requester_team_id,
     uint32_t* out_holder_team_id);
+void kbo_record_recent_custom_foreign_policy_block(
+    uint32_t player_id,
+    uint32_t requester_team_id,
+    uint32_t today);
 int kbo_recent_custom_foreign_policy_block_matches(
     uint32_t player_id,
     uint32_t today,

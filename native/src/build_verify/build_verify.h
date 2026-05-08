@@ -1,6 +1,11 @@
 #ifndef KBO_BUILD_VERIFY_H
 #define KBO_BUILD_VERIFY_H
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
 #include <stddef.h>
 #include <stdint.h>
 

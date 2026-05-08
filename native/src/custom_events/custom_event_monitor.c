@@ -21,8 +21,6 @@ void kbo_custom_event_monitor_tick(
 {
     uint32_t today_yyyymmdd = 0u;
     if (!kbo_get_current_yyyymmdd(&today_yyyymmdd) || today_yyyymmdd == 0u) {
-        kbo_schedule_foreign_priority_custom_events(source);
-        kbo_schedule_asian_games_custom_events(source);
         return;
     }
 

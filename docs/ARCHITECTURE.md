@@ -1,1109 +1,345 @@
 # OOTP27 KBO Launcher Architecture
 
-This project has two runtime layers:
+This document describes the current structure of the repository. The governing
+principles live in `docs/CONSTITUTION.md`; when this file and the constitution
+disagree, the constitution wins.
 
-- `src/KBOLauncher/Program.cs`: the managed launcher. It locates OOTP, prepares local data files and flags, starts or attaches to the game process, and injects the native patch DLL.
-- `native/KBOFix.c`: the native runtime patch shell. Legacy feature fragments are included explicitly from domain folders under `native/src/`, while migrated responsibilities build as explicit `.c/.h` translation units.
+## Runtime Layers
 
-The native layer is where most KBO rule emulation lives. Because it patches a closed game process, the architecture favors small, explicit feature modules over generic abstractions.
+The project has two runtime layers.
+
+- `src/KBOLauncher/Program.cs` is the managed entry point. It delegates to the
+  `LauncherApp` application layer, locates OOTP, prepares runtime data, checks
+  the target process, and injects the native DLL only when the guards allow it.
+- `native/KBOFix.c` is the native patch shell. It includes public module
+  headers and assembles native startup order, but gameplay behavior lives in
+  named modules under `native/src/`.
+
+Most KBO rule emulation lives in the native layer because the project patches a
+closed game process. The architecture therefore favors explicit modules and
+fail-closed guards over generic abstractions.
 
 ## Current Native Shape
 
-`native/KBOFix.c` is now a hybrid native shell. Legacy feature fragments are still included in dependency order, while migrated modules are linked as separate translation units with explicit headers:
+The native layer is now a multi-translation-unit build.
 
-```c
-/* ...core subsystem files... */
-#include "src/bootstrap/profiler.inc"
-#include "src/bootstrap/perf_probe.inc"
-#include "src/build_verify/build_verify.h"
-#include "src/runtime_memory/runtime_memory.inc"
-#include "src/team/team_string.inc"
-/* ...team subsystem files... */
-#include "src/amateur_player_quality/amateur_player_quality_state.inc"
-/* ...amateur_player_quality subsystem files... */
-/* ...fa_requalification subsystem files... */
-#include "src/military_service/military_service_decls.inc"
-/* ...military_service subsystem files... */
-#include "src/foreign/foreign_waiver_decls.inc"
-/* ...foreign subsystem files... */
-/* ...FA subsystem files... */
-#include "src/custom_events/asian_games_state.inc"
-/* ...custom_events subsystem files... */
-/* ...allstar subsystem files... */
-#include "src/season_phase_monitor/season_phase_monitor.inc"
-#include "src/patch_helpers/patch_helpers.inc"
-/* ...hook_stubs subsystem files... */
-/* ...patch_installers subsystem files... */
-#include "src/hotkey_window/state.inc"
-/* ...hotkey_window support files... */
-/* ...hotkey_window content files... */
-/* ...hotkey_window UI files... */
-/* ...entrypoint subsystem files... */
+`native/build.ps1` compiles `native/KBOFix.c` and every `*.c` file under
+`native/src/`, emits dependency files, and links the resulting objects into
+`native/bin/KBOFix.dll`.
+
+`native/KBOFix.c` should remain a thin shell. Its responsibilities are:
+
+- process-wide preprocessor setup needed by Win32/WebView2 headers
+- OOTP ABI and build-verification includes
+- public module header includes
+- startup and patch-installation ordering
+
+It should not own domain policy, persistence, scanners, UI rendering, or large
+helper bodies.
+
+## Native Source Layout
+
+The important native folders are:
+
+```text
+native/
+  KBOFix.c                         native shell and startup include surface
+  build.ps1                        native build/link script
+  tests/                           native helper tests
+  src/
+    bootstrap/                     ABI offsets, typedefs, startup declarations
+    build_verify/                  native supported-build verification
+    core/                          logging, paths, dates, flags, SQL helpers
+    runtime_memory/                process-memory safety helpers
+    team/                          team lookup, names, roster-array mutation
+    foreign/                       foreign-player policy subsystem
+    military_service/              military-service loan subsystem
+    custom_events/                 event scheduling, scanning, dispatch
+    allstar/                       single-division All-Star support
+    fa_*                           FA rules, filing, market, compensation
+    amateur_player_quality/        amateur reputation assignment
+    season_phase_monitor/          read-only phase monitor
+    patch_helpers/                 low-level patch helpers
+    hook_stubs/                    generated/executable hook stubs
+    patch_installers/              byte patches and detour installers
+    hotkey_window/                 in-game F2 hub UI
+    entrypoint/                    native startup and runtime install flow
 ```
 
-For the remaining legacy fragments, `.inc` files can still share `static` functions and state, so file order remains an API. Moving legacy code must preserve declaration order and any cross-module forward declarations in `KBOFix.c` or earlier fragments. Migrated `.c/.h` modules must not rely on include order; they expose only their header contract.
+New native code should be added as a focused `.c/.h` module under the owning
+subsystem. Headers expose the narrow contract; implementation details stay
+`static` in the `.c` file.
 
-`native/KBOFix.c` should stay as the native shell: offsets, OOTP ABI typedefs, hook prototypes, shared low-level helpers, legacy include order, and explicit migrated-module headers. Domain state belongs in the owning subsystem state module, not in the root file.
+## Managed Launcher
 
-## Launcher Build Guard
+`Program.cs` calls `LauncherApp.Run(args)`. `LauncherApp` is a partial
+application shell split by flow:
 
-Unknown OOTP builds must fail closed. The launcher reads the target `ootp27.exe` PE header before any DLL injection and compares `TimeDateStamp` plus `SizeOfImage` against the verified supported-build list.
+- `LauncherApp.cs` parses options, builds run context, applies guards, and
+  delegates to attach or launch flow.
+- `LauncherAttachFlow.cs` handles explicit attach paths.
+- `LauncherLaunchFlow.cs` handles launch and injection paths.
+- `LauncherRunSetup.cs` prepares runtime files and default flag state.
+- Infrastructure modules under `src/KBOLauncher/Infrastructure/` own build
+  guard reads, process discovery, injection, paths, seed copying, and flag JSON.
 
-If the build is unknown or unreadable:
+The managed layer must not implement KBO gameplay rules. It prepares data and
+controls whether the native runtime is allowed to load.
 
-- default no-argument runs disable KBOFix injection; if no OOTP process is running, they launch OOTP unmodified, and if one is already running, they leave it untouched
-- explicit `--dll`, `--attach-existing`, and `--attach-pid` injection requests fail visibly before injection
-- the launcher writes `launcher_build_guard_status.txt` under `%LOCALAPPDATA%\OOTP-KBO\`
-- the native `verify_ootp_build()` check remains as a second line of defense if a DLL is loaded by another path
+## Supported Build Manifest
 
-When OOTP patches, do not change offsets or installers speculatively. First record the detected timestamp/size pair, verify the patch behavior on that exact build, then update `config/ootp-supported-builds.json` and regenerate the managed/native supported-build sources.
+Supported OOTP builds are sourced from:
 
-## Roster Marker Guard
+```text
+config/ootp-supported-builds.json
+```
 
-KBOFix injection also requires the currently opened OOTP 27 `.lg` save to be marked as an Ultimate KBO roster save. After the launcher resolves the exact target OOTP process, it reads that process' current save path from the same OOTP global database field used by the native runtime.
+`tools/generate-supported-builds.ps1` generates:
 
-The current save's `description.txt` must contain:
+- `src/KBOLauncher/Infrastructure/OotpSupportedBuilds.Generated.cs`
+- `native/src/build_verify/supported_builds.generated.h`
+- `native/src/build_verify/supported_builds.generated.c`
+
+`KBOLauncher.Tests/OotpSupportedBuildManifestTests.cs` verifies that the JSON,
+managed generated source, and native generated source match.
+
+The remaining build-related debt is the build-specific RVA mapping in
+`native/src/build_verify/build_verify.c`. The supported-build list is generated,
+but the per-build RVA map is still hand-maintained C code. Future OOTP build
+updates should move those mappings into generated data as well.
+
+## Safety Guards
+
+KBOFix injection is fail-closed.
+
+- The launcher reads the target `ootp27.exe` PE header and checks timestamp plus
+  image size before injection.
+- Explicit injection requests fail visibly on unsupported or unreadable builds.
+- Default no-argument runs do not inject into unsupported targets.
+- The native DLL repeats build verification if loaded by another path.
+- Injection requires the current `.lg` save to contain the Ultimate KBO roster
+  marker in `description.txt`.
+
+The required marker is:
 
 ```text
 https://github.com/lebronisbest623/OOTP27_Ultimate_KBO
 ```
 
-If no save is open immediately after a new OOTP launch, the launcher waits for a marked current save before injecting KBOFix. This supports the "create a new save, then begin play" path without loading the DLL into an unmarked process. If an explicit attach target is unmarked, or the launched process opens a save whose `description.txt` does not contain the marker URL, KBOFix injection is blocked visibly. The launcher writes `launcher_roster_marker_guard_status.txt` under `%LOCALAPPDATA%\OOTP-KBO\` for diagnostics.
+The native save-scoped path helper follows the same fail-closed rule: it uses
+the current save path reported by OOTP memory. It must not guess the newest save
+folder as an output destination.
 
-The native save-scoped path helper follows the same fail-closed rule: it uses only the current save path reported by OOTP memory and does not scan for the newest `.lg` folder. If the current save path is unavailable, save-scoped persistence is disabled instead of writing into a guessed save bucket.
+## Runtime Flags
 
-## Runtime Flag Config
-
-Runtime boolean feature switches live in one JSON file:
+Runtime booleans live in:
 
 ```text
 %LOCALAPPDATA%\OOTP-KBO\kbo_flags.json
 ```
 
-Keys use the old flag-file basename without `.txt`; for example `enable_foreign_waiver_ai.txt` becomes `"enable_foreign_waiver_ai": true`. The launcher reads and writes this JSON for managed flags, and native `read_kbo_localappdata_flag_file()` maps existing call sites to the same JSON keys. Status files, command files, seeds, CSVs, and save-scoped persistence remain separate data files.
-
-The launcher treats the single-division All-Star option as a feature suite. Enabling it writes these native gates together: `enable_single_division_allstar_runtime_patches`, `enable_single_division_allstar_settings_patch`, `enable_single_division_allstar_voting_hook`, and `enable_single_division_allstar_events`. The events hook is nested under the runtime patch gate in native startup, so `enable_single_division_allstar_events` alone is not enough.
-
-## Native Source Layout
-
-`native/KBOFix.c` no longer includes wrapper `.inc` files directly under `native/src/`; those root wrappers have been removed. Remaining legacy fragments are included from their owning domain folders in dependency order. Migrated responsibilities should expose `.h` interfaces and add `.c` implementations under `native/src/`; `native/build.ps1` discovers those `.c` files recursively and links them automatically. Implementation bodies live in matching domain folders:
-
-```text
-native/src/
-  core/
-  build_verify/build_verify.h -> build_verify/build_verify.c
-  runtime_memory/runtime_memory.inc
-  team/
-  amateur_player_quality/
-  fa_requalification/fa_requalification/
-  military_service/
-  foreign/
-  fa_salary_snapshot/fa_salary_snapshot_parts/
-  fa_rules/fa_rules_parts/
-  fa_filing/fa_filing_parts/
-  fa_market_classification/fa_market_classification_parts/
-  fa_compensation/
-  custom_events/
-  allstar/
-  season_phase_monitor/season_phase_monitor.inc
-  patch_helpers/patch_helpers.inc
-  hook_stubs/
-  patch_installers/
-  hotkey_window/state.inc
-  hotkey_window/support/
-  hotkey_window/content_*.inc
-  hotkey_window/ui_*.inc
-  hotkey_window/ui_html_helpers/
-  hotkey_window/ui_html_render/
-  hotkey_window/ui_webview_runtime/
-  entrypoint/entrypoint_parts/
-```
-
-Rule of thumb: do not add new root `native/src/*.inc` wrappers. If a new legacy fragment is still needed before `.c/.h` migration, place it under the owning domain folder and include it explicitly from the native shell or a domain assembler.
-
-### Migrated Translation Units
-
-`native/src/build_verify/build_verify.c` is the first migrated native module. It owns:
-
-- reading the host OOTP PE timestamp and image size
-- fail-closed supported-build verification
-- exposing supported-build metadata to the F2 hub through accessor functions
-
-Its generated supported-build table remains private to the module. Other native code includes `build_verify.h` and must not depend on the generated array or include order.
-
-The current baseline already contains several FA and draft-adjacent domain entrypoints in `native/KBOFix.c`. That baseline is not a precedent for future broad migrations. Any further split, move, or ownership change must close exactly one subsystem or one responsibility unit per change.
-
-## Core Modules
-
-Core files are included explicitly from `native/KBOFix.c`. Core should contain shared runtime helpers only; feature-specific policy belongs in the owning subsystem.
-
-```text
-native/src/core/
-  core_log.h -> core_log.c
-  core_atomic_file.h -> core_atomic_file.c
-  core_text_date.h -> core_text_date.c
-  core_sql_escape.h -> core_sql_escape.c
-  core_sql_league_news.inc
-  core_sql_history_transactions.inc
-  core_save_paths.inc
-  core_message_body_file.inc
-  core_news_object.inc
-  core_current_date.inc
-  core_flags/*.h -> core_flags/*.c
-  core_league_context_parts/
-  core_league_events.inc
-  core_team_collect.inc
-  core_live_news.inc
-  core_history_stubs.inc
-```
-
-- `core_log.h` / `core_log.c`: log file helpers.
-- `core_atomic_file.h` / `core_atomic_file.c`: atomic temp-file write helpers.
-- `core_text_date.h` / `core_text_date.c`: ASCII comparison and YYYYMMDD history-date formatting.
-- `core_sql_escape.h` / `core_sql_escape.c`: SQL literal escaping.
-- `core_sql_league_news.inc`: `messages` and `league_news` SQL writes.
-- `core_sql_history_transactions.inc`: player-history and transaction SQL writes.
-- `core_save_paths.inc`: current save detection and save-scoped data paths.
-- `core_message_body_file.inc`: message body text file writes.
-- `core_news_object.inc`: native news object construction helpers.
-- `core_current_date.inc`: current date, year, and history-date reads.
-- `core_flags/*.h` / `core_flags/*.c`: local flag readers and `kbo_fix_enabled`.
-- `core_league_context_parts/`: event manager and KBO league id resolution.
-- `core_league_events.inc`: league-event existence/create helpers.
-- `core_team_collect.inc`: league team id collection.
-- `core_live_news.inc`: fanout/native live-news helpers.
-- `core_history_stubs.inc`: legacy special-history stubs.
-
-## Foreign Player Rules
-
-The old root foreign assembler used to own too many responsibilities:
-
-- foreign reserve-right negotiation window
-- reserve-right storage, loading, pruning, and memory sync
-- user retain/skip commands
-- AI retain/skip decisions
-- signability and offer blocking hooks
-- Asian quota policy
-- injury replacement slots
-- replacement-player seed resolution
-- foreign roster audit and snapshots
-- helper APIs consumed by the F2 hub UI
-
-The old root file name said "waiver AI", but the file represented the whole foreign-player policy subsystem. That root assembler has been removed; foreign responsibilities now live under `native/src/foreign/` and are included explicitly in the native shell until each responsibility migrates to `.c/.h`.
-
-## Foreign Policy Modules
-
-The foreign-player rules are split into a subsystem under `native/src/foreign/`.
-
-```text
-native/src/foreign/
-  foreign_waiver_decls.inc
-  foreign_waiver_config.inc
-  foreign_waiver_state.inc
-  foreign_waiver_policy.inc
-  foreign_waiver_date.inc
-  foreign_waiver_paths.inc
-  foreign_csv_parse.h
-  foreign_csv_parse.c
-  foreign_waiver_events_parts/
-  foreign_waiver_player_eval.inc
-  foreign_decision_team.inc
-  foreign_military_service_team_policy.inc
-  foreign_waiver_window.inc
-  foreign_waiver_results.inc
-  rights/
-  foreign_waiver_retain.inc
-  foreign_waiver_decisions.inc
-  foreign_waiver_announcements.inc
-  foreign_waiver_io.inc
-  foreign_waiver_command_execute.inc
-  signability/
-  foreign_waiver_status.inc
-  foreign_waiver_ai.inc
-  foreign_waiver_top_candidate.inc
-  foreign_waiver_scanner.inc
-  replacement_seed/
-  injury/
-  quota/
-  roster_audit/
-  rights/
-    foreign_waiver_rights_active.inc
-    foreign_waiver_rights_persist.inc
-    foreign_waiver_rights_load.inc
-    foreign_waiver_rights_mutation.inc
-    foreign_waiver_rights_query.inc
-    foreign_waiver_rights_memory_sync.inc
-  signability/
-    foreign_fa_block_state.inc
-    foreign_fa_block_log.inc
-    foreign_fa_fast_block_policy.inc
-    foreign_signability_wrapper.inc
-    foreign_signability_block_policy.inc
-    foreign_offer_eligibility_wrapper.inc
-    submit_offer_probe_parts/
-    foreign_ai_fa_candidate_wrapper.inc
-  replacement_seed/
-    foreign_replacement_seed_state.inc
-    foreign_replacement_seed_paths.inc
-    foreign_replacement_seed_lock.inc
-    foreign_replacement_seed_parse.h
-    foreign_replacement_seed_parse.c
-    foreign_replacement_seed_memory_resolve.inc
-    foreign_replacement_seed_players_dat.inc
-    foreign_replacement_seed_import.inc
-    foreign_replacement_seed_cache.inc
-    foreign_replacement_seed_loader.inc
-    foreign_replacement_seed_match.inc
-  injury/
-    foreign_injury_state.inc
-    foreign_injury_paths.inc
-    foreign_injury_labels.inc
-    foreign_injury_csv_load.inc
-    foreign_injury_seed_import.inc
-    foreign_injury_csv_persist.inc
-    foreign_injury_loader.inc
-    foreign_injury_queries.inc
-    foreign_injury_news.inc
-    foreign_injury_exceptions.inc
-    foreign_injury_scanner.inc
-  quota/
-    foreign_asian_quota_counts.inc
-    foreign_custom_foreign_signing_policy_parts/
-    foreign_active_count_policy.inc
-    foreign_active_count_wrappers.inc
-    foreign_callup_policy.inc
-    foreign_asian_quota_probe_log.inc
-  roster_audit/
-    foreign_roster_audit_state.inc
-    foreign_roster_audit_paths.inc
-    foreign_roster_audit_state_helpers.inc
-    foreign_roster_audit_csv.inc
-    foreign_roster_audit_scan.inc
-```
-
-### Assembly Layer
-
-The native shell includes the foreign subsystem from `native/src/foreign/` in dependency order. New gameplay rules should go into a focused module under that folder.
-
-### `foreign_waiver_decls.inc`
-
-Forward declarations for cross-module static functions. This exists because the native DLL is built as one translation unit and include order is effectively an API.
-
-### `foreign_waiver_config.inc`
-
-Local config and manual override readers:
-
-- read leading numeric values from local flag/config files
-- read forced foreign-player candidate ids
-- resolve the optional AI target team id
-
-Important rule: a player does not start with an exercised reserve right just because OOTP memory has an `active_team_id`. The reserve right is created only when the retain decision is made during the reserve-right event window or loaded from persisted `foreign_waiver_rights.csv`.
-
-### `foreign_waiver_state.inc`
-
-Shared foreign-waiver state and DTOs:
-
-- negotiation-window cache fields
-- pending event queue state
-- retained-right record table
-- AI target candidate struct
-- shared locks
-
-### `foreign_waiver_policy.inc`
-
-Policy switches and league resolution:
-
-- `kbo_flags.json` key `enable_foreign_waiver_ai`
-- `kbo_flags.json` key `disable_kbo_custom_foreign_policy`
-- `kbo_flags.json` key `disable_foreign_waiver_legacy_auto_detector`
-- configured or inferred KBO league id
-
-### `foreign_waiver_date.inc`
-
-Date parsing and YYYYMMDD arithmetic used across foreign-player policy and custom event scheduling:
-
-- parse `YYYYMMDD` and `YYYY-MM-DD`
-- add days, months, and years to YYYYMMDD values
-- read the current game date as YYYYMMDD
-
-### `foreign_waiver_paths.inc`
-
-Foreign-player file path ownership:
-
-- `foreign_waiver_negotiation_window.txt`
-- `foreign_waiver_rights.csv`
-- `foreign_waiver_decisions.csv`
-- `asian_quota_nation_ids.txt`
-- `foreign_waiver_announcements.txt`
-
-### `foreign_csv_parse.h` / `foreign_csv_parse.c`
-
-Shared CSV numeric-field parsing used by foreign-player persistence modules. This is intentionally tiny because several modules read comma-delimited ids and dates, but none of them should depend on command IO just to parse a number.
-
-### `foreign_waiver_events_parts/`
-
-The event window and league-event layer:
-
-- open the reserve-right decision window
-- close the window
-- persist `foreign_waiver_negotiation_window.txt`
-- queue/flush custom league events
-- detect the offseason anchor for the legacy detector
-
-This module owns when decisions may be made. It should not choose which players to retain.
-
-### `foreign_waiver_player_eval.inc`
-
-Player identity, classification, and value helpers:
-
-- player lookup by id
-- foreign-player classification
-- Asian quota nation classification
-- foreign waiver value score and threshold
-
-### `foreign_decision_team.inc`
-
-Decision-team helpers for the reserve-right event:
+Native callers still use `read_kbo_localappdata_flag_file("name.txt")` for
+compatibility, but that function maps the old filename form to JSON keys.
+Status files, command files, seeds, CSVs, and save-scoped persistence remain
+separate files.
 
-- read the player's original club from memory
-- resolve the team allowed to decide during an open event window
-- enforce the original-club priority rule while the window is open
+The F2 hub intentionally exposes recovery flags so users can disable risky
+runtime paths without editing JSON by hand. The current debt is that flag
+metadata is duplicated between the managed `KboFlags` list and the F2 hub's
+native flag table. The next cleanup should introduce one flag manifest and
+generate both surfaces.
 
-Important rule: this module may expose candidate ownership during the event window, but it must not create an exercised reserve right.
+## Native Subsystems
 
-### `foreign_waiver_window.inc`
+### Core
 
-Negotiation-window reads and open-state checks:
+`native/src/core/` owns shared infrastructure only: logging, atomic writes,
+date/text helpers, SQL escaping, save-scoped paths, runtime flags, league
+context, league-event helpers, and news/history helper APIs.
 
-- read `foreign_waiver_negotiation_window.txt`
-- cache open-window state
-- decide whether retain/skip decisions are currently legal
+Core must not accumulate feature policy. If a helper knows KBO domain rules, it
+belongs in the owning subsystem.
 
-### `foreign_waiver_results.inc`
+### Foreign Player Policy
 
-Reserve-right result summary generation:
+`native/src/foreign/` owns foreign-player reserve rights, signability and offer
+blocking, Asian quota behavior, injury replacement slots, replacement-player
+seed resolution, and foreign roster diagnostics.
 
-- summarize AI/user retain and skip decisions
-- count active retained rights
-- record result announcements
+Key subfolders:
 
-### `foreign_waiver_announcements.inc`
+- `rights/`: exercised reserve-right storage, loading, mutation, and query
+- `signability/`: signability, offer, FA candidate, and no-minor-contract probes
+- `replacement_seed/`: replacement-player seed parsing and resolution
+- `injury/`: injury replacement slot lifecycle
+- `quota/`: Asian quota, active count, and call-up limit policy
+- `roster_audit/`: read-only roster diagnostics and snapshots
 
-Announcement idempotency records:
+Foreign-player event-window logic decides when a retain/skip decision is legal.
+Rights storage owns exercised rights after a valid retain decision exists. The
+two concepts must not be collapsed.
 
-- check whether a result announcement was already recorded
-- append result announcement dates
-- append result announcement bodies for diagnostics
+### Military Service
 
-### `rights/`
+`native/src/military_service/` owns military-service candidate queues, seed
+assignment, active service-loan records, player service-day state, annual
+selection events, return logic, and hook wrappers.
 
-Assembler for the KBO foreign reserve-right store:
+Seed storage and player movement are separate responsibilities. Queueing a
+candidate does not move the player; movement happens in seed assignment or the
+selection-event path.
 
-- `foreign_waiver_rights_active.inc`: active-window check for retained-right records
-- `foreign_waiver_rights_persist.inc`: CSV writes for `foreign_waiver_rights.csv`
-- `foreign_waiver_rights_load.inc`: CSV loading and duplicate collapse
-- `foreign_waiver_rights_mutation.inc`: prune expired rights and upsert retained rights
-- `foreign_waiver_rights_query.inc`: active-holder lookups
-- `foreign_waiver_rights_memory_sync.inc`: sync persisted active rights into player/team memory
+### Custom Events
 
-This module owns exercised rights after a retain decision exists. It should not expose event-window candidate priority as if it were an exercised right.
+`native/src/custom_events/` owns event-name matching, event scheduling,
+processed-event markers, due-event scanning, and dispatch into owning domain
+handlers.
 
-### `foreign_waiver_retain.inc`
+The scanner owns timing and idempotency. Domain modules own behavior. New custom
+events should add a title matcher and a dispatch target rather than expanding
+scanner logic inline.
 
-Retain execution for an approved decision:
+### FA and Amateur Modules
 
-- compute retained/expires dates
-- update the retained-right table through `rights/` helpers
-- persist the new right
-- sync the right into memory
+The FA-adjacent modules are split by responsibility:
 
-This module mutates gameplay state only after event/window and command/AI code have decided that a retain is legal.
+- `fa_rules/`: FA rule config loading and query helpers
+- `fa_filing/`: FA filing persistence and lookup
+- `fa_market_classification/`: market classification, cache, and CSV output
+- `fa_salary_snapshot/`: opening-day salary snapshot observation
+- `fa_compensation/`: compensation records, protected lists, due tasks, and news
+- `fa_requalification/`: FA requalification tracking
+- `amateur_player_quality/`: amateur reputation assignment and diagnostics
 
-### `foreign_waiver_decisions.inc`
+These modules should continue moving toward smaller files where one file owns
+one lifecycle or data table.
 
-Decision-record persistence:
+### All-Star
 
-- resolve the current reserve-right window dates
-- append retain/skip records to `foreign_waiver_decisions.csv`
-- detect whether a team/player/window decision already exists
+`native/src/allstar/` owns single-division All-Star team setup, voting/event
+hooks, schedule dates, candidate-team seeding, and related CSV parsing.
 
-### `foreign_waiver_io.inc`
+### Patch Installers and Hook Stubs
 
-Command and candidate CSV IO only:
+`native/src/patch_installers/` owns byte-pattern verification and patch
+installation. It should not contain gameplay policy.
 
-- read and rewrite `foreign_waiver_commands.txt`
-- append retain/skip commands from UI calls
-- write `foreign_waiver_candidates.csv`
+`native/src/hook_stubs/` owns executable call stubs and ABI wrappers. Wrappers
+should pass arguments to domain modules and translate results back into OOTP ABI
+shape; policy should stay in the domain modules.
 
-It should not own window rules, rights storage, or signability hooks.
+### F2 Hotkey Window
 
-### `foreign_waiver_command_execute.inc`
+`native/src/hotkey_window/` owns the in-game F2 hub UI. It may:
 
-Command execution after `foreign_waiver_io.inc` reads a command line. This module validates retain/skip commands against the current window, decision team, and duplicate-decision rules, then calls the retain or decision-record helpers.
+- display runtime state
+- select league/team/player context
+- write command requests
+- call narrow domain query APIs
+- expose recovery flags for user safety
 
-### `signability/`
+It must not directly mutate gameplay tables or OOTP player/team memory.
 
-Assembler for offer/signability and FA candidate hook wrappers:
+Current debt: `hotkey_window.c` is still an oversized module containing state,
+HTML rendering, WebView runtime, command URI routing, settings rendering, and
+Win32 window code. This is the largest remaining architectural hotspot.
 
-- `foreign_fa_block_state.inc`: recent UI/AI block caches for F2 hub context
-- `foreign_fa_block_log.inc`: callsite diagnostics for new reserve-right blocks
-- `foreign_military_service_team_policy.inc`: military-service team FA block helper
-- `foreign_fa_fast_block_policy.inc`: early FA candidate block decisions before OOTP's original check
-- `foreign_signability_block_policy.inc`: retained-right, custom foreign-policy, and injury-replacement signability decisions
-- `foreign_signability_wrapper.inc`: player/team signability wrapper
-- `foreign_offer_eligibility_wrapper.inc`: offer eligibility wrapper
-- `submit_offer_probe_parts/`: submit-offer screen probe wrapper and no-minor-demand helpers
-- `foreign_ai_fa_candidate_wrapper.inc`: AI free-agent candidate insert wrapper
+## Thread Lifecycle
 
-### `foreign_waiver_status.inc`
+Background loops should:
 
-F2 hub status text for the reserve-right decision window.
+- be started by the module that owns the loop
+- check `kbo_runtime_threads_should_continue()`
+- sleep through `kbo_runtime_sleep_should_continue()`
+- clear their own started flag before exit
 
-### `foreign_waiver_ai.inc`
+`DllMain` requests runtime thread shutdown on process detach. The project does
+not currently join every detached thread because most thread handles are closed
+after creation. Any new thread owner should make shutdown behavior explicit and
+avoid introducing loops that cannot observe the runtime stop flag.
 
-AI decision logic only:
-
-- scan eligible foreign players during an open decision window
-- score candidates
-- choose retain or skip
-- write AI decision records
-
-This module should call rights/orchestrator helpers to execute a retain. It should not own the rights table, event window, or signability hooks.
-
-### `foreign_waiver_top_candidate.inc`
-
-F2 hub helper for resolving a team's best current reserve-right candidate. This belongs outside the AI module because UI candidate preview is not the same responsibility as automatic AI decision-making.
-
-### `foreign_waiver_scanner.inc`
-
-Scanner thread startup and loop for foreign reserve-right processing. The loop invokes window/event processing, command handling, AI decisions, result announcements, and roster audit ticks without owning those domains.
-
-### `replacement_seed/`
-
-Assembler for known replacement-player seed and cache handling:
-
-- `foreign_replacement_seed_state.inc`: seed table state and forward declarations
-- `foreign_replacement_seed_paths.inc`: save/global seed, resolved-cache, and `players.dat` path resolution
-- `foreign_replacement_seed_lock.inc`: seed table lock helpers
-- `foreign_replacement_seed_parse.h` / `foreign_replacement_seed_parse.c`: seed record type, shared constants, CSV token, slot-type, and seed-line parsing
-- `foreign_replacement_seed_memory_resolve.inc`: in-memory seed-key lookup helpers
-- `foreign_replacement_seed_players_dat.inc`: `players.dat` fallback resolution
-- `foreign_replacement_seed_import.inc`: seed table import and de-duplication
-- `foreign_replacement_seed_cache.inc`: resolved id cache load/persist
-- `foreign_replacement_seed_loader.inc`: lazy-load and unresolved-key retry orchestration
-- `foreign_replacement_seed_match.inc`: public match check used by roster counts
-
-This module is data-resolution infrastructure. It should not enforce roster rules.
-
-### `injury/`
-
-Assembler for temporary foreign-player injury replacement rules:
-
-- `foreign_injury_state.inc`: constants, record type, table state, feature flag, and forward declarations
-- `foreign_injury_paths.inc`: save/global CSV path resolution
-- `foreign_injury_labels.inc`: display labels, slot classification, and lock helpers
-- `foreign_injury_csv_load.inc`: persisted replacement record loading
-- `foreign_injury_seed_import.inc`: save/global seed import for open replacement cases
-- `foreign_injury_csv_persist.inc`: persisted replacement record writes
-- `foreign_injury_loader.inc`: lazy-load orchestration and seed import trigger
-- `foreign_injury_queries.inc`: slot lookup/count helpers used by roster policy and UI
-- `foreign_injury_news.inc`: native news for open/pending transitions
-- `foreign_injury_exceptions.inc`: signing/callup exception policy
-- `foreign_injury_scanner.inc`: scanner thread and injury lifecycle transitions
-
-It may depend on `replacement_seed/` and `quota/` helpers for classification, but it should own only injury-replacement lifecycle and exceptions.
-
-### `quota/`
-
-Assembler for Asian quota and foreign roster-count policy:
-
-- `foreign_asian_quota_counts.inc`: organization and active-roster foreign/asian/non-asian counts
-- `foreign_custom_foreign_signing_policy_parts/`: signing/offer allow checks for the custom foreign-player limit
-- `foreign_active_count_policy.inc`: active foreign count adjustment and neutralization policy
-- `foreign_active_count_wrappers.inc`: OOTP active foreign hitter/pitcher count wrappers
-- `foreign_callup_policy.inc`: callup limit policy and OOTP callup wrappers
-- `foreign_asian_quota_probe_log.inc`: signability/offer diagnostic probes
-
-It may ask `injury/` helpers whether an extra temporary slot exists.
-
-### `roster_audit/`
-
-Assembler for foreign roster diagnostics only:
-
-- `foreign_roster_audit_state.inc`: audit record type and in-memory snapshot table
-- `foreign_roster_audit_paths.inc`: audit/snapshot CSV path resolution
-- `foreign_roster_audit_state_helpers.inc`: state capture, comparison, and change-type classification
-- `foreign_roster_audit_csv.inc`: CSV headers, file open helpers, and row writers
-- `foreign_roster_audit_scan.inc`: scan loop, baseline reset, change detection, and summary logging
-
-This module should never change gameplay state.
-
-## Include Order Goal
-
-The current foreign include section is:
-
-```c
-#include "foreign/foreign_waiver_decls.inc"
-#include "foreign/foreign_waiver_config.inc"
-#include "foreign/foreign_waiver_state.inc"
-#include "foreign/foreign_waiver_policy.inc"
-#include "foreign/foreign_waiver_date.inc"
-#include "foreign/foreign_waiver_paths.inc"
-#include "foreign/foreign_csv_parse.h"
-#include "foreign/foreign_waiver_events_parts/priority_event_queue.inc"
-#include "foreign/foreign_waiver_events_parts/offseason_event_detection.inc"
-#include "foreign/foreign_waiver_events_parts/window_persistence.inc"
-#include "foreign/foreign_waiver_events_parts/window_advance.inc"
-#include "foreign/foreign_waiver_player_eval.inc"
-#include "foreign/foreign_decision_team.inc"
-#include "foreign/replacement_seed/foreign_replacement_seed_state.inc"
-/* ...replacement_seed fragments... */
-#include "foreign/injury/foreign_injury_state.inc"
-/* ...injury fragments... */
-#include "foreign/quota/foreign_asian_quota_counts.inc"
-/* ...quota fragments... */
-#include "foreign/rights/foreign_waiver_rights_active.inc"
-/* ...rights fragments... */
-#include "foreign/foreign_waiver_retain.inc"
-#include "foreign/foreign_waiver_decisions.inc"
-#include "foreign/foreign_waiver_announcements.inc"
-#include "foreign/foreign_waiver_results.inc"
-#include "foreign/foreign_waiver_window.inc"
-#include "foreign/signability/foreign_fa_block_state.inc"
-/* ...signability fragments... */
-#include "foreign/foreign_waiver_status.inc"
-#include "foreign/foreign_waiver_command_execute.inc"
-#include "foreign/foreign_waiver_ai.inc"
-#include "foreign/foreign_waiver_io.inc"
-#include "foreign/foreign_waiver_top_candidate.inc"
-#include "foreign/roster_audit/foreign_roster_audit_scan.inc"
-#include "foreign/foreign_injury_scanner.inc"
-#include "foreign/foreign_waiver_scanner.inc"
-```
-
-The exact order can change if compilation proves a different dependency is cleaner. If two modules need each other, prefer a narrow forward declaration in `foreign_waiver_decls.inc` or a tiny shared helper in `foreign_waiver_config.inc` / `foreign_waiver_player_eval.inc` over merging the modules again.
-
-## All-Star Modules
-
-The All-Star subsystem is assembled directly from `native/KBOFix.c` in dependency order.
-
-```text
-native/src/allstar/
-  allstar_state.inc
-  allstar_league_context/
-  allstar_string.inc
-  allstar_csv_parse.h
-  allstar_csv_parse.c
-  allstar_csv_store.inc
-  allstar_team_patch.inc
-  allstar_candidate_seed.inc
-  allstar_flags.inc
-  allstar_event_wrappers.inc
-```
-
-- `allstar_state.inc`: shared typedefs, tables, counters, and build-specific layout selection
-- `allstar_league_context/`: league pointer lookup and KBO All-Star context checks
-- `allstar_string.inc`: OOTP string assignment helper resolution
-- `allstar_csv_parse.h` / `allstar_csv_parse.c`: All-Star team-split CSV parsing helpers
-- `allstar_csv_store.inc`: CSV path resolution, row storage, and lazy loading
-- `allstar_team_patch.inc`: Nanum/Dream and Futures North/South team name assignment
-- `allstar_candidate_seed.inc`: candidate-team seeding wrapper
-- `allstar_flags.inc`: league flag enforcement and startup retry
-- `allstar_event_wrappers.inc`: All-Star event/voting preparation wrappers
-
-All-Star CSV parsing should stay separate from team-memory mutation. Wrappers should remain thin and call the lower-level helpers.
-
-## Hook Stub Modules
-
-The executable stub-builder fragments are assembled directly from `native/KBOFix.c` in dependency order. Stub builders only assemble trampoline/detour byte buffers and flush instruction cache. Policy decisions belong in wrapper/domain modules; patch-site discovery and installation belong in `patch_installers/`.
-
-```text
-native/src/hook_stubs/
-  hook_stubs_military.inc
-  foreign_signability_stubs/
-  hook_stubs_foreign_ai_status.inc
-  hook_stubs_foreign_counts.inc
-  hook_stubs_near_code.inc
-  hook_stubs_season_phase.inc
-  hook_stubs_allstar_settings.inc
-  hook_stubs_allstar_events.inc
-  hook_stubs_allstar_candidate.inc
-```
-
-- `hook_stubs_military.inc`: military service entry trampoline and status detour stubs.
-- `foreign_signability_stubs/`: foreign signability, offer eligibility, submit-offer probe, and FA signing branch stubs.
-- `hook_stubs_foreign_ai_status.inc`: AI FA status candidate insertion stub.
-- `hook_stubs_foreign_counts.inc`: active foreign count and callup-limit branch stubs.
-- `hook_stubs_near_code.inc`: near-target executable allocation helper for relative call sites.
-- `hook_stubs_season_phase.inc`: season-phase write probe call stub.
-- `hook_stubs_allstar_settings.inc`: All-Star setting enable stub.
-- `hook_stubs_allstar_events.inc`: All-Star event preparation and voting-begin stubs.
-- `hook_stubs_allstar_candidate.inc`: All-Star candidate team split stub.
-
-## Patch Installer Modules
-
-Patch installer fragments are assembled directly from `native/KBOFix.c` in dependency order. Installer modules own byte-pattern verification and patch application only; gameplay policy belongs in the hook wrapper or domain subsystem being called.
-
-```text
-native/src/patch_installers/
-  patch_installers_military.inc
-  patch_installers_foreign_signability_entry.inc
-  patch_installers_global_callback_probe.inc
-  patch_installers_foreign_ai_fa_fallback.inc
-  patch_installers_foreign_submit_offer_probe.inc
-  patch_installers_foreign_signing_branch.inc
-  patch_installers_foreign_ai_fa_status.inc
-  patch_installers_foreign_counts.inc
-  patch_installers_foreign_callup_limits.inc
-  patch_installers_allstar_common.inc
-  patch_installers_allstar_static.inc
-  patch_installers_allstar_candidate.inc
-  patch_installers_allstar_events.inc
-  patch_installers_allstar_settings.inc
-```
-
-- `patch_installers_military.inc`: military service entry and status-update detours.
-- `patch_installers_foreign_signability_entry.inc`: player/team signability and offer-eligibility detours.
-- `patch_installers_foreign_ai_fa_fallback.inc`: AI FA signability fallback static patch.
-- `patch_installers_foreign_submit_offer_probe.inc`: FA submit-offer probe detour.
-- `patch_installers_foreign_signing_branch.inc`: FA signing branch signature scan and detour.
-- `patch_installers_foreign_ai_fa_status.inc`: AI FA status candidate insertion detour.
-- `patch_installers_foreign_counts.inc`: active/secondary foreign-player count detours.
-- `patch_installers_foreign_callup_limits.inc`: foreign-player callup limit branch detours.
-- `patch_installers_allstar_common.inc`: All-Star installer host and static-pattern helpers.
-- `patch_installers_allstar_static.inc`: single-division All-Star static byte patches.
-- `patch_installers_allstar_candidate.inc`: All-Star candidate team split hook.
-- `patch_installers_allstar_events.inc`: All-Star voting and event preparation hooks.
-- `patch_installers_allstar_settings.inc`: All-Star settings UI byte patches.
-
-## Team Modules
-
-The team subsystem is assembled directly from `native/KBOFix.c` in dependency order. Team lookup/name helpers are read-only. Roster-array and assignment helpers mutate OOTP memory and should only be used by domain modules that own the state transition being performed.
-
-```text
-native/src/team/
-  team_string.inc
-  team_name_cache.inc
-  team_lookup.inc
-  team_org_assignment_query.inc
-  team_roster_arrays.inc
-  team_assignment.inc
-```
-
-- `team_string.inc`: bounded ASCII copies, OOTP string-object reads, and team string matching.
-- `team_name_cache.inc`: save-scoped `names.dat` cache loading, player name lookup, and display-name formatting.
-- `team_lookup.inc`: player pointer plausibility, global player-vector discovery, and team lookup by CSV or numeric id.
-- `team_org_assignment_query.inc`: organization/affiliate id matching and current player assignment checks.
-- `team_roster_arrays.inc`: fixed-size team roster-array add/remove helpers.
-- `team_assignment.inc`: OOTP-like player-to-team assignment mutation and native team add/remove entry resolution.
-
-## Hotkey Window Modules
-
-The F2 hub is assembled explicitly from `hotkey_window/state.inc` plus content, support, and UI fragments under `hotkey_window/`.
-
-`native/src/hotkey_window/state.inc` is a thin assembler for F2 hub types, global handles, selection state, and small state-adjacent lookup helpers:
-
-```text
-native/src/hotkey_window/
-  state.inc
-  state_types.inc
-  state_window.inc
-  state_gdi.inc
-  state_view.inc
-  state_skin.inc
-  state_constants.inc
-  state_team_vector.inc
-  state_language.inc
-  state_nav.inc
-  state_text_utils.inc
-  state_league_lookup/
-  state_league_name.inc
-```
-
-- `state_types.inc`: shared F2 hub buffer/search structs.
-- `state_window.inc`: Win32/WebView window handles, startup flags, hook handles, and thread state.
-- `state_gdi.inc`: GDI font and brush handles.
-- `state_view.inc`: selected view, language, dropdown, selected league/team/player, and legacy hit rectangles.
-- `state_skin.inc`: skin metrics, bitmap assets, and logo cache keys.
-- `state_constants.inc`: hub control ids, view ids, language ids, fixed size, and palette constants.
-- `kbo_hub_text`: current-language text selection helper in `state.inc`.
-- `state_team_vector.inc`: team vector lookup used by hub selection/league filtering.
-- `state_language.inc`: language setting path, load, and save.
-- `state_nav.inc`: localized navigation labels.
-- `state_text_utils.inc`: UTF-8/wide conversion and ASCII trimming helpers.
-- `state_league_lookup/`: league pointer cache, miss cache, and global DB league-vector scan.
-- `state_league_name.inc`: league-name string scan and display-name formatting.
-
-Legacy text-content fallback files for the Win32 edit control are included explicitly from `native/KBOFix.c`:
-
-```text
-native/src/hotkey_window/
-  content_service_helpers.inc
-  content_overview.inc
-  content_military.inc
-  content_foreign_rights.inc
-  content_foreign_injury.inc
-  content_mod_info.inc
-  content_foreign_policy.inc
-  content_asian_games.inc
-  content_settings.inc
-  content_router.inc
-  content_refresh.inc
-```
-
-- `content_service_helpers.inc`: service-team player counts used by overview and military panels.
-- `content_overview.inc`: overview text panel.
-- `content_military.inc`: military service text panel.
-- `content_foreign_rights.inc`: foreign-rights text panel and selected-candidate text.
-- `content_foreign_injury.inc`: foreign injury replacement text panel.
-- `content_mod_info.inc`: mod information text panel.
-- `content_foreign_policy.inc`: Asian-quota/foreign-policy text panel.
-- `content_asian_games.inc`: Asian Games roster text panel.
-- `content_settings.inc`: settings/hotkey text panel.
-- `content_router.inc`: selected-view dispatch for text panels.
-- `content_refresh.inc`: Win32 edit-control refresh and UTF-8 to wide text handoff.
-
-The WebView2/Win32 UI surface is included explicitly from focused fragments:
-
-```text
-native/src/hotkey_window/
-  ui_view_selection.inc
-  ui_foreign_controls.inc
-  ui_html_helpers/
-  ui_html_render/
-  ui_webview_runtime/
-  ui_window.inc
-```
-
-- `ui_view_selection.inc`: current view titles, league/team visibility rules, selection validation, and league/team dropdown commands.
-- `ui_foreign_controls.inc`: legacy foreign-rights list/edit interaction and retain/skip command submission.
-- `ui_html_helpers/`: HTML escaping, table cells, date/flag formatting, file URL/image helpers, and WebView dropdown markup helpers.
-- `ui_html_render/`: full F2 hub HTML document rendering and current WebView navigation.
-- `ui_webview_runtime/`: WebView2 COM handlers, command URI dispatch, controller creation, settings, and bounds.
-- `ui_window.inc`: fixed-size Win32 window layout, window procedure, keyboard hook thread, and startup.
-
-UI modules can submit command-file actions and refresh views, but direct gameplay memory mutation remains outside `hotkey_window/`.
-
-## Remaining Migration Plan
-
-1. Continue migrating `fa_requalification/fa_requalification/` fragments into explicit `.c/.h` modules.
-2. Finish `amateur_player_quality/` as its own draft-quality subsystem; do not reintroduce a root assembler wrapper.
-3. Finish `fa_salary_snapshot/` as an observation-only subsystem; snapshot code must not mutate gameplay state.
-4. Finish `fa_market_classification/` as a classification/cache subsystem; SQLite cache ownership stays inside that folder.
-5. Finish `patch_installers/no_minor_contracts/` as one patch-installer responsibility unit; do not mix it with unrelated patch families.
-6. Finish `foreign/signability/submit_offer_probe_parts/` as the foreign signability submit-offer responsibility unit.
-7. Finish `foreign/intl_established_fa_postscan/` as the international established FA scan responsibility unit.
-8. Continue splitting `hotkey_window/ui_html_helpers/` and `hotkey_window/ui_webview_runtime/`; UI splits must not change gameplay behavior.
-9. Revisit `custom_events/asian_games_selection/` and `asian_games_news/`; those are the next oversized event-domain groups.
-10. Keep actual AI scoring and automatic retain/skip decisions in `foreign/foreign_waiver_ai.inc`.
-11. Continue trimming team assignment helpers only when a new domain owner makes the mutation boundary clearer.
-12. Decide whether `season_phase_monitor.inc` should remain as its own domain module or be folded into a clearer lifecycle owner.
-
-Each numbered item is a separate migration unit. Do not close multiple items in one code-change commit. A docs-only update may mention multiple items only to describe the existing baseline or plan the sequence.
-
-After each step, run:
+## Known Architectural Debt
+
+These are the current high-cost areas. They are not new precedent; they are the
+next cleanup targets.
+
+1. `native/src/hotkey_window/hotkey_window.c` is too large and mixes UI state,
+   rendering, command routing, settings, and WebView lifecycle.
+2. `native/src/bootstrap/forward_declarations.h` remains a central declaration
+   bucket. Declarations should move into owning headers.
+3. Runtime flag metadata is duplicated between managed code and native F2 UI.
+4. Supported-build rows are generated, but build-specific RVA maps are still
+   hand-maintained.
+5. Several domain modules are mechanically migrated but still too broad:
+   `foreign_waiver_core.c`, `military_service.c`, `amateur_player_quality.c`,
+   `fa_market_classification.c`, `foreign/quota/foreign_quota.c`, and
+   `foreign/signability/submit_offer_probe.c`.
+
+## Migration Plan
+
+Do not resume broad mechanical migration just to move lines around. The next
+steps should close one responsibility boundary at a time:
+
+1. Split the F2 hub by responsibility: state, rendering, WebView runtime,
+   command routing, settings/flags.
+2. Shrink `forward_declarations.h` by moving declarations into owning headers.
+3. Create a runtime-flag manifest and generate managed/native UI flag metadata.
+4. Move build-specific RVA data into generated sources.
+5. Continue splitting large domain modules only when the new file owns a clear
+   lifecycle, table, scanner, policy, or parser.
+
+Each code-change commit should close one subsystem or one responsibility unit.
+Docs-only commits may describe multiple known debts.
+
+## Verification
+
+After native or launcher changes, run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File native\build.ps1
 dotnet build .\OOTP27-KBO-Launcher.sln
+dotnet test .\OOTP27-KBO-Launcher.sln
+powershell -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
 ```
+
+CI runs managed build/test, native build, and native helper tests on Windows.
 
 ## Naming Rules
 
 - Use `reserve_rights` for exercised KBO foreign-player rights.
-- Use `priority_events` for the decision window and league events.
+- Use `priority_events` for decision windows and league events.
 - Use `waiver_ai` only for automatic retain/skip decisions.
-- Use `foreign_policy` or `asian_quota` for roster limit behavior.
+- Use `foreign_policy` or `asian_quota` for roster-limit behavior.
 - Avoid using `waiver` as a catch-all term for KBO foreign-player rules.
 
 ## Design Rules
 
-- Gameplay state changes must live in domain modules, not UI modules.
-- UI modules can select players and submit commands, but must not directly mutate rights tables.
+- Gameplay state changes live in domain modules, not UI modules.
+- UI modules can submit requests, but must not directly mutate gameplay tables.
 - Event modules decide when a decision is legal.
 - AI modules decide what action to take, not how rights are stored.
 - Audit modules observe only.
-- Thread start functions should be explicit and owned by the module whose loop they run.
-- CSV files are module-owned persistence; filename ownership should be documented in that module.
-- Existing exported wrapper names should remain stable unless patch installer code is updated in the same change.
+- Patch installers patch bytes; they do not own policy.
+- Hook wrappers stay thin and delegate to domain modules.
+- CSV files are module-owned persistence.
+- Thread start functions are explicit and owned by the loop's module.
+- Public wrapper names are stable unless the corresponding patch installer is
+  updated in the same change.
 
-## Repository Root Hygiene
+## Repository Data
 
-The repository root is for project entry points only: the solution file, launcher project, launcher source, and startup scripts. Domain data should not live in the root.
-
-Bundled seed/config data files live under:
-
-```text
-data/seeds/
-  asian_games_schedule_seed.csv
-  allstar_teams.csv
-  fa_rules.json
-  foreign_replacement_players_seed.csv
-  military_service_seed.csv
-```
-
-At runtime, `src/KBOLauncher/Program.cs` copies bundled seed files into `%LOCALAPPDATA%\OOTP-KBO\`. Native modules then read save-scoped seed files first and global `%LOCALAPPDATA%\OOTP-KBO\` seed files as fallback. New seed files should follow the same rule: source bundle under `data/seeds/`, runtime copy under local app data, resolved/cache/output files under save-scoped or module-owned paths.
+Bundled seed/config data lives under `data/seeds/`. Runtime setup copies those
+files into `%LOCALAPPDATA%\OOTP-KBO\`. Native modules read save-scoped data
+first, then global local-app-data inputs as fallback. Generated/cache/output
+files should be written to the save scope or the owning module's documented
+path, not guessed global destinations.
 
 ## Open Questions
 
-- Should `foreign_waiver_rights.csv` be renamed to `foreign_reserve_rights.csv`, or kept for compatibility?
-- Should the F2 hub show retained rights outside the event window separately from event candidates?
-- Should user decisions be command-file driven long term, or should the UI call a narrower in-memory API?
-- Should numeric foreign-policy config values move into a structured config file, or remain as simple text overrides?
-
-## Custom Events
-
-The custom event responsibilities live under `native/src/custom_events/` and are included explicitly by the native shell until migrated to `.c/.h`.
-
-```text
-native/src/custom_events/
-  asian_games_state.inc
-  custom_event_state.inc
-  custom_event_names.inc
-  custom_event_lookup.inc
-  asian_games_schedule.inc
-  asian_games_player_eval.inc
-  asian_games_roster_store.inc
-  asian_games_selection/
-  asian_games_lifecycle_roster.inc
-  asian_games_lifecycle_replacement.inc
-  asian_games_lifecycle_departure.inc
-  asian_games_lifecycle_final.inc
-  asian_games_news/
-  custom_event_markers.inc
-  foreign_priority_event_schedule.inc
-  custom_event_dispatch.inc
-  custom_event_scan.inc
-  nation_id_scan.inc
-  offseason_transition_schedule.inc
-  custom_event_monitor.inc
-```
-
-### `asian_games_state.inc`
-
-Asian Games roster constants, DTOs, and in-memory roster state.
-
-### `custom_event_state.inc`
-
-Shared monitor state, event titles, processed-event cache, and narrow cross-module declarations.
-
-### `custom_event_names.inc`
-
-Name matching for local custom events. This is the routing vocabulary used by the scanner.
-
-### `custom_event_lookup.inc`
-
-Read-only league-event-manager scans:
-
-- find latest offseason anchor
-- detect schedule fallback anchors from league year
-- check whether a custom event already exists
-
-### `asian_games_schedule.inc`
-
-Creates Asian Games custom events for selection, departure, and final dates.
-
-### `asian_games_player_eval.inc`
-
-Player scoring, role buckets, organization/team helpers, and Asian Games date helpers.
-
-### `asian_games_roster_store.inc`
-
-Asian Games roster persistence only:
-
-- scoped `asian_games_roster.csv` path
-- load/save
-- clear memory when save changes
-
-### `asian_games_selection/`
-
-Roster construction:
-
-- candidate selection
-- wildcard replacement
-- required organization coverage
-
-### Asian Games Lifecycle
-
-Roster lifecycle after selection:
-
-- `asian_games_lifecycle_roster.inc`: selected-roster membership, wildcard counts, replacement organization limits, and departure availability checks
-- `asian_games_lifecycle_replacement.inc`: unavailable-player replacement search and roster-slot replacement before departure
-- `asian_games_lifecycle_departure.inc`: restricted-list mutation, roster transaction/history records, and departure persistence
-- `asian_games_lifecycle_final.inc`: final return, military exemption completion, assignment restoration, and finalized-roster checks
-
-The lifecycle assembler may forward-declare news emission, but replacement/departure/final files should not build article bodies themselves.
-
-### `asian_games_news/`
-
-News/article text generation and Asian Games event handlers. This module may read roster state but should not choose the roster.
-
-### `custom_event_markers.inc`
-
-Idempotency layer:
-
-- persisted `custom_events_processed.txt`
-- in-memory processed event pointers
-- mark game events as over
-
-### `foreign_priority_event_schedule.inc`
-
-Schedules foreign-player priority negotiation close events and the military-service selection event from the offseason anchor.
-
-### `custom_event_dispatch.inc`
-
-Routes a due custom event to the owning domain handler:
-
-- foreign-player reserve-right open/close events
-- annual military-service selection
-- Asian Games selection, departure, and final events
-
-The dispatcher may call domain modules, but it should not scan the event manager or persist processed markers.
-
-### `custom_event_scan.inc`
-
-Due-event scanner. It owns event-manager traversal, due checks, duplicate marker checks, processed-marker writes, and scan logging. It delegates domain behavior to `custom_event_dispatch.inc`.
-
-### `nation_id_scan.inc`
-
-Diagnostics only. It should not affect gameplay state.
-
-### `offseason_transition_schedule.inc`
-
-Read-only league-phase transition watcher used by the custom-event monitor. When the KBO league moves from postseason/regular phase into offseason phase after October 1, it treats the current date as the offseason anchor and schedules the same foreign-priority and military-selection events that would otherwise wait for OOTP's `Offseason starts` league event to become visible.
-
-### `custom_event_monitor.inc`
-
-Thread startup and polling loop for scheduling/scanning custom events.
-
-## Custom Event Rules
-
-- The scanner owns dispatch timing, not domain behavior.
-- Asian Games modules own only national-team lifecycle, not generic custom event mechanics.
-- Marker persistence is the idempotency boundary; event handlers should remain safe to call more than once.
-- New custom events should add a title matcher and a domain handler instead of expanding `scan_kbo_custom_events_once` with large inline logic.
-
-## Military Service Loans
-
-The military-service loan subsystem implementation lives under `native/src/military_service/` and is included explicitly by the native shell until migrated to `.c/.h`.
-
-```text
-native/src/military_service/
-  military_service_decls.inc
-  military_service_date.inc
-  military_service_state.inc
-  military_service_queue.inc
-  military_service_parse.inc
-  military_service_seed_store.inc
-  military_active_loans.inc
-  military_player_state.inc
-  military_selection_news.inc
-  military_seed_assignments.inc
-  military_native_loan.inc
-  military_return.inc
-  military_days_tick_parts/
-  military_selection_event.inc
-  military_hooks.inc
-```
-
-### `military_service_decls.inc`
-
-Forward declarations and the original OOTP military-service hook typedef.
-
-### `military_service_date.inc`
-
-Date serial helpers used by service duration, return dates, and event routing.
-
-### `military_service_state.inc`
-
-Military-service constants, DTOs, and shared state:
-
-- active service-loan registry
-- seed registry
-- draft-candidate queue
-- return-history idempotency keys
-- service hook/tick log counters
-
-### `military_service_queue.inc`
-
-Draft candidate queueing and return-history idempotency. This module should not move players.
-
-### `military_service_parse.inc`
-
-CSV token parsing, numeric parsing, and military date conversion helpers.
-
-### `military_service_seed_store.inc`
-
-Assembler for the military-service seed subsystem. The implementation is split again under `native/src/military_service/seed/`.
-
-```text
-native/src/military_service/seed/
-  military_seed_paths.inc
-  military_seed_line_parse.inc
-  military_seed_registry.inc
-  military_seed_resolved_cache.inc
-  military_seed_player_lookup.inc
-  military_seed_players_dat_record.inc
-  military_seed_memory_resolve.inc
-  military_seed_players_dat_resolve.inc
-  military_seed_resolve.inc
-```
-
-Seed file ownership:
-
-- save/global seed paths
-- resolved cache path
-- seed line parsing
-- seed registry load and mutation
-- player lookup and memory probes
-- player id resolution from memory or `players.dat`
-- unresolved seed resolution orchestration
-
-### `military_active_loans.inc`
-
-In-memory active military-service loan registry. This is the source of original-team/service-team linkage while a player is serving.
-
-### `military_player_state.inc`
-
-Player flags and day counters:
-
-- stored days left
-- effective days left
-- effective return date
-- unavailable/status flag cleanup
-
-### `military_selection_news.inc`
-
-News text and OOTP link helpers for the annual military-service selection event.
-
-### `military_seed_assignments.inc`
-
-Applies configured seed assignments to players and registers active service loans.
-
-### `military_native_loan.inc`
-
-Tiny helpers around OOTP native loan flags. This module is intentionally small.
-
-### `military_return.inc`
-
-Returns completed service players to original clubs and writes return history.
-
-### `military_days_tick_parts/`
-
-Daily service-time ticking, invalid-assignment release, and the optional background tick thread.
-
-### `military_selection_event.inc`
-
-Annual custom-event handling for queued military-service draft candidates.
-
-### `military_hooks.inc`
-
-Hook wrappers around OOTP military entry/status update behavior.
-
-## Military Service Rules
-
-- Seed storage and seed application are separate responsibilities.
-- Queueing a candidate does not move the player; movement happens in the selection event or seed assignment module.
-- Active-loan registry owns the temporary relationship between original club and service club.
-- Return logic owns player restoration and history writing.
-- Hook wrappers should remain thin and delegate policy to the service modules.
+- Should `foreign_waiver_rights.csv` be renamed to
+  `foreign_reserve_rights.csv`, or kept for compatibility?
+- Should F2 user actions remain command-file based long term, or move to a
+  narrower in-memory request API?
+- Should numeric foreign-policy config values move into a structured manifest?
+- Should WebView command routes be generated or table-driven once the F2 hub is
+  split?

@@ -98,7 +98,6 @@ __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     uintptr_t league_ptr,
     uint32_t value,
     uint32_t site_rva);
-static void kbo_hub_copy_player_display_name(uint8_t* player, char* out, size_t out_size);
 __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
     uintptr_t league_ptr,
     void* left_team_vector,

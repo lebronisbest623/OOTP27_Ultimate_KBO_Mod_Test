@@ -315,6 +315,19 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             continue;
         }
 
+        uint32_t year = 0;
+        uint32_t month = 0;
+        uint32_t day = 0;
+        if (!kbo_current_date_is_valid(&year, &month, &day)) {
+            if (last_date != 0u) {
+                append_log_line("KBO season phase monitor waiting reason=current_date_unavailable");
+            }
+            last_league_ptr = 0;
+            last_date = 0u;
+            continue;
+        }
+        uint32_t date_key = year * 10000u + month * 100u + day;
+
         uint32_t league_id = kbo_resolve_kbo_league_id();
         uintptr_t league_ptr = kbo_find_league_ptr_from_id(league_id);
         if (league_ptr == 0
@@ -328,14 +341,6 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             last_league_ptr = 0;
             last_league_id = league_id;
             continue;
-        }
-
-        uint32_t year = 0;
-        uint32_t month = 0;
-        uint32_t day = 0;
-        uint32_t date_key = 0;
-        if (kbo_current_date_is_valid(&year, &month, &day)) {
-            date_key = year * 10000u + month * 100u + day;
         }
 
         uint32_t league_year = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);

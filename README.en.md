@@ -71,7 +71,7 @@ KBOLauncher.exe          <- C# launcher
           |- native/src/hotkey_window/    in-game F2 hub UI
 ```
 
-The native layer is built as a single translation unit. `native/KBOFix.c` is the shell, and feature-specific `.inc` files are included in dependency order.
+The native layer is built as multiple translation units. `native/KBOFix.c` is a thin assembly shell, and `native/build.ps1` recursively compiles and links the `.c` modules under `native/src/`.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the detailed architecture notes.
 

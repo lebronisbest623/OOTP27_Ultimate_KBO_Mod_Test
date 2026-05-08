@@ -65,7 +65,7 @@ KBOLauncher.exe          ← C# 런처
             └─ native/src/hotkey_window/    인게임 F2 허브 UI
 ```
 
-네이티브 레이어는 단일 번역 단위로 빌드된다. `native/KBOFix.c`가 쉘 역할을 하고, 기능별 `.inc` 파일들을 의존성 순서대로 include한다.
+네이티브 레이어는 다중 번역 단위로 빌드된다. `native/KBOFix.c`는 얇은 조립 셸이고, `native/build.ps1`이 `native/src/` 아래의 `.c` 모듈들을 재귀적으로 컴파일해 링크한다.
 
 ---
 

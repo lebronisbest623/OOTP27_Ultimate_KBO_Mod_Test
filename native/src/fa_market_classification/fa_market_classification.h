@@ -87,7 +87,8 @@ typedef struct KboFaMarketHistoryCase {
     char history_text[KBO_FA_MARKET_HISTORY_TEXT_MAX];
 } KboFaMarketHistoryCase;
 
-int kbo_load_fa_market_seed_cases(KboFaMarketSeedCase* seeds, int max_seeds, char* out_path, size_t out_path_size);
+#include "fa_market_seed_cases.h"
+
 int kbo_load_fa_market_history_cases(
     KboFaMarketClassification* rows,
     int row_count,

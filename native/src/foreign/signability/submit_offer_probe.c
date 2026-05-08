@@ -754,6 +754,17 @@ static int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
     if (InterlockedCompareExchange(&g_kbo_no_minor_contract_demand_floor_enabled, 0, 0) == 0) {
         return 0;
     }
+
+    uint32_t today = 0u;
+    if (!kbo_get_current_yyyymmdd(&today) || today == 0u) {
+        static LONG no_date_log_count = 0;
+        LONG slot = InterlockedIncrement(&no_date_log_count);
+        if (slot <= 5) {
+            append_logf("KBO no-minor demand floor scan skipped source=%s reason=current_date_unavailable", source);
+        }
+        return 0;
+    }
+
     kbo_log_financials_salary_baseline_probe(source);
 
     int32_t salary_floor = kbo_no_minor_resolve_current_league_minimum_salary();

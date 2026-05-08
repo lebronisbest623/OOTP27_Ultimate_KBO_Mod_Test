@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 #include <intrin.h>
 
 #include "../bootstrap/ootp_offsets.h"
@@ -91,6 +90,7 @@
 #include "hotkey_window.h"
 #include "state_team_vector.h"
 #include "state_text_utils.h"
+#include "ui_text_buffer.h"
 #include "support/skin_assets/bitmap_draw.h"
 #include "ui_html_helpers/position_helpers.h"
 
@@ -98,11 +98,6 @@
 /* F2 hub state assembler. */
 
 /* ---- native\src\hotkey_window\state_types.inc ---- */
-typedef struct KboWindowTextBuffer {
-    char* data;
-    size_t capacity;
-    size_t length;
-} KboWindowTextBuffer;
 
 typedef struct KboMainWindowSearch {
     DWORD pid;
@@ -1711,32 +1706,6 @@ static void kbo_hub_draw_ootp_scrollbar(HDC hdc)
         g_kbo_hub_asset_sb_slider_mid,
         g_kbo_hub_asset_sb_slider_bottom,
         &g_kbo_hub_scrollbar_thumb_rect);
-}
-/* ---- native\src\hotkey_window\support\window_hotkey.inc ---- */
-static void kbo_window_text_appendf(KboWindowTextBuffer* buffer, const char* format, ...)
-{
-    if (buffer == NULL || buffer->data == NULL || buffer->capacity == 0
-            || buffer->length >= buffer->capacity - 1 || format == NULL) {
-        return;
-    }
-
-    va_list args;
-    va_start(args, format);
-    int wrote = vsnprintf(buffer->data + buffer->length, buffer->capacity - buffer->length, format, args);
-    va_end(args);
-
-    if (wrote <= 0) {
-        return;
-    }
-
-    size_t available = buffer->capacity - buffer->length;
-    if ((size_t)wrote >= available) {
-        buffer->length = buffer->capacity - 1;
-        buffer->data[buffer->length] = '\0';
-        return;
-    }
-
-    buffer->length += (size_t)wrote;
 }
 
 static void kbo_hub_init_gdi_objects(void)
@@ -3945,23 +3914,6 @@ static void kbo_apply_foreign_rights_button(int retain)
 }
 
 
-/* ---- native\src\hotkey_window\ui_html_helpers\html_cells.inc ---- */
-static void kbo_html_append_escaped(KboWindowTextBuffer* buffer, const char* text)
-{
-    if (buffer == NULL || text == NULL) {
-        return;
-    }
-    for (const char* p = text; *p != '\0'; p++) {
-        switch (*p) {
-        case '&': kbo_window_text_appendf(buffer, "&amp;"); break;
-        case '<': kbo_window_text_appendf(buffer, "&lt;"); break;
-        case '>': kbo_window_text_appendf(buffer, "&gt;"); break;
-        case '"': kbo_window_text_appendf(buffer, "&quot;"); break;
-        case '\'': kbo_window_text_appendf(buffer, "&#39;"); break;
-        default: kbo_window_text_appendf(buffer, "%c", *p); break;
-        }
-    }
-}
 
 static void kbo_webview_append_player_id_attrs(KboWindowTextBuffer* buffer, uint32_t player_id)
 {

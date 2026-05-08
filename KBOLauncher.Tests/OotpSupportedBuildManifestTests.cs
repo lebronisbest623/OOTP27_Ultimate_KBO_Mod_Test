@@ -34,7 +34,7 @@ public sealed class OotpSupportedBuildManifestTests
 
     private static NativeBuildRow[] ReadNativeGeneratedBuilds()
     {
-        var text = File.ReadAllText(RepoPath("native", "src", "build_verify", "supported_builds.generated.h"));
+        var text = File.ReadAllText(RepoPath("native", "src", "build_verify", "supported_builds.generated.c"));
         return Regex.Matches(
                 text,
                 "\\{0x(?<timestamp>[0-9A-Fa-f]{8})u, 0x(?<size>[0-9A-Fa-f]{8})u, \"(?<label>[^\"]+)\"\\},")
