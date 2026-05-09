@@ -177,9 +177,14 @@ int install_allstar_events_prepare_patch(void)
             append_log_line("KBO all-star events prepare hook skipped: prep call target unresolved");
             return 0;
         }
+        void* make_events_address = (uint8_t*)exe + OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA;
+        if (!memory_range_readable(make_events_address, 16u)) {
+            append_logf("KBO all-star events prepare hook skipped: make-events target unreadable target=%p", make_events_address);
+            return 0;
+        }
         InterlockedExchangePointer(
             (PVOID volatile*)&g_allstar_make_events_ptr,
-            allstar_prep_address);
+            make_events_address);
 
         uint8_t* stub = build_allstar_events_prepare_stub(return_address, allstar_prep_address, layout.game_flag_offset);
         if (stub == NULL) {
@@ -201,10 +206,11 @@ int install_allstar_events_prepare_patch(void)
                 DWORD ignored = 0;
                 VirtualProtect(target, sizeof(patch), old_protect, &ignored);
                 append_logf(
-                    "installed KBO all-star events prepare hook target=%p stub=%p return=%p prep=%p helper=%p",
+                    "installed KBO all-star events prepare hook target=%p stub=%p return=%p make_events=%p prep=%p helper=%p",
                     target,
                     stub,
                     return_address,
+                    make_events_address,
                     allstar_prep_address,
                     &ootp_kbo_prepare_allstar_events);
                 ok = 1;

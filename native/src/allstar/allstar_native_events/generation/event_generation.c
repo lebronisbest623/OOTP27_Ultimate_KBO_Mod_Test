@@ -95,29 +95,15 @@ int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* so
                 NULL,
                 NULL);
         if (make_events == NULL) {
-            const uint8_t may_expected[19] = {
-                0x41, 0x80, 0xBC, 0x24, 0xF0, 0x45, 0x00, 0x00, 0x00,
-                0x74, 0x08,
-                0x49, 0x8B, 0xCC,
-                0xE8, 0xB9, 0x55, 0xFF, 0xFF
-            };
-            const uint8_t april_expected[19] = {
-                0x41, 0x80, 0xBC, 0x24, 0xE8, 0x45, 0x00, 0x00, 0x00,
-                0x74, 0x08,
-                0x49, 0x8B, 0xCC,
-                0xE8, 0x89, 0x55, 0xFF, 0xFF
-            };
-            uint8_t* event_site = find_ootp_executable_pattern(may_expected, sizeof(may_expected));
-            if (event_site == NULL) {
-                event_site = find_ootp_executable_pattern(april_expected, sizeof(april_expected));
-            }
-            if (event_site != NULL) {
-                make_events = (OotpMakeAllstarGameEventsFn)resolve_relative_call_target(
-                    event_site + OOTP27_MAKE_ALLSTAR_EVENTS_PREP_CALL_OFFSET);
-                if (make_events != NULL) {
+            HMODULE exe = GetModuleHandleA(NULL);
+            if (exe != NULL) {
+                make_events = (OotpMakeAllstarGameEventsFn)((uint8_t*)exe + OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA);
+                if (memory_range_readable((void*)make_events, 16u)) {
                     InterlockedExchangePointer(
                         (PVOID volatile*)&g_allstar_make_events_ptr,
                         (PVOID)make_events);
+                } else {
+                    make_events = NULL;
                 }
             }
         }

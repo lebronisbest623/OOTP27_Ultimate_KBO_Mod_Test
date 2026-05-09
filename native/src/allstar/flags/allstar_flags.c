@@ -96,6 +96,7 @@ static int write_kbo_allstar_flags(uintptr_t league_ptr, const char* source)
     league[layout.rules_flag_offset] = 1;
     league[layout.game_flag_offset] = 1;
     league[layout.auto_schedule_offset] = 1;
+    InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
     ensure_kbo_allstar_team_ids(league_ptr, source);
     seed_kbo_allstar_schedule_dates(league_ptr, source != NULL ? source : "allstar_flags");
 
@@ -150,6 +151,7 @@ int enable_kbo_allstar_raw_flags_if_kbo_context(uintptr_t league_ptr, const char
     league[layout.rules_flag_offset] = 1;
     league[layout.game_flag_offset] = 1;
     league[layout.auto_schedule_offset] = 1;
+    InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
     ensure_kbo_allstar_team_ids(league_ptr, source);
 
     uint32_t league_year = memory_range_readable(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET, sizeof(uint32_t))
@@ -422,6 +424,24 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
         uint32_t league_id = kbo_get_foreign_waiver_league_id();
         if (league_id == 0u) {
             league_id = kbo_resolve_kbo_league_id();
+        }
+
+        uintptr_t captured = (uintptr_t)InterlockedCompareExchangePointer(
+            (PVOID volatile*)&g_allstar_schedule_import_league_ptr,
+            NULL,
+            NULL);
+        if (captured != 0
+                && enable_kbo_allstar_raw_flags_if_kbo_context(captured, "startup_retry_captured_raw")) {
+            append_logf(
+                "KBO all-star force retry using captured raw league attempt=%d league_id=%u league=%p",
+                attempt,
+                league_id,
+                (void*)captured);
+            seed_kbo_allstar_schedule_dates(captured, "startup_retry_captured_raw");
+            if (run_kbo_allstar_native_event_generation(captured, "startup_retry_captured_raw")) {
+                append_log_line("KBO all-star force retry completed by captured raw league");
+                return 0;
+            }
         }
 
         patch_kbo_allstar_team_names_for_league_id(league_id, "startup_retry");
