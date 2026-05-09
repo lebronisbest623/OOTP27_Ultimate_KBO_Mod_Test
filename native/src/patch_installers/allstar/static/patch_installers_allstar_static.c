@@ -15,6 +15,144 @@
 #include "../common/patch_installers_allstar_common.h"
 #include "patch_installers_allstar_static.h"
 
+static int install_allstar_prep_single_division_gate_patch(HMODULE exe)
+{
+    const uint8_t expected[10] = {
+        0xF6, 0x42, 0x4C, 0x01,
+        0x0F, 0x84, 0xC0, 0x00, 0x00, 0x00
+    };
+
+    uint8_t* target = find_ootp_executable_pattern(expected, sizeof(expected));
+    if (target == NULL) {
+        target = (uint8_t*)exe + OOTP27_ALLSTAR_PREP_SINGLE_DIVISION_GATE_RVA;
+    }
+
+    if (target == NULL || !memory_range_readable(target, sizeof(expected))) {
+        append_logf("KBO all-star prep single-division gate hook target unreadable target=%p", target);
+        return 0;
+    }
+
+    if (target[0] == 0xE9) {
+        append_logf("KBO all-star prep single-division gate hook already installed target=%p", target);
+        return 1;
+    }
+
+    if (memcmp(target, expected, sizeof(expected)) != 0) {
+        log_patch_bytes_mismatch("KBO all-star prep single-division gate hook", target, sizeof(expected));
+        log_extended_context("KBO all-star prep single-division gate hook", target, 16, 96);
+        return 0;
+    }
+
+    int32_t rel = *(int32_t*)(target + 6);
+    void* skip_address = target + sizeof(expected) + rel;
+    void* return_address = target + sizeof(expected);
+    uint8_t* stub = build_allstar_prep_single_division_gate_stub(target, return_address, skip_address);
+    if (stub == NULL) {
+        append_log_line("failed to allocate KBO all-star prep single-division gate hook stub");
+        return 0;
+    }
+
+    intptr_t jmp_rel = (intptr_t)stub - ((intptr_t)target + 5);
+    if (jmp_rel < -2147483647 - 1 || jmp_rel > 2147483647) {
+        append_logf(
+            "KBO all-star prep single-division gate hook skipped reason=stub_out_of_range target=%p stub=%p",
+            target,
+            stub);
+        return 0;
+    }
+
+    uint8_t patch[10] = {0xE9, 0,0,0,0, 0x90,0x90,0x90,0x90,0x90};
+    write_u32(&patch[1], (uint32_t)(int32_t)jmp_rel);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for KBO all-star prep single-division gate hook error=%lu", GetLastError());
+        return 0;
+    }
+
+    memcpy(target, patch, sizeof(patch));
+    FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+    DWORD ignored = 0;
+    VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+    append_logf(
+        "installed KBO all-star prep single-division gate hook target=%p stub=%p return=%p skip=%p helper=%p",
+        target,
+        stub,
+        return_address,
+        skip_address,
+        &ootp_kbo_allow_single_division_allstar_prep);
+    return 1;
+}
+
+static int install_allstar_roster_single_division_gate_patch(HMODULE exe)
+{
+    const uint8_t expected[8] = {
+        0x41, 0x8B, 0x46, 0x4C,
+        0xA8, 0x01,
+        0x74, 0x0D
+    };
+
+    uint8_t* target = find_ootp_executable_pattern(expected, sizeof(expected));
+    if (target == NULL) {
+        target = (uint8_t*)exe + OOTP27_ALLSTAR_ROSTER_SINGLE_DIVISION_GATE_RVA;
+    }
+
+    if (target == NULL || !memory_range_readable(target, sizeof(expected))) {
+        append_logf("KBO all-star roster single-division gate hook target unreadable target=%p", target);
+        return 0;
+    }
+
+    if (target[0] == 0xE9) {
+        append_logf("KBO all-star roster single-division gate hook already installed target=%p", target);
+        return 1;
+    }
+
+    if (memcmp(target, expected, sizeof(expected)) != 0) {
+        log_patch_bytes_mismatch("KBO all-star roster single-division gate hook", target, sizeof(expected));
+        log_extended_context("KBO all-star roster single-division gate hook", target, 16, 96);
+        return 0;
+    }
+
+    void* skip_address = target + sizeof(expected) + (int8_t)target[7];
+    void* return_address = target + sizeof(expected);
+    uint8_t* stub = build_allstar_roster_single_division_gate_stub(target, return_address, skip_address);
+    if (stub == NULL) {
+        append_log_line("failed to allocate KBO all-star roster single-division gate hook stub");
+        return 0;
+    }
+
+    intptr_t jmp_rel = (intptr_t)stub - ((intptr_t)target + 5);
+    if (jmp_rel < -2147483647 - 1 || jmp_rel > 2147483647) {
+        append_logf(
+            "KBO all-star roster single-division gate hook skipped reason=stub_out_of_range target=%p stub=%p",
+            target,
+            stub);
+        return 0;
+    }
+
+    uint8_t patch[8] = {0xE9, 0,0,0,0, 0x90,0x90,0x90};
+    write_u32(&patch[1], (uint32_t)(int32_t)jmp_rel);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for KBO all-star roster single-division gate hook error=%lu", GetLastError());
+        return 0;
+    }
+
+    memcpy(target, patch, sizeof(patch));
+    FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+    DWORD ignored = 0;
+    VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+    append_logf(
+        "installed KBO all-star roster single-division gate hook target=%p stub=%p return=%p skip=%p helper=%p",
+        target,
+        stub,
+        return_address,
+        skip_address,
+        &ootp_kbo_allow_single_division_allstar_roster);
+    return 1;
+}
+
 int install_single_division_allstar_patch(void)
 {
     HMODULE exe = kbo_allstar_get_host_exe("KBO single-division all-star patch");
@@ -23,7 +161,9 @@ int install_single_division_allstar_patch(void)
     }
 
     int ok = 0;
-    append_log_line("KBO single-division all-star unconditional prep/roster gates retired: using scoped capture and wrapper hooks only");
+    append_log_line("KBO single-division all-star scoped prep/roster gates enabled with capture and wrapper hooks");
+    ok |= install_allstar_prep_single_division_gate_patch(exe);
+    ok |= install_allstar_roster_single_division_gate_patch(exe);
 
     /* Search for the schedule import gate with both known exact patterns first,
      * then fall back to a flexible structural search that handles any register
@@ -154,7 +294,74 @@ int install_single_division_allstar_patch(void)
 
 int install_allstar_team_setup_single_division_patch(void)
 {
-    append_log_line("KBO all-star team setup single-division unconditional bail gate retired: using scoped all-star hooks only");
+    HMODULE exe = kbo_allstar_get_host_exe("KBO all-star team setup single-division gate patch");
+    if (exe == NULL) {
+        return 0;
+    }
+
+    const uint8_t expected[15] = {
+        0xF6, 0x41, 0x4C, 0x01,
+        0x0F, 0x85, 0x74, 0x02, 0x00, 0x00,
+        0xB9, 0xD8, 0x00, 0x00, 0x00
+    };
+
+    uint8_t* target = (uint8_t*)exe + OOTP27_ALLSTAR_TEAM_SETUP_SINGLE_DIVISION_GATE_RVA;
+    if (!memory_range_readable(target, sizeof(expected))
+            || (memcmp(target, expected, sizeof(expected)) != 0
+                && !is_rip_absolute_jump_patch(target)
+                && !is_rax_absolute_jump_patch(target))) {
+        target = find_ootp_executable_pattern(expected, sizeof(expected));
+    }
+
+    if (target == NULL || !memory_range_readable(target, sizeof(expected))) {
+        append_logf("KBO all-star team setup single-division gate hook target unreadable target=%p", target);
+        return 0;
+    }
+
+    if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
+        append_logf("KBO all-star team setup single-division gate hook already installed target=%p", target);
+        return 1;
+    }
+
+    if (memcmp(target, expected, sizeof(expected)) != 0) {
+        log_patch_bytes_mismatch("KBO all-star team setup single-division gate hook", target, sizeof(expected));
+        log_extended_context("KBO all-star team setup single-division gate hook", target, 16, 96);
+        return 0;
+    }
+
+    int32_t rel = *(int32_t*)(target + 6);
+    void* bail_address = target + 10 + rel;
+    void* return_address = target + sizeof(expected);
+    uint8_t* stub = build_allstar_team_setup_single_division_gate_stub(return_address, bail_address);
+    if (stub == NULL) {
+        append_log_line("failed to allocate KBO all-star team setup single-division gate hook stub");
+        return 0;
+    }
+
+    uint8_t patch[15] = {
+        0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+        0,0,0,0,0,0,0,0,
+        0x90
+    };
+    write_u64(&patch[6], (uint64_t)(uintptr_t)stub);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for KBO all-star team setup single-division gate hook error=%lu", GetLastError());
+        return 0;
+    }
+
+    memcpy(target, patch, sizeof(patch));
+    FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+    DWORD ignored = 0;
+    VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+    append_logf(
+        "installed KBO all-star team setup single-division gate hook target=%p stub=%p return=%p bail=%p helper=%p",
+        target,
+        stub,
+        return_address,
+        bail_address,
+        &ootp_kbo_allow_single_division_allstar_team_setup);
     return 1;
 }
 

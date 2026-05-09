@@ -17,6 +17,14 @@
 
 static void* resolve_allstar_team_setup_address(void)
 {
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe != NULL) {
+        uint8_t* setup = (uint8_t*)exe + OOTP27_ALLSTAR_TEAM_SETUP_FUNC_RVA;
+        if (memory_range_readable(setup, 16u)) {
+            return setup;
+        }
+    }
+
     static const uint8_t original_context[] = {
         0xF6, 0x41, 0x4C, 0x01,
         0x0F, 0x85, 0x74, 0x02, 0x00, 0x00

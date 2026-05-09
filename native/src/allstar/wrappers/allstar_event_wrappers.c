@@ -7,6 +7,7 @@
 
 #include "../flags/allstar_flags.h"
 #include "../allstar_league_context/allstar_league_context.h"
+#include "../allstar_native_events/schedule/schedule_dates.h"
 #include "../team_patch/allstar_team_patch.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../bootstrap/profiling/perf_probe.h"
@@ -21,7 +22,16 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr)
     static volatile LONG perf_max = 0;
     static volatile LONG perf_tick = 0;
     DWORD perf_start = GetTickCount();
-    enable_kbo_allstar_flags(league_ptr, "make_allstar_game_events");
+    int enabled = 0;
+    if (kbo_allstar_league_context_enabled(league_ptr)) {
+        enable_kbo_allstar_flags(league_ptr, "make_allstar_game_events");
+        enabled = 1;
+    } else {
+        enabled = enable_kbo_allstar_raw_flags_if_kbo_context(league_ptr, "make_allstar_game_events_raw");
+    }
+    if (!enabled) {
+        force_kbo_allstar_flags_for_league_pointer(league_ptr, "make_allstar_game_events_fallback");
+    }
     kbo_perf_probe_record(
         "allstar_events_prepare",
         &perf_total,
@@ -82,12 +92,12 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
                 max_off);
             return;
         }
-        league[layout.rules_flag_offset] = 1;
-        league[layout.game_flag_offset] = 1;
-        league[layout.auto_schedule_offset] = 1;
+        if (!enable_kbo_allstar_raw_flags_if_kbo_context(league_ptr, "allstar_voting_begin_raw")) {
+            return;
+        }
         ensure_kbo_allstar_team_ids(league_ptr, "allstar_voting_begin_fallback");
         append_logf(
-            "KBO all-star voting begin fallback flags league=%p league_id=%u/%u year=%u rules 0x%x game 0x%x auto 0x%x",
+            "KBO all-star voting begin fallback accepted raw league=%p league_id=%u/%u year=%u rules 0x%x game 0x%x auto 0x%x",
             league,
             league_id,
             fallback_league_id,
@@ -122,4 +132,108 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
             (void*)allstar_team_setup_ptr,
             setup_called);
     }
+}
+
+static int ootp_kbo_allow_single_division_allstar_native_gate(uintptr_t league_ptr, const char* source)
+{
+    int enabled = enable_kbo_allstar_raw_flags_if_kbo_context(league_ptr, source);
+    if (!enabled && kbo_allstar_league_context_enabled(league_ptr)) {
+        enable_kbo_allstar_flags(league_ptr, source);
+        enabled = 1;
+    }
+    if (!enabled) {
+        return 0;
+    }
+
+    InterlockedExchangePointer(
+        (PVOID volatile*)&g_allstar_schedule_import_league_ptr,
+        (PVOID)league_ptr);
+    seed_kbo_allstar_schedule_dates(league_ptr, source);
+
+    static volatile LONG s_log_count = 0;
+    LONG log_index = InterlockedIncrement(&s_log_count);
+    if (log_index <= 80) {
+        KboAllstarLayout layout = kbo_get_allstar_layout();
+        uint8_t game_flag = 0;
+        uint32_t league_id = 0;
+        uint32_t fallback_id = 0;
+        uint32_t team_a = 0;
+        uint32_t team_b = 0;
+        if (memory_range_readable((void*)league_ptr, layout.team_b_offset + sizeof(uint32_t))) {
+            uint8_t* league = (uint8_t*)league_ptr;
+            game_flag = league[layout.game_flag_offset];
+            league_id = kbo_allstar_read_u32(league, layout.league_id_primary_offset);
+            fallback_id = kbo_allstar_read_u32(league, layout.league_id_fallback_offset);
+            team_a = kbo_allstar_read_u32(league, layout.team_a_offset);
+            team_b = kbo_allstar_read_u32(league, layout.team_b_offset);
+        }
+        append_logf(
+            "KBO all-star single-division native gate bypassed source=%s league=%p ids=%u/%u game=0x%x:%u teams=%u/%u",
+            source != NULL ? source : "",
+            (void*)league_ptr,
+            league_id,
+            fallback_id,
+            layout.game_flag_offset,
+            game_flag,
+            team_a,
+            team_b);
+    }
+
+    return 1;
+}
+
+__declspec(noinline) int ootp_kbo_allow_single_division_allstar_prep(uintptr_t league_ptr)
+{
+    return ootp_kbo_allow_single_division_allstar_native_gate(
+        league_ptr,
+        "allstar_prep_single_division_gate");
+}
+
+__declspec(noinline) int ootp_kbo_allow_single_division_allstar_roster(uintptr_t league_ptr)
+{
+    return ootp_kbo_allow_single_division_allstar_native_gate(
+        league_ptr,
+        "allstar_roster_single_division_gate");
+}
+
+__declspec(noinline) int ootp_kbo_allow_single_division_allstar_team_setup(uintptr_t league_ptr)
+{
+    int enabled = enable_kbo_allstar_raw_flags_if_kbo_context(
+        league_ptr,
+        "allstar_team_setup_single_division_gate_raw");
+    if (!enabled && kbo_allstar_league_context_enabled(league_ptr)) {
+        enable_kbo_allstar_flags(league_ptr, "allstar_team_setup_single_division_gate");
+        enabled = 1;
+    }
+    if (!enabled) {
+        return 0;
+    }
+
+    InterlockedExchangePointer(
+        (PVOID volatile*)&g_allstar_schedule_import_league_ptr,
+        (PVOID)league_ptr);
+    seed_kbo_allstar_schedule_dates(league_ptr, "allstar_team_setup_single_division_gate");
+
+    static volatile LONG s_log_count = 0;
+    LONG log_index = InterlockedIncrement(&s_log_count);
+    if (log_index <= 40) {
+        KboAllstarLayout layout = kbo_get_allstar_layout();
+        uint8_t game_flag = 0;
+        uint32_t league_id = 0;
+        uint32_t fallback_id = 0;
+        if (memory_range_readable((void*)league_ptr, layout.league_id_fallback_offset + sizeof(uint32_t))) {
+            uint8_t* league = (uint8_t*)league_ptr;
+            game_flag = league[layout.game_flag_offset];
+            league_id = kbo_allstar_read_u32(league, layout.league_id_primary_offset);
+            fallback_id = kbo_allstar_read_u32(league, layout.league_id_fallback_offset);
+        }
+        append_logf(
+            "KBO all-star team setup single-division gate bypassed league=%p ids=%u/%u game=0x%x:%u",
+            (void*)league_ptr,
+            league_id,
+            fallback_id,
+            layout.game_flag_offset,
+            game_flag);
+    }
+    return 1;
 }

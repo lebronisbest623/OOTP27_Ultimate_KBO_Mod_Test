@@ -3,7 +3,6 @@ using static KboSeedFiles;
 using static LauncherGuardStatus;
 using static LauncherLog;
 using static LauncherPaths;
-using static OotpScheduleSpoofer;
 
 internal static partial class LauncherApp
 {
@@ -13,7 +12,7 @@ internal static partial class LauncherApp
 
     private sealed record LaunchPlan(bool AllstarBootstrapRequested, LauncherInjectionDecision InjectionDecision);
 
-    private static void EnsureLauncherRuntimeData()
+    private static void EnsureLauncherRuntimeData(string exePath)
     {
         EnsureKboLeagueIdConfig();
         EnsureBundledKboDataFile("asian_games_schedule_seed.csv", "Asian Games schedule seed");
@@ -23,6 +22,7 @@ internal static partial class LauncherApp
         EnsureBundledKboDataFile("college_reputation_seed.csv", "College reputation seed");
         EnsureBundledKboDataFile("high_school_reputation_seed.csv", "High-school reputation seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
+        EnsureKboScheduleAllstarGameLines(exePath);
         ImportLegacyKboFlagFilesIfMissing();
         EnsureDefaultKboRuntimeFlags();
     }
@@ -175,7 +175,7 @@ internal static partial class LauncherApp
         return new(allstarBootstrapRequested, injectionDecision);
     }
 
-    private static void PrepareSchedulePreflight(
+    private static void PrepareRetiredScheduleMutationNotice(
         string exePath,
         string logPath,
         LauncherOptions options,
@@ -183,9 +183,8 @@ internal static partial class LauncherApp
     {
         if (!options.DryRun)
         {
-            var spoofResult = EnsureAllKboScheduleSpoofFiles(exePath, message => Log(logPath, message));
-            Console.WriteLine(
-                $"Schedule preflight: scanned={spoofResult.ScannedYears} repaired={spoofResult.WrittenFiles} unchanged={spoofResult.UnchangedFiles} failed={spoofResult.FailedFiles}");
+            Log(logPath, "global_major_league_schedule_mutation=retired");
+            Console.WriteLine("Global MLB schedule mutation is retired.");
             return;
         }
 
@@ -195,6 +194,6 @@ internal static partial class LauncherApp
             return;
         }
 
-        Console.WriteLine("Dry-run: schedule preflight would scan for legacy KBO schedule spoof files.");
+        Console.WriteLine("Dry-run: global MLB schedule mutation is retired.");
     }
 }

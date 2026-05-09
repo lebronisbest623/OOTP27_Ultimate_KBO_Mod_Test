@@ -21,6 +21,15 @@ static int kbo_no_minor_contract_experimental_patch_enabled(void)
 
 static volatile LONG g_kbo_no_minor_contract_patch_install_started = 0;
 static volatile LONG g_kbo_no_minor_contract_delayed_install_started = 0;
+static volatile LONG64 g_kbo_runtime_marker_guard_started_filetime = 0;
+
+static LONG64 kbo_filetime_to_i64(FILETIME time)
+{
+    ULARGE_INTEGER value;
+    value.LowPart = time.dwLowDateTime;
+    value.HighPart = time.dwHighDateTime;
+    return (LONG64)value.QuadPart;
+}
 
 static int install_kbo_no_minor_contract_experimental_patch_once(const char* source)
 {
@@ -233,6 +242,23 @@ static int kbo_current_save_has_completed_flag(const char* save_path, const char
         return 0;
     }
 
+    FILETIME completed_write_time = {0};
+    GetFileTime(file, NULL, NULL, &completed_write_time);
+    LONG64 completed_write_ticks = kbo_filetime_to_i64(completed_write_time);
+    LONG64 guard_started_ticks = InterlockedCompareExchange64(&g_kbo_runtime_marker_guard_started_filetime, 0, 0);
+    if (guard_started_ticks != 0 && completed_write_ticks != 0 && completed_write_ticks + 50000000LL < guard_started_ticks) {
+        if (log_detail) {
+            append_logf(
+                "KBO runtime marker guard waiting source=%s reason=save_completed_stale path=%s completed_ticks=%lld guard_started_ticks=%lld",
+                source != NULL ? source : "",
+                completed_path,
+                (long long)completed_write_ticks,
+                (long long)guard_started_ticks);
+        }
+        CloseHandle(file);
+        return 0;
+    }
+
     LARGE_INTEGER size = {0};
     if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > 1024 * 1024) {
         if (log_detail) {
@@ -389,6 +415,14 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
 
     start_kbo_hotkey_window_thread(instance);
 
+    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")
+            && read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
+        append_log_line("KBO all-star flag repair enabled after roster marker");
+        start_kbo_allstar_force_retry_thread();
+    } else {
+        append_log_line("KBO all-star flag repair skipped: single-division all-star runtime/events flag is false");
+    }
+
     install_kbo_military_service_entry_patch();
     install_kbo_military_status_update_patch();
     int enable_legacy_fa_signability_hooks = read_kbo_localappdata_flag_file("enable_kbo_fa_signability_hooks.txt");
@@ -524,6 +558,11 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
 DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
 {
     HINSTANCE instance = (HINSTANCE)parameter;
+    FILETIME guard_started_time = {0};
+    GetSystemTimeAsFileTime(&guard_started_time);
+    InterlockedExchange64(
+        &g_kbo_runtime_marker_guard_started_filetime,
+        kbo_filetime_to_i64(guard_started_time));
     append_log_line("KBO full runtime marker guard thread started");
 
     uint32_t last_date_serial = 0u;

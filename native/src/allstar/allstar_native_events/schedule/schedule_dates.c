@@ -206,13 +206,13 @@ static int kbo_allstar_load_schedule_dates(uint32_t league_year, KboAllstarSched
     }
     *slash = '\0';
 
-    const char* suffixes[] = { "", "_ap" };
+    const char* suffixes[] = { "" };
     for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); i++) {
         char path[MAX_PATH] = {0};
         int written = snprintf(
             path,
             sizeof(path),
-            "%s\\data\\schedules\\major_league_ml_c_%u%s.lsdl",
+            "%s\\data\\schedules\\korean_baseball_organization_int_c_%u%s.lsdl",
             exe_path,
             league_year,
             suffixes[i]);
@@ -231,6 +231,64 @@ static int kbo_allstar_load_schedule_dates(uint32_t league_year, KboAllstarSched
     return 0;
 }
 
+static int kbo_allstar_year_plausible(uint32_t year)
+{
+    return year >= 1982u && year <= 2200u;
+}
+
+static uint32_t kbo_allstar_read_league_year_candidate(uintptr_t league_ptr)
+{
+    if (league_ptr == 0
+            || !memory_range_readable((void*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET), sizeof(uint32_t))) {
+        return 0u;
+    }
+
+    uint32_t year = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
+    return kbo_allstar_year_plausible(year) ? year : 0u;
+}
+
+static uint32_t kbo_allstar_resolve_schedule_year(uintptr_t league_ptr, const char* source)
+{
+    uint32_t year = kbo_allstar_read_league_year_candidate(league_ptr);
+    if (year != 0u) {
+        return year;
+    }
+
+    uintptr_t plus8 = league_ptr + 8u;
+    year = kbo_allstar_read_league_year_candidate(plus8);
+    if (year != 0u) {
+        static volatile LONG s_plus8_log_count = 0;
+        LONG log_index = InterlockedIncrement(&s_plus8_log_count);
+        if (log_index <= 40) {
+            append_logf(
+                "KBO all-star schedule year resolved from raw+8 source=%s raw=%p year=%u",
+                source != NULL ? source : "",
+                (void*)league_ptr,
+                year);
+        }
+        return year;
+    }
+
+    if (league_ptr > 8u) {
+        uintptr_t minus8 = league_ptr - 8u;
+        year = kbo_allstar_read_league_year_candidate(minus8);
+        if (year != 0u) {
+            static volatile LONG s_minus8_log_count = 0;
+            LONG log_index = InterlockedIncrement(&s_minus8_log_count);
+            if (log_index <= 20) {
+                append_logf(
+                    "KBO all-star schedule year resolved from raw-8 source=%s raw=%p year=%u",
+                    source != NULL ? source : "",
+                    (void*)league_ptr,
+                    year);
+            }
+            return year;
+        }
+    }
+
+    return 0u;
+}
+
 int seed_kbo_allstar_schedule_dates(uintptr_t league_ptr, const char* source)
 {
     uint8_t* league = (uint8_t*)league_ptr;
@@ -238,7 +296,7 @@ int seed_kbo_allstar_schedule_dates(uintptr_t league_ptr, const char* source)
         return 0;
     }
 
-    uint32_t league_year = *(uint32_t*)(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
+    uint32_t league_year = kbo_allstar_resolve_schedule_year(league_ptr, source);
     KboAllstarScheduleDate start = {0};
     KboAllstarScheduleDate allstar = {0};
     char schedule_path[MAX_PATH] = {0};
@@ -251,36 +309,55 @@ int seed_kbo_allstar_schedule_dates(uintptr_t league_ptr, const char* source)
         return 0;
     }
 
-    if (!kbo_allstar_season_start_date_ready(league)) {
-        *(uint16_t*)(league + OOTP27_SEASON_START_DATE_YEAR_OFFSET) = start.year;
-        league[OOTP27_SEASON_START_DATE_DAY_OFFSET] = start.day;
-        league[OOTP27_SEASON_START_DATE_MONTH_OFFSET] = start.month;
-        league[OOTP27_SEASON_START_DATE_HOUR_OFFSET] = start.hour;
-        league[OOTP27_SEASON_START_DATE_MIN_OFFSET] = start.minute;
-        league[OOTP27_SEASON_START_DATE_SEC_OFFSET] = start.second;
-    }
+    uint16_t old_start_year = *(uint16_t*)(league + OOTP27_SEASON_START_DATE_YEAR_OFFSET);
+    uint8_t old_start_day = league[OOTP27_SEASON_START_DATE_DAY_OFFSET];
+    uint8_t old_start_month = league[OOTP27_SEASON_START_DATE_MONTH_OFFSET];
+    uint16_t old_allstar_year = *(uint16_t*)(league + OOTP27_ALLSTAR_DATE_YEAR_OFFSET);
+    uint8_t old_allstar_day = league[OOTP27_ALLSTAR_DATE_DAY_OFFSET];
+    uint8_t old_allstar_month = league[OOTP27_ALLSTAR_DATE_MONTH_OFFSET];
+    uint8_t old_allstar_hour = league[OOTP27_ALLSTAR_DATE_HOUR_OFFSET];
+    uint8_t old_allstar_minute = league[OOTP27_ALLSTAR_DATE_MIN_OFFSET];
 
-    if (!kbo_allstar_schedule_date_ready(league)) {
-        *(uint16_t*)(league + OOTP27_ALLSTAR_DATE_YEAR_OFFSET) = allstar.year;
-        league[OOTP27_ALLSTAR_DATE_DAY_OFFSET] = allstar.day;
-        league[OOTP27_ALLSTAR_DATE_MONTH_OFFSET] = allstar.month;
-        league[OOTP27_ALLSTAR_DATE_HOUR_OFFSET] = allstar.hour;
-        league[OOTP27_ALLSTAR_DATE_MIN_OFFSET] = allstar.minute;
-        league[OOTP27_ALLSTAR_DATE_SEC_OFFSET] = allstar.second;
-    }
+    int changed = old_start_year != start.year
+        || old_start_month != start.month
+        || old_start_day != start.day
+        || old_allstar_year != allstar.year
+        || old_allstar_month != allstar.month
+        || old_allstar_day != allstar.day
+        || old_allstar_hour != allstar.hour
+        || old_allstar_minute != allstar.minute;
 
-    append_logf(
-        "KBO all-star schedule dates seeded source=%s league=%p start=%04u-%02u-%02u allstar=%04u-%02u-%02u %02u:%02u path=%s",
-        source != NULL ? source : "",
-        league,
-        (unsigned)start.year,
-        (unsigned)start.month,
-        (unsigned)start.day,
-        (unsigned)allstar.year,
-        (unsigned)allstar.month,
-        (unsigned)allstar.day,
-        (unsigned)allstar.hour,
-        (unsigned)allstar.minute,
-        schedule_path);
+    *(uint16_t*)(league + OOTP27_SEASON_START_DATE_YEAR_OFFSET) = start.year;
+    league[OOTP27_SEASON_START_DATE_DAY_OFFSET] = start.day;
+    league[OOTP27_SEASON_START_DATE_MONTH_OFFSET] = start.month;
+    league[OOTP27_SEASON_START_DATE_HOUR_OFFSET] = start.hour;
+    league[OOTP27_SEASON_START_DATE_MIN_OFFSET] = start.minute;
+    league[OOTP27_SEASON_START_DATE_SEC_OFFSET] = start.second;
+
+    *(uint16_t*)(league + OOTP27_ALLSTAR_DATE_YEAR_OFFSET) = allstar.year;
+    league[OOTP27_ALLSTAR_DATE_DAY_OFFSET] = allstar.day;
+    league[OOTP27_ALLSTAR_DATE_MONTH_OFFSET] = allstar.month;
+    league[OOTP27_ALLSTAR_DATE_HOUR_OFFSET] = allstar.hour;
+    league[OOTP27_ALLSTAR_DATE_MIN_OFFSET] = allstar.minute;
+    league[OOTP27_ALLSTAR_DATE_SEC_OFFSET] = allstar.second;
+
+    static volatile LONG s_log_count = 0;
+    LONG log_index = InterlockedIncrement(&s_log_count);
+    if (changed || log_index <= 80) {
+        append_logf(
+            "KBO all-star schedule dates seeded source=%s league=%p changed=%d start=%04u-%02u-%02u allstar=%04u-%02u-%02u %02u:%02u path=%s",
+            source != NULL ? source : "",
+            league,
+            changed,
+            (unsigned)start.year,
+            (unsigned)start.month,
+            (unsigned)start.day,
+            (unsigned)allstar.year,
+            (unsigned)allstar.month,
+            (unsigned)allstar.day,
+            (unsigned)allstar.hour,
+            (unsigned)allstar.minute,
+            schedule_path);
+    }
     return 1;
 }

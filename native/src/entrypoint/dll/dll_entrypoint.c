@@ -19,7 +19,7 @@ void start_kbo_full_runtime_marker_wait_thread(HINSTANCE instance)
 DWORD WINAPI patch_thread(LPVOID parameter)
 {
     append_log_line("KBOFix loaded");
-    append_log_line("KBOFix build includes retired unconditional all-star single-division gates");
+    append_log_line("KBOFix build includes scoped all-star single-division prep/roster/team setup gates");
 
     if (!read_kbo_localappdata_flag_file("enable_experimental_runtime_hooks.txt")) {
         append_log_line("KBOFix: experimental runtime hooks disabled; safe startup mode active");
@@ -40,6 +40,9 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         append_log_line("KBO diagnostic minimal runtime: build verified, no runtime patches installed");
         return 0;
     }
+
+    append_log_line("KBO F2 hub starting before runtime marker guard");
+    start_kbo_hotkey_window_thread((HINSTANCE)parameter);
 
     if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
         append_log_line("KBO all-star presave bootstrap install started");

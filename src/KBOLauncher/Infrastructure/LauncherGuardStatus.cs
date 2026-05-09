@@ -77,12 +77,32 @@ internal static class LauncherGuardStatus
         return info;
     }
 
-    public static RosterMarkerInfo ProbeRosterMarkerForInjectionTarget(int pid, string logPath, DateTimeOffset? minSaveCompletedAt = null)
+    public static RosterMarkerInfo ProbeRosterMarkerForInjectionTarget(
+        int pid,
+        string logPath,
+        DateTimeOffset? minSaveCompletedAt = null,
+        DateTimeOffset? fallbackMinSaveCompletedAt = null,
+        bool allowIncompleteMarkedSave = false)
     {
         RosterMarkerInfo info;
         try
         {
-            info = KboRosterMarkerGuard.CheckCurrentSave(pid, minSaveCompletedAt, message => Log(logPath, message));
+            info = KboRosterMarkerGuard.CheckCurrentSave(
+                pid,
+                minSaveCompletedAt,
+                allowIncompleteMarkedSave,
+                message => Log(logPath, message));
+            if (!info.Ok && CurrentSaveProbeCanUseLatestMarkedSaveFallback(info))
+            {
+                var fallback = allowIncompleteMarkedSave
+                    ? KboRosterMarkerGuard.FindLatestMarkedSaveForInjection(fallbackMinSaveCompletedAt)
+                    : KboRosterMarkerGuard.FindLatestMarkedCompletedSave(fallbackMinSaveCompletedAt);
+                if (fallback is not null)
+                {
+                    Log(logPath, $"roster_marker_fallback_latest_marked_save pid={pid} original_status={info.Status} allow_incomplete={(allowIncompleteMarkedSave ? "1" : "0")} {KboRosterMarkerGuard.FormatLogStatus(fallback)}");
+                    info = fallback;
+                }
+            }
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
@@ -93,6 +113,19 @@ internal static class LauncherGuardStatus
         Log(logPath, KboRosterMarkerGuard.FormatLogStatus(info));
         WriteRosterMarkerGuardStatus(info);
         return info;
+    }
+
+    private static bool CurrentSaveProbeCanUseLatestMarkedSaveFallback(RosterMarkerInfo info)
+    {
+        return info.Status is
+            "current_save_unavailable" or
+            "process_module_unreadable" or
+            "process_module_missing" or
+            "open_process_failed" or
+            "current_save_probe_failed" or
+            "description_missing" or
+            "save_not_completed" or
+            "save_completion_unreadable";
     }
     
     public static void WriteCurrentSavePathCache(int pid, string? savePath, string logPath)

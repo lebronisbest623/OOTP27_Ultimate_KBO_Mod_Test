@@ -162,47 +162,22 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
         return 0;
     }
 
-    /* Cache the league pointer so kbo_find_allstar_league_ptr can use it, and set
+    /* Cache the league pointer so kbo_find_allstar_league_ptr can use it, and keep
      * game_flag/rules_flag/auto_schedule immediately so the voting ballot shows candidates.
      * The retry thread may have already given up by the time the candidate split fires,
      * so this is the most reliable path to ensure game_flag=1 before voting is checked.
      *
-     * enable_kbo_allstar_flags checks kbo_allstar_league_core_plausible, which reads
-     * OOTP27_KBO_LEAGUE_YEAR_OFFSET — that offset may be wrong for this build's league
-     * struct, causing a silent early return. Write flags directly here as a fallback since
-     * league_ptr comes from OOTP itself via R14 at the hook site and is guaranteed valid. */
+     * The raw flag path accepts the same league pointer that OOTP passed to this hook.
+     * enable_kbo_allstar_flags remains as a strict-context fallback. */
     if (league_ptr != 0) {
         InterlockedCompareExchangePointer(
             (PVOID volatile*)&g_allstar_schedule_import_league_ptr,
             (PVOID)league_ptr,
             NULL);
-        enable_kbo_allstar_flags(league_ptr, "candidate_split");
-
-        KboAllstarLayout asl = kbo_get_allstar_layout();
-        uint32_t max_off = asl.game_flag_offset > asl.auto_schedule_offset
-            ? asl.game_flag_offset : asl.auto_schedule_offset;
-        max_off = max_off > asl.rules_flag_offset ? max_off : asl.rules_flag_offset;
-        if (memory_range_readable((void*)(league_ptr + max_off), 1)) {
-            uint8_t* lp = (uint8_t*)league_ptr;
-            uint8_t old_game  = lp[asl.game_flag_offset];
-            uint8_t old_rules = lp[asl.rules_flag_offset];
-            uint8_t old_auto  = lp[asl.auto_schedule_offset];
-            lp[asl.game_flag_offset]  = 1;
-            lp[asl.rules_flag_offset] = 1;
-            lp[asl.auto_schedule_offset] = 1;
-            if (old_game != 1 || old_rules != 1 || old_auto != 1) {
-                append_logf(
-                    "KBO candidate split: direct allstar flags league=%p game 0x%x=%u->1 rules 0x%x=%u->1 auto 0x%x=%u->1",
-                    (void*)league_ptr,
-                    asl.game_flag_offset, (unsigned)old_game,
-                    asl.rules_flag_offset, (unsigned)old_rules,
-                    asl.auto_schedule_offset, (unsigned)old_auto);
-            }
-        } else {
-            append_logf(
-                "KBO candidate split: direct allstar flags skipped league=%p max_off=0x%x not readable",
-                (void*)league_ptr, max_off);
+        if (!enable_kbo_allstar_raw_flags_if_kbo_context(league_ptr, "candidate_split_raw")) {
+            enable_kbo_allstar_flags(league_ptr, "candidate_split");
         }
+
     }
 
     LONG log_index = InterlockedIncrement(&g_allstar_candidate_seed_log_count);

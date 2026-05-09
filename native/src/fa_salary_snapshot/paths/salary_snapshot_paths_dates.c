@@ -220,13 +220,13 @@ int kbo_fa_salary_snapshot_load_schedule_opening_day(uint32_t season, uint32_t* 
     }
     *slash = '\0';
 
-    const char* suffixes[] = { "", "_ap" };
+    const char* suffixes[] = { "" };
     for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); i++) {
         char path[MAX_PATH] = {0};
         int written = snprintf(
             path,
             sizeof(path),
-            "%s\\data\\schedules\\major_league_ml_c_%u%s.lsdl",
+            "%s\\data\\schedules\\korean_baseball_organization_int_c_%u%s.lsdl",
             exe_path,
             season,
             suffixes[i]);

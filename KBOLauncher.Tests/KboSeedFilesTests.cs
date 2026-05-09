@@ -83,6 +83,86 @@ public sealed class KboSeedFilesTests : IDisposable
         Assert.Equal(before, File.GetLastWriteTimeUtc(localPath));
     }
 
+    [Fact]
+    public void EnsureKboScheduleAllstarGameLine_AddsMissingTypeFourGame()
+    {
+        Directory.CreateDirectory(tempDir);
+        var path = Path.Combine(tempDir, "korean_baseball_organization_int_c_2026.lsdl");
+        File.WriteAllText(path, """
+        <SCHEDULE start_month="3" start_day="28" allstar_game_day="106">
+        <GAMES>
+        <GAME day="1" time="1400" away="1" home="2" />
+        </GAMES>
+        </SCHEDULE>
+        """);
+
+        var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
+
+        var text = File.ReadAllText(path);
+        Assert.True(repaired);
+        Assert.Contains("<Game day=\"106\" time=\"1830\" away=\"0\" home=\"0\" type=\"4\" />", text);
+        Assert.True(text.IndexOf("type=\"4\"", StringComparison.Ordinal) < text.IndexOf("day=\"1\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void EnsureKboScheduleAllstarGameLine_DoesNotDuplicateExistingTypeFourGame()
+    {
+        Directory.CreateDirectory(tempDir);
+        var path = Path.Combine(tempDir, "korean_baseball_organization_int_c_2026.lsdl");
+        File.WriteAllText(path, """
+        <SCHEDULE start_month="3" start_day="28" allstar_game_day="106">
+        <GAMES>
+        <Game day="106" time="1830" away="0" home="0" type="4" />
+        </GAMES>
+        </SCHEDULE>
+        """);
+
+        var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
+
+        Assert.False(repaired);
+        Assert.Equal(2, File.ReadAllText(path).Split("type=\"4\"").Length);
+    }
+
+    [Fact]
+    public void EnsureKboScheduleAllstarGameLine_RepairsTypeFourGameOutsideGamesBlock()
+    {
+        Directory.CreateDirectory(tempDir);
+        var path = Path.Combine(tempDir, "korean_baseball_organization_int_c_2026.lsdl");
+        File.WriteAllText(path, """
+        <SCHEDULE start_month="3" start_day="28" allstar_game_day="106">
+        <GAMES>
+        <GAME day="1" time="1400" away="1" home="2" />
+        </GAMES>
+        <Game day="106" time="1830" away="0" home="0" type="4" />
+        </SCHEDULE>
+        """);
+
+        var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
+
+        var text = File.ReadAllText(path);
+        Assert.True(repaired);
+        Assert.True(text.IndexOf("type=\"4\"", StringComparison.Ordinal) < text.IndexOf("day=\"1\"", StringComparison.Ordinal));
+        Assert.Equal(2, text.Split("type=\"4\"").Length);
+    }
+
+    [Fact]
+    public void EnsureKboScheduleAllstarGameLine_SkipsZeroAllstarDay()
+    {
+        Directory.CreateDirectory(tempDir);
+        var path = Path.Combine(tempDir, "korean_baseball_organization_int_c_2026.lsdl");
+        File.WriteAllText(path, """
+        <SCHEDULE start_month="3" start_day="28" allstar_game_day="0">
+        <GAMES>
+        </GAMES>
+        </SCHEDULE>
+        """);
+
+        var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
+
+        Assert.False(repaired);
+        Assert.DoesNotContain("type=\"4\"", File.ReadAllText(path));
+    }
+
     public void Dispose()
     {
         try

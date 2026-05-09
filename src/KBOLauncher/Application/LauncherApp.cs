@@ -7,7 +7,6 @@ using static KboSeedFiles;
 using static LauncherGuardStatus;
 using static LauncherLog;
 using static LauncherPaths;
-using static OotpScheduleSpoofer;
 using static ProcessDiscovery;
 
 internal static partial class LauncherApp
@@ -50,7 +49,7 @@ internal static partial class LauncherApp
             return 2;
         }
 
-        EnsureLauncherRuntimeData();
+        EnsureLauncherRuntimeData(exePath);
         var existing = FindExistingOotpProcesses(exePath);
         var defaultOptions = ApplyDefaultRunOptions(options, isDefaultRun, existing.Count);
         if (defaultOptions.ExitCode is not null)
@@ -72,7 +71,7 @@ internal static partial class LauncherApp
 
         var launchPlan = BuildLaunchPlan(options, isDefaultRun, buildGate.SupportedBuild);
         Log(logPath, $"injection_policy mode={launchPlan.InjectionDecision.Mode} reason={launchPlan.InjectionDecision.Reason}");
-        PrepareSchedulePreflight(exePath, logPath, options, launchPlan.AllstarBootstrapRequested);
+        PrepareRetiredScheduleMutationNotice(exePath, logPath, options, launchPlan.AllstarBootstrapRequested);
 
         if (options.AttachPid is not null || options.AttachExisting)
         {

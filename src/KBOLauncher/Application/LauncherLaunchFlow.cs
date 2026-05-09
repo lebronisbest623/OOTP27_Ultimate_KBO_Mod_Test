@@ -183,7 +183,9 @@ internal static partial class LauncherApp
             timeout,
             MarkedSavePollInterval,
             logPath,
-            launchStarted.ToUniversalTime());
+            minSaveCompletedAt: null,
+            fallbackMinSaveCompletedAt: launchStarted.ToUniversalTime(),
+            allowIncompleteMarkedSave: true);
     }
 
     private static bool TryResolveReplacementInjectionTarget(
@@ -239,13 +241,39 @@ internal static partial class LauncherApp
         if (IsKboFixAlreadyLoaded(pid, logPath))
         {
             Console.WriteLine($"KBOFix is already loaded in pid={pid}; skipping injection.");
+            WarnIfLoadedKboFixLooksStale(pid, dllPath, logPath);
             Log(logPath, $"inject_skipped pid={pid} reason=already_loaded");
             return;
         }
 
         var injectableDllPath = preparedDllPath ?? PrepareInjectableDllCopy(dllPath, logPath);
-        InjectDll(pid, injectableDllPath, logPath);
+        InjectDllWithShortRetry(pid, injectableDllPath, logPath);
         Log(logPath, $"inject_complete pid={pid} reason={reason}");
+    }
+
+    private static void InjectDllWithShortRetry(int pid, string dllPath, string logPath)
+    {
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= 5; attempt++)
+        {
+            try
+            {
+                InjectDll(pid, dllPath, logPath);
+                if (attempt > 1)
+                {
+                    Log(logPath, $"inject_retry_succeeded pid={pid} attempt={attempt}");
+                }
+                return;
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or TimeoutException)
+            {
+                lastError = ex;
+                Log(logPath, $"inject_retry_wait pid={pid} attempt={attempt} error=\"{ex.Message.Replace("\"", "'")}\"");
+                Thread.Sleep(500);
+            }
+        }
+
+        throw lastError ?? new InvalidOperationException("DLL injection failed without an exception.");
     }
 
     private sealed class PresaveEarlyInjector
@@ -275,12 +303,13 @@ internal static partial class LauncherApp
 
                 if (IsKboFixAlreadyLoaded(candidate.Id, logPath))
                 {
+                    WarnIfLoadedKboFixLooksStale(candidate.Id, dllPath, logPath);
                     Log(logPath, $"early_inject_skipped pid={candidate.Id} reason=already_loaded");
                     return;
                 }
 
                 PreparedDllPath ??= PrepareInjectableDllCopy(dllPath, logPath);
-                InjectDll(candidate.Id, PreparedDllPath, logPath);
+                InjectDllWithShortRetry(candidate.Id, PreparedDllPath, logPath);
                 injectedPids.Add(candidate.Id);
                 Log(logPath, $"early_inject pid={candidate.Id} reason=presave_allstar_candidate");
             }

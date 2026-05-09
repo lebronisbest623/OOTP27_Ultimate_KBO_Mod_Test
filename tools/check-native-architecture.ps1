@@ -1,0 +1,417 @@
+param(
+    [int] $MaxSourceLines = 400,
+    [int] $MaxShellLines = 250,
+    [int] $MaxDirectSourceFilesPerFolder = 4,
+    [int] $MaxInternalHeaderLines = 300,
+    [Alias("Rule")]
+    [string[]] $OnlyRule,
+    [string] $BaselinePath,
+    [string] $WriteBaselinePath,
+    [switch] $IncludeDebt,
+    [switch] $Strict,
+    [switch] $WarnOnly,
+    [switch] $Json
+)
+
+$ErrorActionPreference = "Stop"
+
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+$NativeRoot = Join-Path $RepoRoot "native"
+$NativeSrc = Join-Path $NativeRoot "src"
+$NativeShell = Join-Path $NativeRoot "KBOFix.c"
+
+if (-not (Test-Path -LiteralPath $NativeSrc)) {
+    throw "Could not find native source directory: $NativeSrc"
+}
+
+$NativeRootFull = (Resolve-Path -LiteralPath $NativeRoot).Path.TrimEnd("\")
+$NativeSrcFull = (Resolve-Path -LiteralPath $NativeSrc).Path.TrimEnd("\")
+$Findings = New-Object System.Collections.Generic.List[object]
+
+function Get-RelativeNativePath {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    $Resolved = (Resolve-Path -LiteralPath $Path).Path
+    if ($Resolved.StartsWith($NativeSrcFull, [StringComparison]::OrdinalIgnoreCase)) {
+        return $Resolved.Substring($NativeSrcFull.Length + 1).Replace("\", "/")
+    }
+
+    return $Resolved.Substring($NativeRootFull.Length + 1).Replace("\", "/")
+}
+
+function Get-Text {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    return Get-Content -LiteralPath $Path -Raw
+}
+
+function Get-SourceLineCount {
+    param([Parameter(Mandatory = $true)][string] $Text)
+
+    if ([string]::IsNullOrEmpty($Text)) {
+        return 0
+    }
+
+    return ($Text -split "`r?`n").Count
+}
+
+function Add-Finding {
+    param(
+        [Parameter(Mandatory = $true)][string] $Rule,
+        [Parameter(Mandatory = $true)][string] $Severity,
+        [Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $Message,
+        [string] $Suggestion = "",
+        [hashtable] $Data = @{}
+    )
+
+    $EffectiveSeverity = $Severity
+    if ($Strict -and $Severity -ne "info") {
+        $EffectiveSeverity = "error"
+    }
+
+    $Findings.Add([pscustomobject]@{
+        Rule = $Rule
+        Severity = $EffectiveSeverity
+        OriginalSeverity = $Severity
+        Path = $Path
+        Message = $Message
+        Suggestion = $Suggestion
+        Data = $Data
+    }) | Out-Null
+}
+
+function Test-IncludeOnlyCFile {
+    param([Parameter(Mandatory = $true)][string] $Text)
+
+    $WithoutBlockComments = [regex]::Replace($Text, '(?s)/\*.*?\*/', '')
+    $MeaningfulLines = @($WithoutBlockComments -split "`r?`n" |
+        ForEach-Object { $_ -replace '//.*$', '' } |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -ne "" -and $_ -notmatch '^#\s*include\b' })
+
+    return $MeaningfulLines.Count -eq 0
+}
+
+function Get-BaselineKeys {
+    param([string] $Path)
+
+    $Keys = @{}
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $Keys
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Baseline file not found: $Path"
+    }
+
+    $Items = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    foreach ($Item in @($Items)) {
+        if (-not $Item.rule -or -not $Item.path) {
+            throw "Baseline entries must contain rule and path."
+        }
+        $Keys["$($Item.rule):$($Item.path)"] = $true
+    }
+
+    return $Keys
+}
+
+$SourceFiles = @(Get-ChildItem -LiteralPath $NativeSrc -Recurse -File |
+    Where-Object { $_.Extension -in @(".c", ".h") })
+
+$SourceFacts = @($SourceFiles | ForEach-Object {
+    $Text = Get-Text -Path $_.FullName
+    [pscustomobject]@{
+        FullName = $_.FullName
+        Name = $_.Name
+        Extension = $_.Extension
+        Directory = $_.Directory.FullName
+        Path = Get-RelativeNativePath -Path $_.FullName
+        Text = $Text
+        Lines = Get-SourceLineCount -Text $Text
+    }
+})
+
+foreach ($Fact in $SourceFacts) {
+    if ($Fact.Lines -gt $MaxSourceLines) {
+        Add-Finding `
+            -Rule "native.source.max-lines" `
+            -Severity "error" `
+            -Path $Fact.Path `
+            -Message "$($Fact.Lines) lines exceeds the $MaxSourceLines-line native source checkpoint." `
+            -Suggestion "Split by lifecycle, table, scanner, policy, parser, or install phase." `
+            -Data @{ lines = $Fact.Lines; max = $MaxSourceLines }
+    }
+
+    if ($Fact.Extension -eq ".h" -and $Fact.Name -match '(^|_)internal\.h$' -and $Fact.Lines -gt $MaxInternalHeaderLines) {
+        Add-Finding `
+            -Rule "native.header.internal-too-broad" `
+            -Severity "warn" `
+            -Path $Fact.Path `
+            -Message "$($Fact.Name) is $($Fact.Lines) lines; broad private contracts slow down subsystem cleanup." `
+            -Suggestion "Move declarations into smaller owned headers when a responsibility boundary is clear." `
+            -Data @{ lines = $Fact.Lines; max = $MaxInternalHeaderLines }
+    }
+
+    if ($Fact.Name -match '(^|[_\.-])part\d+\.(c|h)$|_part\d+\.(c|h)$') {
+        Add-Finding `
+            -Rule "native.naming.no-mechanical-parts" `
+            -Severity "error" `
+            -Path $Fact.Path `
+            -Message "Mechanically named source fragments are not a stable architecture boundary." `
+            -Suggestion "Rename the file after the responsibility it owns." `
+            -Data @{ file = $Fact.Name }
+    }
+
+    if ($Fact.Extension -eq ".c" -and (Test-IncludeOnlyCFile -Text $Fact.Text)) {
+        Add-Finding `
+            -Rule "native.source.no-include-only-c" `
+            -Severity "error" `
+            -Path $Fact.Path `
+            -Message "This .c file only includes headers and does not own behavior." `
+            -Suggestion "Remove the shim or move the owned behavior into this translation unit." `
+            -Data @{ file = $Fact.Name }
+    }
+
+    if ($Fact.Path -match '^core/' -and $Fact.Text -match '\b(foreign|military|asian_games|allstar|fa_compensation|fa_market|amateur)\b') {
+        Add-Finding `
+            -Rule "native.core.no-feature-policy-leak" `
+            -Severity "warn" `
+            -Path $Fact.Path `
+            -Message "Core source mentions feature-domain terms; core should stay shared infrastructure." `
+            -Suggestion "Keep KBO feature policy in the owning subsystem unless this is a neutral shared API." `
+            -Data @{ pattern = "foreign|military|asian_games|allstar|fa_compensation|fa_market|amateur" }
+    }
+
+    if ($Fact.Text -match '\bCreateThread\s*\(' -and $Fact.Text -notmatch 'kbo_runtime_threads_should_continue|kbo_runtime_sleep_should_continue') {
+        Add-Finding `
+            -Rule "native.thread.lifecycle-guard" `
+            -Severity "warn" `
+            -Path $Fact.Path `
+            -Message "This file starts a thread but does not reference the runtime stop/sleep helpers." `
+            -Suggestion "Make the thread owner observe kbo_runtime_threads_should_continue or kbo_runtime_sleep_should_continue." `
+            -Data @{ helper = "kbo_runtime_threads_should_continue" }
+    }
+}
+
+if (Test-Path -LiteralPath $NativeShell) {
+    $ShellText = Get-Text -Path $NativeShell
+    $ShellLines = Get-SourceLineCount -Text $ShellText
+    $ShellRelativePath = Get-RelativeNativePath -Path $NativeShell
+
+    if ($ShellLines -gt $MaxShellLines) {
+        Add-Finding `
+            -Rule "native.shell.thin-kbofix" `
+            -Severity "error" `
+            -Path $ShellRelativePath `
+            -Message "$ShellLines lines exceeds the $MaxShellLines-line native shell checkpoint." `
+            -Suggestion "Keep native/KBOFix.c focused on preprocessor setup, public includes, startup ordering, and patch installation ordering." `
+            -Data @{ lines = $ShellLines; max = $MaxShellLines }
+    }
+}
+else {
+    Add-Finding `
+        -Rule "native.shell.required-file" `
+        -Severity "error" `
+        -Path "KBOFix.c" `
+        -Message "The native shell entry file is missing." `
+        -Suggestion "Restore native/KBOFix.c or update the architecture checker if the shell moved." `
+        -Data @{ required = $true }
+}
+
+$Folders = @(Get-ChildItem -LiteralPath $NativeSrc -Recurse -Directory)
+foreach ($Folder in $Folders) {
+    $DirectSourceFiles = @(Get-ChildItem -LiteralPath $Folder.FullName -File |
+        Where-Object { $_.Extension -in @(".c", ".h") })
+
+    if ($DirectSourceFiles.Count -gt $MaxDirectSourceFilesPerFolder) {
+        Add-Finding `
+            -Rule "native.folder.max-direct-source-files" `
+            -Severity "error" `
+            -Path (Get-RelativeNativePath -Path $Folder.FullName) `
+            -Message "$($DirectSourceFiles.Count) direct .c/.h files exceeds the folder checkpoint of $MaxDirectSourceFilesPerFolder." `
+            -Suggestion "Introduce a responsibility-named child folder." `
+            -Data @{ directSourceFiles = $DirectSourceFiles.Count; max = $MaxDirectSourceFilesPerFolder }
+    }
+}
+
+$NamespaceRootRules = @(
+    @{ Path = "custom_events"; Allowed = @(); Message = "custom_events root should not accumulate scanner, dispatcher, or domain behavior." },
+    @{ Path = "patch_installers"; Allowed = @(); Message = "patch_installers root should remain a namespace only." },
+    @{ Path = "military_service"; Allowed = @("military_service.h"); Message = "military_service root should expose only its public facade." }
+)
+
+foreach ($NamespaceRule in $NamespaceRootRules) {
+    $Folder = Join-Path $NativeSrc $NamespaceRule.Path
+    if (-not (Test-Path -LiteralPath $Folder)) {
+        continue
+    }
+
+    $DirectSourceFiles = @(Get-ChildItem -LiteralPath $Folder -File |
+        Where-Object { $_.Extension -in @(".c", ".h") -and $NamespaceRule.Allowed -notcontains $_.Name })
+
+    foreach ($File in $DirectSourceFiles) {
+        Add-Finding `
+            -Rule "native.folder.namespace-root-clean" `
+            -Severity "error" `
+            -Path (Get-RelativeNativePath -Path $File.FullName) `
+            -Message $NamespaceRule.Message `
+            -Suggestion "Move the file into the child folder that owns the responsibility." `
+            -Data @{ folder = $NamespaceRule.Path }
+    }
+}
+
+$GeneratedFiles = @(
+    "build_verify/supported_builds.generated.h",
+    "build_verify/supported_builds.generated.c"
+)
+
+foreach ($GeneratedPath in $GeneratedFiles) {
+    $FullPath = Join-Path $NativeSrc ($GeneratedPath -replace '/', '\')
+    if (-not (Test-Path -LiteralPath $FullPath)) {
+        Add-Finding `
+            -Rule "native.generated.required-file" `
+            -Severity "error" `
+            -Path $GeneratedPath `
+            -Message "Required generated native source is missing." `
+            -Suggestion "Run tools/generate-supported-builds.ps1." `
+            -Data @{ generated = $true }
+        continue
+    }
+
+    $Text = Get-Text -Path $FullPath
+    if ($Text -notmatch '<auto-generated') {
+        Add-Finding `
+            -Rule "native.generated.auto-generated-marker" `
+            -Severity "error" `
+            -Path $GeneratedPath `
+            -Message "Generated native source is missing the auto-generated marker." `
+            -Suggestion "Regenerate it instead of hand-editing generated files." `
+            -Data @{ generated = $true }
+    }
+}
+
+if ($IncludeDebt) {
+    $DebtFiles = @(
+        "hotkey_window/runtime/hotkey_window_runtime_internal.h",
+        "bootstrap/abi/forward_declarations.h",
+        "military_service/runtime/military_service_internal.h",
+        "foreign/waiver_core/foreign_waiver_core_internal.h",
+        "foreign/waiver_decisions/foreign_waiver_decisions_internal.h",
+        "foreign/waiver_window/foreign_waiver_window_internal.h"
+    )
+
+    foreach ($DebtFile in $DebtFiles) {
+        $FullPath = Join-Path $NativeSrc ($DebtFile -replace '/', '\')
+        if (Test-Path -LiteralPath $FullPath) {
+            Add-Finding `
+                -Rule "native.debt.tracked-broad-contract" `
+                -Severity "info" `
+                -Path $DebtFile `
+                -Message "Tracked architecture debt remains present." `
+                -Suggestion "Narrow this contract when touching the owning subsystem." `
+                -Data @{ trackedDebt = $true }
+        }
+    }
+}
+
+$BaselineKeys = Get-BaselineKeys -Path $BaselinePath
+$FilteredFindings = @($Findings | Where-Object {
+    $OnlyRule.Count -eq 0 -or $OnlyRule -contains $_.Rule
+})
+
+$ActiveFindings = @($FilteredFindings | Where-Object {
+    -not $BaselineKeys.ContainsKey("$($_.Rule):$($_.Path)")
+})
+$SuppressedFindings = @($FilteredFindings | Where-Object {
+    $BaselineKeys.ContainsKey("$($_.Rule):$($_.Path)")
+})
+
+if (-not [string]::IsNullOrWhiteSpace($WriteBaselinePath)) {
+    $BaselineItems = @($ActiveFindings |
+        Sort-Object Rule, Path |
+        ForEach-Object {
+            [pscustomobject]@{
+                rule = $_.Rule
+                path = $_.Path
+                severity = $_.Severity
+                message = $_.Message
+            }
+        })
+
+    $BaselineJson = $BaselineItems | ConvertTo-Json -Depth 6
+    if ($BaselineItems.Count -eq 1) {
+        $BaselineJson = "[$BaselineJson]"
+    }
+    elseif ($BaselineItems.Count -eq 0) {
+        $BaselineJson = "[]"
+    }
+
+    Set-Content -LiteralPath $WriteBaselinePath -Value $BaselineJson -Encoding UTF8
+}
+
+$ErrorCount = @($ActiveFindings | Where-Object Severity -eq "error").Count
+$WarnCount = @($ActiveFindings | Where-Object Severity -eq "warn").Count
+$InfoCount = @($ActiveFindings | Where-Object Severity -eq "info").Count
+
+$Summary = [pscustomobject]@{
+    sourceRoot = "native/src"
+    nativeShell = "native/KBOFix.c"
+    sourceFiles = $SourceFiles.Count
+    activeFindings = $ActiveFindings.Count
+    suppressedFindings = $SuppressedFindings.Count
+    errors = $ErrorCount
+    warnings = $WarnCount
+    info = $InfoCount
+    strict = [bool]$Strict
+    warnOnly = [bool]$WarnOnly
+}
+
+if ($Json) {
+    [pscustomobject]@{
+        summary = $Summary
+        findings = $ActiveFindings
+        suppressed = $SuppressedFindings
+    } | ConvertTo-Json -Depth 8
+}
+else {
+    Write-Host "Native architecture check"
+    Write-Host "Source root: $($Summary.sourceRoot)"
+    Write-Host "Native shell: $($Summary.nativeShell)"
+    Write-Host "Source files: $($Summary.sourceFiles)"
+    Write-Host "Findings: $($Summary.activeFindings) active, $($Summary.suppressedFindings) suppressed"
+    Write-Host "Errors: $ErrorCount  Warnings: $WarnCount  Info: $InfoCount"
+    if (-not [string]::IsNullOrWhiteSpace($WriteBaselinePath)) {
+        Write-Host "Baseline written: $WriteBaselinePath"
+    }
+    Write-Host ""
+
+    foreach ($Group in @($ActiveFindings | Sort-Object Severity, Rule, Path | Group-Object Rule)) {
+        $Severity = (@($Group.Group | Select-Object -First 1).Severity).ToUpperInvariant()
+        Write-Host "[$Severity] $($Group.Name) ($($Group.Count))"
+        foreach ($Finding in @($Group.Group | Sort-Object Path)) {
+            Write-Host "  - $($Finding.Path)"
+            Write-Host "    $($Finding.Message)"
+            if (-not [string]::IsNullOrWhiteSpace($Finding.Suggestion)) {
+                Write-Host "    Suggestion: $($Finding.Suggestion)"
+            }
+        }
+        Write-Host ""
+    }
+
+    if ($ActiveFindings.Count -eq 0) {
+        Write-Host "All native architecture checks passed."
+    }
+}
+
+if ($ErrorCount -eq 0 -or $WarnOnly) {
+    if ($ErrorCount -gt 0 -and $WarnOnly -and -not $Json) {
+        Write-Warning "Native architecture checks found $ErrorCount error(s), but -WarnOnly was set."
+    }
+    exit 0
+}
+
+if (-not $Json) {
+    Write-Error "Native architecture checks found $ErrorCount error(s)."
+}
+exit 1

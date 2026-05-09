@@ -35,6 +35,12 @@ Current source-shape checkpoints: no native `.c/.h` source under
 `native/src/` should exceed 400 lines, and folders that need more than four
 direct `.c/.h` files should introduce a responsibility-named child folder.
 
+Run `tools/check-native-architecture.ps1` before native refactors or release
+packaging to verify these source-shape checkpoints and the broader native
+ownership rules. Use `-WarnOnly` when reviewing existing debt without failing
+the command. The checker also supports `-Json`, `-Rule <rule-id>`,
+`-WriteBaselinePath <path>`, and `-BaselinePath <path>` for CI and debt ratchets.
+
 `native/KBOFix.c` should remain a thin shell. Its responsibilities are:
 
 - process-wide preprocessor setup needed by Win32/WebView2 headers
@@ -424,6 +430,7 @@ powershell -ExecutionPolicy Bypass -File native\build.ps1
 dotnet build .\OOTP27-KBO-Launcher.sln
 dotnet test .\OOTP27-KBO-Launcher.sln
 powershell -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
+powershell -ExecutionPolicy Bypass -File tools\check-native-architecture.ps1 -WarnOnly
 ```
 
 CI runs managed build/test, native build, and native helper tests on Windows.

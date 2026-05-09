@@ -55,6 +55,8 @@ uint32_t kbo_get_foreign_waiver_league_id(void);
 
 /* context_enabled.c */
 int kbo_allstar_league_context_enabled(uintptr_t league_ptr);
+int kbo_allstar_league_uses_kbo_schedule_file(uintptr_t league_ptr);
+int kbo_allstar_raw_kbo_league_context_enabled(uintptr_t league_ptr);
 int kbo_allstar_team_matches_league(uint8_t* team, uint32_t primary_league_id, uint32_t fallback_league_id);
 
 /* league_lookup.c */

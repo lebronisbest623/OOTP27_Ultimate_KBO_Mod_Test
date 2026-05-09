@@ -7,6 +7,14 @@ uint8_t* build_allstar_events_prepare_stub(
     void* return_address,
     void* allstar_prep_address,
     uint32_t game_flag_offset);
+uint8_t* build_allstar_prep_single_division_gate_stub(
+    void* patch_site,
+    void* return_address,
+    void* skip_address);
+uint8_t* build_allstar_roster_single_division_gate_stub(
+    void* patch_site,
+    void* return_address,
+    void* skip_address);
 uint8_t* build_allstar_schedule_import_capture_stub_r(
     void* return_address,
     uint32_t game_flag_offset,
@@ -19,5 +27,8 @@ uint8_t* build_allstar_voting_begin_prepare_stub(
     void* no_game_address,
     void* allstar_team_setup_address,
     uint32_t game_flag_offset);
+uint8_t* build_allstar_team_setup_single_division_gate_stub(
+    void* return_address,
+    void* bail_address);
 
 #endif

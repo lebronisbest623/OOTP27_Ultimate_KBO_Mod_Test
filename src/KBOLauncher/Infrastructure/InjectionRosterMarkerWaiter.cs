@@ -9,7 +9,9 @@ internal static class InjectionRosterMarkerWaiter
         TimeSpan timeout,
         TimeSpan pollInterval,
         string logPath,
-        DateTimeOffset? minSaveCompletedAt = null)
+        DateTimeOffset? minSaveCompletedAt = null,
+        DateTimeOffset? fallbackMinSaveCompletedAt = null,
+        bool allowIncompleteMarkedSave = false)
     {
         var deadline = DateTimeOffset.Now + timeout;
         RosterMarkerInfo? lastInfo = null;
@@ -22,7 +24,12 @@ internal static class InjectionRosterMarkerWaiter
         while (DateTimeOffset.Now <= deadline)
         {
             attempt++;
-            lastInfo = ProbeRosterMarkerForInjectionTarget(pid, logPath, minSaveCompletedAt);
+            lastInfo = ProbeRosterMarkerForInjectionTarget(
+                pid,
+                logPath,
+                minSaveCompletedAt,
+                fallbackMinSaveCompletedAt,
+                allowIncompleteMarkedSave);
             Log(logPath, $"roster_marker_wait attempt={attempt} {FormatLogStatus(lastInfo)}");
 
             if (lastInfo.Ok)

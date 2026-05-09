@@ -11,13 +11,22 @@ internal static class KboRosterMarkerGuard
 
     public static RosterMarkerInfo CheckCurrentSave(int pid, DateTimeOffset? minSaveCompletedAt, Action<string>? log = null)
     {
+        return CheckCurrentSave(pid, minSaveCompletedAt, allowIncompleteMarkedSave: false, log);
+    }
+
+    public static RosterMarkerInfo CheckCurrentSave(
+        int pid,
+        DateTimeOffset? minSaveCompletedAt,
+        bool allowIncompleteMarkedSave,
+        Action<string>? log = null)
+    {
         var savePathInfo = OotpCurrentSavePathReader.TryRead(pid, log);
         if (!savePathInfo.Ok)
         {
             return RosterMarkerInfo.Fail(savePathInfo.Status, savePathInfo.SavePath, null, savePathInfo.Error ?? "current save path unavailable");
         }
 
-        return CheckSavePath(savePathInfo.SavePath!, minSaveCompletedAt);
+        return CheckSavePath(savePathInfo.SavePath!, minSaveCompletedAt, allowIncompleteMarkedSave);
     }
 
     internal static RosterMarkerInfo CheckSavePath(string savePath)
@@ -26,6 +35,14 @@ internal static class KboRosterMarkerGuard
     }
 
     internal static RosterMarkerInfo CheckSavePath(string savePath, DateTimeOffset? minSaveCompletedAt)
+    {
+        return CheckSavePath(savePath, minSaveCompletedAt, allowIncompleteMarkedSave: false);
+    }
+
+    internal static RosterMarkerInfo CheckSavePath(
+        string savePath,
+        DateTimeOffset? minSaveCompletedAt,
+        bool allowIncompleteMarkedSave)
     {
         var normalizedSavePath = Path.GetFullPath(savePath);
         if (!Directory.Exists(normalizedSavePath))
@@ -61,6 +78,10 @@ internal static class KboRosterMarkerGuard
         var saveCompletedPath = Path.Combine(normalizedSavePath, SaveCompletedFileName);
         if (!File.Exists(saveCompletedPath))
         {
+            if (allowIncompleteMarkedSave)
+            {
+                return new RosterMarkerInfo(true, "marked_save_in_progress", normalizedSavePath, descriptionPath, saveCompletedPath, null, null);
+            }
             return RosterMarkerInfo.Fail("save_not_completed", normalizedSavePath, descriptionPath, saveCompletedPath, $"{SaveCompletedFileName} not found");
         }
 
@@ -78,11 +99,19 @@ internal static class KboRosterMarkerGuard
 
         if (completedText.IndexOf(SaveCompletedSentinel, StringComparison.OrdinalIgnoreCase) < 0)
         {
+            if (allowIncompleteMarkedSave)
+            {
+                return new RosterMarkerInfo(true, "marked_save_in_progress", normalizedSavePath, descriptionPath, saveCompletedPath, completedAt, null);
+            }
             return RosterMarkerInfo.Fail("save_not_completed", normalizedSavePath, descriptionPath, saveCompletedPath, $"{SaveCompletedFileName} does not contain the completed save sentinel");
         }
 
         if (minSaveCompletedAt is not null && completedAt < minSaveCompletedAt.Value.ToUniversalTime())
         {
+            if (allowIncompleteMarkedSave)
+            {
+                return new RosterMarkerInfo(true, "marked_save_in_progress", normalizedSavePath, descriptionPath, saveCompletedPath, completedAt, null);
+            }
             return RosterMarkerInfo.Fail(
                 "save_completion_stale",
                 normalizedSavePath,
@@ -92,6 +121,90 @@ internal static class KboRosterMarkerGuard
         }
 
         return new RosterMarkerInfo(true, "marked_save_completed", normalizedSavePath, descriptionPath, saveCompletedPath, completedAt, null);
+    }
+
+    internal static RosterMarkerInfo? FindLatestMarkedCompletedSave(DateTimeOffset? minSaveCompletedAt = null)
+    {
+        var savedGamesPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "Out of the Park Developments",
+            "OOTP Baseball 27",
+            "saved_games");
+        return FindLatestMarkedCompletedSaveInDirectory(savedGamesPath, minSaveCompletedAt);
+    }
+
+    internal static RosterMarkerInfo? FindLatestMarkedSaveForInjection(DateTimeOffset? minTouchedAt = null)
+    {
+        var savedGamesPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "Out of the Park Developments",
+            "OOTP Baseball 27",
+            "saved_games");
+        return FindLatestMarkedSaveForInjectionInDirectory(savedGamesPath, minTouchedAt);
+    }
+
+    internal static RosterMarkerInfo? FindLatestMarkedCompletedSaveInDirectory(
+        string savedGamesPath,
+        DateTimeOffset? minSaveCompletedAt = null)
+    {
+        if (!Directory.Exists(savedGamesPath))
+        {
+            return null;
+        }
+
+        return Directory.EnumerateDirectories(savedGamesPath, "*.lg", SearchOption.TopDirectoryOnly)
+            .Select(path =>
+            {
+                try
+                {
+                    var info = CheckSavePath(path, minSaveCompletedAt);
+                    var completedAt = info.SaveCompletedAt ?? DateTimeOffset.MinValue;
+                    return (info, completedAt);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+                {
+                    return (RosterMarkerInfo.Fail("save_scan_failed", path, null, ex.Message), DateTimeOffset.MinValue);
+                }
+            })
+            .Where(candidate => candidate.Item1.Ok)
+            .OrderByDescending(candidate => candidate.Item2)
+            .Select(candidate => candidate.Item1)
+            .FirstOrDefault();
+    }
+
+    internal static RosterMarkerInfo? FindLatestMarkedSaveForInjectionInDirectory(
+        string savedGamesPath,
+        DateTimeOffset? minTouchedAt = null)
+    {
+        if (!Directory.Exists(savedGamesPath))
+        {
+            return null;
+        }
+
+        var minUtc = minTouchedAt?.ToUniversalTime();
+        return Directory.EnumerateDirectories(savedGamesPath, "*.lg", SearchOption.TopDirectoryOnly)
+            .Select(path =>
+            {
+                try
+                {
+                    var touchedAt = Directory.GetLastWriteTimeUtc(path);
+                    if (minUtc is not null && touchedAt < minUtc.Value)
+                    {
+                        return (info: (RosterMarkerInfo?)null, touchedAt);
+                    }
+
+                    var info = CheckSavePath(path, minSaveCompletedAt: null, allowIncompleteMarkedSave: true);
+                    return (info: info.Ok ? info : null, touchedAt);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+                {
+                    return (info: (RosterMarkerInfo?)null, touchedAt: DateTimeOffset.MinValue);
+                }
+            })
+            .Where(candidate => candidate.info is not null)
+            .OrderByDescending(candidate => candidate.touchedAt)
+            .Select(candidate => candidate.info!)
+            .FirstOrDefault();
     }
 
     public static string FormatConsoleStatus(RosterMarkerInfo info)

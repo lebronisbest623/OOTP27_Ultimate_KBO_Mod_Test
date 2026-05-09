@@ -57,6 +57,7 @@ internal static partial class LauncherApp
         if (IsKboFixAlreadyLoaded(targetPid.Value, logPath))
         {
             Console.WriteLine($"KBOFix is already loaded in pid={targetPid.Value}; skipping injection.");
+            WarnIfLoadedKboFixLooksStale(targetPid.Value, options.DllPath, logPath);
             Log(logPath, $"inject_skipped pid={targetPid.Value} reason=already_loaded");
             return 0;
         }
