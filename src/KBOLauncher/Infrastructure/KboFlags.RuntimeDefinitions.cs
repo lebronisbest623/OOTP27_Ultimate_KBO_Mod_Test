@@ -20,7 +20,7 @@ internal static partial class KboFlags
         new("disable_foreign_waiver_legacy_auto_detector", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_intl_established_fa_generation_filter", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_fa_salary_opening_day_snapshot", true, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_no_minor_contract_experimental_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_no_minor_contract_experimental_patch", false, true, RuntimeFlagLifecycle.Recovery),
         new("enable_kbo_ai_fa_status_candidate_insert_hook", false, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_custom_foreign_policy", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_foreign_signing_branch_patch", null, true, RuntimeFlagLifecycle.Recovery),

@@ -38,6 +38,20 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         "Star",
         "Superstar"
     };
+    const char* non_asian_quality_cap_labels_ko[KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT] = {
+        "\xec\x84\xa0\xeb\xb0\x9c \xed\x88\xac\xec\x88\x98",
+        "\xeb\xb6\x88\xed\x8e\x9c \xed\x88\xac\xec\x88\x98",
+        "\xed\x88\xac\xec\x88\x98(\xec\x97\xad\xed\x95\xa0 \xeb\xaf\xb8\xec\x83\x81)",
+        "\xec\x95\xbc\xec\x88\x98",
+        "\xed\x8f\xac\xec\x88\x98"
+    };
+    const char* non_asian_quality_cap_labels_en[KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT] = {
+        "Starting Pitcher",
+        "Bullpen Pitcher",
+        "Unknown Pitcher",
+        "Hitter",
+        "Catcher"
+    };
     kbo_window_text_appendf(
         buffer,
         "<div class='rights settingsGrid'>"
@@ -82,6 +96,30 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         "</select></div>",
         quality_cap_enabled ? "selected" : "",
         quality_cap_enabled ? "" : "selected");
+
+    kbo_window_text_appendf(
+        buffer,
+        "<div class='settingsDivider'></div><h2 class='cardTitle'>");
+    kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\xb9\x84\xec\x95\x84\xec\x8b\x9c\xec\x95\x84 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xed\x92\x88\xec\xa7\x88 \xec\xba\xa1", "NON-ASIAN QUALITY CAPS"));
+    kbo_window_text_appendf(buffer, "</h2>");
+
+    for (int i = 0; i < KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT; i++) {
+        int current = kbo_get_foreign_fa_non_asian_quality_cap_value(i);
+        kbo_window_text_appendf(
+            buffer,
+            "<div class='settingRow'><label class='settingLabel' for='nonAsianQualityCap%d'>",
+            i);
+        kbo_html_append_escaped(buffer, kbo_hub_text(non_asian_quality_cap_labels_ko[i], non_asian_quality_cap_labels_en[i]));
+        kbo_window_text_appendf(
+            buffer,
+            "</label><input id='nonAsianQualityCap%d' class='ootpSelect salaryInput' type='number' min='0' max='%d' step='500' value='%d' "
+            "onchange=\"location.href='kbo://settings/foreign-fa-non-asian-quality-cap/%d/'+this.value\" "
+            "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
+            i,
+            KBO_FOREIGN_FA_QUALITY_CAP_MAX,
+            current,
+            i);
+    }
 
     kbo_window_text_appendf(
         buffer,

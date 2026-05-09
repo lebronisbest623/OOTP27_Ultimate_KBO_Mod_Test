@@ -19,6 +19,98 @@ static int kbo_no_minor_contract_experimental_patch_enabled(void)
     return 1;
 }
 
+static volatile LONG g_kbo_no_minor_contract_patch_install_started = 0;
+static volatile LONG g_kbo_no_minor_contract_delayed_install_started = 0;
+
+static int install_kbo_no_minor_contract_experimental_patch_once(const char* source)
+{
+    if (InterlockedCompareExchange(&g_kbo_no_minor_contract_patch_install_started, 1, 0) != 0) {
+        append_logf(
+            "KBO no-minor-contract experimental patch install skipped source=%s reason=already_started",
+            source != NULL ? source : "");
+        return 0;
+    }
+
+    append_logf(
+        "KBO no-minor-contract experimental patch installing source=%s",
+        source != NULL ? source : "");
+    int installed = install_kbo_no_minor_contract_experimental_patch();
+    start_kbo_no_minor_contract_demand_floor_scanner_thread();
+    return installed;
+}
+
+DWORD WINAPI kbo_delayed_no_minor_contract_patch_install_thread(LPVOID parameter)
+{
+    (void)parameter;
+    append_log_line("KBO no-minor-contract delayed install thread started");
+
+    for (int attempt = 1; attempt <= 720; attempt++) {
+        if (!kbo_runtime_sleep_should_continue(attempt == 1 ? 1000u : 5000u)) {
+            break;
+        }
+
+        if (!kbo_no_minor_contract_experimental_patch_enabled()) {
+            append_logf(
+                "KBO no-minor-contract delayed install ended attempt=%d reason=disabled",
+                attempt);
+            InterlockedExchange(&g_kbo_no_minor_contract_delayed_install_started, 0);
+            return 0;
+        }
+
+        char save_path[MAX_PATH] = {0};
+        uint32_t today_serial = kbo_current_date_serial();
+        int has_save = kbo_get_current_save_path(save_path, sizeof(save_path));
+        if (today_serial == 0u || !has_save) {
+            if (attempt <= 8 || attempt % 12 == 0) {
+                append_logf(
+                    "KBO no-minor-contract delayed install waiting attempt=%d reason=state_not_ready date_serial=%u save=%d",
+                    attempt,
+                    today_serial,
+                    has_save);
+            }
+            continue;
+        }
+
+        if (kbo_opening_day_storyline_guard_active("no_minor_contract_delayed_install", NULL, NULL)) {
+            if (attempt <= 8 || attempt % 12 == 0) {
+                append_logf(
+                    "KBO no-minor-contract delayed install waiting attempt=%d reason=opening_day_storyline_guard save=%s",
+                    attempt,
+                    save_path);
+            }
+            continue;
+        }
+
+        int installed = install_kbo_no_minor_contract_experimental_patch_once("delayed_opening_day_guard");
+        append_logf(
+            "KBO no-minor-contract delayed install complete attempt=%d installed_any=%d save=%s",
+            attempt,
+            installed,
+            save_path);
+        return 0;
+    }
+
+    InterlockedExchange(&g_kbo_no_minor_contract_delayed_install_started, 0);
+    append_log_line("KBO no-minor-contract delayed install ended without installing");
+    return 0;
+}
+
+static void start_kbo_delayed_no_minor_contract_patch_install_thread(void)
+{
+    if (InterlockedCompareExchange(&g_kbo_no_minor_contract_delayed_install_started, 1, 0) != 0) {
+        append_log_line("KBO no-minor-contract delayed install already started");
+        return;
+    }
+
+    HANDLE thread = CreateThread(NULL, 0, kbo_delayed_no_minor_contract_patch_install_thread, NULL, 0, NULL);
+    if (thread != NULL) {
+        kbo_register_runtime_thread(thread, "delayed no-minor contract patch install");
+    } else {
+        InterlockedExchange(&g_kbo_no_minor_contract_delayed_install_started, 0);
+        append_logf("KBO no-minor-contract delayed install thread failed error=%lu", GetLastError());
+    }
+}
+
 DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
 {
     KboSangmuFaHookInstallRequest request = {0};
@@ -375,10 +467,10 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     }
     if (kbo_no_minor_contract_experimental_patch_enabled()) {
         if (!kbo_opening_day_storyline_guard_active("no_minor_contract_patch_install", NULL, NULL)) {
-            install_kbo_no_minor_contract_experimental_patch();
-            start_kbo_no_minor_contract_demand_floor_scanner_thread();
+            install_kbo_no_minor_contract_experimental_patch_once("runtime_install");
         } else {
-            append_log_line("KBO no-minor-contract experimental patch not installed during opening-day stock-news guard");
+            append_log_line("KBO no-minor-contract experimental patch deferred during opening-day stock-news guard");
+            start_kbo_delayed_no_minor_contract_patch_install_thread();
         }
     }
     if (!read_kbo_localappdata_flag_file("disable_kbo_salary_arbitration_no_withdraw_patch.txt")) {

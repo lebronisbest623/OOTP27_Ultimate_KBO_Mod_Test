@@ -43,17 +43,22 @@ int32_t kbo_intl_established_fa_quality_score_cap(
 
     if (position_group == 1u) {
         if (kbo_intl_established_fa_pitcher_role_is_starter(position_role)) {
-            return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_STARTER_SCORE_CAP;
+            return kbo_get_foreign_fa_non_asian_quality_cap_value(
+                KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_STARTER);
         }
         if (kbo_intl_established_fa_pitcher_role_is_bullpen(position_role)) {
-            return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_BULLPEN_SCORE_CAP;
+            return kbo_get_foreign_fa_non_asian_quality_cap_value(
+                KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_BULLPEN);
         }
-        return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_UNKNOWN_PITCHER_SCORE_CAP;
+        return kbo_get_foreign_fa_non_asian_quality_cap_value(
+            KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_PITCHER);
     }
     if (kbo_intl_established_fa_position_is_catcher(position_group, position_role)) {
-        return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_CATCHER_SCORE_CAP;
+        return kbo_get_foreign_fa_non_asian_quality_cap_value(
+            KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_CATCHER);
     }
-    return KBO_INTL_ESTABLISHED_FA_NON_ASIAN_HITTER_SCORE_CAP;
+    return kbo_get_foreign_fa_non_asian_quality_cap_value(
+        KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_HITTER);
 }
 
 int16_t kbo_intl_established_fa_quality_field_cap(

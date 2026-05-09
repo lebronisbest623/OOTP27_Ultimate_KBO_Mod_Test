@@ -20,6 +20,22 @@ int kbo_set_asian_quota_fa_demand_baseline_value(int index, int32_t value);
 int kbo_get_foreign_fa_quality_cap_enabled_setting(void);
 int kbo_set_foreign_fa_quality_cap_enabled_setting(int enabled);
 
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT 5
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_STARTER 0
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_BULLPEN 1
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_PITCHER 2
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_HITTER 3
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_CATCHER 4
+#define KBO_FOREIGN_FA_QUALITY_CAP_MAX 250000
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_STARTER 126500
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_BULLPEN 104500
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_PITCHER 115500
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_HITTER 121000
+#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_CATCHER 88000
+int32_t kbo_clamp_foreign_fa_quality_cap_value(int32_t value);
+int32_t kbo_get_foreign_fa_non_asian_quality_cap_value(int index);
+int kbo_set_foreign_fa_non_asian_quality_cap_value(int index, int32_t value);
+
 int kbo_get_profiler_enabled_setting(void);
 int kbo_set_profiler_enabled_setting(int enabled);
 

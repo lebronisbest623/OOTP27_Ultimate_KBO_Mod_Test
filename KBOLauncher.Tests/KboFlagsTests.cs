@@ -176,7 +176,7 @@ public sealed class KboFlagsTests : IDisposable
         Assert.True(flags["enable_intl_established_fa_quality_probe_patch"]);
         Assert.False(flags["enable_kbo_season_phase_monitor"]);
         Assert.True(flags["disable_kbo_fa_salary_opening_day_snapshot"]);
-        Assert.True(flags["disable_kbo_no_minor_contract_experimental_patch"]);
+        Assert.False(flags["disable_kbo_no_minor_contract_experimental_patch"]);
     }
 
     [Fact]

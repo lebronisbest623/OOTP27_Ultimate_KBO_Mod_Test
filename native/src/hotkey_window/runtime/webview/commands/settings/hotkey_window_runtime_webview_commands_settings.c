@@ -43,6 +43,30 @@ int kbo_webview_handle_settings_command(const char* cmd)
         kbo_webview_navigate_current();
         return 1;
     }
+    const char* non_asian_quality_cap_prefix = "settings/foreign-fa-non-asian-quality-cap/";
+    size_t non_asian_quality_cap_prefix_len = strlen(non_asian_quality_cap_prefix);
+    if (strncmp(cmd, non_asian_quality_cap_prefix, non_asian_quality_cap_prefix_len) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
+        const char* rest = cmd + non_asian_quality_cap_prefix_len;
+        int index = atoi(rest);
+        const char* slash = strchr(rest, '/');
+        int value = slash != NULL ? atoi(slash + 1) : 0;
+        int clamped = kbo_clamp_foreign_fa_quality_cap_value(value);
+        if (kbo_set_foreign_fa_non_asian_quality_cap_value(index, value)) {
+            append_logf("settings webview: non-Asian foreign FA quality cap index=%d value=%d", index, clamped);
+        } else {
+            append_logf("settings webview: failed to write non-Asian foreign FA quality cap index=%d value=%d", index, value);
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "settings/foreign-fa-baseline/", 29) == 0) {
         if (!kbo_hub_selected_league_is_kbo()) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
