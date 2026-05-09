@@ -86,6 +86,27 @@ static void test_json_flags_parser(void)
     assert(kbo_find_json_value_span(json, (DWORD)strlen(json), "intl_established_fa_multiplier", &start, &end));
     assert((size_t)(end - start) == strlen("\" 5 \""));
     assert(strncmp(start, "\" 5 \"", (size_t)(end - start)) == 0);
+
+    const char bom_json[] =
+        "\xEF\xBB\xBF{\r\n"
+        "  \"enable_experimental_runtime_hooks\": true,\r\n"
+        "  \"disable_kbo_no_minor_contract_experimental_patch\": true\r\n"
+        "}\r\n";
+    assert(kbo_find_flag_value_in_json(
+        bom_json,
+        (DWORD)strlen(bom_json),
+        "enable_experimental_runtime_hooks",
+        "enable_experimental_runtime_hooks.txt",
+        &value));
+    assert(value == 1);
+    assert(kbo_find_flag_value_in_json(
+        bom_json,
+        (DWORD)strlen(bom_json),
+        "disable_kbo_no_minor_contract_experimental_patch",
+        "disable_kbo_no_minor_contract_experimental_patch.txt",
+        &value));
+    assert(value == 1);
+
     assert(!kbo_find_flag_value_in_json("{ nope", 6u, "enable_foreign_waiver_ai", NULL, &value));
     printf("test_json_flags_parser: PASS\n");
 }
