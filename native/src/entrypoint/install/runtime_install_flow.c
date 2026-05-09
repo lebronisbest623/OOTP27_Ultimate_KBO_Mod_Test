@@ -526,11 +526,36 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
     HINSTANCE instance = (HINSTANCE)parameter;
     append_log_line("KBO full runtime marker guard thread started");
 
+    uint32_t last_date_serial = 0u;
+    int stable_date_ticks = 0;
     for (int attempt = 1; attempt <= 450; attempt++) {
         int log_detail = attempt == 1 || attempt == 5 || attempt == 15 || attempt % 30 == 0;
         if (kbo_current_save_has_required_roster_marker("runtime_marker_wait", log_detail)) {
-            install_kbo_full_runtime_after_roster_marker(instance);
-            return 0;
+            uint32_t today_serial = kbo_current_date_serial();
+            if (today_serial != 0u && today_serial == last_date_serial) {
+                stable_date_ticks++;
+            } else if (today_serial != 0u) {
+                last_date_serial = today_serial;
+                stable_date_ticks = 1;
+            } else {
+                last_date_serial = 0u;
+                stable_date_ticks = 0;
+            }
+
+            if (stable_date_ticks >= 8) {
+                install_kbo_full_runtime_after_roster_marker(instance);
+                return 0;
+            }
+
+            if (log_detail || stable_date_ticks == 1) {
+                append_logf(
+                    "KBO full runtime marker guard waiting source=runtime_marker_wait reason=current_date_not_stable date_serial=%u stable_ticks=%d",
+                    today_serial,
+                    stable_date_ticks);
+            }
+        } else {
+            last_date_serial = 0u;
+            stable_date_ticks = 0;
         }
         Sleep(2000);
     }

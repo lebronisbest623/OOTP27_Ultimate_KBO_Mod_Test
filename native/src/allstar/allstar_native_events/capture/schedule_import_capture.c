@@ -8,14 +8,14 @@
 #include "../logging/native_event_logging.h"
 #include "../schedule/schedule_dates.h"
 
-__declspec(noinline) void ootp_kbo_capture_allstar_schedule_import_league(uintptr_t league_ptr)
+__declspec(noinline) int ootp_kbo_capture_allstar_schedule_import_league(uintptr_t league_ptr)
 {
     if (league_ptr == 0 || !kbo_allstar_league_core_plausible(league_ptr)) {
-        return;
+        return 0;
     }
 
     if (!kbo_allstar_league_context_enabled(league_ptr)) {
-        return;
+        return 0;
     }
 
     InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
@@ -27,4 +27,6 @@ __declspec(noinline) void ootp_kbo_capture_allstar_schedule_import_league(uintpt
     if (index <= 12) {
         log_kbo_allstar_native_event_state("schedule_import_capture", league_ptr, "schedule_import");
     }
+
+    return 1;
 }

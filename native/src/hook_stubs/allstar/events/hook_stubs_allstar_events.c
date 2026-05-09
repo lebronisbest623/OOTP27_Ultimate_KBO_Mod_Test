@@ -68,25 +68,27 @@ uint8_t* build_allstar_schedule_import_capture_stub_r(void* return_address, uint
         0x48, 0xB8,                                     // [18] mov rax, helper
         0,0,0,0,0,0,0,0,                                // [20] helper address
         0xFF, 0xD0,                                     // [28] call rax
-        0x48, 0x83, 0xC4, 0x28,                         // [30] add rsp, 0x28
-        0x41, 0x5B,                                     // [34] pop r11
-        0x41, 0x5A,                                     // [36] pop r10
-        0x41, 0x59,                                     // [38] pop r9
-        0x41, 0x58,                                     // [40] pop r8
-        0x5A,                                           // [42] pop rdx
-        0x59,                                           // [43] pop rcx
-        0x58,                                           // [44] pop rax
-        0x41, 0xC6, 0x85, 0,0,0,0, 0x01,               // [45] mov byte ptr [r13+offset], 1 (byte [47] patched)
-        0x48, 0xB8,                                     // [53] mov rax, return_address
-        0,0,0,0,0,0,0,0,                                // [55] return address
-        0xFF, 0xE0                                      // [63] jmp rax
+        0x85, 0xC0,                                     // [30] test eax, eax
+        0x74, 0x08,                                     // [32] je skip_write
+        0x41, 0xC6, 0x85, 0,0,0,0, 0x01,               // [34] mov byte ptr [r13+offset], 1 (byte [36] patched)
+        0x48, 0x83, 0xC4, 0x28,                         // [42] skip_write: add rsp, 0x28
+        0x41, 0x5B,                                     // [46] pop r11
+        0x41, 0x5A,                                     // [48] pop r10
+        0x41, 0x59,                                     // [50] pop r9
+        0x41, 0x58,                                     // [52] pop r8
+        0x5A,                                           // [54] pop rdx
+        0x59,                                           // [55] pop rcx
+        0x58,                                           // [56] pop rax
+        0x48, 0xB8,                                     // [57] mov rax, return_address
+        0,0,0,0,0,0,0,0,                                // [59] return address
+        0xFF, 0xE0                                      // [67] jmp rax
     };
 
     code[17] = rcx_modrm[reg_idx];
-    code[47] = mov_modrm[reg_idx];
+    code[36] = mov_modrm[reg_idx];
     write_u64(&code[20], (uint64_t)(uintptr_t)&ootp_kbo_capture_allstar_schedule_import_league);
-    write_u32(&code[48], game_flag_offset);
-    write_u64(&code[55], (uint64_t)(uintptr_t)return_address);
+    write_u32(&code[37], game_flag_offset);
+    write_u64(&code[59], (uint64_t)(uintptr_t)return_address);
 
     uint8_t* memory = (uint8_t*)VirtualAlloc(NULL, sizeof(code), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     if (memory == NULL) {

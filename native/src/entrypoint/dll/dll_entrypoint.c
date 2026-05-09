@@ -41,7 +41,38 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         return 0;
     }
 
-    append_log_line("KBO all-star presave bootstrap retired: no all-star hooks are installed during league creation");
+    if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
+        append_log_line("KBO all-star presave bootstrap install started");
+        install_single_division_allstar_patch();
+        install_allstar_team_setup_single_division_patch();
+        install_allstar_candidate_team_split_patch();
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_voting_hook.txt")) {
+            install_allstar_voting_begin_prepare_patch();
+        } else {
+            append_log_line("KBO all-star voting begin prepare hook disabled: kbo_flags.json enable_single_division_allstar_voting_hook is false");
+        }
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
+            install_allstar_events_prepare_patch();
+        } else {
+            append_log_line("KBO all-star events prepare hook disabled: kbo_flags.json enable_single_division_allstar_events is false");
+        }
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
+            install_allstar_settings_ui_patch();
+        } else {
+            append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
+        }
+        append_log_line("KBO all-star presave bootstrap hooks installed");
+
+        load_allstar_team_rules_once();
+        append_log_line("KBO all-star presave direct league mutations deferred until OOTP invokes scoped hooks");
+    } else {
+        append_log_line("KBO single-division all-star runtime patches disabled: kbo_flags.json enable_single_division_allstar_runtime_patches is false");
+        if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
+            install_allstar_settings_ui_patch();
+        } else {
+            append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
+        }
+    }
 
     if (read_kbo_localappdata_flag_file("disable_kbo_runtime_roster_marker_guard.txt")) {
         append_log_line("KBO runtime marker guard disabled by flag");
@@ -49,11 +80,7 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         return 0;
     }
 
-    if (kbo_current_save_has_required_roster_marker("runtime_startup", 1)) {
-        install_kbo_full_runtime_after_roster_marker((HINSTANCE)parameter);
-    } else {
-        start_kbo_full_runtime_marker_wait_thread((HINSTANCE)parameter);
-    }
+    start_kbo_full_runtime_marker_wait_thread((HINSTANCE)parameter);
     return 0;
 }
 

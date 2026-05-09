@@ -53,6 +53,7 @@ internal static partial class LauncherApp
             options with
             {
                 DllPath = defaultDll,
+                EnableSingleDivisionAllstarEvents = true,
                 AttachExisting = existingProcessCount > 0,
             },
             null);
@@ -160,7 +161,10 @@ internal static partial class LauncherApp
         bool isDefaultRun,
         OotpSupportedBuild? supportedOotpBuild)
     {
-        var allstarBootstrapRequested = false;
+        var allstarBootstrapRequested = options.DllPath is not null
+            && supportedOotpBuild is not null
+            && ReadKboFlag("enable_single_division_allstar_runtime_patches.txt")
+            && ReadKboFlag("enable_single_division_allstar_events.txt");
         var injectionDecision = LauncherInjectionPolicy.Decide(
             isDefaultRun,
             options.DllPath,
@@ -187,7 +191,7 @@ internal static partial class LauncherApp
 
         if (allstarBootstrapRequested)
         {
-            Console.WriteLine("Dry-run: retired all-star schedule spoof would be skipped before OOTP launch.");
+            Console.WriteLine("Dry-run: all-star presave bootstrap would run before OOTP launch.");
             return;
         }
 

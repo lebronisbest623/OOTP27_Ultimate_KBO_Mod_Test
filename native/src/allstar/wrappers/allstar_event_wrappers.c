@@ -34,25 +34,69 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr)
 
 __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league_ptr, uintptr_t allstar_team_setup_ptr)
 {
-    if (!kbo_allstar_league_context_enabled(league_ptr)) {
-        return;
-    }
-
     KboAllstarLayout layout = kbo_get_allstar_layout();
-    if (!memory_range_readable((void*)league_ptr, layout.team_b_offset + sizeof(uint32_t))) {
+    if (league_ptr == 0 || !memory_range_readable((void*)league_ptr, layout.team_b_offset + sizeof(uint32_t))) {
         return;
     }
 
     uint8_t* league = (uint8_t*)league_ptr;
     uint32_t league_id = kbo_allstar_read_u32(league, layout.league_id_primary_offset);
     uint32_t fallback_league_id = kbo_allstar_read_u32(league, layout.league_id_fallback_offset);
-    uint32_t league_year = *(uint32_t*)(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
+    uint32_t league_year = memory_range_readable(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET, sizeof(uint32_t))
+        ? *(uint32_t*)(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET)
+        : 0u;
     uint8_t old_allstar_game = league[layout.game_flag_offset];
     uint32_t old_team_a = kbo_allstar_read_u32(league, layout.team_a_offset);
     uint32_t old_team_b = kbo_allstar_read_u32(league, layout.team_b_offset);
     int setup_called = 0;
+    int scoped_context = kbo_allstar_league_context_enabled(league_ptr);
 
-    enable_kbo_allstar_flags(league_ptr, "allstar_voting_begin");
+    if (scoped_context) {
+        enable_kbo_allstar_flags(league_ptr, "allstar_voting_begin");
+    } else {
+        uint32_t configured_league_id = kbo_get_foreign_waiver_league_id();
+        if (configured_league_id == 0u) {
+            configured_league_id = OOTP27_KBO_MAIN_LEAGUE_ID;
+        }
+        if (league_id != configured_league_id
+                && fallback_league_id != configured_league_id
+                && league_id != OOTP27_KBO_MAIN_LEAGUE_ID
+                && fallback_league_id != OOTP27_KBO_MAIN_LEAGUE_ID) {
+            append_logf(
+                "KBO all-star voting begin skipped league=%p reason=unscoped_non_kbo league_id=%u/%u configured=%u year=%u",
+                league,
+                league_id,
+                fallback_league_id,
+                configured_league_id,
+                league_year);
+            return;
+        }
+
+        uint32_t max_off = layout.game_flag_offset > layout.auto_schedule_offset
+            ? layout.game_flag_offset : layout.auto_schedule_offset;
+        max_off = max_off > layout.rules_flag_offset ? max_off : layout.rules_flag_offset;
+        if (!memory_range_readable((void*)(league_ptr + max_off), 1)) {
+            append_logf(
+                "KBO all-star voting begin skipped league=%p reason=flag_offsets_unreadable max_off=0x%x",
+                league,
+                max_off);
+            return;
+        }
+        league[layout.rules_flag_offset] = 1;
+        league[layout.game_flag_offset] = 1;
+        league[layout.auto_schedule_offset] = 1;
+        ensure_kbo_allstar_team_ids(league_ptr, "allstar_voting_begin_fallback");
+        append_logf(
+            "KBO all-star voting begin fallback flags league=%p league_id=%u/%u year=%u rules 0x%x game 0x%x auto 0x%x",
+            league,
+            league_id,
+            fallback_league_id,
+            league_year,
+            layout.rules_flag_offset,
+            layout.game_flag_offset,
+            layout.auto_schedule_offset);
+    }
+
     if (allstar_team_setup_ptr != 0 && memory_range_readable((void*)allstar_team_setup_ptr, 16u)) {
         OotpAllstarTeamSetupFn setup_allstar_teams = (OotpAllstarTeamSetupFn)allstar_team_setup_ptr;
         setup_allstar_teams(league_ptr);

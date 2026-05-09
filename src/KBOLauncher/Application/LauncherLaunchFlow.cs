@@ -84,6 +84,7 @@ internal static partial class LauncherApp
             options.DllPath!,
             logPath,
             launchPlan.AllstarBootstrapRequested);
+        var markerWaitDeadline = DateTimeOffset.Now + MarkedSaveWaitTimeout;
         var injectionTarget = WaitForStableOotpProcess(
             launched,
             exePath,
@@ -92,42 +93,148 @@ internal static partial class LauncherApp
             logPath,
             earlyInjector.TryInject);
 
-        if (!launchPlan.InjectionDecision.AllowsPresaveInjection
-            && !WaitForRosterMarkerBeforeInjection(injectionTarget.Id, launchStarted, logPath))
+        while (true)
         {
+            if (!launchPlan.InjectionDecision.AllowsPresaveInjection)
+            {
+                var rosterMarkerInfo = WaitForRosterMarkerForInjectionTarget(
+                    injectionTarget.Id,
+                    launchStarted,
+                    markerWaitDeadline,
+                    logPath);
+                if (!rosterMarkerInfo.Ok)
+                {
+                    if (TryResolveReplacementInjectionTarget(
+                            rosterMarkerInfo,
+                            injectionTarget.Id,
+                            launched,
+                            exePath,
+                            launchStarted,
+                            markerWaitDeadline,
+                            logPath,
+                            earlyInjector.TryInject,
+                            out var replacementTarget))
+                    {
+                        injectionTarget = replacementTarget;
+                        continue;
+                    }
+
+                    PrintMissingRosterMarkerWarning(rosterMarkerInfo);
+                    Log(logPath, $"inject_blocked pid={injectionTarget.Id} reason=missing_roster_marker {KboRosterMarkerGuard.FormatLogStatus(rosterMarkerInfo)}");
+                    return 9;
+                }
+            }
+
+            var injectReason = launchPlan.InjectionDecision.AllowsPresaveInjection
+                ? "presave_allstar_bootstrap"
+                : "marked_save_runtime";
+            InjectIfNeeded(injectionTarget.Id, options.DllPath!, earlyInjector.PreparedDllPath, logPath, injectReason);
+
+            if (!launchPlan.InjectionDecision.AllowsPresaveInjection)
+            {
+                return 0;
+            }
+
+            var postInjectRosterMarkerInfo = WaitForRosterMarkerForInjectionTarget(
+                injectionTarget.Id,
+                launchStarted,
+                markerWaitDeadline,
+                logPath);
+            if (postInjectRosterMarkerInfo.Ok)
+            {
+                return 0;
+            }
+
+            if (TryResolveReplacementInjectionTarget(
+                    postInjectRosterMarkerInfo,
+                    injectionTarget.Id,
+                    launched,
+                    exePath,
+                    launchStarted,
+                    markerWaitDeadline,
+                    logPath,
+                    earlyInjector.TryInject,
+                    out var postInjectReplacementTarget))
+            {
+                injectionTarget = postInjectReplacementTarget;
+                continue;
+            }
+
+            PrintMissingRosterMarkerWarning(postInjectRosterMarkerInfo);
+            Log(logPath, $"inject_blocked pid={injectionTarget.Id} reason=missing_roster_marker {KboRosterMarkerGuard.FormatLogStatus(postInjectRosterMarkerInfo)}");
             return 9;
         }
-
-        InjectIfNeeded(injectionTarget.Id, options.DllPath!, earlyInjector.PreparedDllPath, logPath);
-
-        if (launchPlan.InjectionDecision.AllowsPresaveInjection
-            && !WaitForRosterMarkerBeforeInjection(injectionTarget.Id, launchStarted, logPath))
-        {
-            return 9;
-        }
-
-        return 0;
     }
 
-    private static bool WaitForRosterMarkerBeforeInjection(int pid, DateTimeOffset launchStarted, string logPath)
+    private static RosterMarkerInfo WaitForRosterMarkerForInjectionTarget(
+        int pid,
+        DateTimeOffset launchStarted,
+        DateTimeOffset deadline,
+        string logPath)
     {
-        var rosterMarkerInfo = WaitForMarkedCurrentSave(
+        var timeout = deadline - DateTimeOffset.Now;
+        if (timeout < TimeSpan.Zero)
+        {
+            timeout = TimeSpan.Zero;
+        }
+
+        return WaitForMarkedCurrentSave(
             pid,
-            MarkedSaveWaitTimeout,
+            timeout,
             MarkedSavePollInterval,
             logPath,
             launchStarted.ToUniversalTime());
-        if (rosterMarkerInfo.Ok)
-        {
-            return true;
-        }
-
-        PrintMissingRosterMarkerWarning(rosterMarkerInfo);
-        Log(logPath, $"inject_blocked pid={pid} reason=missing_roster_marker {KboRosterMarkerGuard.FormatLogStatus(rosterMarkerInfo)}");
-        return false;
     }
 
-    private static void InjectIfNeeded(int pid, string dllPath, string? preparedDllPath, string logPath)
+    private static bool TryResolveReplacementInjectionTarget(
+        RosterMarkerInfo rosterMarkerInfo,
+        int oldPid,
+        Process launched,
+        string exePath,
+        DateTimeOffset launchStarted,
+        DateTimeOffset markerWaitDeadline,
+        string logPath,
+        Action<Process>? onCandidate,
+        out Process replacementTarget)
+    {
+        replacementTarget = null!;
+        if (rosterMarkerInfo.Status != "process_unavailable")
+        {
+            return false;
+        }
+
+        var remaining = markerWaitDeadline - DateTimeOffset.Now;
+        if (remaining <= TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        Log(logPath, $"stable_injection_target_lost old_pid={oldPid} reason=process_unavailable");
+        Console.WriteLine("OOTP process exited before injection; looking for a replacement OOTP process...");
+
+        try
+        {
+            var resolveTimeout = remaining < TimeSpan.FromSeconds(30)
+                ? remaining
+                : TimeSpan.FromSeconds(30);
+            replacementTarget = WaitForStableOotpProcess(
+                launched,
+                exePath,
+                launchStarted,
+                resolveTimeout,
+                logPath,
+                onCandidate);
+            Log(logPath, $"stable_injection_target_replaced new_pid={replacementTarget.Id}");
+            return true;
+        }
+        catch (TimeoutException ex)
+        {
+            Log(logPath, $"stable_injection_target_replacement_timeout error=\"{ex.Message.Replace("\"", "'")}\"");
+            return false;
+        }
+    }
+
+    private static void InjectIfNeeded(int pid, string dllPath, string? preparedDllPath, string logPath, string reason)
     {
         if (IsKboFixAlreadyLoaded(pid, logPath))
         {
@@ -138,7 +245,7 @@ internal static partial class LauncherApp
 
         var injectableDllPath = preparedDllPath ?? PrepareInjectableDllCopy(dllPath, logPath);
         InjectDll(pid, injectableDllPath, logPath);
-        Log(logPath, $"inject_complete pid={pid} reason=marked_save_runtime");
+        Log(logPath, $"inject_complete pid={pid} reason={reason}");
     }
 
     private sealed class PresaveEarlyInjector
