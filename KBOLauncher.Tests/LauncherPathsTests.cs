@@ -7,7 +7,99 @@ public sealed class LauncherPathsTests : IDisposable
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), "kbo-launcher-path-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void ResolveExistingNewestPath_DeduplicatesCandidatesAndChoosesNewestExistingFile()
+    public void ResolveOotpPath_UsesExplicitPathEvenWhenAnotherCandidateIsNewer()
+    {
+        var explicitPath = Path.Combine(tempDir, "explicit", "ootp27.exe");
+        var newest = Path.Combine(tempDir, "newest", "ootp27.exe");
+        var oldEnvExe = Environment.GetEnvironmentVariable("OOTP27_EXE");
+        Directory.CreateDirectory(Path.GetDirectoryName(explicitPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(newest)!);
+        File.WriteAllText(explicitPath, "explicit");
+        File.WriteAllText(newest, "new");
+        File.SetLastWriteTimeUtc(explicitPath, new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(newest, new DateTime(2026, 5, 2, 0, 0, 0, DateTimeKind.Utc));
+
+        try
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", newest);
+
+            var resolved = global::LauncherPaths.ResolveOotpPath(explicitPath);
+
+            Assert.Equal(explicitPath, resolved);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", oldEnvExe);
+        }
+    }
+
+    [Fact]
+    public void ResolveOotpPath_UsesAutoDiscoveryWhenExplicitPathDoesNotExist()
+    {
+        var envExe = Path.Combine(tempDir, "env", "ootp27.exe");
+        var oldEnvExe = Environment.GetEnvironmentVariable("OOTP27_EXE");
+        Directory.CreateDirectory(Path.GetDirectoryName(envExe)!);
+        File.WriteAllText(envExe, "env");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", envExe);
+
+            var resolved = global::LauncherPaths.ResolveOotpPath(Path.Combine(tempDir, "missing", "ootp27.exe"));
+
+            Assert.Equal(envExe, resolved);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", oldEnvExe);
+        }
+    }
+
+    [Fact]
+    public void ResolveOotpPath_ReturnsNullWhenExplicitPathIsDirectory()
+    {
+        var explicitDirectory = Path.Combine(tempDir, "ootp27.exe");
+        var oldEnvExe = Environment.GetEnvironmentVariable("OOTP27_EXE");
+        Directory.CreateDirectory(explicitDirectory);
+
+        try
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", null);
+
+            var resolved = global::LauncherPaths.ResolveOotpPath(explicitDirectory);
+
+            Assert.Null(resolved);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", oldEnvExe);
+        }
+    }
+
+    [Fact]
+    public void ResolveOotpPath_ReturnsNullWhenExplicitPathIsNotOotpExe()
+    {
+        var explicitPath = Path.Combine(tempDir, "not-ootp.exe");
+        var oldEnvExe = Environment.GetEnvironmentVariable("OOTP27_EXE");
+        Directory.CreateDirectory(Path.GetDirectoryName(explicitPath)!);
+        File.WriteAllText(explicitPath, "not ootp");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", null);
+
+            var resolved = global::LauncherPaths.ResolveOotpPath(explicitPath);
+
+            Assert.Null(resolved);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OOTP27_EXE", oldEnvExe);
+        }
+    }
+
+    [Fact]
+    public void ResolveExistingNewestPath_DeduplicatesAutoCandidatesAndChoosesNewestExistingFile()
     {
         var older = Path.Combine(tempDir, "older", "ootp27.exe");
         var newest = Path.Combine(tempDir, "newest", "ootp27.exe");

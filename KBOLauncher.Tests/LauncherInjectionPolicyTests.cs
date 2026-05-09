@@ -74,7 +74,7 @@ public sealed class LauncherInjectionPolicyTests
     }
 
     [Fact]
-    public void Decide_AllstarBootstrapIsTheOnlyPresaveInjectionMode()
+    public void Decide_AllstarBootstrapStillWaitsForRosterMarker()
     {
         var decision = global::LauncherInjectionPolicy.Decide(
             isDefaultRun: true,
@@ -84,9 +84,9 @@ public sealed class LauncherInjectionPolicyTests
             allstarBootstrapRequested: true);
 
         Assert.True(decision.ShouldInject);
-        Assert.Equal(global::LauncherInjectionMode.PresaveAllstarBootstrap, decision.Mode);
-        Assert.False(decision.RequiresRosterMarkerBeforeInjection);
-        Assert.True(decision.AllowsPresaveInjection);
-        Assert.Equal("presave_allstar_bootstrap", decision.Reason);
+        Assert.Equal(global::LauncherInjectionMode.LaunchThenWaitForMarkedSave, decision.Mode);
+        Assert.True(decision.RequiresRosterMarkerBeforeInjection);
+        Assert.False(decision.AllowsPresaveInjection);
+        Assert.Equal("presave_allstar_bootstrap_retired", decision.Reason);
     }
 }

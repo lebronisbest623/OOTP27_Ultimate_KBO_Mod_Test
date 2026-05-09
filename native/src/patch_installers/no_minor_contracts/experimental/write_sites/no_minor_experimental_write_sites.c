@@ -1,0 +1,356 @@
+#include "../internal/no_minor_experimental_patch_internal.h"
+
+int install_kbo_no_minor_contract_write_site_patches(HMODULE exe)
+{
+    const uint8_t expected_rax[7] = {0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x00};
+    const uint8_t patch_rax[7]    = {0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x01};
+    const uint8_t expected_rax_option[7] = {0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x02};
+    const uint8_t expected_rax_option_alt[7] = {0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x03};
+    const uint8_t expected_rdi[7] = {0xC6, 0x87, 0xA8, 0x08, 0x00, 0x00, 0x00};
+    const uint8_t patch_rdi[7]    = {0xC6, 0x87, 0xA8, 0x08, 0x00, 0x00, 0x01};
+
+    const uint8_t context_write_638d32[64] = {
+        0x48, 0x8D, 0x55, 0x7F, 0x48, 0x8D, 0x8F, 0x48,
+        0x1C, 0x00, 0x00, 0xE8, 0xDE, 0x78, 0x4D, 0x00,
+        0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x00, 0x41,
+        0x8B, 0x87, 0xC8, 0x4C, 0x00, 0x00, 0x89, 0x45,
+        0x9F, 0x85, 0xC0, 0x75, 0x16, 0x8B, 0x87, 0x20,
+        0x01, 0x00, 0x00, 0x89, 0x45, 0x9F, 0x85, 0xC0,
+        0x75, 0x09, 0x8B, 0x87, 0xDC, 0x01, 0x00, 0x00,
+        0x89, 0x45, 0x9F, 0x48, 0x8D, 0x55, 0x9F, 0x48
+    };
+    const uint8_t context_write_638d32_mask[64] = {
+        1,1,1,1,0,1,1,1,
+        1,1,1,1,0,0,0,0,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,0,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,0,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1
+    };
+    const uint8_t context_write_6de7c1[64] = {
+        0x38, 0x01, 0x00, 0x00, 0x48, 0x8D, 0x8F, 0x48,
+        0x1C, 0x00, 0x00, 0xE8, 0x4F, 0x1E, 0x43, 0x00,
+        0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x00, 0x48,
+        0x85, 0xF6, 0x74, 0x59, 0x48, 0x8B, 0x85, 0x20,
+        0x01, 0x00, 0x00, 0x8B, 0x90, 0xC8, 0x4C, 0x00,
+        0x00, 0x48, 0x8B, 0xCF, 0xE8, 0x7E, 0xDB, 0x34,
+        0x00, 0x48, 0x8B, 0xD8, 0x48, 0x8B, 0x85, 0x20,
+        0x01, 0x00, 0x00, 0x8B, 0x90, 0xC8, 0x4C, 0x00
+    };
+    const uint8_t context_write_6de7c1_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,0,0,0,0,
+        1,1,1,1,1,1,1,1,
+        1,1,1,0,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,0,0,0,
+        0,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1
+    };
+    const uint8_t context_write_6ddea2[64] = {
+        0x48, 0x8D, 0x55, 0xA8, 0x49, 0x8D, 0x8F, 0x48,
+        0x1C, 0x00, 0x00, 0xE8, 0x6E, 0x27, 0x43, 0x00,
+        0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x02, 0x66,
+        0x83, 0xBF, 0xDC, 0x03, 0x00, 0x00, 0x00, 0x0F,
+        0x86, 0xCB, 0xFE, 0xFF, 0xFF, 0x4C, 0x8D, 0x0D,
+        0x3A, 0x26, 0x3F, 0x02, 0x4C, 0x8D, 0x05, 0x63,
+        0x26, 0x3F, 0x02, 0xBA, 0x01, 0x00, 0x00, 0x00,
+        0xE8, 0x91, 0xCC, 0xAE, 0x00, 0x48, 0x8B, 0xD0
+    };
+    const uint8_t context_write_6ddea2_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,0,0,0,0,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,0,0,0,0,1,1,1,
+        0,0,0,0,1,1,1,0,
+        0,0,0,1,1,1,1,1,
+        1,0,0,0,0,1,1,1
+    };
+    const uint8_t context_write_6de33e[64] = {
+        0x48, 0x8D, 0x55, 0xB8, 0x48, 0x8D, 0x8B, 0x48,
+        0x1C, 0x00, 0x00, 0xE8, 0xD2, 0x22, 0x43, 0x00,
+        0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x02, 0x48,
+        0x8B, 0xBD, 0x20, 0x01, 0x00, 0x00, 0x66, 0x83,
+        0xBF, 0xDC, 0x03, 0x00, 0x00, 0x00, 0x76, 0x27,
+        0x4C, 0x8D, 0x0D, 0x9B, 0x21, 0x3F, 0x02, 0x4C,
+        0x8D, 0x05, 0xC4, 0x21, 0x3F, 0x02, 0xBA, 0x01,
+        0x00, 0x00, 0x00, 0xE8, 0xF2, 0xC7, 0xAE, 0x00
+    };
+    const uint8_t context_write_6de33e_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,0,0,0,0,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,0,
+        1,1,1,0,0,0,0,1,
+        1,1,0,0,0,0,1,1,
+        1,1,1,1,0,0,0,0
+    };
+    const uint8_t context_write_6de58c[64] = {
+        0x48, 0x8D, 0x55, 0xC0, 0x48, 0x8D, 0x8B, 0x48,
+        0x1C, 0x00, 0x00, 0xE8, 0x84, 0x20, 0x43, 0x00,
+        0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x02, 0x48,
+        0x8B, 0xB5, 0x20, 0x01, 0x00, 0x00, 0x66, 0x83,
+        0xBE, 0xDC, 0x03, 0x00, 0x00, 0x00, 0x76, 0x27,
+        0x4C, 0x8D, 0x0D, 0x4D, 0x1F, 0x3F, 0x02, 0x4C,
+        0x8D, 0x05, 0x76, 0x1F, 0x3F, 0x02, 0xBA, 0x01,
+        0x00, 0x00, 0x00, 0xE8, 0xA4, 0xC5, 0xAE, 0x00
+    };
+    const uint8_t context_write_6de58c_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,0,0,0,0,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,0,
+        1,1,1,0,0,0,0,1,
+        1,1,0,0,0,0,1,1,
+        1,1,1,1,0,0,0,0
+    };
+    const uint8_t context_write_6de6bf[64] = {
+        0x48, 0x8D, 0x55, 0xC8, 0x48, 0x8D, 0x8B, 0x48,
+        0x1C, 0x00, 0x00, 0xE8, 0x51, 0x1F, 0x43, 0x00,
+        0xC6, 0x80, 0xA8, 0x08, 0x00, 0x00, 0x02, 0x66,
+        0x45, 0x39, 0xA5, 0xDC, 0x03, 0x00, 0x00, 0x76,
+        0x27, 0x4C, 0x8D, 0x0D, 0x21, 0x1E, 0x3F, 0x02,
+        0x4C, 0x8D, 0x05, 0x4A, 0x1E, 0x3F, 0x02, 0xBA,
+        0x01, 0x00, 0x00, 0x00, 0xE8, 0x78, 0xC4, 0xAE,
+        0x00, 0x48, 0x8B, 0xD0, 0x48, 0x8D, 0x8B, 0x68
+    };
+    const uint8_t context_write_6de6bf_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,0,0,0,0,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        0,1,1,1,0,0,0,0,
+        1,1,1,0,0,0,0,1,
+        1,1,1,1,1,0,0,0,
+        0,1,1,1,1,1,1,1
+    };
+    const uint8_t context_write_a4be04[64] = {
+        0xFA, 0x44, 0x00, 0x00, 0x8D, 0x41, 0xFE, 0x3C,
+        0x04, 0x76, 0x05, 0x80, 0xF9, 0x09, 0x72, 0x23,
+        0xC6, 0x87, 0xA8, 0x08, 0x00, 0x00, 0x00, 0xC6,
+        0x87, 0x14, 0x09, 0x00, 0x00, 0x01, 0xC6, 0x87,
+        0xAA, 0x08, 0x00, 0x00, 0x00, 0x44, 0x89, 0xA7,
+        0xC4, 0x08, 0x00, 0x00, 0x44, 0x89, 0xA7, 0xD8,
+        0x08, 0x00, 0x00, 0x80, 0xBF, 0xA8, 0x08, 0x00,
+        0x00, 0x00, 0x0F, 0x84, 0x15, 0x01, 0x00, 0x00
+    };
+    const uint8_t context_write_a4be04_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,0,1,1,1,1,0,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,0,0,0,0
+    };
+    const uint8_t context_write_2184b61[64] = {
+        0xFF, 0xFF, 0x90, 0x48, 0x8D, 0x8F, 0xF8, 0x00,
+        0x00, 0x00, 0xE8, 0xF0, 0xC9, 0xFD, 0xFF, 0x90,
+        0xC6, 0x87, 0xA8, 0x08, 0x00, 0x00, 0x00, 0x48,
+        0xC7, 0x87, 0xB0, 0x08, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x48, 0x8D, 0x8F, 0xF8, 0x00, 0x00,
+        0x00, 0xE8, 0xB1, 0x28, 0xFE, 0xFF, 0x90, 0x48,
+        0x8B, 0xC7, 0x48, 0x8B, 0x5C, 0x24, 0x38, 0x48,
+        0x83, 0xC4, 0x20, 0x5F, 0xC3, 0xCC, 0xCC, 0x48
+    };
+    const uint8_t context_write_2184b61_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,1,0,0,0,0,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,0,0,0,0,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1
+    };
+    const uint8_t context_write_2185963[64] = {
+        0xE8, 0x78, 0xB2, 0xE1, 0xFF, 0x48, 0xC7, 0x87,
+        0xB0, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xC6, 0x87, 0xA8, 0x08, 0x00, 0x00, 0x00, 0x4C,
+        0x8D, 0x67, 0x18, 0xC6, 0x44, 0x24, 0x20, 0x00,
+        0x4C, 0x8B, 0xCB, 0x45, 0x33, 0xC0, 0xBA, 0x2C,
+        0x01, 0x00, 0x00, 0x49, 0x8B, 0xCC, 0xE8, 0x5A,
+        0xEB, 0xFF, 0xFF, 0x48, 0x8D, 0xAF, 0xF8, 0x00,
+        0x00, 0x00, 0x4C, 0x8B, 0xCB, 0x41, 0xB0, 0x01
+    };
+    const uint8_t context_write_2185963_mask[64] = {
+        1,0,0,0,0,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,0,
+        0,0,0,1,1,1,1,1,
+        1,1,1,1,1,1,1,1
+    };
+    const uint8_t context_write_2185d00[64] = {
+        0x00, 0x48, 0x8B, 0x9C, 0x24, 0xA0, 0x00, 0x00,
+        0x00, 0x48, 0x8D, 0x4F, 0x18, 0x4C, 0x8B, 0xCB,
+        0xC6, 0x87, 0xA8, 0x08, 0x00, 0x00, 0x00, 0x45,
+        0x33, 0xC0, 0xC6, 0x44, 0x24, 0x20, 0x00, 0xBA,
+        0x2C, 0x01, 0x00, 0x00, 0xE8, 0xC7, 0xE7, 0xFF,
+        0xFF, 0x41, 0xB0, 0x01, 0x48, 0x8D, 0x8F, 0xF8,
+        0x00, 0x00, 0x00, 0x41, 0x0F, 0xB6, 0xD0, 0x4C,
+        0x8B, 0xCB, 0xE8, 0x61, 0x6F, 0xFF, 0xFF, 0x49
+    };
+    const uint8_t context_write_2185d00_mask[64] = {
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,1,1,0,0,0,
+        0,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,
+        1,1,1,0,0,0,0,1
+    };
+
+    int ok = 0;
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch write 638D32",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_638D32_RVA,
+        expected_rax,
+        patch_rax,
+        sizeof(expected_rax),
+        context_write_638d32,
+        context_write_638d32_mask,
+        sizeof(context_write_638d32),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_pattern_ordinal(
+        exe,
+        "KBO no-minor-contract experimental patch option write 6393A3",
+        expected_rax_option,
+        patch_rax,
+        sizeof(expected_rax_option),
+        0,
+        6);
+    ok |= patch_kbo_no_minor_contract_write_site_by_pattern_ordinal(
+        exe,
+        "KBO no-minor-contract experimental patch option write 6396D4",
+        expected_rax_option,
+        patch_rax,
+        sizeof(expected_rax_option),
+        1,
+        6);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch write 6DE7C1",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_6DE7C1_RVA,
+        expected_rax,
+        patch_rax,
+        sizeof(expected_rax),
+        context_write_6de7c1,
+        context_write_6de7c1_mask,
+        sizeof(context_write_6de7c1),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch option write 6DDEA2",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_6DDEA2_RVA,
+        expected_rax_option,
+        patch_rax,
+        sizeof(expected_rax_option),
+        context_write_6ddea2,
+        context_write_6ddea2_mask,
+        sizeof(context_write_6ddea2),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch option write 6DE33E",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_6DE33E_RVA,
+        expected_rax_option,
+        patch_rax,
+        sizeof(expected_rax_option),
+        context_write_6de33e,
+        context_write_6de33e_mask,
+        sizeof(context_write_6de33e),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch option write 6DE58C",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_6DE58C_RVA,
+        expected_rax_option,
+        patch_rax,
+        sizeof(expected_rax_option),
+        context_write_6de58c,
+        context_write_6de58c_mask,
+        sizeof(context_write_6de58c),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch option write 6DE6BF",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_6DE6BF_RVA,
+        expected_rax_option,
+        patch_rax,
+        sizeof(expected_rax_option),
+        context_write_6de6bf,
+        context_write_6de6bf_mask,
+        sizeof(context_write_6de6bf),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_pattern(
+        exe,
+        "KBO no-minor-contract experimental patch option-alt write 6DE96E",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_6DE96E_RVA,
+        expected_rax_option_alt,
+        patch_rax,
+        sizeof(expected_rax_option_alt));
+    ok |= patch_kbo_no_minor_contract_write_site_by_pattern_ordinal(
+        exe,
+        "KBO no-minor-contract experimental patch write 5568EF",
+        expected_rdi,
+        patch_rdi,
+        sizeof(expected_rdi),
+        0,
+        5);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch write A4BE04",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_A4BE04_RVA,
+        expected_rdi,
+        patch_rdi,
+        sizeof(expected_rdi),
+        context_write_a4be04,
+        context_write_a4be04_mask,
+        sizeof(context_write_a4be04),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch write 2184B61",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_2184B61_RVA,
+        expected_rdi,
+        patch_rdi,
+        sizeof(expected_rdi),
+        context_write_2184b61,
+        context_write_2184b61_mask,
+        sizeof(context_write_2184b61),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch write 2185963",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_2185963_RVA,
+        expected_rdi,
+        patch_rdi,
+        sizeof(expected_rdi),
+        context_write_2185963,
+        context_write_2185963_mask,
+        sizeof(context_write_2185963),
+        16u);
+    ok |= patch_kbo_no_minor_contract_write_site_by_masked_context(
+        exe,
+        "KBO no-minor-contract experimental patch write 2185D00",
+        OOTP27_NO_MINOR_CONTRACT_WRITE_2185D00_RVA,
+        expected_rdi,
+        patch_rdi,
+        sizeof(expected_rdi),
+        context_write_2185d00,
+        context_write_2185d00_mask,
+        sizeof(context_write_2185d00),
+        16u);
+    return ok;
+}

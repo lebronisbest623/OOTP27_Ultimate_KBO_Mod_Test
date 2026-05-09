@@ -1,0 +1,73 @@
+param(
+    [string]$RepoRoot = "",
+    [string]$Dist = ""
+)
+
+$ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
+    $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
+}
+
+if ([string]::IsNullOrWhiteSpace($Dist)) {
+    $Dist = Join-Path $RepoRoot "dist"
+}
+
+if (-not (Test-Path -LiteralPath $Dist -PathType Container)) {
+    throw "Release artifact directory does not exist: $Dist"
+}
+
+$requiredFiles = @(
+    "KBOLauncher.exe",
+    "KBOFix.dll",
+    "WebView2Loader.dll",
+    "kbo_league_id.txt",
+    "assets\fonts\JejuGothic-Regular.ttf",
+    "assets\fonts\JejuGothic-OFL.txt",
+    "assets\icons\github-mark.png",
+    "data\seeds\allstar_teams.csv",
+    "data\seeds\asian_games_schedule_seed.csv",
+    "data\seeds\college_reputation_seed.csv",
+    "data\seeds\fa_rules.json",
+    "data\seeds\foreign_replacement_players_seed.csv",
+    "data\seeds\high_school_reputation_seed.csv",
+    "data\seeds\military_service_seed.csv"
+)
+
+foreach ($requiredFile in $requiredFiles) {
+    $path = Join-Path $Dist $requiredFile
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Release payload missing required file: $requiredFile"
+    }
+}
+
+$manifest = Join-Path $RepoRoot "config\ootp-supported-builds.json"
+$managedGenerated = Join-Path $RepoRoot "src\KBOLauncher\Infrastructure\OotpSupportedBuilds.Generated.cs"
+$nativeGenerated = Join-Path $RepoRoot "native\src\build_verify\supported_builds.generated.c"
+$nativeDll = Join-Path $RepoRoot "native\bin\KBOFix.dll"
+$launcherExe = Join-Path $Dist "KBOLauncher.exe"
+
+foreach ($path in @($manifest, $managedGenerated, $nativeGenerated, $nativeDll, $launcherExe)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Release validation input missing: $path"
+    }
+}
+
+$manifestTime = (Get-Item -LiteralPath $manifest).LastWriteTimeUtc
+foreach ($generated in @($managedGenerated, $nativeGenerated)) {
+    if ((Get-Item -LiteralPath $generated).LastWriteTimeUtc -lt $manifestTime) {
+        throw "Generated supported-build file is older than manifest: $generated"
+    }
+}
+
+if ((Get-Item -LiteralPath $nativeDll).LastWriteTimeUtc -gt (Get-Item -LiteralPath $launcherExe).LastWriteTimeUtc) {
+    throw "Native build appears newer than managed publish; run native build before publishing launcher."
+}
+
+$leagueId = (Get-Content -LiteralPath (Join-Path $Dist "kbo_league_id.txt") -Raw).Trim()
+if ($leagueId -ne "100") {
+    throw "Release payload has unexpected kbo_league_id.txt value: '$leagueId'"
+}
+
+$fileCount = (Get-ChildItem -LiteralPath $Dist -Recurse -File).Count
+Write-Host "Release artifact verified: $fileCount files in $Dist"

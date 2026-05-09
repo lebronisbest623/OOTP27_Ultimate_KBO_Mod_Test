@@ -2,8 +2,8 @@
 #include <windows.h>
 
 #include "build_verify.h"
-#include "../bootstrap/ootp_offsets.h"
-#include "../core/core_log.h"
+#include "../bootstrap/abi/ootp_offsets.h"
+#include "../core/logging/core_log.h"
 
 #include "supported_builds.generated.h"
 
@@ -116,6 +116,14 @@ int verify_ootp_build(void)
     for (size_t i = 0; i < kbo_supported_ootp_build_count(); ++i) {
         const OotpSupportedBuild* build = kbo_supported_ootp_build_at(i);
         if (build != NULL && info.timestamp == build->timestamp && info.size_of_image == build->size_of_image) {
+            if (!build->native_patches_supported) {
+                append_logf(
+                    "build verify: metadata-only label=%s timestamp=0x%08X size_of_image=0x%08X. "
+                    "Native patches DISABLED because this build does not have a complete verified RVA table.",
+                    build->label, info.timestamp, info.size_of_image);
+                return 0;
+            }
+
             append_logf(
                 "build verify: ok label=%s timestamp=0x%08X size_of_image=0x%08X",
                 build->label, info.timestamp, info.size_of_image);

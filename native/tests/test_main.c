@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,11 +8,12 @@
 #define KBO_FOREIGN_INJURY_SLOT_REGULAR 1
 #define KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA 2
 
-#include "../src/core/core_text_date.h"
-#include "../src/core/core_flags/json_bool_parser.h"
-#include "../src/core/core_sql_escape.h"
-#include "../src/foreign/foreign_csv_parse.h"
-#include "../src/foreign/replacement_seed/foreign_replacement_seed_parse.h"
+#include "../src/core/dates/core_text_date.h"
+#include "../src/core/core_flags/json/json_bool_parser.h"
+#include "../src/core/sql/escape/core_sql_escape.h"
+#include "../src/foreign/common/csv/foreign_csv_parse.h"
+#include "../src/foreign/replacement_seed/parse/foreign_replacement_seed_parse.h"
+#include "../src/patch_helpers/patch_helpers.h"
 
 int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
 {
@@ -27,10 +29,10 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
     return 0;
 }
 
-#include "../src/military_service/military_service_date.h"
-#include "../src/military_service/military_service_seed_parse.h"
-#include "../src/allstar/allstar_csv_parse.h"
-#include "../src/foreign/foreign_waiver_date.h"
+#include "../src/military_service/calendar/military_service_date.h"
+#include "../src/military_service/seed/parse/military_service_seed_parse.h"
+#include "../src/allstar/csv/allstar_csv_parse.h"
+#include "../src/foreign/common/dates/foreign_waiver_date.h"
 
 static void test_core_text_and_sql_helpers(void)
 {
@@ -374,6 +376,22 @@ static void test_foreign_csv_parse(void)
     printf("test_foreign_csv_parse: PASS\n");
 }
 
+static void test_masked_pattern_matching(void)
+{
+    const uint8_t data[] = {0x48u, 0x8Bu, 0x11u, 0x22u, 0x90u};
+    const uint8_t pattern[] = {0x48u, 0x8Bu, 0x00u, 0x00u, 0x90u};
+    const uint8_t wildcard_mask[] = {1u, 1u, 0u, 0u, 1u};
+    const uint8_t exact_mask[] = {1u, 1u, 1u, 1u, 1u};
+
+    assert(kbo_memory_matches_masked_pattern(data, pattern, wildcard_mask, sizeof(data)));
+    assert(!kbo_memory_matches_masked_pattern(data, pattern, exact_mask, sizeof(data)));
+    assert(!kbo_memory_matches_masked_pattern(NULL, pattern, wildcard_mask, sizeof(data)));
+    assert(!kbo_memory_matches_masked_pattern(data, NULL, wildcard_mask, sizeof(data)));
+    assert(!kbo_memory_matches_masked_pattern(data, pattern, NULL, sizeof(data)));
+    assert(!kbo_memory_matches_masked_pattern(data, pattern, wildcard_mask, 0u));
+    printf("test_masked_pattern_matching: PASS\n");
+}
+
 int main(void)
 {
     test_core_text_and_sql_helpers();
@@ -386,6 +404,17 @@ int main(void)
     test_allstar_csv_parse();
     test_foreign_replacement_seed_parse();
     test_foreign_csv_parse();
+    test_masked_pattern_matching();
     printf("All tests passed.\n");
     return 0;
+}
+
+void append_logf(const char* fmt, ...)
+{
+    (void)fmt;
+}
+
+int memory_range_readable(const void* ptr, size_t size)
+{
+    return ptr != NULL && size > 0u;
 }

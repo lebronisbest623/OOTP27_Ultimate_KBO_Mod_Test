@@ -174,6 +174,9 @@ function Test-ObjectOutOfDate {
     }
 
     foreach ($Dependency in Read-DependencyPaths -DepPath $DepPath) {
+        if (-not (Test-Path -LiteralPath $Dependency)) {
+            return $true
+        }
         if ((Get-Item -LiteralPath $Dependency).LastWriteTimeUtc -gt $ObjectTime) {
             return $true
         }
@@ -260,12 +263,17 @@ foreach ($Source in $NativeSources) {
     }
 
     Write-Host "Compiling $(Get-PathRelativeToRoot -Path $Source)"
-    & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
-        -I $WebView2Include `
+    $PreviousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $GccOutput = & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
+        -isystem $WebView2Include `
         -MMD -MP -MF $DepPath `
         -c $Source `
-        -o $ObjectPath
-    if ($LASTEXITCODE -ne 0) {
+        -o $ObjectPath 2>&1
+    $GccExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $PreviousErrorActionPreference
+    $GccOutput | ForEach-Object { Write-Host $_ }
+    if ($GccExitCode -ne 0) {
         throw "Failed to compile $Source"
     }
     $CompiledCount += 1
@@ -290,9 +298,14 @@ if (Test-LinkOutOfDate -OutputPath $DllPath -ObjectPaths $Objects -LoaderPath $W
         "-lwindowscodecs"
     )
     Set-Content -LiteralPath $ResponsePath -Value ($ResponseArgs -join " ") -Encoding ASCII
-    & $Gcc -shared `
-        "@$ResponsePath"
-    if ($LASTEXITCODE -ne 0) {
+    $PreviousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $GccOutput = & $Gcc -shared `
+        "@$ResponsePath" 2>&1
+    $GccExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $PreviousErrorActionPreference
+    $GccOutput | ForEach-Object { Write-Host $_ }
+    if ($GccExitCode -ne 0) {
         throw "Failed to link KBOFix.dll"
     }
 }
@@ -305,3 +318,25 @@ if ($CompiledCount -eq 0) {
 }
 
 Write-Host "Built $DllPath"
+
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+$LauncherOutputDirs = @(
+    (Join-Path $RepoRoot "bin\Release\net8.0"),
+    (Join-Path $RepoRoot "bin\Debug\net8.0"),
+    (Join-Path $RepoRoot "src\KBOLauncher\bin\Release\net8.0"),
+    (Join-Path $RepoRoot "src\KBOLauncher\bin\Debug\net8.0")
+)
+foreach ($LauncherOutputDir in $LauncherOutputDirs) {
+    if (Test-Path $LauncherOutputDir) {
+        Copy-Item -LiteralPath $DllPath -Destination (Join-Path $LauncherOutputDir "KBOFix.dll") -Force
+        $LoaderPath = Join-Path $OutDir "WebView2Loader.dll"
+        if (Test-Path $LoaderPath) {
+            Copy-Item -LiteralPath $LoaderPath -Destination (Join-Path $LauncherOutputDir "WebView2Loader.dll") -Force
+        }
+        $AssetsPath = Join-Path $OutDir "assets"
+        if (Test-Path $AssetsPath) {
+            Copy-Item -LiteralPath $AssetsPath -Destination (Join-Path $LauncherOutputDir "assets") -Recurse -Force
+        }
+        Write-Host "Synced native payload to $LauncherOutputDir"
+    }
+}

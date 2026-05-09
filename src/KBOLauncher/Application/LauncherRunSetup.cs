@@ -93,9 +93,10 @@ internal static partial class LauncherApp
     {
         var ootpBuildInfo = OotpBuildGuard.Read(exePath);
         var supportedOotpBuild = OotpBuildGuard.FindSupportedBuild(ootpBuildInfo);
-        Console.WriteLine(OotpBuildGuard.FormatConsoleStatus(ootpBuildInfo, supportedOotpBuild));
-        Log(logPath, OotpBuildGuard.FormatLogStatus(ootpBuildInfo, supportedOotpBuild));
-        WriteLauncherBuildGuardStatus(ootpBuildInfo, supportedOotpBuild, options.DllPath is not null);
+        var knownOotpBuild = supportedOotpBuild ?? OotpBuildGuard.FindKnownBuild(ootpBuildInfo);
+        Console.WriteLine(OotpBuildGuard.FormatConsoleStatus(ootpBuildInfo, knownOotpBuild));
+        Log(logPath, OotpBuildGuard.FormatLogStatus(ootpBuildInfo, knownOotpBuild));
+        WriteLauncherBuildGuardStatus(ootpBuildInfo, knownOotpBuild, options.DllPath is not null);
 
         if (options.DllPath is null || supportedOotpBuild is not null)
         {
@@ -103,7 +104,10 @@ internal static partial class LauncherApp
         }
 
         PrintUnsupportedBuildInjectionWarning(ootpBuildInfo);
-        Log(logPath, $"inject_blocked reason=unsupported_ootp_build {OotpBuildGuard.FormatLogStatus(ootpBuildInfo, null)}");
+        var blockReason = knownOotpBuild is not null && !knownOotpBuild.NativePatchesSupported
+            ? "metadata_only_ootp_build"
+            : "unsupported_ootp_build";
+        Log(logPath, $"inject_blocked reason={blockReason} {OotpBuildGuard.FormatLogStatus(ootpBuildInfo, knownOotpBuild)}");
 
         if (options.DryRun)
         {
@@ -158,10 +162,7 @@ internal static partial class LauncherApp
         bool isDefaultRun,
         OotpSupportedBuild? supportedOotpBuild)
     {
-        var allstarBootstrapRequested = options.DllPath is not null
-            && supportedOotpBuild is not null
-            && ReadKboFlag("enable_single_division_allstar_runtime_patches.txt")
-            && ReadKboFlag("enable_single_division_allstar_events.txt");
+        var allstarBootstrapRequested = false;
         var injectionDecision = LauncherInjectionPolicy.Decide(
             isDefaultRun,
             options.DllPath,
@@ -182,11 +183,11 @@ internal static partial class LauncherApp
         {
             var spoofResult = EnsureAllKboScheduleSpoofFiles(exePath, message => Log(logPath, message));
             Console.WriteLine(
-                $"All-star schedule spoof: scanned={spoofResult.ScannedYears} written={spoofResult.WrittenFiles} unchanged={spoofResult.UnchangedFiles} failed={spoofResult.FailedFiles}");
+                $"All-star schedule spoof retired: scanned={spoofResult.ScannedYears} written={spoofResult.WrittenFiles} unchanged={spoofResult.UnchangedFiles} failed={spoofResult.FailedFiles}");
         }
         else if (allstarBootstrapRequested)
         {
-            Console.WriteLine("Dry-run: all-star schedule spoof would run before OOTP launch.");
+            Console.WriteLine("Dry-run: retired all-star schedule spoof would be skipped before OOTP launch.");
         }
     }
 }

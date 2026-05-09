@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../bootstrap/ootp_offsets.h"
-#include "../core/core_log.h"
+#include "../bootstrap/abi/ootp_offsets.h"
+#include "../core/logging/core_log.h"
 #include "runtime_memory.h"
 static int protect_allows_read(DWORD protect)
 {

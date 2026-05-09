@@ -2,70 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using static LauncherPaths;
 
-internal static class KboFlags
+internal static partial class KboFlags
 {
-    private enum RuntimeFlagLifecycle
-    {
-        User,
-        Recovery,
-        Diagnostic,
-        Legacy,
-    }
-
-    private sealed record RuntimeFlagDefinition(
-        string Key,
-        bool? DefaultValue,
-        bool ImportLegacy,
-        RuntimeFlagLifecycle Lifecycle);
-
-    private static readonly RuntimeFlagDefinition[] RuntimeFlags =
-    [
-        new("disable_foreign_injury_replacement", null, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_foreign_waiver_legacy_auto_detector", null, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_ai_fa_status_candidate_insert_hook", null, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_custom_foreign_policy", null, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_foreign_signing_branch_patch", null, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_foreign_trade_check_patch", null, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_sangmu_fa_block_core", null, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_submit_offer_probe_patch", null, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_experimental_runtime_hooks", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_fa_requalification", null, true, RuntimeFlagLifecycle.Legacy),
-        new("enable_foreign_waiver_ai", true, true, RuntimeFlagLifecycle.User),
-        new("enable_foreign_waiver_background_scanner", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_foreign_waiver_event_probe", null, true, RuntimeFlagLifecycle.Diagnostic),
-        new("enable_kbo_ai_fa_fallback_patch", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_kbo_asian_quota_probe_logs", null, true, RuntimeFlagLifecycle.Diagnostic),
-        new("enable_kbo_callup_foreign_limit_patch", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_kbo_custom_foreign_offer_logs", null, true, RuntimeFlagLifecycle.Diagnostic),
-        new("enable_kbo_diagnostic_minimal_runtime", null, true, RuntimeFlagLifecycle.Diagnostic),
-        new("enable_kbo_fa_signability_hooks", null, true, RuntimeFlagLifecycle.Legacy),
-        new("enable_kbo_fix", null, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_kbo_foreign_trade_check_patch", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_kbo_offer_eligibility_patch", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_kbo_player_team_signability_patch", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_kbo_sangmu_offer_only", null, true, RuntimeFlagLifecycle.Diagnostic),
-        new("enable_kbo_sangmu_signability_only", null, true, RuntimeFlagLifecycle.Diagnostic),
-        new("enable_kbo_season_phase_monitor", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_kbo_submit_offer_probe_patch", null, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_launcher_injection", null, true, RuntimeFlagLifecycle.User),
-        new("enable_single_division_allstar_events", true, true, RuntimeFlagLifecycle.User),
-        new("enable_single_division_allstar_runtime_patches", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_single_division_allstar_settings_patch", true, true, RuntimeFlagLifecycle.Recovery),
-        new("enable_single_division_allstar_voting_hook", true, true, RuntimeFlagLifecycle.Recovery),
-    ];
-
-    private static readonly string[] SingleDivisionAllstarFlagFiles =
-    [
-        "enable_single_division_allstar_runtime_patches.txt",
-        "enable_single_division_allstar_settings_patch.txt",
-        "enable_single_division_allstar_voting_hook.txt",
-        "enable_single_division_allstar_events.txt",
-    ];
-
-    private static readonly HashSet<string> LegacyImportFlagKeys = RuntimeFlags
-        .Where(flag => flag.ImportLegacy)
-        .Select(flag => flag.Key)
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    private static readonly object ConfigWriteLock = new();
 
     public static void WriteKboFlag(string fileName, string label, bool enabled)
     {
@@ -82,14 +21,15 @@ internal static class KboFlags
 
     internal static void WriteKboFlagValues(string configPath, IEnumerable<string> fileNames, bool enabled)
     {
-        var flags = ReadKboRawConfig(configPath);
-        foreach (var fileName in fileNames)
+        lock (ConfigWriteLock)
         {
-            flags[NormalizeKboFlagKey(fileName)] = JsonValue.Create(enabled);
+            var flags = ReadKboRawConfig(configPath);
+            foreach (var fileName in fileNames)
+            {
+                flags[NormalizeKboFlagKey(fileName)] = JsonValue.Create(enabled);
+            }
+            WriteRawConfigAtomically(configPath, flags);
         }
-        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
-        var json = JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(configPath, json + Environment.NewLine);
     }
 
     public static void ImportLegacyKboFlagFilesIfMissing()
@@ -121,9 +61,10 @@ internal static class KboFlags
             return;
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
-        var json = JsonSerializer.Serialize(raw, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(configPath, json + Environment.NewLine);
+        lock (ConfigWriteLock)
+        {
+            WriteRawConfigAtomically(configPath, raw);
+        }
     }
 
     private static bool EnsureMissingFlag(SortedDictionary<string, JsonNode?> flags, string key, bool value)
@@ -181,9 +122,10 @@ internal static class KboFlags
             return;
         }
 
-        Directory.CreateDirectory(configDir);
-        var json = JsonSerializer.Serialize(raw, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(configPath, json + Environment.NewLine);
+        lock (ConfigWriteLock)
+        {
+            WriteRawConfigAtomically(configPath, raw);
+        }
     }
     
     public static bool ReadKboFlag(string fileName)
@@ -204,7 +146,14 @@ internal static class KboFlags
 
     internal static bool ReadKboFlagDefaultEnabled(string configPath, string fileName)
     {
-        return !ReadKboFlagConfig(configPath).TryGetValue(NormalizeKboFlagKey(fileName), out var enabled)
+        var key = NormalizeKboFlagKey(fileName);
+        if (key.Equals("enable_launcher_injection", StringComparison.OrdinalIgnoreCase))
+        {
+            return ReadKboFlagConfig(configPath).TryGetValue(key, out var launcherInjectionEnabled)
+                && launcherInjectionEnabled;
+        }
+
+        return !ReadKboFlagConfig(configPath).TryGetValue(key, out var enabled)
             || enabled;
     }
 
@@ -388,11 +337,31 @@ internal static class KboFlags
 
     internal static void WriteKboIntSetting(string configPath, string key, int value, int minValue, int maxValue)
     {
-        var values = ReadKboRawConfig(configPath);
-        values[NormalizeKboFlagKey(key)] = JsonValue.Create(Math.Clamp(value, minValue, maxValue));
+        lock (ConfigWriteLock)
+        {
+            var values = ReadKboRawConfig(configPath);
+            values[NormalizeKboFlagKey(key)] = JsonValue.Create(Math.Clamp(value, minValue, maxValue));
+            WriteRawConfigAtomically(configPath, values);
+        }
+    }
+
+    private static void WriteRawConfigAtomically(string configPath, SortedDictionary<string, JsonNode?> values)
+    {
         Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
         var json = JsonSerializer.Serialize(values, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(configPath, json + Environment.NewLine);
+        var tempPath = Path.Combine(
+            Path.GetDirectoryName(configPath)!,
+            $".{Path.GetFileName(configPath)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp");
+
+        File.WriteAllText(tempPath, json + Environment.NewLine);
+        if (File.Exists(configPath))
+        {
+            File.Replace(tempPath, configPath, null);
+        }
+        else
+        {
+            File.Move(tempPath, configPath);
+        }
     }
 
     public static bool TryReadJsonInt(JsonElement value, out int result)

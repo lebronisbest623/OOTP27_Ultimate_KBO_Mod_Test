@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <windows.h>
 
-#include "../../bootstrap/ootp_offsets.h"
+#include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../build_verify/build_verify.h"
-#include "../../core/core_flags/flags_api.h"
-#include "../../core/core_log.h"
-#include "../../core/core_text_date.h"
+#include "../../core/core_flags/api/flags_api.h"
+#include "../../core/logging/core_log.h"
+#include "../../core/dates/core_text_date.h"
 #include "../../runtime_memory/runtime_memory.h"
 
 typedef struct KboAllstarTeamRow {

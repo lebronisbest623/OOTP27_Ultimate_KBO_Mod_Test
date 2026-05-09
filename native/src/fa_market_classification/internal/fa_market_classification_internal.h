@@ -1,0 +1,190 @@
+#ifndef NATIVE_SRC_FA_MARKET_CLASSIFICATION_FA_MARKET_CLASSIFICATION_C_INTERNAL_H
+#define NATIVE_SRC_FA_MARKET_CLASSIFICATION_FA_MARKET_CLASSIFICATION_C_INTERNAL_H
+
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../core/dates/core_current_date.h"
+#include "../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../core/logging/core_log.h"
+#include "../../core/files/save_paths/core_save_paths.h"
+#include "../../fa_filing/fa_filing.h"
+#include "../../fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
+#include "../../fa_requalification/fa_requalification.h"
+#include "../../fa_rules/fa_rules.h"
+#include "../../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
+#include "../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../foreign/common/policy/foreign_waiver_policy.h"
+#include "../../foreign/rights/query/foreign_waiver_rights_query.h"
+#include "../../runtime_memory/runtime_memory.h"
+#include "../../team/lookup/team_lookup.h"
+#include "../../team/names/team_name_cache.h"
+#include "../api/fa_market_classification.h"
+#include "../seeds/fa_market_seed_cases.h"
+typedef struct KboFaMarketSqlite3 KboFaMarketSqlite3;
+typedef struct KboFaMarketSqlite3Stmt KboFaMarketSqlite3Stmt;
+typedef int (__cdecl *KboSqlite3OpenV2Fn)(const char*, KboFaMarketSqlite3**, int, const char*);
+typedef int (__cdecl *KboSqlite3CloseFn)(KboFaMarketSqlite3*);
+typedef int (__cdecl *KboSqlite3PrepareV2Fn)(KboFaMarketSqlite3*, const char*, int, KboFaMarketSqlite3Stmt**, const char**);
+typedef int (__cdecl *KboSqlite3StepFn)(KboFaMarketSqlite3Stmt*);
+typedef int (__cdecl *KboSqlite3FinalizeFn)(KboFaMarketSqlite3Stmt*);
+typedef int (__cdecl *KboSqlite3BindIntFn)(KboFaMarketSqlite3Stmt*, int, int);
+typedef int (__cdecl *KboSqlite3ResetFn)(KboFaMarketSqlite3Stmt*);
+typedef int (__cdecl *KboSqlite3ClearBindingsFn)(KboFaMarketSqlite3Stmt*);
+typedef const unsigned char* (__cdecl *KboSqlite3ColumnTextFn)(KboFaMarketSqlite3Stmt*, int);
+typedef const char* (__cdecl *KboSqlite3ErrmsgFn)(KboFaMarketSqlite3*);
+typedef struct KboFaMarketSqliteApi {
+    HMODULE module;
+    int attempted;
+    int available;
+    KboSqlite3OpenV2Fn open_v2;
+    KboSqlite3CloseFn close;
+    KboSqlite3PrepareV2Fn prepare_v2;
+    KboSqlite3StepFn step;
+    KboSqlite3FinalizeFn finalize;
+    KboSqlite3BindIntFn bind_int;
+    KboSqlite3ResetFn reset;
+    KboSqlite3ClearBindingsFn clear_bindings;
+    KboSqlite3ColumnTextFn column_text;
+    KboSqlite3ErrmsgFn errmsg;
+} KboFaMarketSqliteApi;
+typedef struct KboFaMarketFileSignature {
+    int exists;
+    DWORD size_high;
+    DWORD size_low;
+    FILETIME last_write_time;
+} KboFaMarketFileSignature;
+#define KBO_SQLITE_OK 0
+#define KBO_SQLITE_ROW 100
+#define KBO_SQLITE_DONE 101
+#define KBO_SQLITE_OPEN_READONLY 0x00000001
+
+extern KboFaMarketSqliteApi g_kbo_fa_market_sqlite_api;
+extern KboFaMarketHistoryCase g_kbo_fa_market_history_cache[KBO_FA_MARKET_CLASSIFICATION_MAX];
+extern int g_kbo_fa_market_history_cache_count;
+extern int g_kbo_fa_market_history_cache_valid;
+extern char g_kbo_fa_market_history_cache_save_path[MAX_PATH];
+extern KboFaMarketFileSignature g_kbo_fa_market_history_cache_db_sig;
+extern KboFaMarketFileSignature g_kbo_fa_market_history_cache_wal_sig;
+extern KboFaMarketFileSignature g_kbo_fa_market_history_cache_shm_sig;
+
+KboFaMarketSqliteApi* kbo_fa_market_get_sqlite_api(void);
+uint32_t kbo_fa_market_get_player_original_team_id(uint8_t* player);
+const KboFaRequalificationRecord* kbo_find_fa_market_requalification_record(
+    const KboFaRequalificationRecord* records,
+    int record_count,
+    uint32_t player_id);
+const KboFaMarketHistoryCase* kbo_find_fa_market_history_case(
+    const KboFaMarketHistoryCase* histories,
+    int history_count,
+    uint32_t player_id);
+int kbo_get_fa_market_classification_csv_path(char* out, size_t out_size);
+void kbo_fa_market_text_data_source_paths(
+    const char* save_path,
+    char* source_db,
+    size_t source_db_size,
+    char* source_wal,
+    size_t source_wal_size,
+    char* source_shm,
+    size_t source_shm_size);
+int kbo_fa_market_get_file_signature(const char* path, KboFaMarketFileSignature* out);
+int kbo_fa_market_file_signature_equal(
+    const KboFaMarketFileSignature* lhs,
+    const KboFaMarketFileSignature* rhs);
+int kbo_fa_market_get_text_data_signatures(
+    const char* save_path,
+    KboFaMarketFileSignature* db_sig,
+    KboFaMarketFileSignature* wal_sig,
+    KboFaMarketFileSignature* shm_sig);
+int kbo_fa_market_history_cache_matches(
+    const char* save_path,
+    const KboFaMarketFileSignature* db_sig,
+    const KboFaMarketFileSignature* wal_sig,
+    const KboFaMarketFileSignature* shm_sig);
+int kbo_fa_market_copy_history_cache_for_rows(
+    KboFaMarketClassification* rows,
+    int row_count,
+    KboFaMarketHistoryCase* histories,
+    int max_histories);
+void kbo_fa_market_store_history_cache(
+    const char* save_path,
+    const KboFaMarketFileSignature* db_sig,
+    const KboFaMarketFileSignature* wal_sig,
+    const KboFaMarketFileSignature* shm_sig,
+    const KboFaMarketHistoryCase* histories,
+    int history_count);
+int kbo_fa_market_copy_file_if_present(const char* source, const char* destination);
+int kbo_fa_market_copy_text_data_sqlite(char* out_path, size_t out_path_size);
+void kbo_fa_market_copy_sqlite_text_column(
+    KboFaMarketSqliteApi* api,
+    KboFaMarketSqlite3Stmt* stmt,
+    int column,
+    char* out,
+    size_t out_size);
+uint32_t kbo_fa_market_resolve_league_id(uint32_t requested_league_id);
+uint32_t kbo_fa_market_get_team_league_id(uint32_t team_id);
+int kbo_fa_market_team_belongs_to_league(uint32_t team_id, uint32_t league_id);
+int kbo_fa_market_player_has_kbo_pro_context(uint8_t* player, uint32_t league_id);
+int kbo_fa_market_player_is_candidate(uint8_t* player, uint32_t league_id);
+int kbo_fa_market_row_is_undrafted_domestic(const KboFaMarketClassification* row);
+int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* row);
+void kbo_fa_market_set_history_reason(
+    KboFaMarketClassification* row,
+    const KboFaMarketHistoryCase* history,
+    const char* prefix);
+int kbo_fa_market_apply_history_case(
+    KboFaMarketClassification* row,
+    const KboFaMarketHistoryCase* history);
+int kbo_fa_market_grade_is_unknown(const char* grade);
+uint32_t kbo_fa_market_display_grade_sort_rank(const char* grade);
+uint32_t kbo_fa_market_display_team_id(const KboFaMarketClassification* row);
+void kbo_fa_market_format_salary(int32_t salary, char* out, size_t out_size);
+int kbo_fa_market_apply_age_grade_override(KboFaMarketClassification* row, const KboFaRules* rules);
+void kbo_fa_market_apply_salary_snapshot_grade(
+    KboFaMarketClassification* row,
+    const KboFaSalarySnapshotGrade* salary_grades,
+    int salary_grade_count,
+    const KboFaRules* rules);
+void kbo_fa_market_mark_history_case(KboFaMarketHistoryCase* history);
+int kbo_load_fa_market_history_cases(
+    KboFaMarketClassification* rows,
+    int row_count,
+    KboFaMarketHistoryCase* histories,
+    int max_histories);
+uint32_t kbo_fa_market_history_date_u32(const KboFaMarketHistoryCase* history);
+int kbo_fa_market_overlay_filing_history_cases(
+    KboFaMarketClassification* rows,
+    int row_count,
+    KboFaMarketHistoryCase* histories,
+    int history_count);
+void kbo_classify_fa_market_row(
+    KboFaMarketClassification* row,
+    const KboFaMarketSeedCase* seeds,
+    int seed_count,
+    const KboFaRequalificationRecord* records,
+    int record_count,
+    const KboFaMarketHistoryCase* history_case,
+    uint32_t current_year,
+    uint32_t today_yyyymmdd);
+int kbo_fa_market_case_rank(const char* case_label);
+int kbo_compare_fa_market_classification_rows(const void* lhs, const void* rhs);
+void kbo_fa_market_write_raw(HANDLE file, const char* text);
+void kbo_fa_market_write_csv_text(HANDLE file, const char* text);
+void kbo_write_fa_market_classification_csv(
+    const KboFaMarketClassification* rows,
+    int row_count,
+    const KboFaMarketScanSummary* summary,
+    const char* source);
+int kbo_collect_fa_market_classifications(
+    uint32_t requested_league_id,
+    KboFaMarketClassification* rows,
+    int max_rows,
+    KboFaMarketScanSummary* summary,
+    int write_csv,
+    const char* source);
+
+#endif

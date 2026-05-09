@@ -38,7 +38,16 @@ internal static class LauncherGuardStatus
             {
                 lines.Add("support=experimental_signature");
             }
-            lines.Add(injectionRequested ? "kbo_injection=allowed" : "kbo_injection=not_requested");
+            if (!supportedBuild.NativePatchesSupported)
+            {
+                lines.Add("support=metadata_only");
+                lines.Add("kbo_injection=disabled");
+                lines.Add("disabled_reason=incomplete_native_rva_table");
+            }
+            else
+            {
+                lines.Add(injectionRequested ? "kbo_injection=allowed" : "kbo_injection=not_requested");
+            }
         }
     
         lines.Add("supported_builds=" + string.Join(", ", OotpBuildGuard.SupportedBuildDescriptions()));

@@ -3,7 +3,25 @@ internal static class LauncherPaths
 {
     public static string? ResolveOotpPath(string? explicitPath)
     {
-        return ResolveExistingNewestPath(GetOotpPathCandidates(explicitPath));
+        if (!string.IsNullOrWhiteSpace(explicitPath))
+        {
+            if (IsOotpExecutablePath(explicitPath) && File.Exists(explicitPath))
+            {
+                return explicitPath;
+            }
+
+            if (File.Exists(explicitPath) || Directory.Exists(explicitPath))
+            {
+                return null;
+            }
+        }
+
+        return ResolveExistingNewestPath(GetOotpPathCandidates(null));
+    }
+
+    private static bool IsOotpExecutablePath(string path)
+    {
+        return Path.GetFileName(path).Equals("ootp27.exe", StringComparison.OrdinalIgnoreCase);
     }
 
     internal static IEnumerable<string> GetOotpPathCandidates(string? explicitPath)
@@ -213,10 +231,14 @@ internal static class LauncherPaths
         {
             Path.Combine(baseDir, "KBOFix.dll"),
             Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "native", "bin", "KBOFix.dll")),
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "..", "native", "bin", "KBOFix.dll")),
         };
     
         return candidates
             .Where(File.Exists)
+            .Select(path => new FileInfo(path))
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .Select(file => file.FullName)
             .FirstOrDefault();
     }
     

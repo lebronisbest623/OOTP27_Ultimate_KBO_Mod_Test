@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <windows.h>
 
-#include "military_active_loan.h"
-#include "military_draft_queue.h"
-#include "military_fa_policy.h"
+#include "players/loans/military_active_loan.h"
+#include "selection/draft/military_draft_queue.h"
+#include "selection/fa_policy/military_fa_policy.h"
 
 #define KBO_MILITARY_SERVICE_DAYS 545
 

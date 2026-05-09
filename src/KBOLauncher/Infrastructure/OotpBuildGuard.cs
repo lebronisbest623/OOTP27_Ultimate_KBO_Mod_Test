@@ -55,7 +55,21 @@ internal static class OotpBuildGuard
         }
 
         return OotpSupportedBuilds.All.FirstOrDefault(build =>
-            build.Timestamp == info.Timestamp && build.SizeOfImage == info.SizeOfImage);
+            build.NativePatchesSupported &&
+            build.Timestamp == info.Timestamp &&
+            build.SizeOfImage == info.SizeOfImage);
+    }
+
+    public static OotpSupportedBuild? FindKnownBuild(OotpBuildInfo info)
+    {
+        if (!info.Ok)
+        {
+            return null;
+        }
+
+        return OotpSupportedBuilds.All.FirstOrDefault(build =>
+            build.Timestamp == info.Timestamp &&
+            build.SizeOfImage == info.SizeOfImage);
     }
 
     public static string FormatConsoleStatus(OotpBuildInfo info, OotpSupportedBuild? supportedBuild)
@@ -67,9 +81,9 @@ internal static class OotpBuildGuard
 
         var suffix = supportedBuild is null
             ? "unsupported"
-            : supportedBuild.ExperimentalSignature
-                ? $"experimental signature-supported ({supportedBuild.Label})"
-                : $"supported ({supportedBuild.Label})";
+            : supportedBuild.NativePatchesSupported
+                ? $"supported ({supportedBuild.Label})"
+                : $"metadata-only ({supportedBuild.Label})";
         return $"OOTP build: timestamp=0x{info.Timestamp:X8}, size_of_image=0x{info.SizeOfImage:X8} [{suffix}]";
     }
 
@@ -92,6 +106,7 @@ internal static class OotpBuildGuard
     {
         return OotpSupportedBuilds.All.Select(build =>
             $"{build.Label}:0x{build.Timestamp:X8}/0x{build.SizeOfImage:X8}" +
-            (build.ExperimentalSignature ? "[experimental_signature]" : ""));
+            (build.ExperimentalSignature ? "[experimental_signature]" : "") +
+            (build.NativePatchesSupported ? "[native_patches]" : "[metadata_only]"));
     }
 }

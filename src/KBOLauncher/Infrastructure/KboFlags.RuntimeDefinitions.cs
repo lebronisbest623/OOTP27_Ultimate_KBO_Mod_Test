@@ -1,0 +1,67 @@
+internal static partial class KboFlags
+{
+    private enum RuntimeFlagLifecycle
+    {
+        User,
+        Recovery,
+        Diagnostic,
+        Legacy,
+    }
+
+    private sealed record RuntimeFlagDefinition(
+        string Key,
+        bool? DefaultValue,
+        bool ImportLegacy,
+        RuntimeFlagLifecycle Lifecycle);
+
+    private static readonly RuntimeFlagDefinition[] RuntimeFlags =
+    [
+        new("disable_foreign_injury_replacement", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_foreign_waiver_legacy_auto_detector", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_intl_established_fa_generation_filter", null, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_ai_fa_status_candidate_insert_hook", false, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_custom_foreign_policy", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_foreign_signing_branch_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_foreign_trade_check_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_sangmu_fa_block_core", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_submit_offer_probe_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_experimental_runtime_hooks", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_fa_requalification", null, true, RuntimeFlagLifecycle.Legacy),
+        new("enable_foreign_waiver_ai", true, true, RuntimeFlagLifecycle.User),
+        new("enable_foreign_waiver_background_scanner", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_foreign_waiver_event_probe", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_ai_fa_fallback_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_asian_quota_probe_logs", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_callup_foreign_limit_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_custom_foreign_offer_logs", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_diagnostic_minimal_runtime", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_fa_signability_hooks", null, true, RuntimeFlagLifecycle.Legacy),
+        new("enable_kbo_fix", null, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_foreign_trade_check_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_offer_eligibility_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_player_team_signability_patch", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_sangmu_offer_only", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_sangmu_signability_only", null, true, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_season_phase_monitor", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_kbo_submit_offer_probe_patch", null, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_launcher_injection", null, true, RuntimeFlagLifecycle.User),
+        new("enable_single_division_allstar_events", false, true, RuntimeFlagLifecycle.User),
+        new("enable_single_division_allstar_runtime_patches", false, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_single_division_allstar_settings_patch", false, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_single_division_allstar_voting_hook", false, true, RuntimeFlagLifecycle.Recovery),
+    ];
+
+    private static readonly string[] SingleDivisionAllstarFlagFiles =
+    [
+        "enable_single_division_allstar_runtime_patches.txt",
+        "enable_single_division_allstar_settings_patch.txt",
+        "enable_single_division_allstar_voting_hook.txt",
+        "enable_single_division_allstar_events.txt",
+    ];
+
+    private static readonly HashSet<string> LegacyImportFlagKeys = RuntimeFlags
+        .Where(flag => flag.ImportLegacy)
+        .Select(flag => flag.Key)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+}

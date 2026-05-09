@@ -3,6 +3,8 @@ using static LauncherLog;
 
 internal static class DllPayloadStager
 {
+    private static readonly TimeSpan StagedDllRetention = TimeSpan.FromDays(7);
+
     public static string PrepareInjectableDllCopy(string dllPath, string logPath)
     {
         return PrepareInjectableDllCopy(dllPath, GetKboLocalDataPath("run_dlls"), logPath);
@@ -17,6 +19,7 @@ internal static class DllPayloadStager
         }
     
         Directory.CreateDirectory(runDllDir);
+        CleanupOldStagedDlls(runDllDir, DateTimeOffset.Now - StagedDllRetention, logPath);
     
         var extension = Path.GetExtension(fullDllPath);
         var stem = Path.GetFileNameWithoutExtension(fullDllPath);
@@ -48,15 +51,46 @@ internal static class DllPayloadStager
 
     private static void CopyDirectory(string sourceDir, string targetDir)
     {
+        if ((File.GetAttributes(sourceDir) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new IOException($"Refusing to copy reparse point asset directory: {sourceDir}");
+        }
+
         Directory.CreateDirectory(targetDir);
         foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.TopDirectoryOnly))
         {
+            if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new IOException($"Refusing to copy reparse point asset file: {file}");
+            }
+
             File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
         }
 
         foreach (var directory in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
         {
             CopyDirectory(directory, Path.Combine(targetDir, Path.GetFileName(directory)));
+        }
+    }
+
+    private static void CleanupOldStagedDlls(string runDllDir, DateTimeOffset cutoff, string logPath)
+    {
+        foreach (var path in Directory.EnumerateFiles(runDllDir, "KBOFix-*.dll", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                if (File.GetLastWriteTimeUtc(path) >= cutoff.UtcDateTime)
+                {
+                    continue;
+                }
+
+                File.Delete(path);
+                Log(logPath, $"staged_dll_cleanup deleted={path}");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log(logPath, $"staged_dll_cleanup failed={path} error=\"{ex.Message}\"");
+            }
         }
     }
 }

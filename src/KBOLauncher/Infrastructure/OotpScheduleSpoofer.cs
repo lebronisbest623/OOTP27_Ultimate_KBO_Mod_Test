@@ -31,51 +31,58 @@ internal static partial class OotpScheduleSpoofer
             return new Result(0, 0, 0, 1);
         }
 
-        Directory.CreateDirectory(backupDir);
+        var scanned = Directory.EnumerateFiles(schedulesDir, "korean_baseball_organization_int_c_*.lsdl")
+            .Count(path => KboScheduleFileName.IsMatch(Path.GetFileName(path)));
+        log?.Invoke($"schedule_spoof retired scanned={scanned} written=0 unchanged=0 failed=0 reason=global_major_league_schedule_mutation_disabled");
+        return new Result(scanned, 0, 0, 0);
+    }
+
+    internal static Result RestoreAllKboScheduleSpoofFiles(string ootpExePath, string backupDir, Action<string>? log = null)
+    {
+        var installDir = Path.GetDirectoryName(Path.GetFullPath(ootpExePath));
+        if (string.IsNullOrWhiteSpace(installDir))
+        {
+            log?.Invoke("schedule_restore skipped reason=install_dir_unavailable");
+            return new Result(0, 0, 0, 1);
+        }
+
+        var schedulesDir = Path.Combine(installDir, "data", "schedules");
+        if (!Directory.Exists(schedulesDir) || !Directory.Exists(backupDir))
+        {
+            log?.Invoke("schedule_restore skipped reason=restore_dir_missing");
+            return new Result(0, 0, 0, 1);
+        }
 
         var scanned = 0;
-        var written = 0;
+        var restored = 0;
         var unchanged = 0;
         var failed = 0;
-
-        foreach (var sourcePath in Directory.EnumerateFiles(schedulesDir, "korean_baseball_organization_int_c_*.lsdl"))
+        foreach (var backupPath in Directory.EnumerateFiles(backupDir, "major_league_ml_c_*.lsdl"))
         {
-            var match = KboScheduleFileName.Match(Path.GetFileName(sourcePath));
-            if (!match.Success || !int.TryParse(match.Groups["year"].Value, out var year))
-            {
-                continue;
-            }
-
             scanned++;
-            foreach (var suffix in new[] { "", "_ap" })
+            var targetPath = Path.Combine(schedulesDir, Path.GetFileName(backupPath));
+            try
             {
-                var targetName = $"major_league_ml_c_{year}{suffix}.lsdl";
-                var targetPath = Path.Combine(schedulesDir, targetName);
-                try
+                var backupText = File.ReadAllText(backupPath);
+                if (File.Exists(targetPath) && File.ReadAllText(targetPath) == backupText)
                 {
-                    BackupScheduleIfNeeded(targetPath, Path.Combine(backupDir, targetName), log);
-                    var sourceText = File.ReadAllText(sourcePath);
-                    var spoofText = BuildSpoofScheduleText(sourceText, year, log);
-                    if (File.Exists(targetPath) && File.ReadAllText(targetPath) == spoofText)
-                    {
-                        unchanged++;
-                        continue;
-                    }
+                    unchanged++;
+                    continue;
+                }
 
-                    File.WriteAllText(targetPath, spoofText);
-                    written++;
-                    log?.Invoke($"schedule_spoof wrote year={year} source=\"{sourcePath}\" target=\"{targetPath}\"");
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    failed++;
-                    log?.Invoke($"schedule_spoof failed year={year} target=\"{targetPath}\" error=\"{ex.Message}\"");
-                }
+                File.WriteAllText(targetPath, backupText);
+                restored++;
+                log?.Invoke($"schedule_restore restored backup=\"{backupPath}\" target=\"{targetPath}\"");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                failed++;
+                log?.Invoke($"schedule_restore failed backup=\"{backupPath}\" error=\"{ex.Message}\"");
             }
         }
 
-        log?.Invoke($"schedule_spoof complete scanned={scanned} written={written} unchanged={unchanged} failed={failed}");
-        return new Result(scanned, written, unchanged, failed);
+        log?.Invoke($"schedule_restore complete scanned={scanned} restored={restored} unchanged={unchanged} failed={failed}");
+        return new Result(scanned, restored, unchanged, failed);
     }
 
     internal static string BuildSpoofScheduleText(string sourceText, int year, Action<string>? log = null)

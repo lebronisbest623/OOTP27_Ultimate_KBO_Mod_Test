@@ -56,6 +56,7 @@ foreach ($Build in $Manifest.builds) {
         Timestamp = $Timestamp
         SizeOfImage = $SizeOfImage
         ExperimentalSignature = [bool]($Build.PSObject.Properties.Name -contains "experimentalSignature" -and $Build.experimentalSignature)
+        NativePatchesSupported = [bool]($Build.PSObject.Properties.Name -contains "nativePatchesSupported" -and $Build.nativePatchesSupported)
     }
 }
 
@@ -70,7 +71,8 @@ $CsLines = @(
 )
 foreach ($Build in $Builds) {
     $ExperimentalSignature = if ($Build.ExperimentalSignature) { "true" } else { "false" }
-    $CsLines += '        new(0x{0:X8}u, 0x{1:X8}u, "{2}", {3}),' -f $Build.Timestamp, $Build.SizeOfImage, ($Build.Label -replace '"', '\"'), $ExperimentalSignature
+    $NativePatchesSupported = if ($Build.NativePatchesSupported) { "true" } else { "false" }
+    $CsLines += '        new(0x{0:X8}u, 0x{1:X8}u, "{2}", {3}, {4}),' -f $Build.Timestamp, $Build.SizeOfImage, ($Build.Label -replace '"', '\"'), $ExperimentalSignature, $NativePatchesSupported
 }
 $CsLines += @(
     "    ];",
@@ -108,7 +110,8 @@ $NativeSourceLines = @(
     "const OotpSupportedBuild KBO_SUPPORTED_OOTP_BUILDS[KBO_SUPPORTED_OOTP_BUILD_COUNT] = {"
 )
 foreach ($Build in $Builds) {
-    $NativeSourceLines += '    {{0x{0:X8}u, 0x{1:X8}u, "{2}"}},' -f $Build.Timestamp, $Build.SizeOfImage, ($Build.Label -replace '"', '\"')
+    $NativePatchesSupported = if ($Build.NativePatchesSupported) { "1" } else { "0" }
+    $NativeSourceLines += '    {{0x{0:X8}u, 0x{1:X8}u, "{2}", {3}}},' -f $Build.Timestamp, $Build.SizeOfImage, ($Build.Label -replace '"', '\"'), $NativePatchesSupported
 }
 $NativeSourceLines += @(
     "};"

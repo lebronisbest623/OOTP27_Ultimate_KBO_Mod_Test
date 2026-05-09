@@ -31,6 +31,48 @@ public sealed class DllPayloadStagerTests : IDisposable
     }
 
     [Fact]
+    public void PrepareInjectableDllCopy_CleansOldStagedDllsAndKeepsRecentOnes()
+    {
+        var sourceDir = Path.Combine(tempDir, "source");
+        var runDir = Path.Combine(tempDir, "run_dlls");
+        var logPath = Path.Combine(tempDir, "launcher.log");
+        var dllPath = Path.Combine(sourceDir, "KBOFix.dll");
+        var oldDll = Path.Combine(runDir, "KBOFix-old.dll");
+        var recentDll = Path.Combine(runDir, "KBOFix-recent.dll");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(runDir);
+        File.WriteAllBytes(dllPath, [1]);
+        File.WriteAllBytes(oldDll, [2]);
+        File.WriteAllBytes(recentDll, [3]);
+        File.SetLastWriteTimeUtc(oldDll, DateTime.UtcNow.AddDays(-8));
+        File.SetLastWriteTimeUtc(recentDll, DateTime.UtcNow);
+
+        _ = global::DllPayloadStager.PrepareInjectableDllCopy(dllPath, runDir, logPath);
+
+        Assert.False(File.Exists(oldDll));
+        Assert.True(File.Exists(recentDll));
+        Assert.Contains("staged_dll_cleanup", File.ReadAllText(logPath));
+    }
+
+    [Fact]
+    public void PrepareInjectableDllCopy_CreatesUniqueStagingPathForEachRun()
+    {
+        var sourceDir = Path.Combine(tempDir, "source");
+        var runDir = Path.Combine(tempDir, "run_dlls");
+        var logPath = Path.Combine(tempDir, "launcher.log");
+        var dllPath = Path.Combine(sourceDir, "KBOFix.dll");
+        Directory.CreateDirectory(sourceDir);
+        File.WriteAllBytes(dllPath, [1]);
+
+        var first = global::DllPayloadStager.PrepareInjectableDllCopy(dllPath, runDir, logPath);
+        var second = global::DllPayloadStager.PrepareInjectableDllCopy(dllPath, runDir, logPath);
+
+        Assert.NotEqual(first, second);
+        Assert.True(File.Exists(first));
+        Assert.True(File.Exists(second));
+    }
+
+    [Fact]
     public void PrepareInjectableDllCopy_ThrowsWhenSourceDllIsMissing()
     {
         var missingPath = Path.Combine(tempDir, "missing", "KBOFix.dll");

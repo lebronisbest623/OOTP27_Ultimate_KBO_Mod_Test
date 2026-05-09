@@ -1,0 +1,103 @@
+#ifndef NATIVE_SRC_FOREIGN_INTL_ESTABLISHED_FA_POSTSCAN_INTL_ESTABLISHED_FA_POSTSCAN_C_INTERNAL_H
+#define NATIVE_SRC_FOREIGN_INTL_ESTABLISHED_FA_POSTSCAN_INTL_ESTABLISHED_FA_POSTSCAN_C_INTERNAL_H
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/dates/core_current_date.h"
+#include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../runtime_memory/runtime_memory.h"
+#include "../../../team/lookup/team_lookup.h"
+#include "../../common/dates/foreign_waiver_date.h"
+#include "../../common/player_eval/foreign_waiver_player_eval.h"
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_DELAY_MS 4500ull
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_RETRY_MS 2500ull
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_RETRIES 8
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_DETAIL_LOGS 160
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_STARTER_SCORE_CAP 72000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_BULLPEN_SCORE_CAP 70000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_UNKNOWN_PITCHER_SCORE_CAP 71000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_HITTER_SCORE_CAP 72000
+#define KBO_INTL_ESTABLISHED_FA_ASIAN_CATCHER_SCORE_CAP 65000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_STARTER_SCORE_CAP 115000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_BULLPEN_SCORE_CAP 95000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_UNKNOWN_PITCHER_SCORE_CAP 105000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_HITTER_SCORE_CAP 110000
+#define KBO_INTL_ESTABLISHED_FA_NON_ASIAN_CATCHER_SCORE_CAP 80000
+typedef struct KboIntlEstablishedFaPostscanState {
+    LONG pending;
+    LONG batch_id;
+    int32_t before_count;
+    uint32_t before_max_player_id;
+    int32_t original_count;
+    int32_t expected_count;
+    int multiplier;
+    uint32_t primary_league_id;
+    uint32_t fallback_league_id;
+    uint32_t scheduled_date;
+    ULONGLONG due_tick;
+    int attempts;
+} KboIntlEstablishedFaPostscanState;
+
+extern KboIntlEstablishedFaPostscanState g_kbo_intl_established_fa_postscan;
+extern volatile LONG g_kbo_intl_established_fa_postscan_worker_started;
+
+int kbo_intl_established_fa_quality_shaping_enabled(void);
+int kbo_intl_established_fa_pitcher_role_is_starter(uint8_t position_role);
+int kbo_intl_established_fa_pitcher_role_is_bullpen(uint8_t position_role);
+int kbo_intl_established_fa_position_is_catcher(uint8_t position_group, uint8_t position_role);
+const char* kbo_intl_established_fa_quality_policy_label(
+    int asian_quota,
+    uint8_t position_group,
+    uint8_t position_role);
+int32_t kbo_intl_established_fa_quality_score_cap(
+    int asian_quota,
+    uint8_t position_group,
+    uint8_t position_role);
+int16_t kbo_intl_established_fa_quality_field_cap(
+    int asian_quota,
+    uint8_t position_group,
+    uint8_t position_role);
+int16_t kbo_intl_established_fa_scale_value_i16(int16_t value, int32_t original_score, int32_t cap);
+int16_t kbo_intl_established_fa_clamp_value_i16(int16_t value, int16_t cap);
+int kbo_intl_established_fa_apply_quality_cap(
+    uint8_t* player,
+    int32_t cap,
+    int16_t field_cap,
+    int32_t original_score,
+    int32_t* out_adjusted_score);
+int kbo_intl_established_fa_postscan_csv_empty(HANDLE file);
+int kbo_intl_established_fa_postscan_open_csv(HANDLE* out_file, char* out_path, size_t out_path_size);
+void kbo_intl_established_fa_postscan_write_csv_row(
+    HANDLE file,
+    const char* date,
+    LONG batch_id,
+    int32_t before_count,
+    int32_t after_count,
+    int32_t expected_count,
+    int32_t index,
+    uint8_t* player);
+void kbo_intl_established_fa_postscan_schedule(
+    int32_t original_count,
+    int32_t expected_count,
+    int multiplier,
+    uint32_t primary_league_id,
+    uint32_t fallback_league_id);
+int kbo_intl_established_fa_postscan_candidate_matches(
+    const KboIntlEstablishedFaPostscanState* batch,
+    int32_t index,
+    int32_t player_count,
+    uint8_t* player);
+void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanState* batch);
+void kbo_intl_established_fa_postscan_try_run(void);
+DWORD WINAPI kbo_intl_established_fa_postscan_thread(LPVOID parameter);
+void start_kbo_intl_established_fa_postscan_thread(void);
+
+#endif

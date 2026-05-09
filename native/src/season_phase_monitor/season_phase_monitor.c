@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "../bootstrap/ootp_offsets.h"
-#include "../core/core_current_date.h"
-#include "../core/core_flags/flags_api.h"
-#include "../core/core_league_context_parts/league_context_lookup.h"
-#include "../core/core_log.h"
+#include "../bootstrap/abi/ootp_offsets.h"
+#include "../core/dates/core_current_date.h"
+#include "../core/core_flags/api/flags_api.h"
+#include "../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../core/logging/core_log.h"
 #include "../runtime_memory/runtime_memory.h"
 #include "season_phase_monitor.h"
 /* League season-phase diagnostics. Included from native/KBOFix.c. */
@@ -394,7 +394,7 @@ int start_kbo_season_phase_monitor(void)
         return 0;
     }
 
-    CloseHandle(thread);
+    kbo_register_runtime_thread(thread, "season phase monitor");
     return 1;
 }
 

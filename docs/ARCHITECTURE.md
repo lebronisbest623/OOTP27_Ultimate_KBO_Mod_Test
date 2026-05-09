@@ -25,7 +25,15 @@ The native layer is now a multi-translation-unit build.
 
 `native/build.ps1` compiles `native/KBOFix.c` and every `*.c` file under
 `native/src/`, emits dependency files, and links the resulting objects into
-`native/bin/KBOFix.dll`.
+`native/bin/KBOFix.dll`. External WebView2 headers are passed as system headers
+so third-party warning noise does not dominate incremental native builds.
+
+The native tree intentionally favors focused translation units over source
+fragments. Mechanically named files such as `_part1.c` are not considered a
+stable structure; split files should be named for the responsibility they own.
+Current source-shape checkpoints: no native `.c/.h` source under
+`native/src/` should exceed 400 lines, and folders that need more than four
+direct `.c/.h` files should introduce a responsibility-named child folder.
 
 `native/KBOFix.c` should remain a thin shell. Its responsibilities are:
 
@@ -69,6 +77,10 @@ native/
 New native code should be added as a focused `.c/.h` module under the owning
 subsystem. Headers expose the narrow contract; implementation details stay
 `static` in the `.c` file.
+
+Tiny compatibility shims that only include an internal header are not useful
+modules. Keep public headers for stable entry points, but do not keep empty
+`.c` landing files just to preserve an old filename.
 
 ## Managed Launcher
 
@@ -160,6 +172,22 @@ context, league-event helpers, and news/history helper APIs.
 Core must not accumulate feature policy. If a helper knows KBO domain rules, it
 belongs in the owning subsystem.
 
+Core uses the following internal grouping:
+
+- `dates/`: current-date extraction and text/date conversion helpers
+- `events/`: shared league-event lookup helpers
+- `files/`: atomic writes, message-body temp files, and save-scoped paths.
+  `save_paths/` is split into `platform/` Win32 UTF-8 path helpers,
+  `current/` current-save discovery, and `scope/` save-scoped data paths.
+- `logging/`: native log output and profiling bridge
+- `news/`: live-news emission, news-object creation, and history stubs
+- `sql/`: SQL escaping plus league-news/history transaction helpers
+- `teams/`: shared team collection helpers
+- `core_flags/`: runtime flag metadata and local-app-data flag reads.
+  `api/` is split into `runtime/` thread lifecycle controls, `legacy/`
+  filename-compatible flag reads, and `settings/` numeric/UI settings.
+- `core_league_context_parts/`: league context lookup and event-manager access
+
 ### Foreign Player Policy
 
 `native/src/foreign/` owns foreign-player reserve rights, signability and offer
@@ -168,12 +196,24 @@ seed resolution, and foreign roster diagnostics.
 
 Key subfolders:
 
+- `common/`: CSV parsing, path/date/config helpers, waiver policy, player
+  evaluation, and shared event declarations
 - `rights/`: exercised reserve-right storage, loading, mutation, and query
 - `signability/`: signability, offer, FA candidate, and no-minor-contract probes
 - `replacement_seed/`: replacement-player seed parsing and resolution
 - `injury/`: injury replacement slot lifecycle
 - `quota/`: Asian quota, active count, and call-up limit policy
 - `roster_audit/`: read-only roster diagnostics and snapshots
+- `waiver_core/`: waiver scanner, AI candidate logic, CSV candidate writing,
+  and top-candidate selection
+- `waiver_decisions/`: retain/skip command handling, team resolution, and
+  decision persistence
+- `waiver_window/`: waiver window state, status, opening, and event-window
+  checks
+- `waiver_outputs/`: user-visible waiver announcements and close-window
+  results
+- `intl_established_fa/`: established foreign FA generation/multiplier wrappers
+- `intl_established_fa_postscan/`: post-generation visibility and quality pass
 
 Foreign-player event-window logic decides when a retain/skip decision is legal.
 Rights storage owns exercised rights after a valid retain decision exists. The
@@ -189,6 +229,20 @@ Seed storage and player movement are separate responsibilities. Queueing a
 candidate does not move the player; movement happens in seed assignment or the
 selection-event path.
 
+The military subsystem uses the following internal grouping:
+
+- `runtime/`: service-day ticking, assignment orchestration, thread startup,
+  shared runtime state, and hook wrappers
+- `players/`: active service-loan records, player service state, team-add
+  guards, and service-team policy
+- `selection/`: annual selection events, draft queues, FA policy, and selection
+  news
+- `returns/`: player return flow and return-history persistence
+- `seed/`: seed parsing, seed paths, and seed-registry storage
+- `calendar/`: service-day and current-date helpers
+
+The root folder keeps `military_service.h` as the public facade.
+
 ### Custom Events
 
 `native/src/custom_events/` owns event-name matching, event scheduling,
@@ -198,6 +252,23 @@ handlers.
 The scanner owns timing and idempotency. Domain modules own behavior. New custom
 events should add a title matcher and a dispatch target rather than expanding
 scanner logic inline.
+
+The custom-event subsystem uses the following internal grouping:
+
+- `runtime/`: event names, lookup, markers, scanner, dispatcher, monitor, and
+  shared custom-event declarations
+- `asian_games/`: Asian Games state, schedule creation, roster store, and
+  player evaluation
+- `asian_games_lifecycle/`: selection-result application, departure,
+  replacement, and final-return flows
+- `asian_games_selection/`: roster selection and wildcard/missing-org helpers
+- `asian_games_schedule_seed/`: Asian Games schedule seed persistence, parsing,
+  import, and query helpers
+- `asian_games_news/`: Asian Games news body, link, emit, and handler helpers
+- `schedules/`: foreign-priority and offseason-transition event scheduling
+- `diagnostics/`: custom-event-adjacent read-only diagnostics
+
+The root folder should not accumulate scanner, dispatcher, or domain behavior.
 
 ### FA and Amateur Modules
 
@@ -224,6 +295,29 @@ hooks, schedule dates, candidate-team seeding, and related CSV parsing.
 `native/src/patch_installers/` owns byte-pattern verification and patch
 installation. It should not contain gameplay policy.
 
+Patch installers are grouped by patch surface:
+
+- `allstar/`: All-Star static/team/event/settings/candidate patch installers
+- `foreign/`: foreign-player signability, counts, call-up, trade, submit-offer,
+  and international-established-FA patch installers
+- `military/`: military-service patch installers
+- `season_phase/`: season-phase probe patch installers
+- `no_minor_contracts/`: no-minor-contract and offer-demand patch installers
+- `arbitration/`: arbitration offer/non-tender/no-withdraw patch installers
+
+`no_minor_contracts/` is split by patch responsibility:
+
+- `common/`: shared no-minor patch helpers
+- `callbacks/`: offer, contract, and player-action callback detours
+- `demand_floors/`: offer-demand, demand-write, foreign-FA baseline, and
+  submit-salary floor patches
+- `scan/`: scanner and string patches
+- `experimental/`: experimental no-minor runtime flag wiring, offer UI hooks,
+  and write-site patch orchestration
+
+The root folder should remain a namespace only; new patch installers belong in
+the patch-surface subfolder they modify.
+
 `native/src/hook_stubs/` owns executable call stubs and ABI wrappers. Wrappers
 should pass arguments to domain modules and translate results back into OOTP ABI
 shape; policy should stay in the domain modules.
@@ -240,9 +334,27 @@ shape; policy should stay in the domain modules.
 
 It must not directly mutate gameplay tables or OOTP player/team memory.
 
-Current debt: `hotkey_window.c` is still an oversized module containing state,
-HTML rendering, WebView runtime, command URI routing, settings rendering, and
-Win32 window code. This is the largest remaining architectural hotspot.
+The F2 hub uses the following internal grouping:
+
+- `runtime/`: Win32/WebView runtime. `content/` owns HTML assembly,
+  selection/navigation helpers, player badges, skin bitmap use, and team-color
+  helpers; `webview/` owns COM setup, command routing, and lifetime handling;
+  `window/` owns window state and Win32 window procedures.
+- `views/`: feature-specific HTML views split by visible hub tab:
+  `asian_games/`, `fa/`, `foreign/`, `military/`, and `mod/`.
+- `support/`: shared UI helpers split by support concern. `assets/` owns names,
+  logos, image sources, asset paths, nations, and uniform numbers; `text/` owns
+  language/date/string/text-buffer helpers; `roster/` owns roster cells, table
+  CSS, and sort script; `skin/` owns scrollbar and skin metrics; `skin_assets/`
+  owns bitmap drawing helpers.
+- `state/`: selected league/team state lookup and display caches
+- `ui_html_helpers/`: small HTML helper routines that are shared by multiple
+  views
+
+Current debt: the top-level file explosion is gone, but
+`hotkey_window_runtime_internal.h` is still a broad private contract. Future
+cleanup should replace that broad internal header with smaller runtime, command,
+content, and WebView contracts.
 
 ## Thread Lifecycle
 
@@ -263,30 +375,42 @@ avoid introducing loops that cannot observe the runtime stop flag.
 These are the current high-cost areas. They are not new precedent; they are the
 next cleanup targets.
 
-1. `native/src/hotkey_window/hotkey_window.c` is too large and mixes UI state,
-   rendering, command routing, settings, and WebView lifecycle.
-2. `native/src/bootstrap/forward_declarations.h` remains a central declaration
-   bucket. Declarations should move into owning headers.
+1. `native/src/hotkey_window/runtime/hotkey_window_runtime_internal.h` is a
+   broad private contract. It should be narrowed into smaller runtime,
+   command, content, and WebView contracts.
+2. `native/src/bootstrap/abi/forward_declarations.h` remains a central
+   declaration bucket. Declarations should move into owning headers.
 3. Runtime flag metadata is duplicated between managed code and native F2 UI.
 4. Supported-build rows are generated, but build-specific RVA maps are still
    hand-maintained.
-5. Several domain modules are mechanically migrated but still too broad:
-   `foreign_waiver_core.c`, `military_service.c`, `amateur_player_quality.c`,
-   `fa_market_classification.c`, `foreign/quota/foreign_quota.c`, and
-   `foreign/signability/submit_offer_probe.c`.
+5. Several mechanically migrated domain areas still carry temporary internal
+   headers and broad responsibility names. The worst cleanup targets are
+   `foreign/signability/`, `foreign/waiver_core/`,
+   `patch_installers/foreign/`, `amateur_player_quality/`, and
+   `fa_market_classification/`. Custom events, patch installers, military
+   service, and foreign-player policy now have folder-level ownership, but broad
+   private contracts remain in
+   `native/src/military_service/runtime/military_service_internal.h`,
+   `native/src/foreign/waiver_core/foreign_waiver_core_internal.h`,
+   `native/src/foreign/waiver_decisions/foreign_waiver_decisions_internal.h`,
+   and
+   `native/src/foreign/waiver_window/foreign_waiver_window_internal.h`.
 
 ## Migration Plan
 
 Do not resume broad mechanical migration just to move lines around. The next
 steps should close one responsibility boundary at a time:
 
-1. Split the F2 hub by responsibility: state, rendering, WebView runtime,
-   command routing, settings/flags.
-2. Shrink `forward_declarations.h` by moving declarations into owning headers.
+1. Narrow the F2 hub private contracts now that the files are grouped into
+   runtime, views, support, and state folders.
+2. Shrink `bootstrap/abi/forward_declarations.h` by moving declarations into
+   owning headers.
 3. Create a runtime-flag manifest and generate managed/native UI flag metadata.
 4. Move build-specific RVA data into generated sources.
-5. Continue splitting large domain modules only when the new file owns a clear
+5. Continue splitting or regrouping domain modules only when the new file owns a clear
    lifecycle, table, scanner, policy, or parser.
+6. Remove temporary `_internal.h` headers when their declarations can move to
+   narrow owned headers without creating cycles.
 
 Each code-change commit should close one subsystem or one responsibility unit.
 Docs-only commits may describe multiple known debts.

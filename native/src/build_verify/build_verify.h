@@ -13,6 +13,7 @@ typedef struct OotpSupportedBuild {
     uint32_t timestamp;
     uint32_t size_of_image;
     const char* label;
+    int native_patches_supported;
 } OotpSupportedBuild;
 
 typedef struct OotpBuildInfo {

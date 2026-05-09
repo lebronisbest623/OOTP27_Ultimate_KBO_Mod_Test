@@ -56,23 +56,14 @@ internal static class LauncherInjectionPolicy
                 isDefaultRun ? "default_attach_existing" : "explicit_attach_existing");
         }
 
-        if (allstarBootstrapRequested)
-        {
-            return new(
-                LauncherInjectionMode.PresaveAllstarBootstrap,
-                ShouldInject: true,
-                RequiresSupportedBuild: true,
-                RequiresRosterMarkerBeforeInjection: false,
-                AllowsPresaveInjection: true,
-                "presave_allstar_bootstrap");
-        }
-
         return new(
             LauncherInjectionMode.LaunchThenWaitForMarkedSave,
             ShouldInject: true,
             RequiresSupportedBuild: true,
             RequiresRosterMarkerBeforeInjection: true,
             AllowsPresaveInjection: false,
-            "launch_wait_for_marked_save");
+            allstarBootstrapRequested
+                ? "presave_allstar_bootstrap_retired"
+                : "launch_wait_for_marked_save");
     }
 }

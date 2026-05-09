@@ -49,18 +49,8 @@ $RequiredFiles = @(
     "data\seeds\high_school_reputation_seed.csv",
     "data\seeds\military_service_seed.csv"
 )
-
-foreach ($RequiredFile in $RequiredFiles) {
-    $Path = Join-Path $Dist $RequiredFile
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "Release payload missing required file: $RequiredFile"
-    }
-}
-
-$LeagueId = (Get-Content -LiteralPath (Join-Path $Dist "kbo_league_id.txt") -Raw).Trim()
-if ($LeagueId -ne "100") {
-    throw "Release payload has unexpected kbo_league_id.txt value: '$LeagueId'"
-}
+& powershell -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "tests\release\verify-release-artifact.ps1") -RepoRoot $RepoRoot -Dist $Dist
+if ($LASTEXITCODE -ne 0) { throw "Release payload validation failed" }
 
 $FileCount = (Get-ChildItem $Dist -Recurse -File).Count
 Write-Host "==> Done: $FileCount files in dist\"
