@@ -72,7 +72,7 @@ internal static partial class LauncherApp
 
         var launchPlan = BuildLaunchPlan(options, isDefaultRun, buildGate.SupportedBuild);
         Log(logPath, $"injection_policy mode={launchPlan.InjectionDecision.Mode} reason={launchPlan.InjectionDecision.Reason}");
-        PrepareAllstarBootstrapIfRequested(exePath, logPath, options, launchPlan.AllstarBootstrapRequested);
+        PrepareSchedulePreflight(exePath, logPath, options, launchPlan.AllstarBootstrapRequested);
 
         if (options.AttachPid is not null || options.AttachExisting)
         {

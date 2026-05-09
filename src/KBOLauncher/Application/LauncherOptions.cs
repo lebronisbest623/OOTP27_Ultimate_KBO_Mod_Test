@@ -119,7 +119,7 @@ record LauncherOptions(
         Safety:
           KBOFix injection is disabled unless ootp27.exe matches a verified build.
           KBOFix injection also requires the currently opened OOTP .lg save description.txt
-          to contain the official roster marker URL.
+          to contain the official roster marker URL and a completed save flag.
         """);
     }
 }

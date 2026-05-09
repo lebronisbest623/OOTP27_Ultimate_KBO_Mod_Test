@@ -13,6 +13,7 @@
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/news/history_stubs/core_history_stubs.h"
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../core/season/opening_day_storyline_guard.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../team/assignment/assignment/team_assignment.h"

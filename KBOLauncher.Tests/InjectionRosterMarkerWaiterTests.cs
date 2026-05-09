@@ -11,6 +11,9 @@ public sealed class InjectionRosterMarkerWaiterTests
     [InlineData("current_save_unavailable", false)]
     [InlineData("description_missing", false)]
     [InlineData("description_unreadable", false)]
+    [InlineData("save_not_completed", false)]
+    [InlineData("save_completion_unreadable", false)]
+    [InlineData("save_completion_stale", false)]
     public void IsTerminalRosterMarkerFailure_OnlyStopsWhenWaitingCannotHelp(string status, bool expected)
     {
         var info = global::RosterMarkerInfo.Fail(status, null, null, "test");

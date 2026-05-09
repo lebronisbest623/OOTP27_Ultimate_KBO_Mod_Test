@@ -72,17 +72,17 @@ internal static class LauncherGuardStatus
     
     public static RosterMarkerInfo CheckRosterMarkerForInjectionTarget(int pid, string logPath)
     {
-        var info = ProbeRosterMarkerForInjectionTarget(pid, logPath);
+        var info = ProbeRosterMarkerForInjectionTarget(pid, logPath, null);
         Console.WriteLine(KboRosterMarkerGuard.FormatConsoleStatus(info));
         return info;
     }
 
-    public static RosterMarkerInfo ProbeRosterMarkerForInjectionTarget(int pid, string logPath)
+    public static RosterMarkerInfo ProbeRosterMarkerForInjectionTarget(int pid, string logPath, DateTimeOffset? minSaveCompletedAt = null)
     {
         RosterMarkerInfo info;
         try
         {
-            info = KboRosterMarkerGuard.CheckCurrentSave(pid, message => Log(logPath, message));
+            info = KboRosterMarkerGuard.CheckCurrentSave(pid, minSaveCompletedAt, message => Log(logPath, message));
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
@@ -139,6 +139,14 @@ internal static class LauncherGuardStatus
         {
             lines.Add($"description_path={info.DescriptionPath}");
         }
+        if (!string.IsNullOrWhiteSpace(info.SaveCompletedPath))
+        {
+            lines.Add($"save_completed_path={info.SaveCompletedPath}");
+        }
+        if (info.SaveCompletedAt is not null)
+        {
+            lines.Add($"save_completed_at={info.SaveCompletedAt.Value:O}");
+        }
         if (!string.IsNullOrWhiteSpace(info.Error))
         {
             lines.Add($"error={info.Error}");
@@ -149,7 +157,7 @@ internal static class LauncherGuardStatus
     
     public static void PrintMissingRosterMarkerWarning(RosterMarkerInfo info)
     {
-        Console.Error.WriteLine("KBOFix injection disabled: the currently opened OOTP save is not marked for this KBO roster.");
+        Console.Error.WriteLine("KBOFix injection disabled: the currently opened OOTP save is not marked for this KBO roster or is not fully saved yet.");
         Console.Error.WriteLine($"Required marker in description.txt: {KboRosterMarkerGuard.RequiredMarkerUrl}");
         if (!string.IsNullOrWhiteSpace(info.SavePath))
         {
@@ -158,6 +166,10 @@ internal static class LauncherGuardStatus
         if (!string.IsNullOrWhiteSpace(info.DescriptionPath))
         {
             Console.Error.WriteLine($"Description checked: {info.DescriptionPath}");
+        }
+        if (!string.IsNullOrWhiteSpace(info.SaveCompletedPath))
+        {
+            Console.Error.WriteLine($"Save completion checked: {info.SaveCompletedPath}");
         }
         if (!string.IsNullOrWhiteSpace(info.Error))
         {

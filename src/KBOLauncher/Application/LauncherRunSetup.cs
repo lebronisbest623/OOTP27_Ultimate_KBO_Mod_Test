@@ -53,8 +53,6 @@ internal static partial class LauncherApp
             options with
             {
                 DllPath = defaultDll,
-                EnableForeignWaiverAi = true,
-                EnableSingleDivisionAllstarEvents = true,
                 AttachExisting = existingProcessCount > 0,
             },
             null);
@@ -173,21 +171,26 @@ internal static partial class LauncherApp
         return new(allstarBootstrapRequested, injectionDecision);
     }
 
-    private static void PrepareAllstarBootstrapIfRequested(
+    private static void PrepareSchedulePreflight(
         string exePath,
         string logPath,
         LauncherOptions options,
         bool allstarBootstrapRequested)
     {
-        if (allstarBootstrapRequested && !options.DryRun)
+        if (!options.DryRun)
         {
             var spoofResult = EnsureAllKboScheduleSpoofFiles(exePath, message => Log(logPath, message));
             Console.WriteLine(
-                $"All-star schedule spoof retired: scanned={spoofResult.ScannedYears} written={spoofResult.WrittenFiles} unchanged={spoofResult.UnchangedFiles} failed={spoofResult.FailedFiles}");
+                $"Schedule preflight: scanned={spoofResult.ScannedYears} repaired={spoofResult.WrittenFiles} unchanged={spoofResult.UnchangedFiles} failed={spoofResult.FailedFiles}");
+            return;
         }
-        else if (allstarBootstrapRequested)
+
+        if (allstarBootstrapRequested)
         {
             Console.WriteLine("Dry-run: retired all-star schedule spoof would be skipped before OOTP launch.");
+            return;
         }
+
+        Console.WriteLine("Dry-run: schedule preflight would scan for legacy KBO schedule spoof files.");
     }
 }

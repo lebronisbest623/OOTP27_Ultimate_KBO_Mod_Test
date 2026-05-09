@@ -73,7 +73,7 @@ public sealed class OotpScheduleSpooferTests : IDisposable
 
         var result = global::OotpScheduleSpoofer.EnsureAllKboScheduleSpoofFiles(exePath, backupDir);
 
-        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 0, 0, 0), result);
+        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 0, 2, 0), result);
         Assert.Equal("original regular", File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2098.lsdl")));
         Assert.Equal("original ap", File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2098_ap.lsdl")));
         Assert.False(File.Exists(Path.Combine(backupDir, "major_league_ml_c_2098.lsdl")));
@@ -81,7 +81,7 @@ public sealed class OotpScheduleSpooferTests : IDisposable
     }
 
     [Fact]
-    public void EnsureAllKboScheduleSpoofFiles_DoesNotRestoreFromKboSchedule()
+    public void EnsureAllKboScheduleSpoofFiles_RemovesLegacyAllstarSpoofWhenNoCleanBackupExists()
     {
         var installDir = Path.Combine(tempDir, "ootp");
         var schedulesDir = Path.Combine(installDir, "data", "schedules");
@@ -103,9 +103,68 @@ public sealed class OotpScheduleSpooferTests : IDisposable
 
         var result = global::OotpScheduleSpoofer.EnsureAllKboScheduleSpoofFiles(exePath, backupDir);
 
-        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 0, 0, 0), result);
-        Assert.Equal(spoofed, File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2097.lsdl")));
+        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 1, 1, 0), result);
+        Assert.Equal(source, File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2097.lsdl")));
         Assert.Equal("user modified", File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2097_ap.lsdl")));
+    }
+
+    [Fact]
+    public void EnsureAllKboScheduleSpoofFiles_IgnoresContaminatedBackupAndRemovesLegacyAllstarSpoof()
+    {
+        var installDir = Path.Combine(tempDir, "ootp");
+        var schedulesDir = Path.Combine(installDir, "data", "schedules");
+        var backupDir = Path.Combine(tempDir, "backups");
+        Directory.CreateDirectory(schedulesDir);
+        Directory.CreateDirectory(backupDir);
+        var exePath = Path.Combine(installDir, "ootp27.exe");
+        File.WriteAllText(exePath, "");
+        var source = """
+            <SCHEDULE allstar_game_day="106">
+            <GAMES>
+            <GAME day="1" time="1400" away="1" home="2" />
+            </GAMES>
+            </SCHEDULE>
+            """;
+        var spoofed = global::OotpScheduleSpoofer.BuildSpoofScheduleText(source, 2095);
+        File.WriteAllText(Path.Combine(schedulesDir, "korean_baseball_organization_int_c_2095.lsdl"), source);
+        File.WriteAllText(Path.Combine(schedulesDir, "major_league_ml_c_2095.lsdl"), spoofed);
+        File.WriteAllText(Path.Combine(backupDir, "major_league_ml_c_2095.lsdl"), spoofed);
+
+        var result = global::OotpScheduleSpoofer.EnsureAllKboScheduleSpoofFiles(exePath, backupDir);
+
+        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 1, 1, 0), result);
+        Assert.Equal(source, File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2095.lsdl")));
+        Assert.Equal(spoofed, File.ReadAllText(Path.Combine(backupDir, "major_league_ml_c_2095.lsdl")));
+    }
+
+    [Fact]
+    public void EnsureAllKboScheduleSpoofFiles_RestoresMajorLeagueTargetsThatWereOverwrittenWithKboSchedules()
+    {
+        var installDir = Path.Combine(tempDir, "ootp");
+        var schedulesDir = Path.Combine(installDir, "data", "schedules");
+        var backupDir = Path.Combine(tempDir, "backups");
+        Directory.CreateDirectory(schedulesDir);
+        Directory.CreateDirectory(backupDir);
+        var exePath = Path.Combine(installDir, "ootp27.exe");
+        File.WriteAllText(exePath, "");
+        var kboSchedule = """
+            <SCHEDULE allstar_game_day="106">
+            <GAMES>
+            <GAME day="1" time="1400" away="1" home="2" />
+            </GAMES>
+            </SCHEDULE>
+            """;
+        File.WriteAllText(Path.Combine(schedulesDir, "korean_baseball_organization_int_c_2096.lsdl"), kboSchedule);
+        File.WriteAllText(Path.Combine(schedulesDir, "major_league_ml_c_2096.lsdl"), kboSchedule);
+        File.WriteAllText(Path.Combine(schedulesDir, "major_league_ml_c_2096_ap.lsdl"), kboSchedule);
+        File.WriteAllText(Path.Combine(backupDir, "major_league_ml_c_2096.lsdl"), "original regular");
+        File.WriteAllText(Path.Combine(backupDir, "major_league_ml_c_2096_ap.lsdl"), "original ap");
+
+        var result = global::OotpScheduleSpoofer.EnsureAllKboScheduleSpoofFiles(exePath, backupDir);
+
+        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 2, 0, 0), result);
+        Assert.Equal("original regular", File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2096.lsdl")));
+        Assert.Equal("original ap", File.ReadAllText(Path.Combine(schedulesDir, "major_league_ml_c_2096_ap.lsdl")));
     }
 
     [Fact]
@@ -128,8 +187,8 @@ public sealed class OotpScheduleSpooferTests : IDisposable
         var first = global::OotpScheduleSpoofer.EnsureAllKboScheduleSpoofFiles(exePath, backupDir);
         var second = global::OotpScheduleSpoofer.EnsureAllKboScheduleSpoofFiles(exePath, backupDir);
 
-        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 0, 0, 0), first);
-        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 0, 0, 0), second);
+        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 0, 2, 0), first);
+        Assert.Equal(new global::OotpScheduleSpoofer.Result(1, 0, 2, 0), second);
     }
 
     [Fact]

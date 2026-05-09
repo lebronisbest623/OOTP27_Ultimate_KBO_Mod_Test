@@ -5,6 +5,7 @@ using Xunit;
 public sealed class RosterMarkerGuardTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), "kbo-roster-marker-tests", Guid.NewGuid().ToString("N"));
+    private const string SaveCompletedText = "2026-05-09 23:44:08\tFinished save_database, closing flag file now";
 
     [Fact]
     public void CheckSavePath_FailsWhenSaveDirectoryIsMissing()
@@ -46,7 +47,7 @@ public sealed class RosterMarkerGuardTests : IDisposable
     }
 
     [Fact]
-    public void CheckSavePath_AllowsMarkedLgSaveCaseInsensitively()
+    public void CheckSavePath_FailsClosedWhenMarkedSaveWasNotCompleted()
     {
         var savePath = Path.Combine(tempDir, "KBO.lg");
         Directory.CreateDirectory(savePath);
@@ -54,12 +55,46 @@ public sealed class RosterMarkerGuardTests : IDisposable
 
         var info = global::KboRosterMarkerGuard.CheckSavePath(savePath);
 
+        Assert.False(info.Ok);
+        Assert.Equal("save_not_completed", info.Status);
+        Assert.EndsWith("flag_save_completed.dat", info.SaveCompletedPath);
+    }
+
+    [Fact]
+    public void CheckSavePath_FailsClosedWhenCompletedSaveIsOlderThanRequired()
+    {
+        var savePath = Path.Combine(tempDir, "KBO.lg");
+        Directory.CreateDirectory(savePath);
+        File.WriteAllText(Path.Combine(savePath, "description.txt"), global::KboRosterMarkerGuard.RequiredMarkerUrl.ToUpperInvariant());
+        var completedPath = Path.Combine(savePath, "flag_save_completed.dat");
+        File.WriteAllText(completedPath, SaveCompletedText);
+        File.SetLastWriteTimeUtc(completedPath, new DateTime(2026, 5, 9, 14, 44, 8, DateTimeKind.Utc));
+
+        var info = global::KboRosterMarkerGuard.CheckSavePath(
+            savePath,
+            new DateTimeOffset(2026, 5, 9, 14, 45, 0, TimeSpan.Zero));
+
+        Assert.False(info.Ok);
+        Assert.Equal("save_completion_stale", info.Status);
+    }
+
+    [Fact]
+    public void CheckSavePath_AllowsMarkedCompletedLgSaveCaseInsensitively()
+    {
+        var savePath = Path.Combine(tempDir, "KBO.lg");
+        Directory.CreateDirectory(savePath);
+        File.WriteAllText(Path.Combine(savePath, "description.txt"), global::KboRosterMarkerGuard.RequiredMarkerUrl.ToUpperInvariant());
+        File.WriteAllText(Path.Combine(savePath, "flag_save_completed.dat"), SaveCompletedText);
+
+        var info = global::KboRosterMarkerGuard.CheckSavePath(savePath);
+
         Assert.True(info.Ok);
-        Assert.Equal("marked", info.Status);
+        Assert.Equal("marked_save_completed", info.Status);
         Assert.Equal(Path.GetFullPath(savePath), info.SavePath);
         Assert.Equal(Path.Combine(Path.GetFullPath(savePath), "description.txt"), info.DescriptionPath);
+        Assert.Equal(Path.Combine(Path.GetFullPath(savePath), "flag_save_completed.dat"), info.SaveCompletedPath);
         Assert.Contains("ok=1", global::KboRosterMarkerGuard.FormatLogStatus(info));
-        Assert.Contains("current save marked", global::KboRosterMarkerGuard.FormatConsoleStatus(info));
+        Assert.Contains("current save marked and saved", global::KboRosterMarkerGuard.FormatConsoleStatus(info));
     }
 
     [Fact]

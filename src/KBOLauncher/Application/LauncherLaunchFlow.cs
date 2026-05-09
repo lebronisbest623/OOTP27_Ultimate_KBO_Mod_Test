@@ -93,7 +93,7 @@ internal static partial class LauncherApp
             earlyInjector.TryInject);
 
         if (!launchPlan.InjectionDecision.AllowsPresaveInjection
-            && !WaitForRosterMarkerBeforeInjection(injectionTarget.Id, logPath))
+            && !WaitForRosterMarkerBeforeInjection(injectionTarget.Id, launchStarted, logPath))
         {
             return 9;
         }
@@ -101,7 +101,7 @@ internal static partial class LauncherApp
         InjectIfNeeded(injectionTarget.Id, options.DllPath!, earlyInjector.PreparedDllPath, logPath);
 
         if (launchPlan.InjectionDecision.AllowsPresaveInjection
-            && !WaitForRosterMarkerBeforeInjection(injectionTarget.Id, logPath))
+            && !WaitForRosterMarkerBeforeInjection(injectionTarget.Id, launchStarted, logPath))
         {
             return 9;
         }
@@ -109,13 +109,14 @@ internal static partial class LauncherApp
         return 0;
     }
 
-    private static bool WaitForRosterMarkerBeforeInjection(int pid, string logPath)
+    private static bool WaitForRosterMarkerBeforeInjection(int pid, DateTimeOffset launchStarted, string logPath)
     {
         var rosterMarkerInfo = WaitForMarkedCurrentSave(
             pid,
             MarkedSaveWaitTimeout,
             MarkedSavePollInterval,
-            logPath);
+            logPath,
+            launchStarted.ToUniversalTime());
         if (rosterMarkerInfo.Ok)
         {
             return true;
@@ -137,7 +138,7 @@ internal static partial class LauncherApp
 
         var injectableDllPath = preparedDllPath ?? PrepareInjectableDllCopy(dllPath, logPath);
         InjectDll(pid, injectableDllPath, logPath);
-        Log(logPath, $"early_inject pid={pid} reason=presave_allstar_bootstrap");
+        Log(logPath, $"inject_complete pid={pid} reason=marked_save_runtime");
     }
 
     private sealed class PresaveEarlyInjector

@@ -10,6 +10,9 @@ int kbo_military_daily_roster_mutation_window_ready(
             || !kbo_get_current_save_path(save_path, sizeof(save_path))) {
         return 0;
     }
+    if (kbo_opening_day_storyline_guard_active("military_daily_roster_mutation_window", NULL, NULL)) {
+        return 0;
+    }
 
     LONG slot = InterlockedIncrement(&g_military_daily_mutation_ready_log_count);
     if (slot <= 20 || (slot % 100) == 0) {

@@ -8,20 +8,21 @@ internal static class InjectionRosterMarkerWaiter
         int pid,
         TimeSpan timeout,
         TimeSpan pollInterval,
-        string logPath)
+        string logPath,
+        DateTimeOffset? minSaveCompletedAt = null)
     {
         var deadline = DateTimeOffset.Now + timeout;
         RosterMarkerInfo? lastInfo = null;
         var attempt = 0;
 
         Console.WriteLine(
-            $"Waiting for marked OOTP .lg save before KBOFix injection, timeout={FormatTimeout(timeout)}.");
-        Log(logPath, $"roster_marker_wait started pid={pid} timeout_seconds={(int)timeout.TotalSeconds}");
+            $"Waiting for marked and fully saved OOTP .lg save before KBOFix injection, timeout={FormatTimeout(timeout)}.");
+        Log(logPath, $"roster_marker_wait started pid={pid} timeout_seconds={(int)timeout.TotalSeconds} min_save_completed_at=\"{(minSaveCompletedAt is null ? "" : minSaveCompletedAt.Value.ToString("O"))}\"");
 
         while (DateTimeOffset.Now <= deadline)
         {
             attempt++;
-            lastInfo = ProbeRosterMarkerForInjectionTarget(pid, logPath);
+            lastInfo = ProbeRosterMarkerForInjectionTarget(pid, logPath, minSaveCompletedAt);
             Log(logPath, $"roster_marker_wait attempt={attempt} {FormatLogStatus(lastInfo)}");
 
             if (lastInfo.Ok)

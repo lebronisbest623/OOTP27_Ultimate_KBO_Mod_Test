@@ -80,6 +80,14 @@ static int kbo_parse_json_tokens(const char* json, DWORD json_size, jsmntok_t* t
         return -1;
     }
 
+    if (json_size >= 3
+            && (unsigned char)json[0] == 0xEF
+            && (unsigned char)json[1] == 0xBB
+            && (unsigned char)json[2] == 0xBF) {
+        json += 3;
+        json_size -= 3;
+    }
+
     jsmn_parser parser;
     jsmn_init(&parser);
     int parsed = jsmn_parse(&parser, json, (size_t)json_size, tokens, token_count);

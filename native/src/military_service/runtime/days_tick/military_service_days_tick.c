@@ -9,12 +9,16 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
         return 0;
     }
 
-    flush_pending_special_player_history_sql(source);
-
     uint32_t today_serial = kbo_current_date_serial();
     if (today_serial == 0) {
         return 0;
     }
+
+    if (kbo_opening_day_storyline_guard_active(source, NULL, NULL)) {
+        return 0;
+    }
+
+    flush_pending_special_player_history_sql(source);
 
     uintptr_t player_vector = 0;
     int32_t   player_count  = 0;
@@ -262,7 +266,7 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
 
     char last_save_path[MAX_PATH] = {0};
     int settled_attempts = 0;
-    for (int attempt = 1; attempt <= 36; attempt++) {
+    for (int attempt = 1; attempt <= 720; attempt++) {
         if (!kbo_runtime_sleep_should_continue(attempt == 1 ? 2500u : 5000u)) {
             break;
         }
@@ -299,6 +303,11 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
                     (void*)kpb,
                     save_path);
             }
+            continue;
+        }
+
+        if (kbo_opening_day_storyline_guard_active("military_seed_bootstrap", NULL, NULL)) {
+            settled_attempts = 0;
             continue;
         }
 
