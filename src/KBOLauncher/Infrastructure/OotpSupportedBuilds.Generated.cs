@@ -7,6 +7,6 @@ internal static class OotpSupportedBuilds
     [
         new(0x69F75E6Bu, 0x03919000u, "2026-05-04 Steam", false, true),
         new(0x69F1E677u, 0x0350C000u, "27.2.59 Official experimental signature", true, false),
-        new(0x69F7605Bu, 0x034FB000u, "27.2.60 Official experimental signature", true, false),
+        new(0x69F7605Bu, 0x034FB000u, "27.2.60 Official experimental signature", true, true),
     ];
 }

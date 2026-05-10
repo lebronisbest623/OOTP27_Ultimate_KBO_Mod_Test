@@ -6,6 +6,7 @@
 #include "../../../allstar/allstar_league_context/allstar_league_context.h"
 #include "../../../bootstrap/abi/hook_entrypoints.h"
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../build_verify/build_verify.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../hook_stubs/allstar/candidate/hook_stubs_allstar_candidate.h"
 #include "../../../hook_stubs/allstar/events/hook_stubs_allstar_events.h"
@@ -19,7 +20,9 @@ static void* resolve_allstar_team_setup_address(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe != NULL) {
-        uint8_t* setup = (uint8_t*)exe + OOTP27_ALLSTAR_TEAM_SETUP_FUNC_RVA;
+        uint8_t* setup = (uint8_t*)kbo_resolve_build_specific_rva_ptr(
+            exe,
+            OOTP27_ALLSTAR_TEAM_SETUP_FUNC_RVA);
         if (memory_range_readable(setup, 16u)) {
             return setup;
         }
@@ -177,7 +180,9 @@ int install_allstar_events_prepare_patch(void)
             append_log_line("KBO all-star events prepare hook skipped: prep call target unresolved");
             return 0;
         }
-        void* make_events_address = (uint8_t*)exe + OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA;
+        void* make_events_address = kbo_resolve_build_specific_rva_ptr(
+            exe,
+            OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA);
         if (!memory_range_readable(make_events_address, 16u)) {
             append_logf("KBO all-star events prepare hook skipped: make-events target unreadable target=%p", make_events_address);
             return 0;

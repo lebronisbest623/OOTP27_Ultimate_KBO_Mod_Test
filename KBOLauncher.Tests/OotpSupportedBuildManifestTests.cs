@@ -37,10 +37,10 @@ public sealed class OotpSupportedBuildManifestTests
     }
 
     [Fact]
-    public void NativeBuildSpecificRvaResolver_CoversEveryMetadataOnlyBuildForCriticalRvas()
+    public void NativeBuildSpecificRvaResolver_CoversEveryOfficialExperimentalBuildForCriticalRvas()
     {
-        var metadataOnlyBuilds = ReadManifestBuilds()
-            .Where(build => !build.NativePatchesSupported)
+        var officialExperimentalBuilds = ReadManifestBuilds()
+            .Where(build => build.ExperimentalSignature && build.Label.Contains("Official", StringComparison.OrdinalIgnoreCase))
             .ToArray();
         var resolverText = File.ReadAllText(RepoPath("native", "src", "build_verify", "build_verify.c"));
         var criticalRvas = new[]
@@ -55,7 +55,7 @@ public sealed class OotpSupportedBuildManifestTests
             "OOTP27_LEAGUE_FINANCIALS_LOOKUP_RVA",
         };
 
-        foreach (var build in metadataOnlyBuilds)
+        foreach (var build in officialExperimentalBuilds)
         {
             var token = ToNativeBuildMacroToken(build.Label);
             Assert.Contains($"KBO_SUPPORTED_OOTP_BUILD_{token}_TIMESTAMP", resolverText);
@@ -64,7 +64,33 @@ public sealed class OotpSupportedBuildManifestTests
 
         foreach (var rva in criticalRvas)
         {
-            Assert.Equal(metadataOnlyBuilds.Length, Regex.Matches(resolverText, $"case {rva}:").Count);
+            Assert.Equal(officialExperimentalBuilds.Length, Regex.Matches(resolverText, $"case {rva}:").Count);
+        }
+    }
+
+    [Fact]
+    public void OfficialBuilds_OnlyEnableNativePatchesWhenDirectFunctionRvasAreMapped()
+    {
+        var officialBuilds = ReadManifestBuilds()
+            .Where(build => build.ExperimentalSignature && build.Label.Contains("Official", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var resolverText = File.ReadAllText(RepoPath("native", "src", "build_verify", "build_verify.c"));
+        var requiredDirectFunctionRvas = new[]
+        {
+            "OOTP27_ALLSTAR_TEAM_SETUP_FUNC_RVA",
+            "OOTP27_ALLSTAR_CANDIDATE_REBUILD_FUNC_RVA",
+            "OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA",
+        };
+
+        Assert.NotEmpty(officialBuilds);
+        foreach (var build in officialBuilds.Where(build => build.NativePatchesSupported))
+        {
+            var token = ToNativeBuildMacroToken(build.Label);
+            Assert.Contains($"KBO_SUPPORTED_OOTP_BUILD_{token}_TIMESTAMP", resolverText);
+            foreach (var rva in requiredDirectFunctionRvas)
+            {
+                Assert.Contains($"case {rva}:", resolverText);
+            }
         }
     }
 

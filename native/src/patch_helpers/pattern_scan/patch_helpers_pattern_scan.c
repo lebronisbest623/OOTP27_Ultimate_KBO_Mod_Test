@@ -1,4 +1,5 @@
 #include "../patch_helpers_internal.h"
+#include "../../build_verify/build_verify.h"
 
 uint8_t* resolve_patch_target_by_rva_or_pattern(
     HMODULE exe,
@@ -12,7 +13,7 @@ uint8_t* resolve_patch_target_by_rva_or_pattern(
         return NULL;
     }
 
-    uint8_t* target = (uint8_t*)exe + rva;
+    uint8_t* target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, rva);
     if (memory_range_readable(target, expected_size) && memcmp(target, expected, expected_size) == 0) {
         append_logf(
             "%s resolved by rva target=%p rva=0x%08X",

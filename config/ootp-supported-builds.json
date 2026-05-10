@@ -21,7 +21,7 @@
       "timestamp": "0x69F7605B",
       "sizeOfImage": "0x034FB000",
       "experimentalSignature": true,
-      "nativePatchesSupported": false
+      "nativePatchesSupported": true
     }
   ]
 }

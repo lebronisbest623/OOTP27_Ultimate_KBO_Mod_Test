@@ -5,6 +5,7 @@
 
 #include "../../bootstrap/abi/hook_entrypoints.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../build_verify/build_verify.h"
 #include "../../core/logging/core_log.h"
 #include "../../hook_stubs/military/hook_stubs_military.h"
 #include "../../team/add_player_guard/team_add_player_guard.h"
@@ -223,6 +224,12 @@ int install_kbo_military_team_add_guard_patch(void)
         0x48, 0x89, 0x4C, 0x24, 0x08,                  /* mov [rsp+0x8], rcx */
         0x55                                            /* push rbp */
     };
+    uint8_t* rva_target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_TEAM_ADD_PLAYER_RVA);
+    if (memory_range_readable(rva_target, sizeof(expected)) && is_rax_absolute_jump_patch(rva_target)) {
+        append_logf("KBO military team-add guard patch already installed target=%p", rva_target);
+        return 1;
+    }
+
     uint8_t* target = resolve_patch_target_by_rva_or_pattern(
         exe,
         OOTP27_TEAM_ADD_PLAYER_RVA,

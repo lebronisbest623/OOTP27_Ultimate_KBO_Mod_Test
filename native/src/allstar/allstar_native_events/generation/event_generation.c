@@ -6,6 +6,7 @@
 #include "../../flags/allstar_flags.h"
 #include "../../allstar_league_context/allstar_league_context.h"
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../build_verify/build_verify.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../patch_helpers/patch_helpers.h"
 #include "../../../runtime_memory/runtime_memory.h"
@@ -97,7 +98,9 @@ int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* so
         if (make_events == NULL) {
             HMODULE exe = GetModuleHandleA(NULL);
             if (exe != NULL) {
-                make_events = (OotpMakeAllstarGameEventsFn)((uint8_t*)exe + OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA);
+                make_events = (OotpMakeAllstarGameEventsFn)kbo_resolve_build_specific_rva_ptr(
+                    exe,
+                    OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA);
                 if (memory_range_readable((void*)make_events, 16u)) {
                     InterlockedExchangePointer(
                         (PVOID volatile*)&g_allstar_make_events_ptr,

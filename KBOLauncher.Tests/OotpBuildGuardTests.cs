@@ -63,20 +63,24 @@ public sealed class OotpBuildGuardTests : IDisposable
     }
 
     [Fact]
-    public void FindSupportedBuild_MatchesVerifiedBuildOnly()
+    public void FindSupportedBuild_MatchesNativePatchSupportedBuilds()
     {
-        var expected = global::OotpSupportedBuilds.All.Single(build => build.NativePatchesSupported);
-        var info = new global::OotpBuildInfo(true, expected.Timestamp, expected.SizeOfImage, null);
+        foreach (var expected in global::OotpSupportedBuilds.All.Where(build => build.NativePatchesSupported))
+        {
+            var info = new global::OotpBuildInfo(true, expected.Timestamp, expected.SizeOfImage, null);
 
-        var supported = global::OotpBuildGuard.FindSupportedBuild(info);
+            var supported = global::OotpBuildGuard.FindSupportedBuild(info);
 
-        Assert.NotNull(supported);
-        Assert.Equal(expected.Label, supported.Label);
-        Assert.Contains($"supported ({expected.Label})", global::OotpBuildGuard.FormatConsoleStatus(info, supported));
-        Assert.Contains("status=supported", global::OotpBuildGuard.FormatLogStatus(info, supported));
-        Assert.Contains(
-            $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}[native_patches]",
-            global::OotpBuildGuard.SupportedBuildDescriptions());
+            Assert.NotNull(supported);
+            Assert.Equal(expected.Label, supported.Label);
+            Assert.Contains($"supported ({expected.Label})", global::OotpBuildGuard.FormatConsoleStatus(info, supported));
+            Assert.Contains("status=supported", global::OotpBuildGuard.FormatLogStatus(info, supported));
+            Assert.Contains(
+                $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}" +
+                (expected.ExperimentalSignature ? "[experimental_signature]" : "") +
+                "[native_patches]",
+                global::OotpBuildGuard.SupportedBuildDescriptions());
+        }
     }
 
     [Fact]

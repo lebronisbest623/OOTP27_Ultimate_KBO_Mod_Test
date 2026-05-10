@@ -11,6 +11,7 @@
 #include "../team_patch/allstar_team_patch.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../bootstrap/profiling/perf_probe.h"
+#include "../../build_verify/build_verify.h"
 #include "../../core/logging/core_log.h"
 #include "../../runtime_memory/runtime_memory.h"
 
@@ -61,7 +62,9 @@ static int force_kbo_allstar_candidate_rebuild_once(uintptr_t league_ptr, uint32
         return 0;
     }
 
-    uintptr_t rebuild_addr = (uintptr_t)exe + OOTP27_ALLSTAR_CANDIDATE_REBUILD_FUNC_RVA;
+    uintptr_t rebuild_addr = (uintptr_t)kbo_resolve_build_specific_rva_ptr(
+        exe,
+        OOTP27_ALLSTAR_CANDIDATE_REBUILD_FUNC_RVA);
     if (!memory_range_readable((void*)rebuild_addr, 16u)) {
         append_logf(
             "KBO all-star candidate rebuild skipped: target unreadable league=%p rebuild=%p",
