@@ -318,8 +318,8 @@ Patch installers are grouped by patch surface:
 - `demand_floors/`: offer-demand, demand-write, foreign-FA baseline, and
   submit-salary floor patches
 - `scan/`: scanner and string patches
-- `experimental/`: experimental no-minor runtime flag wiring, offer UI hooks,
-  and write-site patch orchestration
+- `experimental/`: historical folder name for official no-minor runtime flag
+  wiring, offer UI hooks, and write-site patch orchestration
 
 The root folder should remain a namespace only; new patch installers belong in
 the patch-surface subfolder they modify.

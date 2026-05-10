@@ -14,13 +14,17 @@ internal static partial class KboFlags
         bool ImportLegacy,
         RuntimeFlagLifecycle Lifecycle);
 
+    private sealed record RuntimeFlagAlias(
+        string LegacyKey,
+        string CanonicalKey);
+
     private static readonly RuntimeFlagDefinition[] RuntimeFlags =
     [
         new("disable_foreign_injury_replacement", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_foreign_waiver_legacy_auto_detector", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_intl_established_fa_generation_filter", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_fa_salary_opening_day_snapshot", false, true, RuntimeFlagLifecycle.Recovery),
-        new("disable_kbo_no_minor_contract_experimental_patch", false, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_no_minor_contract_patch", false, true, RuntimeFlagLifecycle.Recovery),
         new("enable_kbo_ai_fa_status_candidate_insert_hook", false, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_custom_foreign_policy", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_foreign_signing_branch_patch", null, true, RuntimeFlagLifecycle.Recovery),
@@ -61,9 +65,15 @@ internal static partial class KboFlags
         "enable_single_division_allstar_events.txt",
     ];
 
+    private static readonly RuntimeFlagAlias[] RuntimeFlagAliases =
+    [
+        new("disable_kbo_no_minor_contract_experimental_patch", "disable_kbo_no_minor_contract_patch"),
+    ];
+
     private static readonly HashSet<string> LegacyImportFlagKeys = RuntimeFlags
         .Where(flag => flag.ImportLegacy)
         .Select(flag => flag.Key)
+        .Concat(RuntimeFlagAliases.Select(alias => alias.LegacyKey))
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 }

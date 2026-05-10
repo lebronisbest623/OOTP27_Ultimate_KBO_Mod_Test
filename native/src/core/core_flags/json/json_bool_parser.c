@@ -303,8 +303,19 @@ static int kbo_find_value_token_in_json(const char* json, DWORD json_size, const
         if (tokens[i].type != JSMN_STRING) {
             continue;
         }
-        if (kbo_token_equals_key(json, &tokens[i], key)
-                || (legacy_key != NULL && kbo_token_equals_key(json, &tokens[i], legacy_key))) {
+        if (kbo_token_equals_key(json, &tokens[i], key)) {
+            *out_value = tokens[i + 1];
+            return 1;
+        }
+    }
+    if (legacy_key == NULL) {
+        return 0;
+    }
+    for (int i = 1; i + 1 < parsed; i++) {
+        if (tokens[i].type != JSMN_STRING) {
+            continue;
+        }
+        if (kbo_token_equals_key(json, &tokens[i], legacy_key)) {
             *out_value = tokens[i + 1];
             return 1;
         }

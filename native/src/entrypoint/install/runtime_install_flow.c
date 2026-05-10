@@ -2,18 +2,32 @@
 #include "../../core/core_flags/localappdata/localappdata_reader.h"
 #include "../../core/season/opening_day_storyline_guard.h"
 
-static int kbo_no_minor_contract_experimental_patch_enabled(void)
+static int read_kbo_no_minor_contract_disable_flag(int* disabled)
 {
-    int disabled = 1;
-    if (!kbo_read_localappdata_json_flag_value(
-            "disable_kbo_no_minor_contract_experimental_patch",
-            "disable_kbo_no_minor_contract_experimental_patch.txt",
-            &disabled)) {
-        append_log_line("KBO no-minor-contract experimental patch disabled: missing explicit recovery flag defaults to safe-off");
+    if (disabled == NULL) {
         return 0;
     }
+    if (kbo_read_localappdata_json_flag_value(
+            "disable_kbo_no_minor_contract_patch",
+            "disable_kbo_no_minor_contract_patch.txt",
+            disabled)) {
+        return 1;
+    }
+    return kbo_read_localappdata_json_flag_value(
+            "disable_kbo_no_minor_contract_experimental_patch",
+            "disable_kbo_no_minor_contract_experimental_patch.txt",
+            disabled);
+}
+
+static int kbo_no_minor_contract_patch_enabled(void)
+{
+    int disabled = 0;
+    if (!read_kbo_no_minor_contract_disable_flag(&disabled)) {
+        append_log_line("KBO no-minor-contract patch enabled: disable flag missing, defaulting to enabled");
+        return 1;
+    }
     if (disabled) {
-        append_log_line("KBO no-minor-contract experimental patch disabled: kbo_flags.json disable_kbo_no_minor_contract_experimental_patch is true");
+        append_log_line("KBO no-minor-contract patch disabled: kbo_flags.json disable_kbo_no_minor_contract_patch is true");
         return 0;
     }
     return 1;
@@ -32,19 +46,19 @@ static LONG64 kbo_filetime_to_i64(FILETIME time)
     return (LONG64)value.QuadPart;
 }
 
-static int install_kbo_no_minor_contract_experimental_patch_once(const char* source)
+static int install_kbo_no_minor_contract_patch_once(const char* source)
 {
     if (InterlockedCompareExchange(&g_kbo_no_minor_contract_patch_install_started, 1, 0) != 0) {
         append_logf(
-            "KBO no-minor-contract experimental patch install skipped source=%s reason=already_started",
+            "KBO no-minor-contract patch install skipped source=%s reason=already_started",
             source != NULL ? source : "");
         return 0;
     }
 
     append_logf(
-        "KBO no-minor-contract experimental patch installing source=%s",
+        "KBO no-minor-contract patch installing source=%s",
         source != NULL ? source : "");
-    int installed = install_kbo_no_minor_contract_experimental_patch();
+    int installed = install_kbo_no_minor_contract_patch();
     if (installed) {
         start_kbo_no_minor_contract_demand_floor_scanner_thread();
         append_log_line("KBO no-minor-contract demand-floor scanner enabled: demand salary catch-up only");
@@ -62,7 +76,7 @@ DWORD WINAPI kbo_delayed_no_minor_contract_patch_install_thread(LPVOID parameter
             break;
         }
 
-        if (!kbo_no_minor_contract_experimental_patch_enabled()) {
+        if (!kbo_no_minor_contract_patch_enabled()) {
             append_logf(
                 "KBO no-minor-contract delayed install ended attempt=%d reason=disabled",
                 attempt);
@@ -94,7 +108,7 @@ DWORD WINAPI kbo_delayed_no_minor_contract_patch_install_thread(LPVOID parameter
             continue;
         }
 
-        int installed = install_kbo_no_minor_contract_experimental_patch_once("delayed_opening_day_guard");
+        int installed = install_kbo_no_minor_contract_patch_once("delayed_opening_day_guard");
         append_logf(
             "KBO no-minor-contract delayed install complete attempt=%d installed_any=%d save=%s",
             attempt,
@@ -126,7 +140,7 @@ static void start_kbo_delayed_no_minor_contract_patch_install_thread(void)
 
 void install_kbo_early_no_minor_contract_hooks_once(const char* source)
 {
-    if (!kbo_no_minor_contract_experimental_patch_enabled()) {
+    if (!kbo_no_minor_contract_patch_enabled()) {
         append_logf(
             "KBO early no-minor-contract hooks skipped source=%s reason=disabled",
             source != NULL ? source : "");
@@ -569,11 +583,11 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         append_log_line("KBO AI FA status candidate insert hook disabled: defaulting to native FA market candidate insertion");
     }
-    if (kbo_no_minor_contract_experimental_patch_enabled()) {
+    if (kbo_no_minor_contract_patch_enabled()) {
         if (!kbo_opening_day_storyline_guard_active("no_minor_contract_patch_install", NULL, NULL)) {
-            install_kbo_no_minor_contract_experimental_patch_once("runtime_install");
+            install_kbo_no_minor_contract_patch_once("runtime_install");
         } else {
-            append_log_line("KBO no-minor-contract experimental patch deferred during opening-day stock-news guard");
+            append_log_line("KBO no-minor-contract patch deferred during opening-day stock-news guard");
             start_kbo_delayed_no_minor_contract_patch_install_thread();
         }
     }

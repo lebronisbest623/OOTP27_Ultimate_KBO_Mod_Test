@@ -90,7 +90,8 @@ static void test_json_flags_parser(void)
     const char bom_json[] =
         "\xEF\xBB\xBF{\r\n"
         "  \"enable_experimental_runtime_hooks\": true,\r\n"
-        "  \"disable_kbo_no_minor_contract_experimental_patch\": true\r\n"
+        "  \"disable_kbo_no_minor_contract_patch\": true,\r\n"
+        "  \"disable_kbo_no_minor_contract_experimental_patch\": false\r\n"
         "}\r\n";
     assert(kbo_find_flag_value_in_json(
         bom_json,
@@ -102,6 +103,25 @@ static void test_json_flags_parser(void)
     assert(kbo_find_flag_value_in_json(
         bom_json,
         (DWORD)strlen(bom_json),
+        "disable_kbo_no_minor_contract_patch",
+        "disable_kbo_no_minor_contract_experimental_patch",
+        &value));
+    assert(value == 1);
+
+    const char legacy_no_minor_json[] =
+        "{\r\n"
+        "  \"disable_kbo_no_minor_contract_experimental_patch\": true\r\n"
+        "}\r\n";
+    assert(kbo_find_flag_value_in_json(
+        legacy_no_minor_json,
+        (DWORD)strlen(legacy_no_minor_json),
+        "disable_kbo_no_minor_contract_patch",
+        "disable_kbo_no_minor_contract_experimental_patch",
+        &value));
+    assert(value == 1);
+    assert(kbo_find_flag_value_in_json(
+        legacy_no_minor_json,
+        (DWORD)strlen(legacy_no_minor_json),
         "disable_kbo_no_minor_contract_experimental_patch",
         "disable_kbo_no_minor_contract_experimental_patch.txt",
         &value));

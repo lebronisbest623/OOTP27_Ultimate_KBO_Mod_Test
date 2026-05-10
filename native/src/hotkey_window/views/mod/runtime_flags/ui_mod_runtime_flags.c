@@ -22,7 +22,7 @@ static const KboModRuntimeFlagSetting KBO_MOD_RUNTIME_FLAG_SETTINGS[] = {
     { "disable_intl_established_fa_generation_filter", "International FA generation filter", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "disable_kbo_fa_compensation", "FA compensation", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "disable_kbo_salary_arbitration_no_withdraw_patch", "Salary arbitration no-withdraw", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_no_minor_contract_experimental_patch", "No minor-contract patch", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_no_minor_contract_patch", "No minor-contract patch", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "disable_kbo_sangmu_fa_block_core", "Military team FA block", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "disable_kbo_military_team_add_guard_patch", "Military team add guard", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "disable_amateur_assignment_reroute", "Amateur reputation assignment", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
