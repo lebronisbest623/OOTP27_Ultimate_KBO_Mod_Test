@@ -55,6 +55,10 @@ jobs:
       - name: Test managed solution
         run: dotnet test .\OOTP27-KBO-Launcher.sln --configuration Release --no-build --verbosity normal
 
+      - name: Verify native architecture
+        shell: pwsh
+        run: .\tools\check-native-architecture.ps1 -BaselinePath .\tools\native-architecture-baseline.json
+
       - name: Build native DLL
         shell: pwsh
         run: .\native\build.ps1

@@ -1,0 +1,128 @@
+﻿[
+    {
+        "rule":  "native.folder.max-direct-source-files",
+        "path":  "amateur_player_quality/assignment",
+        "severity":  "error",
+        "message":  "5 direct .c/.h files exceeds the folder checkpoint of 4."
+    },
+    {
+        "rule":  "native.header.internal-too-broad",
+        "path":  "hotkey_window/runtime/hotkey_window_runtime_internal.h",
+        "severity":  "warn",
+        "message":  "hotkey_window_runtime_internal.h is 366 lines; broad private contracts slow down subsystem cleanup."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "allstar/flags/allstar_flags.c",
+        "severity":  "error",
+        "message":  "499 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "allstar/wrappers/allstar_candidate_seed.c",
+        "severity":  "error",
+        "message":  "452 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "amateur_player_quality/assignment/amateur_assignment_candidates.c",
+        "severity":  "error",
+        "message":  "401 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "amateur_player_quality/assignment/amateur_assignment_ortools.c",
+        "severity":  "error",
+        "message":  "1450 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "amateur_player_quality/assignment/amateur_team_add_reroute.c",
+        "severity":  "error",
+        "message":  "412 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "custom_events/asian_games_selection/roster/select_roster.c",
+        "severity":  "error",
+        "message":  "601 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "entrypoint/install/runtime_install_flow.c",
+        "severity":  "error",
+        "message":  "688 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "fa_compensation/due/fa_compensation_due.c",
+        "severity":  "error",
+        "message":  "439 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "military_service/selection/events/military_selection_event.c",
+        "severity":  "error",
+        "message":  "597 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "patch_installers/allstar/candidate/patch_installers_allstar_candidate.c",
+        "severity":  "error",
+        "message":  "463 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "season_phase_monitor/season_phase_monitor.c",
+        "severity":  "error",
+        "message":  "401 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.max-lines",
+        "path":  "team/add_player_guard/team_add_player_guard.c",
+        "severity":  "error",
+        "message":  "422 lines exceeds the 400-line native source checkpoint."
+    },
+    {
+        "rule":  "native.source.no-include-only-c",
+        "path":  "hotkey_window/hotkey_window.c",
+        "severity":  "error",
+        "message":  "This .c file only includes headers and does not own behavior."
+    },
+    {
+        "rule":  "native.thread.lifecycle-guard",
+        "path":  "allstar/flags/allstar_flags.c",
+        "severity":  "warn",
+        "message":  "This file starts a thread but does not reference the runtime stop/sleep helpers."
+    },
+    {
+        "rule":  "native.thread.lifecycle-guard",
+        "path":  "amateur_player_quality/assignment/amateur_assignment_ortools.c",
+        "severity":  "warn",
+        "message":  "This file starts a thread but does not reference the runtime stop/sleep helpers."
+    },
+    {
+        "rule":  "native.thread.lifecycle-guard",
+        "path":  "entrypoint/dll/dll_entrypoint.c",
+        "severity":  "warn",
+        "message":  "This file starts a thread but does not reference the runtime stop/sleep helpers."
+    },
+    {
+        "rule":  "native.thread.lifecycle-guard",
+        "path":  "foreign/signability/submit_offer_probe/demand/submit_offer_probe_foreign_fa_demand_remap.c",
+        "severity":  "warn",
+        "message":  "This file starts a thread but does not reference the runtime stop/sleep helpers."
+    },
+    {
+        "rule":  "native.thread.lifecycle-guard",
+        "path":  "hotkey_window/runtime/window/hotkey_window_runtime_window.c",
+        "severity":  "warn",
+        "message":  "This file starts a thread but does not reference the runtime stop/sleep helpers."
+    },
+    {
+        "rule":  "native.thread.lifecycle-guard",
+        "path":  "military_service/runtime/threads/military_service_threads.c",
+        "severity":  "warn",
+        "message":  "This file starts a thread but does not reference the runtime stop/sleep helpers."
+    }
+]
