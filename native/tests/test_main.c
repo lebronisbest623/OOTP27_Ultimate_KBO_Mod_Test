@@ -39,6 +39,8 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/core/files/atomic/core_atomic_file.h"
 #include "../src/military_service/players/loans/military_native_loan.h"
 #include "../src/bootstrap/abi/ootp_offsets.h"
+#include "../src/foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../src/foreign/injury/api/foreign_injury.h"
 
 static void test_core_text_and_sql_helpers(void)
 {
@@ -814,6 +816,143 @@ static void test_military_native_loan_clear(void)
     printf("test_military_native_loan_clear: PASS\n");
 }
 
+static void test_foreign_waiver_read_player_i16(void)
+{
+    uint8_t player[OOTP27_PLAYER_SCAN_BYTES];
+    memset(player, 0, sizeof(player));
+
+    /* Round-trip a positive and a negative i16 at known offsets. */
+    *(int16_t*)(player + 100u) = -42;
+    assert(kbo_read_player_i16(player, 100u) == -42);
+
+    *(int16_t*)(player + 200u) = 32767;
+    assert(kbo_read_player_i16(player, 200u) == 32767);
+
+    *(int16_t*)(player + 300u) = -32768;
+    assert(kbo_read_player_i16(player, 300u) == -32768);
+
+    /* NULL guard. */
+    assert(kbo_read_player_i16(NULL, 100u) == 0);
+
+    /* Boundary: offset + sizeof(i16) must fit within SCAN_BYTES.
+     * SCAN_BYTES - 2 fits exactly (last legal offset);
+     * SCAN_BYTES - 1 would read one byte past the buffer → rejected. */
+    *(int16_t*)(player + (OOTP27_PLAYER_SCAN_BYTES - 2u)) = 0x4321;
+    assert(kbo_read_player_i16(player, OOTP27_PLAYER_SCAN_BYTES - 2u) == 0x4321);
+    assert(kbo_read_player_i16(player, OOTP27_PLAYER_SCAN_BYTES - 1u) == 0);
+    assert(kbo_read_player_i16(player, OOTP27_PLAYER_SCAN_BYTES) == 0);
+
+    printf("test_foreign_waiver_read_player_i16: PASS\n");
+}
+
+static void test_foreign_waiver_value_score(void)
+{
+    uint8_t player[OOTP27_PLAYER_SCAN_BYTES];
+
+    /* NULL → 0. */
+    assert(kbo_foreign_waiver_value_score(NULL) == 0);
+
+    /* All zero → 0. */
+    memset(player, 0, sizeof(player));
+    assert(kbo_foreign_waiver_value_score(player) == 0);
+
+    /* Each weight contributes individually:
+     *   score = talent*55 + overall*25 + ratings*10 + career*10 */
+    memset(player, 0, sizeof(player));
+    *(int16_t*)(player + OOTP27_PLAYER_TALENT_VALUE_OFFSET) = 10;
+    assert(kbo_foreign_waiver_value_score(player) == 550);
+
+    memset(player, 0, sizeof(player));
+    *(int16_t*)(player + OOTP27_PLAYER_OVERALL_VALUE_OFFSET) = 10;
+    assert(kbo_foreign_waiver_value_score(player) == 250);
+
+    memset(player, 0, sizeof(player));
+    *(int16_t*)(player + OOTP27_PLAYER_RATINGS_VALUE_OFFSET) = 10;
+    assert(kbo_foreign_waiver_value_score(player) == 100);
+
+    memset(player, 0, sizeof(player));
+    *(int16_t*)(player + OOTP27_PLAYER_CAREER_VALUE_OFFSET) = 10;
+    assert(kbo_foreign_waiver_value_score(player) == 100);
+
+    /* Combined realistic player. */
+    memset(player, 0, sizeof(player));
+    *(int16_t*)(player + OOTP27_PLAYER_TALENT_VALUE_OFFSET)  = 100;
+    *(int16_t*)(player + OOTP27_PLAYER_OVERALL_VALUE_OFFSET) = 80;
+    *(int16_t*)(player + OOTP27_PLAYER_RATINGS_VALUE_OFFSET) = 70;
+    *(int16_t*)(player + OOTP27_PLAYER_CAREER_VALUE_OFFSET)  = 60;
+    assert(kbo_foreign_waiver_value_score(player) == 5500 + 2000 + 700 + 600);
+
+    /* Negative components compose linearly (i16 is signed). */
+    memset(player, 0, sizeof(player));
+    *(int16_t*)(player + OOTP27_PLAYER_TALENT_VALUE_OFFSET) = -1;
+    assert(kbo_foreign_waiver_value_score(player) == -55);
+
+    printf("test_foreign_waiver_value_score: PASS\n");
+}
+
+static void test_player_is_foreign_for_kbo_rights(void)
+{
+    uint8_t player[OOTP27_PLAYER_SCAN_BYTES];
+
+    /* NULL → not foreign. */
+    assert(!kbo_player_is_foreign_for_kbo_rights(NULL));
+
+    /* nation_id == 0 → not foreign (unset). */
+    memset(player, 0, sizeof(player));
+    assert(!kbo_player_is_foreign_for_kbo_rights(player));
+
+    /* nation_id == Korea → not foreign. */
+    *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET) = OOTP27_KBO_KOREA_NATION_ID;
+    assert(!kbo_player_is_foreign_for_kbo_rights(player));
+
+    /* Any other nation id → foreign for KBO rights purposes. */
+    *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET) = 98u;  /* Japan */
+    assert(kbo_player_is_foreign_for_kbo_rights(player));
+
+    *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET) = 1u;   /* US */
+    assert(kbo_player_is_foreign_for_kbo_rights(player));
+
+    *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET) = 0xFFFFFFFFu;
+    assert(kbo_player_is_foreign_for_kbo_rights(player));
+
+    printf("test_player_is_foreign_for_kbo_rights: PASS\n");
+}
+
+static void test_foreign_injury_slot_label(void)
+{
+    /* The two named slot types: regular foreign vs Asian quota. */
+    assert(strcmp(kbo_foreign_injury_slot_label(KBO_FOREIGN_INJURY_SLOT_REGULAR), "Regular") == 0);
+    assert(strcmp(kbo_foreign_injury_slot_label(KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA), "Asian quota") == 0);
+
+    /* Anything else falls through to "Regular". This is a single-branch
+     * conditional, so unset (0), out-of-range (255), and any future slot
+     * type all collapse to "Regular" today. Pin this behavior — if a new
+     * slot type is added, the test will fail and force a deliberate
+     * decision about its label rather than silent fall-through. */
+    assert(strcmp(kbo_foreign_injury_slot_label(0u), "Regular") == 0);
+    assert(strcmp(kbo_foreign_injury_slot_label(3u), "Regular") == 0);
+    assert(strcmp(kbo_foreign_injury_slot_label(255u), "Regular") == 0);
+
+    printf("test_foreign_injury_slot_label: PASS\n");
+}
+
+static void test_foreign_injury_status_label(void)
+{
+    /* All four lifecycle states map to their human-readable labels. */
+    assert(strcmp(kbo_foreign_injury_status_label(KBO_FOREIGN_INJURY_STATUS_OPEN),    "Open") == 0);
+    assert(strcmp(kbo_foreign_injury_status_label(KBO_FOREIGN_INJURY_STATUS_ACTIVE),  "Active") == 0);
+    assert(strcmp(kbo_foreign_injury_status_label(KBO_FOREIGN_INJURY_STATUS_PENDING), "Decision due") == 0);
+    assert(strcmp(kbo_foreign_injury_status_label(KBO_FOREIGN_INJURY_STATUS_CLOSED),  "Closed") == 0);
+
+    /* Status 0 (unset) and any out-of-range value yield the "Unknown"
+     * sentinel — distinguishable from the four real states above. */
+    assert(strcmp(kbo_foreign_injury_status_label(0u), "Unknown") == 0);
+    assert(strcmp(kbo_foreign_injury_status_label(5u), "Unknown") == 0);
+    assert(strcmp(kbo_foreign_injury_status_label(255u), "Unknown") == 0);
+
+    printf("test_foreign_injury_status_label: PASS\n");
+}
+
 static void test_flag_key_from_file_name(void)
 {
     char out[64];
@@ -889,6 +1028,11 @@ int main(void)
     test_core_atomic_file_round_trip();
     test_military_native_loan_on_loan_predicate();
     test_military_native_loan_clear();
+    test_foreign_waiver_read_player_i16();
+    test_foreign_waiver_value_score();
+    test_player_is_foreign_for_kbo_rights();
+    test_foreign_injury_slot_label();
+    test_foreign_injury_status_label();
     printf("All tests passed.\n");
     return 0;
 }
@@ -901,4 +1045,41 @@ void append_logf(const char* fmt, ...)
 int memory_range_readable(const void* ptr, size_t size)
 {
     return ptr != NULL && size > 0u;
+}
+
+/* ---- Test-only stubs for symbols referenced by foreign_waiver_player_eval.c
+ * functions that the tests do NOT exercise. The link must resolve them, but
+ * their bodies are unreachable from any test path — keeping them inert. */
+
+int kbo_player_pointer_plausible(uintptr_t player_ptr)
+{
+    (void)player_ptr;
+    return 0;
+}
+
+int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uint32_t* out_offset)
+{
+    if (out_vector != NULL) { *out_vector = 0u; }
+    if (out_count != NULL) { *out_count = 0; }
+    if (out_offset != NULL) { *out_offset = 0u; }
+    return 0;
+}
+
+int get_kbo_asian_quota_nation_ids_path(char* out, size_t out_size)
+{
+    if (out != NULL && out_size > 0u) {
+        out[0] = '\0';
+    }
+    return 0;
+}
+
+uint32_t read_u32_leading_number_from_file(const char* filename)
+{
+    (void)filename;
+    return 0u;
+}
+
+void append_log_line(const char* line)
+{
+    (void)line;
 }

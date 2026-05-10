@@ -67,7 +67,9 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\fa_filing\fa_filing_parts\fa_filing_csv_parse.c") `
     (Join-Path $Root "src\fa_salary_snapshot\csv\salary_snapshot_csv_parse.c") `
     (Join-Path $Root "src\core\files\atomic\core_atomic_file.c") `
-    (Join-Path $Root "src\military_service\players\loans\military_native_loan.c")
+    (Join-Path $Root "src\military_service\players\loans\military_native_loan.c") `
+    (Join-Path $Root "src\foreign\common\player_eval\foreign_waiver_player_eval.c") `
+    (Join-Path $Root "src\foreign\injury\state\foreign_injury_state.c")
 if ($LASTEXITCODE -ne 0) {
     throw "Build failed"
 }
