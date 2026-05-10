@@ -33,6 +33,12 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/military_service/seed/parse/military_service_seed_parse.h"
 #include "../src/allstar/csv/allstar_csv_parse.h"
 #include "../src/foreign/common/dates/foreign_waiver_date.h"
+#include "../src/core/core_flags/keys/flag_key.h"
+#include "../src/fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
+#include "../src/fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
+#include "../src/core/files/atomic/core_atomic_file.h"
+#include "../src/military_service/players/loans/military_native_loan.h"
+#include "../src/bootstrap/abi/ootp_offsets.h"
 
 static void test_core_text_and_sql_helpers(void)
 {
@@ -433,6 +439,435 @@ static void test_masked_pattern_matching(void)
     printf("test_masked_pattern_matching: PASS\n");
 }
 
+static void test_patch_bytes_writers(void)
+{
+    uint8_t buf[8] = {0};
+
+    write_u64(buf, 0x1122334455667788ull);
+    assert(buf[0] == 0x88u);
+    assert(buf[1] == 0x77u);
+    assert(buf[2] == 0x66u);
+    assert(buf[3] == 0x55u);
+    assert(buf[4] == 0x44u);
+    assert(buf[5] == 0x33u);
+    assert(buf[6] == 0x22u);
+    assert(buf[7] == 0x11u);
+
+    write_u64(buf, 0u);
+    for (int i = 0; i < 8; i++) {
+        assert(buf[i] == 0u);
+    }
+
+    write_u64(buf, 0xffffffffffffffffull);
+    for (int i = 0; i < 8; i++) {
+        assert(buf[i] == 0xffu);
+    }
+
+    uint8_t buf32[4] = {0xAAu, 0xAAu, 0xAAu, 0xAAu};
+    write_u32(buf32, 0xDEADBEEFu);
+    assert(buf32[0] == 0xEFu);
+    assert(buf32[1] == 0xBEu);
+    assert(buf32[2] == 0xADu);
+    assert(buf32[3] == 0xDEu);
+
+    printf("test_patch_bytes_writers: PASS\n");
+}
+
+static void test_patch_bytes_jump_recognizers(void)
+{
+    /* movabs r11, imm64 ; jmp r11  →  49 BB <8 bytes> 41 FF E3 */
+    const uint8_t r11_jump[13] = {
+        0x49u, 0xBBu,
+        0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x66u, 0x77u, 0x88u,
+        0x41u, 0xFFu, 0xE3u
+    };
+    assert(is_r11_absolute_jump_patch(r11_jump));
+
+    /* movabs rax, imm64 ; jmp rax  →  48 B8 <8 bytes> FF E0 */
+    const uint8_t rax_jump[12] = {
+        0x48u, 0xB8u,
+        0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x66u, 0x77u, 0x88u,
+        0xFFu, 0xE0u
+    };
+    assert(is_rax_absolute_jump_patch(rax_jump));
+
+    /* jmp [rip+0]  →  FF 25 00 00 00 00 */
+    const uint8_t rip_jump[6] = {0xFFu, 0x25u, 0x00u, 0x00u, 0x00u, 0x00u};
+    assert(is_rip_absolute_jump_patch(rip_jump));
+
+    /* Negatives: a single wrong byte must reject the patch shape. */
+    uint8_t bad_r11[13];
+    memcpy(bad_r11, r11_jump, sizeof(bad_r11));
+    bad_r11[12] = 0xE0u;
+    assert(!is_r11_absolute_jump_patch(bad_r11));
+
+    uint8_t bad_rax[12];
+    memcpy(bad_rax, rax_jump, sizeof(bad_rax));
+    bad_rax[1] = 0xB9u;
+    assert(!is_rax_absolute_jump_patch(bad_rax));
+
+    uint8_t bad_rip[6];
+    memcpy(bad_rip, rip_jump, sizeof(bad_rip));
+    bad_rip[5] = 0x01u;
+    assert(!is_rip_absolute_jump_patch(bad_rip));
+
+    /* The three shapes must not accept each other's bytes. */
+    assert(!is_rax_absolute_jump_patch(r11_jump));
+    assert(!is_rip_absolute_jump_patch(r11_jump));
+    assert(!is_r11_absolute_jump_patch(rax_jump));
+    assert(!is_rip_absolute_jump_patch(rax_jump));
+
+    printf("test_patch_bytes_jump_recognizers: PASS\n");
+}
+
+static void test_fa_filing_csv_parse(void)
+{
+    /* parse_u32: skips leading whitespace; strtoul base 0 (so 0x.. is hex). */
+    assert(kbo_fa_filing_parse_u32(NULL) == 0u);
+    assert(kbo_fa_filing_parse_u32("") == 0u);
+    assert(kbo_fa_filing_parse_u32("   ") == 0u);
+    assert(kbo_fa_filing_parse_u32("abc") == 0u);
+    assert(kbo_fa_filing_parse_u32(" 12345 ") == 12345u);
+    assert(kbo_fa_filing_parse_u32("\t\r\n42") == 42u);
+    assert(kbo_fa_filing_parse_u32("0x10") == 16u);
+    assert(kbo_fa_filing_parse_u32("99trailing") == 99u);
+
+    /* copy_text: truncating copy that always NUL-terminates. */
+    char buf[8];
+    buf[0] = 'X';
+    kbo_fa_filing_copy_text(buf, sizeof(buf), "hello");
+    assert(strcmp(buf, "hello") == 0);
+
+    kbo_fa_filing_copy_text(buf, sizeof(buf), "this is too long");
+    assert(strcmp(buf, "this is") == 0);
+    assert(buf[7] == '\0');
+
+    buf[0] = 'X';
+    kbo_fa_filing_copy_text(buf, sizeof(buf), NULL);
+    assert(buf[0] == '\0');
+
+    /* Must not crash on zero-size or NULL out. */
+    kbo_fa_filing_copy_text(buf, 0u, "ignored");
+    kbo_fa_filing_copy_text(NULL, sizeof(buf), "ignored");
+
+    /* parse_csv_field: quoted, escaped quotes, trim, comma advance. */
+    char csv[] = " plain , \"quoted, with comma\" ,\"\"\"escaped\"\"\",last\n";
+    char* cur = csv;
+    char field[64];
+
+    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "plain") == 0);
+    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "quoted, with comma") == 0);
+    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "\"escaped\"") == 0);
+    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "last") == 0);
+
+    /* Truncation: out_size limits payload but result stays NUL-terminated. */
+    char small[4];
+    char src[] = "abcdef,rest";
+    cur = src;
+    assert(kbo_fa_filing_parse_csv_field(&cur, small, sizeof(small)));
+    assert(strcmp(small, "abc") == 0);
+    /* Cursor must still advance past the comma even when content was truncated. */
+    assert(strcmp(cur, "rest") == 0);
+
+    /* NULL / zero-size guards. */
+    assert(!kbo_fa_filing_parse_csv_field(NULL, field, sizeof(field)));
+    assert(!kbo_fa_filing_parse_csv_field(&cur, NULL, sizeof(field)));
+    assert(!kbo_fa_filing_parse_csv_field(&cur, field, 0u));
+
+    printf("test_fa_filing_csv_parse: PASS\n");
+}
+
+static void test_salary_snapshot_csv_parse(void)
+{
+    /* parse_u32: base 10 — hex prefix is NOT honoured. */
+    assert(kbo_fa_salary_snapshot_parse_u32(NULL) == 0u);
+    assert(kbo_fa_salary_snapshot_parse_u32("") == 0u);
+    assert(kbo_fa_salary_snapshot_parse_u32("abc") == 0u);
+    assert(kbo_fa_salary_snapshot_parse_u32("12345") == 12345u);
+    assert(kbo_fa_salary_snapshot_parse_u32("0") == 0u);
+    /* "0x10" parses the leading "0", then the "x10" tail is dropped → result 0. */
+    assert(kbo_fa_salary_snapshot_parse_u32("0x10") == 0u);
+
+    /* parse_i32: signed base 10. */
+    assert(kbo_fa_salary_snapshot_parse_i32(NULL) == 0);
+    assert(kbo_fa_salary_snapshot_parse_i32("") == 0);
+    assert(kbo_fa_salary_snapshot_parse_i32("xyz") == 0);
+    assert(kbo_fa_salary_snapshot_parse_i32("123") == 123);
+    assert(kbo_fa_salary_snapshot_parse_i32("-42") == -42);
+    assert(kbo_fa_salary_snapshot_parse_i32("+7") == 7);
+
+    /* parse_csv_field: same shape as fa_filing — sanity check it agrees on
+     * the same key cases, locking the duplicated parsers to identical behavior. */
+    char csv[] = " plain , \"quoted, with comma\" ,\"\"\"escaped\"\"\",last\n";
+    char* cur = csv;
+    char field[64];
+
+    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "plain") == 0);
+    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "quoted, with comma") == 0);
+    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "\"escaped\"") == 0);
+    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "last") == 0);
+
+    /* NULL / zero-size guards. */
+    char dummy[8];
+    char* cur2 = csv;
+    assert(!kbo_fa_salary_snapshot_parse_csv_field(NULL, dummy, sizeof(dummy)));
+    assert(!kbo_fa_salary_snapshot_parse_csv_field(&cur2, NULL, sizeof(dummy)));
+    assert(!kbo_fa_salary_snapshot_parse_csv_field(&cur2, dummy, 0u));
+
+    printf("test_salary_snapshot_csv_parse: PASS\n");
+}
+
+static void test_core_atomic_file_round_trip(void)
+{
+    char temp_dir[MAX_PATH];
+    DWORD dir_len = GetTempPathA(sizeof(temp_dir), temp_dir);
+    assert(dir_len > 0u && dir_len < sizeof(temp_dir));
+
+    /* Reserve a unique destination name in the temp dir, then delete the
+     * placeholder file GetTempFileNameA created — kbo_atomic_open_tmp must
+     * own the .tmp -> dest cycle from a clean slate. */
+    char dest_path[MAX_PATH];
+    UINT unique = GetTempFileNameA(temp_dir, "kbo", 0u, dest_path);
+    assert(unique != 0u);
+    DeleteFileA(dest_path);
+
+    char tmp_path[MAX_PATH] = {0};
+
+    /* NULL / zero-size guards: handle stays invalid, no file is created. */
+    assert(kbo_atomic_open_tmp(NULL, tmp_path, sizeof(tmp_path)) == INVALID_HANDLE_VALUE);
+    assert(kbo_atomic_open_tmp(dest_path, NULL, sizeof(tmp_path)) == INVALID_HANDLE_VALUE);
+    assert(kbo_atomic_open_tmp(dest_path, tmp_path, 0u) == INVALID_HANDLE_VALUE);
+
+    /* Happy path: open tmp, write payload, commit. */
+    HANDLE file = kbo_atomic_open_tmp(dest_path, tmp_path, sizeof(tmp_path));
+    assert(file != INVALID_HANDLE_VALUE);
+
+    /* The contract is dest_path + ".tmp". Buffer is sized so the
+     * "%s.tmp" concat is provably non-truncating under -Wformat-truncation. */
+    char expected_tmp[MAX_PATH + 8];
+    snprintf(expected_tmp, sizeof(expected_tmp), "%s.tmp", dest_path);
+    assert(strcmp(tmp_path, expected_tmp) == 0);
+    assert(GetFileAttributesA(tmp_path) != INVALID_FILE_ATTRIBUTES);
+
+    const char payload[] = "hello atomic\n";
+    DWORD written = 0;
+    assert(WriteFile(file, payload, (DWORD)(sizeof(payload) - 1u), &written, NULL));
+    assert(written == sizeof(payload) - 1u);
+
+    /* commit closes the handle and renames tmp -> dest. */
+    assert(kbo_atomic_commit(file, tmp_path, dest_path));
+
+    /* dest now holds the exact payload; tmp is gone. */
+    assert(GetFileAttributesA(tmp_path) == INVALID_FILE_ATTRIBUTES);
+    HANDLE check = CreateFileA(dest_path, GENERIC_READ, FILE_SHARE_READ,
+        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    assert(check != INVALID_HANDLE_VALUE);
+    char read_buf[64] = {0};
+    DWORD read_len = 0;
+    assert(ReadFile(check, read_buf, (DWORD)(sizeof(read_buf) - 1u), &read_len, NULL));
+    assert(read_len == sizeof(payload) - 1u);
+    assert(strcmp(read_buf, payload) == 0);
+    CloseHandle(check);
+
+    /* Replace-existing semantics: a second round-trip must overwrite cleanly. */
+    HANDLE file2 = kbo_atomic_open_tmp(dest_path, tmp_path, sizeof(tmp_path));
+    assert(file2 != INVALID_HANDLE_VALUE);
+    const char payload2[] = "second";
+    assert(WriteFile(file2, payload2, (DWORD)(sizeof(payload2) - 1u), &written, NULL));
+    assert(kbo_atomic_commit(file2, tmp_path, dest_path));
+
+    HANDLE check2 = CreateFileA(dest_path, GENERIC_READ, FILE_SHARE_READ,
+        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    assert(check2 != INVALID_HANDLE_VALUE);
+    char read_buf2[16] = {0};
+    assert(ReadFile(check2, read_buf2, (DWORD)(sizeof(read_buf2) - 1u), &read_len, NULL));
+    assert(read_len == sizeof(payload2) - 1u);
+    assert(strcmp(read_buf2, payload2) == 0);
+    CloseHandle(check2);
+
+    DeleteFileA(dest_path);
+
+    /* commit() rejects bad inputs. All four guards short-circuit before
+     * CloseHandle, so passing a non-INVALID dummy handle alongside a NULL
+     * path is safe — the guard order is (file, tmp, tmp[0], dest). */
+    assert(!kbo_atomic_commit(INVALID_HANDLE_VALUE, "x", "y"));
+    assert(!kbo_atomic_commit((HANDLE)(uintptr_t)0x1, NULL, "y"));
+    assert(!kbo_atomic_commit((HANDLE)(uintptr_t)0x1, "", "y"));
+    assert(!kbo_atomic_commit((HANDLE)(uintptr_t)0x1, "x", NULL));
+
+    printf("test_core_atomic_file_round_trip: PASS\n");
+}
+
+/* ---- ABI fakes: byte-level "OOTP Player object" stand-ins for policy tests ----
+ *
+ * The OOTP Player object lives in the game process at a known size and layout.
+ * Tests build a uint8_t buffer of that exact size and write fields at the same
+ * offsets the real code reads from, so policy functions cannot tell the fake
+ * apart from a real OOTP Player. This is the smallest form of an ABI fake —
+ * no separate adapter layer, just the offsets the ABI manifest already owns.
+ */
+
+static void kbo_test_make_loaned_player(uint8_t* p)
+{
+    memset(p, 0, OOTP27_PLAYER_SCAN_BYTES);
+    /* All four conditions kbo_player_native_on_loan checks for. */
+    *(uint32_t*)(p + OOTP27_PLAYER_LOAN_LEAGUE_ID_OFFSET) = 100u;
+    p[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET] = 1u;
+    p[OOTP27_PLAYER_DFA_FLAG_OFFSET] = 0u;
+    *(uint32_t*)(p + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) = 7u;
+}
+
+static void test_military_native_loan_on_loan_predicate(void)
+{
+    uint8_t player[OOTP27_PLAYER_SCAN_BYTES];
+
+    /* NULL guard. */
+    assert(!kbo_player_native_on_loan(NULL));
+
+    /* Zeroed object: clearly not on loan. */
+    memset(player, 0, sizeof(player));
+    assert(!kbo_player_native_on_loan(player));
+
+    /* All four conditions met → on loan. */
+    kbo_test_make_loaned_player(player);
+    assert(kbo_player_native_on_loan(player));
+
+    /* Each individual condition must break the result. */
+    kbo_test_make_loaned_player(player);
+    *(uint32_t*)(player + OOTP27_PLAYER_LOAN_LEAGUE_ID_OFFSET) = 0u;
+    assert(!kbo_player_native_on_loan(player));
+
+    kbo_test_make_loaned_player(player);
+    player[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET] = 0u;
+    assert(!kbo_player_native_on_loan(player));
+
+    kbo_test_make_loaned_player(player);
+    player[OOTP27_PLAYER_DFA_FLAG_OFFSET] = 1u;
+    assert(!kbo_player_native_on_loan(player));
+
+    kbo_test_make_loaned_player(player);
+    *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) = 0u;
+    assert(!kbo_player_native_on_loan(player));
+
+    /* SUBTLE: the team-id check is a single-byte read, not a u32 read.
+     * A team_id whose low byte is zero (e.g. 0x100 = 256) is treated as
+     * "no team" even though league/active/dfa look loaned. Pin the current
+     * behavior so any future fix surfaces here as a deliberate update. */
+    kbo_test_make_loaned_player(player);
+    *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) = 0x00000100u;
+    assert(!kbo_player_native_on_loan(player));
+
+    /* High-byte-only team_id (e.g. 0xFF000000) still has a non-zero low byte
+     * is FALSE — the low byte IS zero, so this also reads as "not loaned".
+     * The predicate is sensitive only to the LSB. */
+    kbo_test_make_loaned_player(player);
+    *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) = 0xFF000000u;
+    assert(!kbo_player_native_on_loan(player));
+
+    printf("test_military_native_loan_on_loan_predicate: PASS\n");
+}
+
+static void test_military_native_loan_clear(void)
+{
+    uint8_t player[OOTP27_PLAYER_SCAN_BYTES];
+
+    /* NULL guard. */
+    assert(!kbo_clear_native_player_loan(NULL));
+
+    /* Clearing a loaned player: zeros the loan triple, sets the dirty
+     * marker, leaves unrelated fields alone, and on_loan() reports false. */
+    kbo_test_make_loaned_player(player);
+    /* Mark unrelated bytes that must NOT be touched by clear. */
+    player[OOTP27_PLAYER_AGE_OFFSET] = 0x2Au;          /* age = 42 */
+    *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) = 999u;
+    player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET] = 0u;
+
+    assert(kbo_clear_native_player_loan(player));
+
+    assert(player[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET] == 0u);
+    assert(*(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) == 0u);
+    assert(*(uint32_t*)(player + OOTP27_PLAYER_LOAN_LEAGUE_ID_OFFSET) == 0u);
+    assert(player[OOTP27_PLAYER_LOAN_DIRTY_FLAG_OFFSET] == 1u);
+
+    /* Untouched fields remain at the values the test set above. */
+    assert(player[OOTP27_PLAYER_AGE_OFFSET] == 0x2Au);
+    assert(*(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) == 999u);
+    assert(player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET] == 0u);
+
+    /* Predicate now reports false. */
+    assert(!kbo_player_native_on_loan(player));
+
+    /* Idempotent: clearing an already-cleared player still reports success
+     * (the post-condition !on_loan() holds). The dirty marker is set again. */
+    player[OOTP27_PLAYER_LOAN_DIRTY_FLAG_OFFSET] = 0u;
+    assert(kbo_clear_native_player_loan(player));
+    assert(player[OOTP27_PLAYER_LOAN_DIRTY_FLAG_OFFSET] == 1u);
+
+    printf("test_military_native_loan_clear: PASS\n");
+}
+
+static void test_flag_key_from_file_name(void)
+{
+    char out[64];
+
+    /* Bare key passes through unchanged. */
+    out[0] = 'X';
+    assert(kbo_flag_key_from_file_name("enable_foreign_waiver_ai", out, sizeof(out)));
+    assert(strcmp(out, "enable_foreign_waiver_ai") == 0);
+
+    /* .txt suffix is stripped (case-insensitive). */
+    assert(kbo_flag_key_from_file_name("enable_launcher_injection.txt", out, sizeof(out)));
+    assert(strcmp(out, "enable_launcher_injection") == 0);
+    assert(kbo_flag_key_from_file_name("enable_launcher_injection.TXT", out, sizeof(out)));
+    assert(strcmp(out, "enable_launcher_injection") == 0);
+    assert(kbo_flag_key_from_file_name("enable_launcher_injection.TxT", out, sizeof(out)));
+    assert(strcmp(out, "enable_launcher_injection") == 0);
+
+    /* Path components are trimmed; both separator styles are accepted. */
+    assert(kbo_flag_key_from_file_name("C:\\Users\\u\\flags\\kbo_league_id.txt", out, sizeof(out)));
+    assert(strcmp(out, "kbo_league_id") == 0);
+    assert(kbo_flag_key_from_file_name("/home/u/flags/kbo_league_id.txt", out, sizeof(out)));
+    assert(strcmp(out, "kbo_league_id") == 0);
+    assert(kbo_flag_key_from_file_name("mixed\\path/with.txt", out, sizeof(out)));
+    assert(strcmp(out, "with") == 0);
+
+    /* A non-.txt extension is preserved as part of the key. */
+    assert(kbo_flag_key_from_file_name("flag.json", out, sizeof(out)));
+    assert(strcmp(out, "flag.json") == 0);
+
+    /* The .txt strip only fires when there is a stem before the suffix.
+     * A bare ".txt" is preserved verbatim — never collapses to an empty key. */
+    assert(kbo_flag_key_from_file_name(".txt", out, sizeof(out)));
+    assert(strcmp(out, ".txt") == 0);
+    assert(kbo_flag_key_from_file_name("dir/.txt", out, sizeof(out)));
+    assert(strcmp(out, ".txt") == 0);
+
+    /* Buffer must hold the key plus the NUL terminator. */
+    char tight[5];
+    assert(!kbo_flag_key_from_file_name("abcde", tight, sizeof(tight)));
+    assert(kbo_flag_key_from_file_name("abcd", tight, sizeof(tight)));
+    assert(strcmp(tight, "abcd") == 0);
+    assert(!kbo_flag_key_from_file_name("abcde.txt", tight, 5u));
+    assert(kbo_flag_key_from_file_name("abcd.txt", tight, sizeof(tight)));
+    assert(strcmp(tight, "abcd") == 0);
+
+    /* NULL/empty inputs and zero-sized output buffer are rejected. */
+    assert(!kbo_flag_key_from_file_name(NULL, out, sizeof(out)));
+    assert(!kbo_flag_key_from_file_name("", out, sizeof(out)));
+    assert(!kbo_flag_key_from_file_name("name", NULL, sizeof(out)));
+    assert(!kbo_flag_key_from_file_name("name", out, 0u));
+
+    printf("test_flag_key_from_file_name: PASS\n");
+}
+
 int main(void)
 {
     test_core_text_and_sql_helpers();
@@ -446,6 +881,14 @@ int main(void)
     test_foreign_replacement_seed_parse();
     test_foreign_csv_parse();
     test_masked_pattern_matching();
+    test_patch_bytes_writers();
+    test_patch_bytes_jump_recognizers();
+    test_flag_key_from_file_name();
+    test_fa_filing_csv_parse();
+    test_salary_snapshot_csv_parse();
+    test_core_atomic_file_round_trip();
+    test_military_native_loan_on_loan_predicate();
+    test_military_native_loan_clear();
     printf("All tests passed.\n");
     return 0;
 }

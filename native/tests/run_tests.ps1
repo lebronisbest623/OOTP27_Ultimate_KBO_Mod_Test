@@ -63,7 +63,11 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\core\core_flags\keys\flag_key.c") `
     (Join-Path $Root "src\core\core_flags\json\json_bool_parser.c") `
     (Join-Path $Root "src\core\core_flags\localappdata\localappdata_reader.c") `
-    (Join-Path $Root "src\patch_helpers\bytes\patch_bytes.c")
+    (Join-Path $Root "src\patch_helpers\bytes\patch_bytes.c") `
+    (Join-Path $Root "src\fa_filing\fa_filing_parts\fa_filing_csv_parse.c") `
+    (Join-Path $Root "src\fa_salary_snapshot\csv\salary_snapshot_csv_parse.c") `
+    (Join-Path $Root "src\core\files\atomic\core_atomic_file.c") `
+    (Join-Path $Root "src\military_service\players\loans\military_native_loan.c")
 if ($LASTEXITCODE -ne 0) {
     throw "Build failed"
 }
