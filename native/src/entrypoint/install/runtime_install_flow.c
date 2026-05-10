@@ -328,20 +328,6 @@ static int kbo_current_save_has_completed_flag(const char* save_path, const char
 
     FILETIME completed_write_time = {0};
     GetFileTime(file, NULL, NULL, &completed_write_time);
-    LONG64 completed_write_ticks = kbo_filetime_to_i64(completed_write_time);
-    LONG64 guard_started_ticks = InterlockedCompareExchange64(&g_kbo_runtime_marker_guard_started_filetime, 0, 0);
-    if (guard_started_ticks != 0 && completed_write_ticks != 0 && completed_write_ticks + 50000000LL < guard_started_ticks) {
-        if (log_detail) {
-            append_logf(
-                "KBO runtime marker guard waiting source=%s reason=save_completed_stale path=%s completed_ticks=%lld guard_started_ticks=%lld",
-                source != NULL ? source : "",
-                completed_path,
-                (long long)completed_write_ticks,
-                (long long)guard_started_ticks);
-        }
-        CloseHandle(file);
-        return 0;
-    }
 
     LARGE_INTEGER size = {0};
     if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > 1024 * 1024) {
