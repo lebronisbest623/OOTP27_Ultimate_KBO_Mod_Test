@@ -97,13 +97,22 @@ uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr
 
     int32_t quality_score = kbo_amateur_quality_score(player);
     uint8_t target_reputation = 0u;
-    uint8_t* target_team = kbo_choose_amateur_assignment_team(
+    uint8_t* target_team = kbo_choose_amateur_assignment_team_ortools(
         player,
         team_league_id,
         team_id,
         current_reputation,
         quality_score,
         &target_reputation);
+    if (target_team == NULL) {
+        target_team = kbo_choose_amateur_assignment_team(
+            player,
+            team_league_id,
+            team_id,
+            current_reputation,
+            quality_score,
+            &target_reputation);
+    }
     if (target_team == NULL || target_team == team) {
         int player_tier = kbo_amateur_assignment_player_tier(team_league_id, quality_score);
         int from_tier = kbo_amateur_assignment_team_tier(team_league_id, current_reputation);

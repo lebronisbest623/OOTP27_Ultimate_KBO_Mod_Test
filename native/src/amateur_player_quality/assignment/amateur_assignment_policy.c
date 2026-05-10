@@ -216,7 +216,10 @@ int kbo_amateur_assignment_player_tier(uint32_t league_id, int32_t quality_score
 
 int kbo_amateur_assignment_tier_allowed(int player_tier, int team_tier)
 {
-    return player_tier == team_tier;
+    if (player_tier < 0 || team_tier < 0) {
+        return 0;
+    }
+    return abs(player_tier - team_tier) <= 1;
 }
 
 int kbo_amateur_assignment_effective_player_tier(int player_tier, int max_team_tier)

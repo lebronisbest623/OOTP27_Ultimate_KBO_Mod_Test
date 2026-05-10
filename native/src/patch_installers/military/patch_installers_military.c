@@ -7,7 +7,7 @@
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/logging/core_log.h"
 #include "../../hook_stubs/military/hook_stubs_military.h"
-#include "../../military_service/players/guards/military_team_add_guard.h"
+#include "../../team/add_player_guard/team_add_player_guard.h"
 #include "../../patch_helpers/patch_helpers.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "patch_installers_military.h"

@@ -1,7 +1,8 @@
 #ifndef KBOFIX_SRC_MILITARY_SERVICE_MILITARY_TEAM_ADD_GUARD_H_
 #define KBOFIX_SRC_MILITARY_SERVICE_MILITARY_TEAM_ADD_GUARD_H_
 
-void kbo_set_team_add_player_guard_trampoline(void* trampoline);
-void kbo_clear_team_add_player_guard_trampoline(void);
+#include <stdint.h>
+
+int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t player_ptr);
 
 #endif

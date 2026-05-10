@@ -75,6 +75,7 @@ uint32_t kbo_amateur_reputation_parse_u32(const char* text);
 
 void kbo_update_amateur_reputation_from_team_records(const char* source);
 uint32_t kbo_resolve_amateur_assignment_league_id_for_team_ptr(uint8_t* team);
+int kbo_amateur_player_age_eligible(uint32_t league_id, int16_t age);
 void kbo_amateur_assignment_mark_rejected_target(uint32_t league_id, uint32_t team_id);
 uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr, uintptr_t player_ptr, const char* source);
 void kbo_amateur_team_add_player_note_original_success(uintptr_t team_ptr, uintptr_t player_ptr, const char* source, int original_result);

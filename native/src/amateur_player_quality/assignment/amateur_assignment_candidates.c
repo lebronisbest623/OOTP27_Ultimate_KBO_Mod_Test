@@ -22,31 +22,18 @@ void kbo_amateur_assignment_append_debug_csv(
     uint32_t after_team_id,
     uint32_t after_league_id)
 {
-    (void)phase;
-    (void)source;
-    (void)player_id;
-    (void)league_id;
-    (void)age;
-    (void)quality_score;
-    (void)player_tier;
-    (void)from_team_id;
-    (void)from_reputation;
-    (void)from_tier;
-    (void)from_player_count;
-    (void)to_team_id;
-    (void)to_reputation;
-    (void)to_tier;
-    (void)to_player_count;
-    (void)target_player_count;
-    (void)target_reputation;
-    (void)original_result;
-    (void)after_team_id;
-    (void)after_league_id;
-    return;
+    if (!read_kbo_localappdata_flag_file("enable_amateur_assignment_debug_csv.txt")) {
+        return;
+    }
 
     if (strcmp(phase != NULL ? phase : "", "original_success") == 0) {
         static volatile LONG success_csv_count = 0;
         if (InterlockedIncrement(&success_csv_count) > 300) {
+            return;
+        }
+    } else {
+        static volatile LONG reroute_csv_count = 0;
+        if (InterlockedIncrement(&reroute_csv_count) > 5000) {
             return;
         }
     }
@@ -149,11 +136,26 @@ uint32_t kbo_amateur_assignment_candidate_weight(
     }
 
     int32_t distance = abs((int32_t)reputation - target);
-    int32_t base = 72 - (distance * 3);
-    if (base < 12) {
-        base = 12;
+    int32_t base = 96 - (distance * 4);
+    if (base < 8) {
+        base = 8;
     }
-    uint32_t weight = (uint32_t)base;
+    int tier_delta = team_tier - player_tier;
+    int tier_fit = abs(tier_delta);
+    int32_t tier_multiplier = 100;
+    if (tier_fit == 0) {
+        tier_multiplier = 140;
+    } else if (tier_delta > 0) {
+        tier_multiplier = 65;
+    } else {
+        tier_multiplier = player_tier >= 4 ? 30 : 45;
+    }
+
+    int32_t weight_value = (base * tier_multiplier) / 100;
+    if (target_max_players > 0 && player_count >= target_max_players - 2) {
+        weight_value /= 2;
+    }
+    uint32_t weight = (uint32_t)(weight_value > 0 ? weight_value : 1);
     if (weight == 0u) {
         weight = 1u;
     }
