@@ -364,6 +364,30 @@ powershell -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
 
 ---
 
+## 제15장 - 정책의 테스트 가능성
+
+### 제30조 - 정책은 ABI 페이크로 단위 테스트 가능해야 한다
+
+도메인 정책 함수는 OOTP 프로세스 없이 단위 테스트할 수 있는 형태로 작성한다.
+
+OOTP 객체와 byte 배열은 함수 입장에서 구별되지 않는다. 정책 함수가 OOTP 메모리에 접근할 때 `uint8_t*` 또는 `uintptr_t` 포인터와 `bootstrap/abi/ootp_offsets.h`에 명명된 오프셋만 사용하면, 테스트는 매니페스트 크기(`OOTP27_PLAYER_SCAN_BYTES`, `OOTP27_KBO_TEAM_READABLE_BYTES`)로 byte 배열을 만들고 같은 오프셋에 값을 박아 정책 함수에 넘긴다. 별도 어댑터 레이어 없이도 정책이 단위 테스트된다.
+
+이 패턴은 `native/tests/test_main.c`에서 `military_native_loan`, `foreign_waiver_value_score`, `foreign_injury_*_label` 등에 적용되어 검증되었다.
+
+새로 작성하는 정책은 이 형태를 따른다. 정책 변경은 `native/tests/test_main.c`에 그 동작을 잠그는 단위 테스트와 함께 병합한다.
+
+### 제31조 - 정책 함수에 OOTP 외부 헬퍼를 직접 묶지 않는다
+
+정책 함수가 OOTP의 글로벌 vector 검색, 파일 I/O, 네이티브 lock 같은 비-ABI 의존성을 직접 호출하면 단위 테스트가 불가능해진다. 이런 의존성은 다음 중 하나로 분리한다:
+
+1. 정책 함수의 매개변수로 받는다 (`uint8_t* player`, `team_id`, `today_yyyymmdd` 등 plain value).
+2. 외부 헬퍼는 같은 모듈의 별도 함수로 분리하여, 정책 함수가 plain value로 호출되는 형태를 유지한다.
+3. 모듈 단위 link가 외부 의존성을 끌고 오는 경우, 테스트 빌드는 `native/tests/test_main.c`의 stub으로 그 심볼만 만족시키고 정책 경로 자체는 stub을 호출하지 않게 둔다.
+
+이 분리가 깨진 기존 모듈은 `ARCHITECTURE.md`에 부채로 기록하고, 후속 작업으로 정책과 외부 헬퍼 경계를 다시 그어 단위 테스트 가능 상태로 복원한다.
+
+---
+
 ## 부칙 - 이 헌법의 개정
 
 이 헌법은 다음 두 조건을 모두 충족할 때만 개정된다:
