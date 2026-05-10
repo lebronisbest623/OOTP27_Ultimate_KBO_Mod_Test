@@ -45,6 +45,7 @@ extern volatile uintptr_t g_allstar_make_events_ptr;
 typedef void (__fastcall *OotpMakeAllstarGameEventsFn)(uintptr_t league_ptr, uint8_t force_create);
 typedef void (__fastcall *OotpVectorPushBack)(void* vector, void* value);
 typedef void (__fastcall *OotpAllstarTeamSetupFn)(uintptr_t league_ptr);
+typedef void (__fastcall *OotpAllstarCandidateRebuildFn)(uintptr_t league_ptr, uint8_t force_rebuild);
 
 KboAllstarLayout kbo_get_allstar_layout(void);
 void load_allstar_team_rules_once(void);

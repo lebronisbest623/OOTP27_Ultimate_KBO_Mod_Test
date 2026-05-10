@@ -1,6 +1,7 @@
 #include "salary_snapshot_paths_dates.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <windows.h>
 
@@ -199,6 +200,37 @@ static int kbo_fa_salary_snapshot_load_schedule_opening_day_from_file(const char
     return 1;
 }
 
+static int kbo_fa_salary_snapshot_try_schedule_dir(
+    const char* dir,
+    uint32_t season,
+    uint32_t* out_opening_day,
+    char* out_path,
+    size_t out_path_size)
+{
+    if (dir == NULL || dir[0] == '\0' || out_opening_day == NULL) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    int written = snprintf(
+        path,
+        sizeof(path),
+        "%s\\korean_baseball_organization_int_c_%u.lsdl",
+        dir,
+        season);
+    if (written <= 0 || (size_t)written >= sizeof(path)) {
+        return 0;
+    }
+
+    if (!kbo_fa_salary_snapshot_load_schedule_opening_day_from_file(path, season, out_opening_day)) {
+        return 0;
+    }
+    if (out_path != NULL && out_path_size > 0) {
+        snprintf(out_path, out_path_size, "%s", path);
+    }
+    return 1;
+}
+
 int kbo_fa_salary_snapshot_load_schedule_opening_day(uint32_t season, uint32_t* out_opening_day)
 {
     if (out_opening_day != NULL) {
@@ -220,20 +252,25 @@ int kbo_fa_salary_snapshot_load_schedule_opening_day(uint32_t season, uint32_t* 
     }
     *slash = '\0';
 
-    const char* suffixes[] = { "" };
-    for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); i++) {
-        char path[MAX_PATH] = {0};
-        int written = snprintf(
-            path,
-            sizeof(path),
-            "%s\\data\\schedules\\korean_baseball_organization_int_c_%u%s.lsdl",
-            exe_path,
-            season,
-            suffixes[i]);
-        if (written <= 0 || (size_t)written >= sizeof(path)) {
-            continue;
-        }
-        if (kbo_fa_salary_snapshot_load_schedule_opening_day_from_file(path, season, out_opening_day)) {
+    char path[MAX_PATH] = {0};
+    char dir[MAX_PATH] = {0};
+    snprintf(dir, sizeof(dir), "%s\\data\\schedules", exe_path);
+    if (kbo_fa_salary_snapshot_try_schedule_dir(dir, season, out_opening_day, path, sizeof(path))) {
+        return 1;
+    }
+    snprintf(dir, sizeof(dir), "%s\\schedules", exe_path);
+    if (kbo_fa_salary_snapshot_try_schedule_dir(dir, season, out_opening_day, path, sizeof(path))) {
+        return 1;
+    }
+
+    const char* user_profile = getenv("USERPROFILE");
+    if (user_profile != NULL && user_profile[0] != '\0') {
+        snprintf(
+            dir,
+            sizeof(dir),
+            "%s\\Documents\\Out of the Park Developments\\OOTP Baseball 27\\schedules",
+            user_profile);
+        if (kbo_fa_salary_snapshot_try_schedule_dir(dir, season, out_opening_day, path, sizeof(path))) {
             return 1;
         }
     }

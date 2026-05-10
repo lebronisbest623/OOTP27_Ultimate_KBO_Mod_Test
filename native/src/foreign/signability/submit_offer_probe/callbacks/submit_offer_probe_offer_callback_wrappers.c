@@ -1,5 +1,69 @@
 #include "../internal/submit_offer_probe_internal.h"
 
+static int kbo_no_minor_force_contract_offer_major_terms(
+    uintptr_t offer_ptr,
+    const char* source,
+    int32_t* out_salary,
+    int32_t* out_option_salary,
+    uint8_t* out_major_flag,
+    int32_t* out_floor)
+{
+    if (offer_ptr == 0 || !memory_range_readable((void*)offer_ptr, 0xd0)) {
+        return 0;
+    }
+
+    int changed = 0;
+    int32_t salary_floor = kbo_no_minor_resolve_current_league_minimum_salary();
+    int32_t salary = *(int32_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_SALARY_OFFSET);
+    int32_t option_salary = *(int32_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_OPTION_SALARY_OFFSET);
+    uint8_t major_flag = *(uint8_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_MAJOR_FLAG_OFFSET);
+
+    if (major_flag != 1u) {
+        *(uint8_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_MAJOR_FLAG_OFFSET) = 1u;
+        major_flag = 1u;
+        changed = 1;
+    }
+    if (salary_floor > 0 && salary < salary_floor) {
+        *(int32_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_SALARY_OFFSET) = salary_floor;
+        salary = salary_floor;
+        changed = 1;
+    }
+    if (salary_floor > 0 && option_salary > 0 && option_salary < salary_floor) {
+        *(int32_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_OPTION_SALARY_OFFSET) = salary_floor;
+        option_salary = salary_floor;
+        changed = 1;
+    }
+
+    if (out_salary != NULL) {
+        *out_salary = salary;
+    }
+    if (out_option_salary != NULL) {
+        *out_option_salary = option_salary;
+    }
+    if (out_major_flag != NULL) {
+        *out_major_flag = major_flag;
+    }
+    if (out_floor != NULL) {
+        *out_floor = salary_floor;
+    }
+
+    if (changed) {
+        static LONG force_log_count = 0;
+        LONG slot = InterlockedIncrement(&force_log_count);
+        if (slot <= 120) {
+            append_logf(
+                "KBO no-minor offer terms forced: source=%s offer=%p salary=%d option_salary=%d major_flag=%u floor=%d",
+                source,
+                (void*)offer_ptr,
+                salary,
+                option_salary,
+                (unsigned)major_flag,
+                salary_floor);
+        }
+    }
+    return changed;
+}
+
 __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
     uintptr_t screen_ptr,
     uintptr_t sender_ptr,
@@ -110,18 +174,33 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
         int32_t after_salary = *(int32_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_SALARY_OFFSET);
         int32_t after_option_salary = *(int32_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_OPTION_SALARY_OFFSET);
         uint8_t after_major_flag = *(uint8_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_MAJOR_FLAG_OFFSET);
-        *(uint8_t*)(offer_ptr + OOTP27_FA_CONTRACT_OFFER_MAJOR_FLAG_OFFSET) = 1u;
+        int32_t final_salary = after_salary;
+        int32_t final_option_salary = after_option_salary;
+        uint8_t final_major_flag = after_major_flag;
+        int32_t salary_floor = 0;
+        int forced = kbo_no_minor_force_contract_offer_major_terms(
+            offer_ptr,
+            "contract_callback",
+            &final_salary,
+            &final_option_salary,
+            &final_major_flag,
+            &salary_floor);
 
         LONG after_slot = InterlockedIncrement(&contract_callback_log_count);
         if (after_slot <= 600) {
             append_logf(
-                "KBO no-minor contract callback after: offer=%p id=0x%llx result=%d salary=%d option_salary=%d major_flag=%u forced_major_flag=1",
+                "KBO no-minor contract callback after: offer=%p id=0x%llx result=%d salary=%d option_salary=%d major_flag=%u final_salary=%d final_option_salary=%d final_major_flag=%u floor=%d forced=%d",
                 (void*)offer_ptr,
                 (unsigned long long)callback_id,
                 result,
                 after_salary,
                 after_option_salary,
-                (unsigned)after_major_flag);
+                (unsigned)after_major_flag,
+                final_salary,
+                final_option_salary,
+                (unsigned)final_major_flag,
+                salary_floor,
+                forced);
         }
     }
 

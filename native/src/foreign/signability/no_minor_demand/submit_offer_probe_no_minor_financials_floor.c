@@ -103,10 +103,6 @@ int kbo_no_minor_clamp_player_demand_salary(uintptr_t player_ptr, uintptr_t scre
     int32_t old_demand = *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET);
     uint8_t old_contract_level = *(uint8_t*)(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET);
     int changed = 0;
-    if (old_contract_level != 1u) {
-        *(uint8_t*)(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET) = 1u;
-        changed = 1;
-    }
     if (old_demand < salary_floor) {
         *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET) = salary_floor;
         changed = 1;
@@ -117,7 +113,7 @@ int kbo_no_minor_clamp_player_demand_salary(uintptr_t player_ptr, uintptr_t scre
         LONG clamp_slot = InterlockedIncrement(&clamp_log_count);
         if (clamp_slot <= 120) {
             append_logf(
-                "KBO no-minor demand floor applied: source=%s screen=%p player=%u old_demand=%d floor=%d old_contract_level=%u",
+                "KBO no-minor demand floor applied: source=%s screen=%p player=%u old_demand=%d floor=%d observed_contract_level=%u",
                 source,
                 (void*)screen_ptr,
                 player_id,
@@ -147,10 +143,3 @@ int kbo_no_minor_clamp_offer_screen_player_salary(uintptr_t screen_ptr, const ch
 
     return kbo_no_minor_clamp_player_demand_salary((uintptr_t)player, screen_ptr, source);
 }
-
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INITIAL_DELAY_MS 1000u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_INTERVAL_MS 50u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS 240u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INTERVAL_MS 250u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS 80
-

@@ -68,6 +68,11 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
     void* left_team_vector,
     void* right_team_vector,
     uintptr_t vector_push_back_ptr);
+__declspec(noinline) int ootp_kbo_allstar_candidate_push_filter(
+    uint32_t side_index,
+    uintptr_t player_ptr,
+    void* candidate_vector,
+    uintptr_t vector_push_back_ptr);
 __declspec(noinline) void ootp_kbo_enable_allstar_setting(uintptr_t league_ptr);
 __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr);
 __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league_ptr, uintptr_t allstar_team_setup_ptr);

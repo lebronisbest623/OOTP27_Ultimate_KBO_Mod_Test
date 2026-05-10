@@ -61,12 +61,16 @@ int kbo_return_completed_military_loan_player(
     }
 
     uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t loan_team_id = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
     uint32_t service_team_id = 0;
     if (registered_service_team_id != 0) {
         service_team_id = registered_service_team_id;
     } else if (current_team_id != 0
                && (current_team_id == sang_id || current_team_id == kpb_id)) {
         service_team_id = current_team_id;
+    } else if (loan_team_id != 0
+               && (loan_team_id == sang_id || loan_team_id == kpb_id)) {
+        service_team_id = loan_team_id;
     } else {
         return 0;
     }

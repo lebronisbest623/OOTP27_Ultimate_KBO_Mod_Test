@@ -52,6 +52,19 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
         uintptr_t league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);
         uint32_t opening_day = 0u;
         if (league_ptr == 0 || !kbo_fa_salary_snapshot_read_opening_day(league_ptr, &opening_day)) {
+            if (kbo_fa_salary_snapshot_load_schedule_opening_day(year, &opening_day)) {
+                if (date != last_log_date || opening_day != last_log_opening_day) {
+                    append_logf(
+                        "KBO FA salary snapshot opening day fallback date=%u opening_day=%u league=%u source=schedule",
+                        date,
+                        opening_day,
+                        league_id);
+                    last_log_date = date;
+                    last_log_opening_day = opening_day;
+                }
+            }
+        }
+        if (opening_day == 0u) {
             DWORD now_ms = GetTickCount();
             if (cached_message_date != date
                     && (cached_message_checked_ms == 0u || now_ms - cached_message_checked_ms >= 30000u)) {
@@ -76,7 +89,13 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             opening_day = date;
         }
 
-        if (!kbo_fa_salary_snapshot_current_date_in_opening_window(date, opening_day)) {
+        int in_opening_window = kbo_fa_salary_snapshot_current_date_in_opening_window(date, opening_day);
+        int late_missing_snapshot_backfill =
+            !in_opening_window
+            && opening_day / 10000u == year
+            && date > opening_day
+            && !kbo_fa_salary_snapshot_file_exists(year);
+        if (!in_opening_window && !late_missing_snapshot_backfill) {
             if (date != last_log_date || opening_day != last_log_opening_day) {
                 append_logf(
                     "KBO FA salary snapshot waiting date=%u opening_day=%u league=%u",
@@ -91,6 +110,13 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             }
             continue;
         }
+        if (late_missing_snapshot_backfill) {
+            append_logf(
+                "KBO FA salary snapshot late backfill date=%u opening_day=%u league=%u reason=missing_opening_day_snapshot",
+                date,
+                opening_day,
+                league_id);
+        }
 
         if (captured_season == year || kbo_fa_salary_snapshot_file_exists(year)) {
             captured_season = year;
@@ -100,7 +126,12 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             continue;
         }
 
-        if (kbo_capture_fa_salary_opening_day_snapshot("opening_day_thread", date, year, opening_day, league_id)) {
+        if (kbo_capture_fa_salary_opening_day_snapshot(
+                late_missing_snapshot_backfill ? "opening_day_thread_late_backfill" : "opening_day_thread",
+                date,
+                year,
+                opening_day,
+                league_id)) {
             captured_season = year;
         }
         if (profile_snapshot_thread_tick_active) {

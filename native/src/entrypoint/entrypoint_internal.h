@@ -66,6 +66,8 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
 void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance);
 DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter);
 void start_kbo_full_runtime_marker_wait_thread(HINSTANCE instance);
+void install_kbo_early_foreign_policy_hooks_once(const char* source);
+void install_kbo_early_no_minor_contract_hooks_once(const char* source);
 DWORD WINAPI patch_thread(LPVOID parameter);
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved);
 

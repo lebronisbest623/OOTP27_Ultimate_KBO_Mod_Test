@@ -23,6 +23,7 @@
 
 int install_kbo_no_minor_contract_base_patches(HMODULE exe);
 int install_kbo_no_minor_contract_dynamic_flag_patches(HMODULE exe);
+int install_kbo_no_minor_contract_offer_major_flag_patches(HMODULE exe);
 int install_kbo_no_minor_contract_offer_ui_patches(HMODULE exe);
 int install_kbo_no_minor_contract_write_site_patches(HMODULE exe);
 

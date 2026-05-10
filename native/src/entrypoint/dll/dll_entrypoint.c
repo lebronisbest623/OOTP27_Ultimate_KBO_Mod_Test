@@ -41,6 +41,10 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         return 0;
     }
 
+    install_kbo_early_foreign_policy_hooks_once("presave_bootstrap");
+    install_kbo_early_no_minor_contract_hooks_once("presave_bootstrap");
+    start_kbo_military_seed_bootstrap_thread();
+
     append_log_line("KBO F2 hub starting before runtime marker guard");
     start_kbo_hotkey_window_thread((HINSTANCE)parameter);
 
@@ -49,6 +53,9 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         install_single_division_allstar_patch();
         install_allstar_team_setup_single_division_patch();
         install_allstar_candidate_team_split_patch();
+        install_allstar_candidate_player_push_filter_patch();
+        install_allstar_candidate_team_roster_push_filter_patch();
+        install_allstar_candidate_ranked_player_push_filter_patch();
         if (read_kbo_localappdata_flag_file("enable_single_division_allstar_voting_hook.txt")) {
             install_allstar_voting_begin_prepare_patch();
         } else {

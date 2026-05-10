@@ -1,5 +1,28 @@
 #include "../internal/military_service_internal.h"
 
+static void kbo_military_prewarm_save_scoped_bootstrap_files(const char* save_path)
+{
+    if (save_path == NULL || save_path[0] == '\0') {
+        return;
+    }
+
+    kbo_ensure_military_service_seeds_loaded();
+    kbo_ensure_foreign_replacement_player_seeds_loaded();
+    kbo_ensure_amateur_reputation_seeds_loaded();
+
+    KboFaMarketSeedCase fa_seed_cases[1];
+    char fa_seed_path[MAX_PATH] = {0};
+    kbo_load_fa_market_seed_cases(fa_seed_cases, 1, fa_seed_path, sizeof(fa_seed_path));
+
+    KboFaRequalificationRecord requalification_records[1];
+    kbo_load_fa_requalification_records(requalification_records, 1);
+
+    append_logf(
+        "KBO save bootstrap files prewarmed save=%s fa_seed=%s",
+        save_path,
+        fa_seed_path[0] != '\0' ? fa_seed_path : "-");
+}
+
 int kbo_tick_military_service_days(const char* source, int* out_seeded_assignments)
 {
     if (out_seeded_assignments != NULL) {
@@ -65,8 +88,14 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
 
         uint8_t* player = (uint8_t*)player_ptr;
         uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-        if (current_team_id == 0
-                || (current_team_id != sang_id && current_team_id != kpb_id)) {
+        uint32_t loan_team_id = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+        uint32_t service_team_id = 0u;
+        if (current_team_id == sang_id || current_team_id == kpb_id) {
+            service_team_id = current_team_id;
+        } else if (loan_team_id == sang_id || loan_team_id == kpb_id) {
+            service_team_id = loan_team_id;
+        }
+        if (service_team_id == 0u) {
             continue;
         }
 
@@ -80,11 +109,11 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
                 deferred_invalid_releases++;
                 continue;
             }
-            uint8_t* service_team = (current_team_id == sang_id) ? sang : kpb;
+            uint8_t* service_team = (service_team_id == sang_id) ? sang : kpb;
             invalid_released += kbo_release_invalid_military_service_team_assignment(
                 player,
                 service_team,
-                current_team_id,
+                service_team_id,
                 source,
                 vector_offset);
             continue;
@@ -94,20 +123,20 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
         uint32_t original_league_id = 0u;
         kbo_military_resolve_original_team(
             player,
-            current_team_id,
+            service_team_id,
             sang_id,
             kpb_id,
             &original_team_id,
             &original_league_id);
         if (original_team_id != 0u
-                && original_team_id != current_team_id
+                && original_team_id != service_team_id
                 && original_team_id != sang_id
                 && original_team_id != kpb_id) {
             kbo_military_repair_original_team_memory(
                 player,
                 original_team_id,
                 original_league_id,
-                current_team_id,
+                service_team_id,
                 sang_id,
                 kpb_id);
         }
@@ -115,17 +144,17 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
         if (active_index < 0
                 && direct_days_left > 0
                 && original_team_id != 0
-                && original_team_id != current_team_id
+                && original_team_id != service_team_id
                 && original_team_id != sang_id
                 && original_team_id != kpb_id) {
-            uint8_t* service_team   = (current_team_id == sang_id) ? sang : kpb;
+            uint8_t* service_team   = (service_team_id == sang_id) ? sang : kpb;
             uint32_t service_league = service_team != NULL
                 ? *(uint32_t*)(service_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET)
                 : 0;
             register_active_kbo_military_loan(
                 player_id, player_ptr,
                 original_team_id, original_league_id,
-                current_team_id,
+                service_team_id,
                 service_league != 0 ? service_league
                     : *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET));
             active_index = find_active_kbo_military_loan_index(player_id);
@@ -137,7 +166,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
                     "KBO military discovered active loan registered source=%s player=%u service_team=%u original_team=%u original_league=%u days_left=%d military_active=%u",
                     source != NULL ? source : "",
                     player_id,
-                    current_team_id,
+                    service_team_id,
                     original_team_id,
                     original_league_id,
                     direct_days_left,
@@ -154,11 +183,11 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
                     deferred_invalid_releases++;
                     continue;
                 }
-                uint8_t* service_team = (current_team_id == sang_id) ? sang : kpb;
+                uint8_t* service_team = (service_team_id == sang_id) ? sang : kpb;
                 invalid_released += kbo_release_invalid_military_service_team_assignment(
                     player,
                     service_team,
-                    current_team_id,
+                    service_team_id,
                     source,
                     vector_offset);
                 continue;
@@ -282,6 +311,7 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
         if (_stricmp(last_save_path, save_path) != 0) {
             snprintf(last_save_path, sizeof(last_save_path), "%s", save_path);
             settled_attempts = 0;
+            kbo_military_prewarm_save_scoped_bootstrap_files(save_path);
         }
 
         uint32_t today_serial = kbo_current_date_serial();

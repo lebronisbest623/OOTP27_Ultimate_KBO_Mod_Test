@@ -19,11 +19,11 @@ int install_kbo_no_minor_contract_experimental_patch(void)
 
     int ok = 0;
     ok |= install_kbo_no_minor_contract_base_patches(exe);
-    ok |= install_kbo_no_minor_contract_dynamic_flag_patches(exe);
     ok |= install_kbo_no_minor_contract_offer_ui_patches(exe);
-    ok |= install_kbo_no_minor_contract_write_site_patches(exe);
-    ok |= install_kbo_no_minor_contract_scan_patch(exe);
-    ok |= install_kbo_no_minor_contract_string_patch(exe);
+    append_log_line("KBO no-minor-contract dynamic +0x8a8 patches retired: unsafe outside scoped offer/submit flow");
+    append_log_line("KBO no-minor-contract write-site patches retired: unsafe player/import/parser state writes");
+    append_log_line("KBO no-minor-contract scan patch retired: unsafe global +0x8a8 writes can corrupt stock OOTP season/storyline state");
+    append_log_line("KBO no-minor-contract global string patch retired: avoiding broad text/data mutation");
 
     append_logf("KBO no-minor-contract experimental patch complete installed_any=%d", ok);
     return ok;

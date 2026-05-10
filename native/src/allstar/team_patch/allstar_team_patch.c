@@ -207,34 +207,11 @@ int patch_kbo_allstar_team_names_for_league_id(uint32_t league_id, const char* s
     if (league_id == 0u) {
         return 0;
     }
-    OotpBuildInfo info = read_ootp_build_info();
-    if (kbo_ootp_build_is_steam_2026_05_04(info)) {
-        static volatile LONG skip_log_count = 0;
-        LONG log_index = InterlockedIncrement(&skip_log_count);
-        if (log_index <= 20) {
-            append_logf(
-                "KBO all-star team name patch skipped source=%s league_id=%u reason=latest_build_preserve_serialized_objects",
-                source != NULL ? source : "",
-                league_id);
-        }
-        return 0;
-    }
     return patch_kbo_allstar_team_names_for_league_id_or_any(league_id, source);
 }
 
 int patch_kbo_allstar_team_names_for_known_exhibition_teams(const char* source)
 {
-    OotpBuildInfo info = read_ootp_build_info();
-    if (kbo_ootp_build_is_steam_2026_05_04(info)) {
-        static volatile LONG skip_log_count = 0;
-        LONG log_index = InterlockedIncrement(&skip_log_count);
-        if (log_index <= 20) {
-            append_logf(
-                "KBO all-star exhibition team name patch skipped source=%s reason=latest_build_preserve_serialized_objects",
-                source != NULL ? source : "");
-        }
-        return 0;
-    }
     return patch_kbo_allstar_team_names_for_league_id_or_any(0u, source);
 }
 

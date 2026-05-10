@@ -29,6 +29,69 @@ int kbo_custom_event_date_allows_offseason_transition(uint32_t yyyymmdd)
     return month_day >= 1001u;
 }
 
+static int kbo_custom_event_date_gap_days(
+    uint32_t older_yyyymmdd,
+    uint32_t newer_yyyymmdd,
+    uint32_t* out_days)
+{
+    if (out_days != NULL) {
+        *out_days = 0u;
+    }
+    if (older_yyyymmdd == 0u || newer_yyyymmdd == 0u || older_yyyymmdd > newer_yyyymmdd) {
+        return 0;
+    }
+
+    uint32_t older_serial = kbo_date_serial(
+        older_yyyymmdd / 10000u,
+        (older_yyyymmdd / 100u) % 100u,
+        older_yyyymmdd % 100u);
+    uint32_t newer_serial = kbo_date_serial(
+        newer_yyyymmdd / 10000u,
+        (newer_yyyymmdd / 100u) % 100u,
+        newer_yyyymmdd % 100u);
+    if (older_serial == 0u || newer_serial == 0u || older_serial > newer_serial) {
+        return 0;
+    }
+
+    if (out_days != NULL) {
+        *out_days = newer_serial - older_serial;
+    }
+    return 1;
+}
+
+static uint32_t kbo_custom_event_resolve_offseason_transition_anchor(
+    uint32_t today_yyyymmdd,
+    uint32_t previous_phase_date,
+    const char* source)
+{
+    uint32_t offseason_starts = kbo_get_latest_offseason_starts_event(today_yyyymmdd);
+    if (offseason_starts != 0u) {
+        append_logf(
+            "KBO custom event offseason transition anchor source=%s reason=offseason_starts_event today=%u anchor=%u",
+            source != NULL ? source : "",
+            today_yyyymmdd,
+            offseason_starts);
+        return offseason_starts;
+    }
+
+    uint32_t gap_days = 0u;
+    if (previous_phase_date != 0u
+            && previous_phase_date < today_yyyymmdd
+            && kbo_custom_event_date_allows_offseason_transition(previous_phase_date)
+            && kbo_custom_event_date_gap_days(previous_phase_date, today_yyyymmdd, &gap_days)
+            && gap_days <= 1u) {
+        append_logf(
+            "KBO custom event offseason transition anchor source=%s reason=previous_phase_date today=%u anchor=%u gap_days=%u",
+            source != NULL ? source : "",
+            today_yyyymmdd,
+            previous_phase_date,
+            gap_days);
+        return previous_phase_date;
+    }
+
+    return today_yyyymmdd;
+}
+
 int kbo_custom_event_read_league_phase(
     uint32_t league_id,
     uintptr_t* out_league_ptr,
@@ -153,14 +216,19 @@ int kbo_custom_event_monitor_check_offseason_transition(
 
     if (transitioned_to_offseason) {
         if (kbo_custom_event_date_allows_offseason_transition(today_yyyymmdd)) {
-            if (g_kbo_custom_event_last_offseason_transition_anchor != today_yyyymmdd) {
-                g_kbo_custom_event_pending_offseason_transition_anchor = today_yyyymmdd;
+            uint32_t transition_anchor = kbo_custom_event_resolve_offseason_transition_anchor(
+                today_yyyymmdd,
+                g_kbo_custom_event_last_phase_date,
+                source);
+            if (g_kbo_custom_event_last_offseason_transition_anchor != transition_anchor) {
+                g_kbo_custom_event_pending_offseason_transition_anchor = transition_anchor;
                 append_logf(
-                    "KBO custom event offseason transition detected source=%s league=%p league_id=%u date=%u league_year=%u previous_phase=%u phase=%u",
+                    "KBO custom event offseason transition detected source=%s league=%p league_id=%u date=%u anchor=%u league_year=%u previous_phase=%u phase=%u",
                     source != NULL ? source : "",
                     (void*)league_ptr,
                     league_id,
                     today_yyyymmdd,
+                    transition_anchor,
                     league_year,
                     (unsigned)g_kbo_custom_event_last_seen_league_phase,
                     (unsigned)phase);

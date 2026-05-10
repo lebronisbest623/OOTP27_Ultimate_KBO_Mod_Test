@@ -21,6 +21,7 @@ static int kbo_no_minor_contract_experimental_patch_enabled(void)
 
 static volatile LONG g_kbo_no_minor_contract_patch_install_started = 0;
 static volatile LONG g_kbo_no_minor_contract_delayed_install_started = 0;
+static volatile LONG g_kbo_early_foreign_policy_hooks_install_started = 0;
 static volatile LONG64 g_kbo_runtime_marker_guard_started_filetime = 0;
 
 static LONG64 kbo_filetime_to_i64(FILETIME time)
@@ -44,7 +45,10 @@ static int install_kbo_no_minor_contract_experimental_patch_once(const char* sou
         "KBO no-minor-contract experimental patch installing source=%s",
         source != NULL ? source : "");
     int installed = install_kbo_no_minor_contract_experimental_patch();
-    start_kbo_no_minor_contract_demand_floor_scanner_thread();
+    if (installed) {
+        start_kbo_no_minor_contract_demand_floor_scanner_thread();
+        append_log_line("KBO no-minor-contract demand-floor scanner enabled: demand salary catch-up only");
+    }
     return installed;
 }
 
@@ -118,6 +122,72 @@ static void start_kbo_delayed_no_minor_contract_patch_install_thread(void)
         InterlockedExchange(&g_kbo_no_minor_contract_delayed_install_started, 0);
         append_logf("KBO no-minor-contract delayed install thread failed error=%lu", GetLastError());
     }
+}
+
+void install_kbo_early_no_minor_contract_hooks_once(const char* source)
+{
+    if (!kbo_no_minor_contract_experimental_patch_enabled()) {
+        append_logf(
+            "KBO early no-minor-contract hooks skipped source=%s reason=disabled",
+            source != NULL ? source : "");
+        return;
+    }
+
+    append_logf(
+        "KBO early no-minor-contract hooks deferred source=%s reason=avoid_presave_stock_storyline_side_effects",
+        source != NULL ? source : "");
+    start_kbo_delayed_no_minor_contract_patch_install_thread();
+}
+
+void install_kbo_early_foreign_policy_hooks_once(const char* source)
+{
+    if (!kbo_custom_foreign_policy_enabled()) {
+        append_logf(
+            "KBO early foreign policy hooks skipped source=%s reason=custom_policy_disabled",
+            source != NULL ? source : "");
+        return;
+    }
+    if (InterlockedCompareExchange(&g_kbo_early_foreign_policy_hooks_install_started, 1, 0) != 0) {
+        append_logf(
+            "KBO early foreign policy hooks skipped source=%s reason=already_started",
+            source != NULL ? source : "");
+        return;
+    }
+
+    append_logf("KBO early foreign policy hooks installing source=%s", source != NULL ? source : "");
+
+    if (read_kbo_localappdata_flag_file("enable_kbo_player_team_signability_patch.txt")) {
+        install_kbo_player_team_signability_patch();
+    } else {
+        append_log_line("KBO early player/team signability patch skipped: enable_kbo_player_team_signability_patch is false");
+    }
+
+    if (read_kbo_localappdata_flag_file("enable_kbo_offer_eligibility_patch.txt")) {
+        install_kbo_player_offer_eligibility_patch();
+    } else {
+        append_log_line("KBO early player offer eligibility patch skipped: enable_kbo_offer_eligibility_patch is false");
+    }
+
+    if (!read_kbo_localappdata_flag_file("disable_kbo_submit_offer_probe_patch.txt")) {
+        install_kbo_fa_submit_offer_probe_patch();
+    } else {
+        append_log_line("KBO early submit-offer probe patch skipped: disable_kbo_submit_offer_probe_patch is true");
+    }
+
+    if (!read_kbo_localappdata_flag_file("disable_kbo_foreign_signing_branch_patch.txt")) {
+        install_kbo_fa_signing_branch_patch();
+    } else {
+        append_log_line("KBO early foreign signing branch patch skipped: disable_kbo_foreign_signing_branch_patch is true");
+    }
+
+    if (read_kbo_localappdata_flag_file("enable_kbo_foreign_trade_check_patch.txt")
+            && !read_kbo_localappdata_flag_file("disable_kbo_foreign_trade_check_patch.txt")) {
+        install_kbo_trade_check_foreign_policy_patch();
+    } else {
+        append_log_line("KBO early trade foreign policy patch skipped: flag disabled");
+    }
+
+    append_logf("KBO early foreign policy hooks installed source=%s", source != NULL ? source : "");
 }
 
 DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)

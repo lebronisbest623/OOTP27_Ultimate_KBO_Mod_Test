@@ -110,24 +110,20 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
         return proposed_demand;
     }
 
-    uint8_t old_contract_level = *(uint8_t*)(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET);
-    if (old_contract_level != 1u) {
-        *(uint8_t*)(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET) = 1u;
-    }
-
     int32_t adjusted_demand = proposed_demand < salary_floor ? salary_floor : proposed_demand;
-    if (adjusted_demand != proposed_demand || old_contract_level != 1u) {
+    if (adjusted_demand != proposed_demand) {
+        uint8_t observed_contract_level = *(uint8_t*)(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET);
         static LONG write_floor_log_count = 0;
         LONG slot = InterlockedIncrement(&write_floor_log_count);
         if (slot <= 120) {
             append_logf(
-                "KBO no-minor demand write floor: source=0x%x player=%u proposed=%d adjusted=%d floor=%d old_contract_level=%u",
+                "KBO no-minor demand write floor: source=0x%x player=%u proposed=%d adjusted=%d floor=%d observed_contract_level=%u",
                 source_rva,
                 *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
                 proposed_demand,
                 adjusted_demand,
                 salary_floor,
-                (unsigned)old_contract_level);
+                (unsigned)observed_contract_level);
         }
     }
 
@@ -211,7 +207,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
     int changed = 0;
     int demand_fixed = 0;
     int foreign_demand_mapped = 0;
-    int level_fixed = 0;
+    int level_observed_nonmajor = 0;
     static LONG detail_log_count = 0;
     static LONG foreign_detail_log_count = 0;
 
@@ -242,9 +238,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             : 0u;
         int player_changed = 0;
         if (no_minor_candidate && old_contract_level != 1u) {
-            *(uint8_t*)(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET) = 1u;
-            level_fixed++;
-            player_changed = 1;
+            level_observed_nonmajor++;
         }
         if (no_minor_candidate && old_demand < salary_floor) {
             *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET) = salary_floor;
@@ -285,7 +279,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             LONG detail_slot = InterlockedIncrement(&detail_log_count);
             if (detail_slot <= KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS) {
                 append_logf(
-                    "KBO no-minor demand floor prescan applied: source=%s player=%u old_demand=%d floor=%d old_contract_level=%u",
+                    "KBO no-minor demand floor prescan applied: source=%s player=%u old_demand=%d floor=%d observed_contract_level=%u",
                     source,
                     *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
                     old_demand,
@@ -301,7 +295,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
     LONG summary_slot = changed > 0 ? InterlockedIncrement(&summary_log_count) : 0;
     if (changed > 0 && (summary_slot <= 20 || (summary_slot % 40) == 0)) {
         append_logf(
-            "KBO no-minor demand floor prescan complete: source=%s league=%u vector_off=0x%x scanned=%d teamless=%d changed=%d demand_fixed=%d foreign_demand_mapped=%d level_fixed=%d floor=%d summary_slot=%ld",
+            "KBO no-minor demand floor prescan complete: source=%s league=%u vector_off=0x%x scanned=%d teamless=%d changed=%d demand_fixed=%d foreign_demand_mapped=%d level_observed_nonmajor=%d floor=%d summary_slot=%ld",
             source,
             league_id,
             vector_offset,
@@ -310,7 +304,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             changed,
             demand_fixed,
             foreign_demand_mapped,
-            level_fixed,
+            level_observed_nonmajor,
             salary_floor,
             summary_slot);
     }

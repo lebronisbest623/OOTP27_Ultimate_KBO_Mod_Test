@@ -136,6 +136,21 @@ int kbo_record_fa_compensation_signing(
     }
     KBO_PROFILE_END(profile_fa_comp_market_row, "fa_comp.record_signing.market_row");
 
+    if (filing_original_team_id != 0u && filing_original_team_id != row.original_team_id) {
+        uint8_t* filing_original_team = find_kbo_team_by_numeric_id_any_league(filing_original_team_id, 0);
+        if (filing_original_team != NULL) {
+            append_logf(
+                "KBO FA compensation original team override player=%u memory_original=%u filing_original=%u signing_team=%u filing_league=%u filing_season=%u",
+                row.player_id,
+                row.original_team_id,
+                filing_original_team_id,
+                signing_team_id,
+                filing_league_id,
+                filing_season);
+            row.original_team_id = filing_original_team_id;
+        }
+    }
+
     if (!kbo_fa_rules_case_is_compensable(&fa_rules, row.case_label)
             || (fa_rules.exclude_foreign_players && row.foreign_player)
             || row.original_team_id == 0u

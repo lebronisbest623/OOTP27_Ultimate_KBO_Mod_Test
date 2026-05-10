@@ -27,15 +27,17 @@ int kbo_handle_asian_games_selection_event(uint32_t event_yyyymmdd, const char* 
         return 0;
     }
     g_kbo_asian_games_last_selection_fired_date = event_yyyymmdd;
+    uint32_t news_yyyymmdd = kbo_asian_games_effective_action_date(event_yyyymmdd);
     kbo_emit_asian_games_news(
-        event_yyyymmdd,
+        news_yyyymmdd,
         "[KBO] Asian Games Roster Announced",
         "The KBO has announced Korea's Asian Games roster.",
         source);
     append_logf(
-        "KBO Asian Games selection reached source=%s date=%u selected=%d",
+        "KBO Asian Games selection reached source=%s event_date=%u news_date=%u selected=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
+        news_yyyymmdd,
         selected);
     return 1;
 }

@@ -29,7 +29,7 @@ static const KboModRuntimeFlagSetting KBO_MOD_RUNTIME_FLAG_SETTINGS[] = {
     { "enable_single_division_allstar_runtime_patches", "Single-division All-Star runtime", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_single_division_allstar_voting_hook", "Single-division All-Star voting", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_single_division_allstar_settings_patch", "Single-division All-Star settings", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_fa_salary_opening_day_snapshot", "FA salary opening-day snapshot", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
+    { "disable_kbo_fa_salary_opening_day_snapshot", "FA salary opening-day snapshot", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_kbo_ai_fa_status_candidate_insert_hook", "AI FA candidate hook", 1, 0, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_kbo_ai_fa_fallback_patch", "AI FA fallback patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_kbo_player_team_signability_patch", "Player-team signability patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },

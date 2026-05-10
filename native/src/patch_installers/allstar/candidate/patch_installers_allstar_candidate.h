@@ -2,5 +2,8 @@
 #define KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_ALLSTAR_CANDIDATE_H_
 
 int install_allstar_candidate_team_split_patch(void);
+int install_allstar_candidate_team_roster_push_filter_patch(void);
+int install_allstar_candidate_player_push_filter_patch(void);
+int install_allstar_candidate_ranked_player_push_filter_patch(void);
 
 #endif
