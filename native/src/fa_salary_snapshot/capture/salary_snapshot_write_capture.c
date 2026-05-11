@@ -7,6 +7,7 @@
 
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../bootstrap/profiling/profiler.h"
+#include "../../competitive_balance_tax/api/competitive_balance_tax.h"
 #include "../../core/logging/core_log.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_name_cache.h"
@@ -192,6 +193,7 @@ int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date
     if (wrote) {
         InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_season, (LONG)season);
         InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_value, 1);
+        kbo_process_competitive_balance_tax(season, source);
         append_logf(
             "KBO FA salary opening-day snapshot written source=%s date=%u season=%u opening_day=%u league=%u scanned=%d rows=%d salary_rows=%d zero_salary_rows=%d csv=%s",
             source != NULL ? source : "",

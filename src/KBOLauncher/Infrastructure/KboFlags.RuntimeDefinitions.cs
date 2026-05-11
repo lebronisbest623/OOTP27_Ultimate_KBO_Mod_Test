@@ -32,6 +32,7 @@ internal static partial class KboFlags
         new("disable_kbo_sangmu_fa_block_core", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_submit_offer_probe_patch", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_amateur_assignment_reroute", null, true, RuntimeFlagLifecycle.Recovery),
+        new("disable_kbo_competitive_balance_tax", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_fa_compensation", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_military_team_add_guard_patch", null, true, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_runtime_roster_marker_guard", null, true, RuntimeFlagLifecycle.Recovery),
