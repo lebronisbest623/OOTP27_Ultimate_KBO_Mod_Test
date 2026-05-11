@@ -1,6 +1,7 @@
 #include "../entrypoint_internal.h"
 #include "../../core/core_flags/localappdata/localappdata_reader.h"
 #include "../../core/season/opening_day_storyline_guard.h"
+#include "../../patch_installers/amateur_assignment/patch_installers_amateur_assignment.h"
 
 static int read_kbo_no_minor_contract_disable_flag(int* disabled)
 {
@@ -522,6 +523,9 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
             append_log_line("KBO military team-add guard patch disabled: kbo_flags.json disable_kbo_military_team_add_guard_patch is true");
         }
     }
+    if (enable_amateur_assignment_core) {
+        install_kbo_amateur_assignment_batch_probe_patch();
+    }
     start_kbo_delayed_sangmu_fa_hooks_install_thread(
         enable_sangmu_signability_only || read_kbo_localappdata_flag_file("enable_kbo_player_team_signability_patch.txt"),
         enable_sangmu_offer_only || read_kbo_localappdata_flag_file("enable_kbo_offer_eligibility_patch.txt"),
@@ -637,9 +641,17 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
 
     uint32_t last_date_serial = 0u;
     int stable_date_ticks = 0;
+    int early_amateur_team_add_guard_installed = 0;
     for (int attempt = 1; attempt <= 450; attempt++) {
         int log_detail = attempt == 1 || attempt == 5 || attempt == 15 || attempt % 30 == 0;
         if (kbo_current_save_has_required_roster_marker("runtime_marker_wait", log_detail)) {
+            if (!early_amateur_team_add_guard_installed
+                    && !read_kbo_localappdata_flag_file("disable_amateur_assignment_reroute.txt")
+                    && !read_kbo_localappdata_flag_file("disable_kbo_military_team_add_guard_patch.txt")) {
+                append_log_line("KBO early amateur team-add guard installing after roster marker");
+                early_amateur_team_add_guard_installed = install_kbo_military_team_add_guard_patch();
+            }
+
             uint32_t today_serial = kbo_current_date_serial();
             if (today_serial != 0u && today_serial == last_date_serial) {
                 stable_date_ticks++;

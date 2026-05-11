@@ -68,6 +68,78 @@ int kbo_amateur_player_is_hitter(uint8_t* player)
     return player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] != 1u;
 }
 
+uint32_t kbo_amateur_player_assignment_league_id(uint8_t* player)
+{
+    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0u;
+    }
+
+    uint32_t current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+    if (current_league_id == KBO_HIGH_SCHOOL_LEAGUE_ID || current_league_id == KBO_COLLEGE_LEAGUE_ID) {
+        return current_league_id;
+    }
+
+    uint32_t original_league_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET);
+    if (original_league_id == KBO_HIGH_SCHOOL_LEAGUE_ID || original_league_id == KBO_COLLEGE_LEAGUE_ID) {
+        return original_league_id;
+    }
+    return 0u;
+}
+
+uint32_t kbo_amateur_player_assignment_team_id(uint8_t* player)
+{
+    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0u;
+    }
+
+    uint32_t team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    if (team_id == 0u) {
+        team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    }
+    if (team_id == 0u) {
+        team_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
+    }
+    return team_id;
+}
+
+int kbo_amateur_player_position_bucket(uint8_t* player)
+{
+    if (player == NULL
+            || !memory_range_readable(player + OOTP27_PLAYER_POSITION_GROUP_OFFSET, sizeof(uint8_t))) {
+        return 0;
+    }
+    switch (player[OOTP27_PLAYER_POSITION_GROUP_OFFSET]) {
+    case 1u: return 0; /* P */
+    case 2u: return 1; /* C */
+    case 3u: return 2; /* 1B */
+    case 4u: return 3; /* 2B */
+    case 5u: return 4; /* 3B */
+    case 6u: return 5; /* SS */
+    case 7u: return 6; /* LF */
+    case 8u: return 7; /* CF */
+    case 9u: return 8; /* RF */
+    case 10u: return 2; /* DH is folded into 1B for amateur balancing */
+    default:
+        return kbo_amateur_player_is_hitter(player) ? 2 : 0;
+    }
+}
+
+const char* kbo_amateur_position_bucket_label(int bucket)
+{
+    switch (bucket) {
+    case 0: return "P";
+    case 1: return "C";
+    case 2: return "1B";
+    case 3: return "2B";
+    case 4: return "3B";
+    case 5: return "SS";
+    case 6: return "LF";
+    case 7: return "CF";
+    case 8: return "RF";
+    default: return "P";
+    }
+}
+
 int32_t kbo_amateur_assignment_target_max_players(uint32_t league_id)
 {
     return league_id == KBO_HIGH_SCHOOL_LEAGUE_ID

@@ -131,10 +131,6 @@ uint32_t kbo_amateur_assignment_candidate_weight(
     if (!kbo_amateur_assignment_tier_allowed(player_tier, team_tier)) {
         return 0u;
     }
-    if (target_player_count >= 0 && player_count > target_player_count) {
-        return 0u;
-    }
-
     int32_t distance = abs((int32_t)reputation - target);
     int32_t base = 96 - (distance * 4);
     if (base < 8) {
@@ -152,6 +148,10 @@ uint32_t kbo_amateur_assignment_candidate_weight(
     }
 
     int32_t weight_value = (base * tier_multiplier) / 100;
+    if (target_player_count >= 0 && player_count > target_player_count) {
+        int32_t overage = player_count - target_player_count;
+        weight_value -= overage * 8;
+    }
     if (target_max_players > 0 && player_count >= target_max_players - 2) {
         weight_value /= 2;
     }
@@ -205,6 +205,19 @@ int kbo_amateur_assignment_collect_candidates(
         candidates[found].team_id = team_id;
         candidates[found].reputation = reputation;
         candidates[found].player_count = 0;
+        candidates[found].hitter_count = 0;
+        candidates[found].pitcher_count = 0;
+        candidates[found].catcher_count = 0;
+        candidates[found].infielder_count = 0;
+        candidates[found].outfielder_count = 0;
+        candidates[found].first_base_count = 0;
+        candidates[found].second_base_count = 0;
+        candidates[found].third_base_count = 0;
+        candidates[found].shortstop_count = 0;
+        candidates[found].left_field_count = 0;
+        candidates[found].center_field_count = 0;
+        candidates[found].right_field_count = 0;
+        candidates[found].designated_hitter_count = 0;
         found++;
     }
     return found;
@@ -222,6 +235,18 @@ void kbo_amateur_assignment_refresh_player_counts(
     for (int i = 0; i < candidate_count; i++) {
         candidates[i].player_count = 0;
         candidates[i].hitter_count = 0;
+        candidates[i].pitcher_count = 0;
+        candidates[i].catcher_count = 0;
+        candidates[i].infielder_count = 0;
+        candidates[i].outfielder_count = 0;
+        candidates[i].first_base_count = 0;
+        candidates[i].second_base_count = 0;
+        candidates[i].third_base_count = 0;
+        candidates[i].shortstop_count = 0;
+        candidates[i].left_field_count = 0;
+        candidates[i].center_field_count = 0;
+        candidates[i].right_field_count = 0;
+        candidates[i].designated_hitter_count = 0;
     }
 
     uintptr_t player_vector = 0;
@@ -251,6 +276,18 @@ void kbo_amateur_assignment_refresh_player_counts(
                 candidates[c].player_count++;
                 if (kbo_amateur_player_is_hitter(player)) {
                     candidates[c].hitter_count++;
+                }
+                switch (kbo_amateur_player_position_bucket(player)) {
+                case 0: candidates[c].pitcher_count++; break;
+                case 1: candidates[c].catcher_count++; break;
+                case 2: candidates[c].first_base_count++; candidates[c].infielder_count++; break;
+                case 3: candidates[c].second_base_count++; candidates[c].infielder_count++; break;
+                case 4: candidates[c].third_base_count++; candidates[c].infielder_count++; break;
+                case 5: candidates[c].shortstop_count++; candidates[c].infielder_count++; break;
+                case 6: candidates[c].left_field_count++; candidates[c].outfielder_count++; break;
+                case 7: candidates[c].center_field_count++; candidates[c].outfielder_count++; break;
+                case 8: candidates[c].right_field_count++; candidates[c].outfielder_count++; break;
+                default: break;
                 }
                 break;
             }
@@ -282,6 +319,32 @@ void kbo_amateur_assignment_note_player_count_delta(uint32_t league_id, uint32_t
                 if (candidates[i].hitter_count < 0) {
                     candidates[i].hitter_count = 0;
                 }
+            }
+            int bucket = kbo_amateur_player_position_bucket(player);
+            int32_t* bucket_count = NULL;
+            switch (bucket) {
+            case 0: bucket_count = &candidates[i].pitcher_count; break;
+            case 1: bucket_count = &candidates[i].catcher_count; break;
+            case 2: bucket_count = &candidates[i].first_base_count; candidates[i].infielder_count += delta; break;
+            case 3: bucket_count = &candidates[i].second_base_count; candidates[i].infielder_count += delta; break;
+            case 4: bucket_count = &candidates[i].third_base_count; candidates[i].infielder_count += delta; break;
+            case 5: bucket_count = &candidates[i].shortstop_count; candidates[i].infielder_count += delta; break;
+            case 6: bucket_count = &candidates[i].left_field_count; candidates[i].outfielder_count += delta; break;
+            case 7: bucket_count = &candidates[i].center_field_count; candidates[i].outfielder_count += delta; break;
+            case 8: bucket_count = &candidates[i].right_field_count; candidates[i].outfielder_count += delta; break;
+            default: break;
+            }
+            if (bucket_count != NULL) {
+                *bucket_count += delta;
+                if (*bucket_count < 0) {
+                    *bucket_count = 0;
+                }
+            }
+            if (candidates[i].infielder_count < 0) {
+                candidates[i].infielder_count = 0;
+            }
+            if (candidates[i].outfielder_count < 0) {
+                candidates[i].outfielder_count = 0;
             }
             break;
         }

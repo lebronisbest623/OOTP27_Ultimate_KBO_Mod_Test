@@ -34,6 +34,13 @@ void kbo_webview_append_mod_runtime_flag_group(
     int category,
     const char* title,
     const char* help_text);
+void kbo_webview_begin_ootp_choice(KboWindowTextBuffer* buffer, const char* id, const char* current_label);
+void kbo_webview_append_ootp_choice_option(
+    KboWindowTextBuffer* buffer,
+    const char* href,
+    const char* label,
+    int selected);
+void kbo_webview_end_ootp_choice(KboWindowTextBuffer* buffer);
 void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_mod_subview);
 void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer);
 

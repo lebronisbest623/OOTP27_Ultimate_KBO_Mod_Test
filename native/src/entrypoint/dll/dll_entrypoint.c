@@ -43,6 +43,11 @@ DWORD WINAPI patch_thread(LPVOID parameter)
 
     install_kbo_early_foreign_policy_hooks_once("presave_bootstrap");
     install_kbo_early_no_minor_contract_hooks_once("presave_bootstrap");
+    if (!read_kbo_localappdata_flag_file("disable_amateur_assignment_reroute.txt")) {
+        install_kbo_amateur_assignment_batch_probe_patch();
+    } else {
+        append_log_line("KBO early amateur assignment batch probe skipped: disable_amateur_assignment_reroute is true");
+    }
     start_kbo_military_seed_bootstrap_thread();
 
     append_log_line("KBO F2 hub starting before runtime marker guard");

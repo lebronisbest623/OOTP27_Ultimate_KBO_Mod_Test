@@ -1,4 +1,5 @@
 #include "../../hotkey_window_runtime_internal.h"
+#include "../../hotkey_window_domain_contract.h"
 
 int kbo_hub_foreign_rights_ui_selected(void)
 {

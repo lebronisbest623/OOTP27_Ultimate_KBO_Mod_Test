@@ -41,6 +41,20 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/bootstrap/abi/ootp_offsets.h"
 #include "../src/foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../src/foreign/injury/api/foreign_injury.h"
+#include "../src/amateur_player_quality/api/amateur_player_quality.h"
+
+int kbo_amateur_player_is_hitter(uint8_t* player);
+uint32_t kbo_amateur_player_assignment_league_id(uint8_t* player);
+uint32_t kbo_amateur_player_assignment_team_id(uint8_t* player);
+int kbo_amateur_player_position_bucket(uint8_t* player);
+const char* kbo_amateur_position_bucket_label(int bucket);
+int32_t kbo_amateur_assignment_target_max_players(uint32_t league_id);
+int32_t kbo_amateur_quality_score(uint8_t* player);
+int32_t kbo_amateur_assignment_target_reputation(uint32_t league_id, int32_t quality_score);
+int kbo_amateur_assignment_team_tier(uint32_t league_id, uint8_t reputation);
+int kbo_amateur_assignment_player_tier(uint32_t league_id, int32_t quality_score);
+int kbo_amateur_assignment_tier_allowed(int player_tier, int team_tier);
+int kbo_amateur_assignment_effective_player_tier(int player_tier, int max_team_tier);
 
 static void test_core_text_and_sql_helpers(void)
 {
@@ -1007,6 +1021,195 @@ static void test_flag_key_from_file_name(void)
     printf("test_flag_key_from_file_name: PASS\n");
 }
 
+static void test_amateur_assignment_policy(void)
+{
+    uint8_t player[OOTP27_PLAYER_SCAN_BYTES];
+
+    /* kbo_amateur_player_is_hitter: position_group 1 = pitcher; anything else = hitter */
+    memset(player, 0, sizeof(player));
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 1u;
+    assert(!kbo_amateur_player_is_hitter(player));
+
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 2u;
+    assert(kbo_amateur_player_is_hitter(player));
+
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 10u;
+    assert(kbo_amateur_player_is_hitter(player));
+
+    /* position_group 0 (unset) is treated as hitter (not 1) */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 0u;
+    assert(kbo_amateur_player_is_hitter(player));
+
+    assert(!kbo_amateur_player_is_hitter(NULL));
+
+    /* kbo_amateur_player_position_bucket: each position_group maps to a named bucket */
+    memset(player, 0, sizeof(player));
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 1u;  assert(kbo_amateur_player_position_bucket(player) == 0); /* P  */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 2u;  assert(kbo_amateur_player_position_bucket(player) == 1); /* C  */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 3u;  assert(kbo_amateur_player_position_bucket(player) == 2); /* 1B */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 4u;  assert(kbo_amateur_player_position_bucket(player) == 3); /* 2B */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 5u;  assert(kbo_amateur_player_position_bucket(player) == 4); /* 3B */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 6u;  assert(kbo_amateur_player_position_bucket(player) == 5); /* SS */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 7u;  assert(kbo_amateur_player_position_bucket(player) == 6); /* LF */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 8u;  assert(kbo_amateur_player_position_bucket(player) == 7); /* CF */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 9u;  assert(kbo_amateur_player_position_bucket(player) == 8); /* RF */
+    /* DH (10) folds into 1B bucket for amateur balancing */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 10u; assert(kbo_amateur_player_position_bucket(player) == 2);
+    /* unknown group falls through to is_hitter; 0 is treated as hitter → bucket 2 */
+    player[OOTP27_PLAYER_POSITION_GROUP_OFFSET] = 0u;  assert(kbo_amateur_player_position_bucket(player) == 2);
+    assert(kbo_amateur_player_position_bucket(NULL) == 0);
+
+    /* kbo_amateur_position_bucket_label: covers 0-8, default falls back to "P" */
+    assert(strcmp(kbo_amateur_position_bucket_label(0), "P")  == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(1), "C")  == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(2), "1B") == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(3), "2B") == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(4), "3B") == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(5), "SS") == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(6), "LF") == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(7), "CF") == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(8), "RF") == 0);
+    assert(strcmp(kbo_amateur_position_bucket_label(9),  "P") == 0); /* out-of-range → default */
+    assert(strcmp(kbo_amateur_position_bucket_label(-1), "P") == 0);
+
+    /* kbo_amateur_assignment_target_max_players: HS=34, College=40, anything else=40 */
+    assert(kbo_amateur_assignment_target_max_players(KBO_HIGH_SCHOOL_LEAGUE_ID) == KBO_HIGH_SCHOOL_ASSIGNMENT_TARGET_MAX_PLAYERS);
+    assert(kbo_amateur_assignment_target_max_players(KBO_COLLEGE_LEAGUE_ID)     == KBO_COLLEGE_ASSIGNMENT_TARGET_MAX_PLAYERS);
+    assert(kbo_amateur_assignment_target_max_players(0u)                        == KBO_COLLEGE_ASSIGNMENT_TARGET_MAX_PLAYERS);
+
+    /* kbo_amateur_quality_score: sum of four i16 value fields */
+    memset(player, 0, sizeof(player));
+    *(int16_t*)(player + OOTP27_PLAYER_OVERALL_VALUE_OFFSET)  = 100;
+    *(int16_t*)(player + OOTP27_PLAYER_TALENT_VALUE_OFFSET)   = 200;
+    *(int16_t*)(player + OOTP27_PLAYER_RATINGS_VALUE_OFFSET)  = 300;
+    *(int16_t*)(player + OOTP27_PLAYER_CAREER_VALUE_OFFSET)   = 400;
+    assert(kbo_amateur_quality_score(player) == 1000);
+
+    memset(player, 0, sizeof(player));
+    assert(kbo_amateur_quality_score(player) == 0);
+    assert(kbo_amateur_quality_score(NULL) == 0);
+
+    /* kbo_amateur_assignment_target_reputation: high school — exact boundary cases */
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 2300) == 92);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 2299) == 84);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 1800) == 84);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 1799) == 72);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 1350) == 72);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 1349) == 58);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 950)  == 58);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 949)  == 45);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 600)  == 45);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 599)  == 35);
+    assert(kbo_amateur_assignment_target_reputation(KBO_HIGH_SCHOOL_LEAGUE_ID, 0)    == 35);
+    /* college: subtracts 10 from each threshold; bottom bracket (35-10=25) is clamped to 25 */
+    assert(kbo_amateur_assignment_target_reputation(KBO_COLLEGE_LEAGUE_ID, 2300) == 82);
+    assert(kbo_amateur_assignment_target_reputation(KBO_COLLEGE_LEAGUE_ID, 1800) == 74);
+    assert(kbo_amateur_assignment_target_reputation(KBO_COLLEGE_LEAGUE_ID, 1350) == 62);
+    assert(kbo_amateur_assignment_target_reputation(KBO_COLLEGE_LEAGUE_ID, 950)  == 48);
+    assert(kbo_amateur_assignment_target_reputation(KBO_COLLEGE_LEAGUE_ID, 600)  == 35);
+    assert(kbo_amateur_assignment_target_reputation(KBO_COLLEGE_LEAGUE_ID, 0)    == 25);
+
+    /* kbo_amateur_assignment_team_tier: high school / default thresholds (90/80/68/56/48) */
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 255) == 5);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 90)  == 5);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 89)  == 4);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 80)  == 4);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 79)  == 3);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 68)  == 3);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 67)  == 2);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 56)  == 2);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 55)  == 1);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 48)  == 1);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 47)  == 0);
+    assert(kbo_amateur_assignment_team_tier(KBO_HIGH_SCHOOL_LEAGUE_ID, 0)   == 0);
+    /* college: tighter thresholds (68/55/42/28/15) */
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 68) == 5);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 67) == 4);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 55) == 4);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 54) == 3);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 42) == 3);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 41) == 2);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 28) == 2);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 27) == 1);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 15) == 1);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 14) == 0);
+    assert(kbo_amateur_assignment_team_tier(KBO_COLLEGE_LEAGUE_ID, 0)  == 0);
+
+    /* kbo_amateur_assignment_player_tier: league_id ignored; score thresholds match target_reputation */
+    assert(kbo_amateur_assignment_player_tier(0u, 2300) == 5);
+    assert(kbo_amateur_assignment_player_tier(0u, 2299) == 4);
+    assert(kbo_amateur_assignment_player_tier(0u, 1800) == 4);
+    assert(kbo_amateur_assignment_player_tier(0u, 1799) == 3);
+    assert(kbo_amateur_assignment_player_tier(0u, 1350) == 3);
+    assert(kbo_amateur_assignment_player_tier(0u, 1349) == 2);
+    assert(kbo_amateur_assignment_player_tier(0u, 950)  == 2);
+    assert(kbo_amateur_assignment_player_tier(0u, 949)  == 1);
+    assert(kbo_amateur_assignment_player_tier(0u, 600)  == 1);
+    assert(kbo_amateur_assignment_player_tier(0u, 599)  == 0);
+    assert(kbo_amateur_assignment_player_tier(0u, 0)    == 0);
+
+    /* kbo_amateur_assignment_tier_allowed: |player_tier - team_tier| <= 1 */
+    assert(kbo_amateur_assignment_tier_allowed(3, 3));
+    assert(kbo_amateur_assignment_tier_allowed(3, 2));
+    assert(kbo_amateur_assignment_tier_allowed(3, 4));
+    assert(!kbo_amateur_assignment_tier_allowed(3, 1));
+    assert(!kbo_amateur_assignment_tier_allowed(3, 5));
+    assert(!kbo_amateur_assignment_tier_allowed(-1, 0));
+    assert(!kbo_amateur_assignment_tier_allowed(0, -1));
+    assert(kbo_amateur_assignment_tier_allowed(0, 0));
+    assert(kbo_amateur_assignment_tier_allowed(5, 5));
+
+    /* kbo_amateur_assignment_effective_player_tier:
+     * max_team_tier < 0 → pass through unchanged; otherwise cap at max_team_tier */
+    assert(kbo_amateur_assignment_effective_player_tier(5, -1) == 5);
+    assert(kbo_amateur_assignment_effective_player_tier(5, 3)  == 3);
+    assert(kbo_amateur_assignment_effective_player_tier(2, 3)  == 2);
+    assert(kbo_amateur_assignment_effective_player_tier(3, 3)  == 3);
+    assert(kbo_amateur_assignment_effective_player_tier(0, 0)  == 0);
+
+    /* kbo_amateur_player_assignment_league_id: current league id checked first */
+    memset(player, 0, sizeof(player));
+    *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) = KBO_HIGH_SCHOOL_LEAGUE_ID;
+    assert(kbo_amateur_player_assignment_league_id(player) == KBO_HIGH_SCHOOL_LEAGUE_ID);
+
+    memset(player, 0, sizeof(player));
+    *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) = KBO_COLLEGE_LEAGUE_ID;
+    assert(kbo_amateur_player_assignment_league_id(player) == KBO_COLLEGE_LEAGUE_ID);
+
+    /* original league id used when current league is not an amateur league */
+    memset(player, 0, sizeof(player));
+    *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET)  = 999u;
+    *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET) = KBO_HIGH_SCHOOL_LEAGUE_ID;
+    assert(kbo_amateur_player_assignment_league_id(player) == KBO_HIGH_SCHOOL_LEAGUE_ID);
+
+    memset(player, 0, sizeof(player));
+    *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET)  = 999u;
+    *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET) = 888u;
+    assert(kbo_amateur_player_assignment_league_id(player) == 0u);
+
+    assert(kbo_amateur_player_assignment_league_id(NULL) == 0u);
+
+    /* kbo_amateur_player_assignment_team_id: current → active → original fallback chain */
+    memset(player, 0, sizeof(player));
+    *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) = 42u;
+    assert(kbo_amateur_player_assignment_team_id(player) == 42u);
+
+    memset(player, 0, sizeof(player));
+    *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = 77u;
+    assert(kbo_amateur_player_assignment_team_id(player) == 77u);
+
+    memset(player, 0, sizeof(player));
+    *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET) = 99u;
+    assert(kbo_amateur_player_assignment_team_id(player) == 99u);
+
+    memset(player, 0, sizeof(player));
+    assert(kbo_amateur_player_assignment_team_id(player) == 0u);
+
+    assert(kbo_amateur_player_assignment_team_id(NULL) == 0u);
+
+    printf("test_amateur_assignment_policy: PASS\n");
+}
+
 int main(void)
 {
     test_core_text_and_sql_helpers();
@@ -1033,6 +1236,7 @@ int main(void)
     test_player_is_foreign_for_kbo_rights();
     test_foreign_injury_slot_label();
     test_foreign_injury_status_label();
+    test_amateur_assignment_policy();
     printf("All tests passed.\n");
     return 0;
 }
@@ -1082,4 +1286,20 @@ uint32_t read_u32_leading_number_from_file(const char* filename)
 void append_log_line(const char* line)
 {
     (void)line;
+}
+
+/* ---- Globals and stubs for amateur_assignment_policy.c ---- */
+
+KboAmateurAssignmentProcessed g_kbo_amateur_assignment_processed[KBO_AMATEUR_ASSIGNMENT_PROCESSED_MAX];
+KboAmateurAssignmentProcessed g_kbo_amateur_assignment_processed_hash[KBO_AMATEUR_ASSIGNMENT_PROCESSED_HASH_MAX];
+LONG g_kbo_amateur_assignment_processed_count = 0;
+LONG g_kbo_amateur_assignment_processed_hash_count = 0;
+KboAmateurAssignmentProcessed g_kbo_amateur_assignment_rejected_targets[KBO_AMATEUR_ASSIGNMENT_REJECTED_TARGET_MAX];
+LONG g_kbo_amateur_assignment_rejected_target_count = 0;
+
+void kbo_amateur_assignment_clear_processed_cache(void) {}
+
+uint32_t kbo_amateur_assignment_processed_hash_key(uint32_t player_id, uint32_t team_id)
+{
+    (void)player_id; (void)team_id; return 0u;
 }

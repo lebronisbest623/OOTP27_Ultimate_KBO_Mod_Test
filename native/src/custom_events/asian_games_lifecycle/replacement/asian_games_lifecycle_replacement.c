@@ -10,7 +10,6 @@
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../allstar/allstar_league_context/allstar_league_context.h"
-#include "../../../bootstrap/abi/forward_declarations.h"
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../../foreign/common/policy/foreign_waiver_policy.h"

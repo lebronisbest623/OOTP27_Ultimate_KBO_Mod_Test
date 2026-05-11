@@ -44,6 +44,14 @@ internal static class DllPayloadStager
             CopyDirectory(assetSource, assetTarget);
             Log(logPath, $"assets_copy source={assetSource} target={assetTarget}");
         }
+
+        var toolSource = Path.Combine(Path.GetDirectoryName(fullDllPath) ?? string.Empty, "tools");
+        if (Directory.Exists(toolSource))
+        {
+            var toolTarget = Path.Combine(runDllDir, "tools");
+            CopyDirectory(toolSource, toolTarget);
+            Log(logPath, $"tools_copy source={toolSource} target={toolTarget}");
+        }
     
         Log(logPath, $"dll_copy source={fullDllPath} target={copyPath}");
         return copyPath;

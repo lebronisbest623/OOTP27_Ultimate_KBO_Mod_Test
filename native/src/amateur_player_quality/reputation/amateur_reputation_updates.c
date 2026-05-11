@@ -69,6 +69,25 @@ uint32_t kbo_resolve_amateur_assignment_league_id_for_team_ptr(uint8_t* team)
     return 0u;
 }
 
+uint32_t kbo_resolve_amateur_assignment_league_id_for_team_and_player(uint8_t* team, uint8_t* player)
+{
+    uint32_t player_league_id = kbo_amateur_player_assignment_league_id(player);
+    if (player_league_id == KBO_HIGH_SCHOOL_LEAGUE_ID || player_league_id == KBO_COLLEGE_LEAGUE_ID) {
+        uint8_t reputation = 0u;
+        if (kbo_find_amateur_team_reputation_by_memory_team(player_league_id, team, &reputation)) {
+            return player_league_id;
+        }
+
+        uint32_t team_league_id = kbo_resolve_amateur_assignment_league_id_for_team_ptr(team);
+        if (team_league_id != 0u && team_league_id != player_league_id) {
+            return 0u;
+        }
+        return 0u;
+    }
+
+    return kbo_resolve_amateur_assignment_league_id_for_team_ptr(team);
+}
+
 int kbo_compare_amateur_reputation_update_rows(const void* a, const void* b)
 {
     const KboAmateurReputationUpdateRow* left = (const KboAmateurReputationUpdateRow*)a;

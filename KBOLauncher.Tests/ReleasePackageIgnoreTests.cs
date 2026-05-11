@@ -27,6 +27,7 @@ public sealed class ReleasePackageIgnoreTests
     [InlineData("\"assets\\fonts\\JejuGothic-Regular.ttf\"")]
     [InlineData("\"assets\\icons\\github-mark.png\"")]
     [InlineData("\"data\\seeds\\allstar_teams.csv\"")]
+    [InlineData("\"data\\seeds\\asian_games_projected_hosts.csv\"")]
     [InlineData("\"data\\seeds\\asian_games_schedule_seed.csv\"")]
     [InlineData("\"data\\seeds\\college_reputation_seed.csv\"")]
     [InlineData("\"data\\seeds\\fa_rules.json\"")]

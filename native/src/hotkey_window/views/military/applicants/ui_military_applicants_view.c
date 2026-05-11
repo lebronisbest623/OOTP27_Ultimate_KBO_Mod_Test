@@ -185,7 +185,7 @@ void kbo_webview_append_military_applicants_view(KboWindowTextBuffer* buffer)
 
     int rendered = 0;
     if (!application_active) {
-        kbo_window_text_appendf(buffer, "<tr><td class='roEmptyMessage' colspan='6'>지??기간�닙?�다.</td></tr>");
+        kbo_window_text_appendf(buffer, "<tr><td class='roEmptyMessage' colspan='6'>\xec\xa7\x80\xec\x9b\x90\xea\xb8\xb0\xea\xb0\x84\xec\x9d\xb4 \xec\x95\x84\xeb\x8b\x99\xeb\x8b\x88\xeb\x8b\xa4.</td></tr>");
     }
     for (LONG i = 0; application_active && i < count && rendered < 500; i++) {
         KboMilitaryDraftCandidate* candidate = &g_kbo_military_draft_candidates[i];

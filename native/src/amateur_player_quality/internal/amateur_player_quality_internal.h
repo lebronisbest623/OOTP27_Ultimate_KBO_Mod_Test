@@ -15,6 +15,7 @@
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../runtime_memory/runtime_memory.h"
+#include "../../team/add_player_guard/team_add_player_guard.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_string.h"
 
@@ -62,6 +63,7 @@ void kbo_ensure_amateur_reputation_seeds_loaded(void);
 int kbo_find_amateur_team_reputation_for_league(uint32_t league_id, uint32_t team_id, uint8_t* out_reputation);
 int kbo_find_amateur_team_reputation_by_memory_team(uint32_t league_id, uint8_t* team, uint8_t* out_reputation);
 uint32_t kbo_resolve_amateur_assignment_league_id_for_team_ptr(uint8_t* team);
+uint32_t kbo_resolve_amateur_assignment_league_id_for_team_and_player(uint8_t* team, uint8_t* player);
 int kbo_compare_amateur_reputation_update_rows(const void* a, const void* b);
 uint8_t kbo_amateur_reputation_clamp_for_league(uint32_t league_id, int32_t value);
 int kbo_append_amateur_reputation_history(
@@ -77,6 +79,10 @@ void kbo_amateur_assignment_clear_processed_cache(void);
 int kbo_amateur_assignment_already_processed(uint32_t player_id, uint32_t team_id);
 void kbo_amateur_assignment_mark_processed(uint32_t player_id, uint32_t team_id);
 int kbo_amateur_player_is_hitter(uint8_t* player);
+uint32_t kbo_amateur_player_assignment_league_id(uint8_t* player);
+uint32_t kbo_amateur_player_assignment_team_id(uint8_t* player);
+int kbo_amateur_player_position_bucket(uint8_t* player);
+const char* kbo_amateur_position_bucket_label(int bucket);
 int32_t kbo_amateur_assignment_target_max_players(uint32_t league_id);
 void kbo_read_amateur_quality_fields(
     uint8_t* player,
@@ -158,8 +164,21 @@ uint8_t* kbo_choose_amateur_assignment_team_ortools(
     uint8_t current_reputation,
     int32_t quality_score,
     uint8_t* out_target_reputation);
+void kbo_prepare_amateur_assignment_batch_ortools(uintptr_t player_list_ptr, int32_t player_count, uintptr_t source_team_ptr);
+int kbo_amateur_generation_team_add_caller(uint32_t caller_rva);
 uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr, uintptr_t player_ptr, const char* source);
 void kbo_amateur_team_add_player_note_original_success(uintptr_t team_ptr, uintptr_t player_ptr, const char* source, int original_result);
+int kbo_amateur_defer_team_add_if_generation(
+    uint32_t caller_rva,
+    uintptr_t team_ptr,
+    uintptr_t player_ptr,
+    uintptr_t arg3,
+    uintptr_t arg4,
+    uintptr_t arg5,
+    uintptr_t arg6,
+    uintptr_t arg7,
+    uintptr_t arg8);
+void ootp_kbo_amateur_assignment_batch_probe(uintptr_t player_list_ptr, int32_t player_count, uintptr_t source_team_ptr);
 int kbo_amateur_player_age_eligible(uint32_t league_id, int16_t age);
 
 #endif

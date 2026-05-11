@@ -96,16 +96,18 @@ void kbo_webview_append_mod_runtime_flag_row(KboWindowTextBuffer* buffer, const 
         "<div class='settingRow flagSettingRow'><label class='settingLabel' for='flag_%s'>",
         setting->key);
     kbo_html_append_escaped(buffer, setting->label);
-    kbo_window_text_appendf(
-        buffer,
-        "</label><select id='flag_%s' class='ootpSelect' onchange=\"if(this.value){location.href='kbo://mod/settings/flag/%s/'+this.value}\">"
-        "<option value='on' %s>On</option>"
-        "<option value='off' %s>Off</option>"
-        "</select></div>",
-        setting->key,
-        setting->key,
-        enabled ? "selected" : "",
-        enabled ? "" : "selected");
+    char id[128] = {0};
+    char href_on[192] = {0};
+    char href_off[192] = {0};
+    snprintf(id, sizeof(id), "flag_%s", setting->key);
+    snprintf(href_on, sizeof(href_on), "kbo://mod/settings/flag/%s/on", setting->key);
+    snprintf(href_off, sizeof(href_off), "kbo://mod/settings/flag/%s/off", setting->key);
+    kbo_window_text_appendf(buffer, "</label>");
+    kbo_webview_begin_ootp_choice(buffer, id, enabled ? "On" : "Off");
+    kbo_webview_append_ootp_choice_option(buffer, href_on, "On", enabled);
+    kbo_webview_append_ootp_choice_option(buffer, href_off, "Off", !enabled);
+    kbo_webview_end_ootp_choice(buffer);
+    kbo_window_text_appendf(buffer, "</div>");
 }
 
 void kbo_webview_append_mod_runtime_flag_group(

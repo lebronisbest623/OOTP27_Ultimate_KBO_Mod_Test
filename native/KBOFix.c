@@ -15,7 +15,6 @@
 
 #include "src/bootstrap/abi/ootp_offsets.h"
 #include "src/bootstrap/abi/ootp_typedefs.h"
-#include "src/bootstrap/abi/forward_declarations.h"
 #include "src/build_verify/build_verify.h"
 
 /*
@@ -142,6 +141,7 @@
 #include "src/bootstrap/abi/hook_entrypoints.h"
 #include "src/hook_stubs/allocation/hook_stubs_near_code.h"
 #include "src/hook_stubs/military/hook_stubs_military.h"
+#include "src/hook_stubs/amateur_assignment/hook_stubs_amateur_assignment.h"
 #include "src/hook_stubs/foreign_signability_stubs/eligibility/basic_eligibility_stubs.h"
 #include "src/hook_stubs/foreign_signability_stubs/demand_floor/offer_demand_floor_stubs.h"
 #include "src/hook_stubs/foreign_signability_stubs/callbacks/offer_callback_stubs.h"
@@ -156,6 +156,7 @@
 #include "src/hook_stubs/allstar/events/hook_stubs_allstar_events.h"
 #include "src/hook_stubs/allstar/candidate/hook_stubs_allstar_candidate.h"
 #include "src/patch_installers/military/patch_installers_military.h"
+#include "src/patch_installers/amateur_assignment/patch_installers_amateur_assignment.h"
 #include "src/patch_installers/foreign/signability/entry/patch_installers_foreign_signability_entry.h"
 #include "src/patch_installers/foreign/ai_fa/patch_installers_foreign_ai_fa_fallback.h"
 #include "src/patch_installers/foreign/signability/submit_offer/patch_installers_foreign_submit_offer_probe.h"

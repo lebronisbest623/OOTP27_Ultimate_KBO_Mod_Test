@@ -16,6 +16,10 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     uintptr_t arg6,
     uintptr_t arg7,
     uintptr_t arg8);
+__declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
+    uintptr_t player_list_ptr,
+    int32_t player_count,
+    uintptr_t source_team_ptr);
 __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uintptr_t player_ptr, int32_t team_id, uint16_t year_hint, uintptr_t original_func_ptr);
 __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(

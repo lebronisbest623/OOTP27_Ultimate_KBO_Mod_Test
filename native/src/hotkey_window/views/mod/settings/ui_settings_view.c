@@ -62,40 +62,36 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         buffer,
         "</h2><div class='settingRow'><label class='settingLabel' for='intlFaMultiplierSelect'>");
     kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 FA \xec\x83\x9d\xec\x84\xb1", "International FA pool"));
-    kbo_window_text_appendf(
-        buffer,
-        "</label><select id='intlFaMultiplierSelect' class='ootpSelect' onchange=\"if(this.value){location.href='kbo://settings/intl-fa-multiplier/'+this.value}\">");
+    char current_choice_label[32] = {0};
+    snprintf(current_choice_label, sizeof(current_choice_label), "%dx", multiplier);
+    kbo_window_text_appendf(buffer, "</label>");
+    kbo_webview_begin_ootp_choice(buffer, "intlFaMultiplierSelect", current_choice_label);
     if (!preset_has_current) {
-        kbo_window_text_appendf(
-            buffer,
-            "<option value='%d' selected>%dx</option>",
-            multiplier,
-            multiplier);
+        char href[96] = {0};
+        snprintf(href, sizeof(href), "kbo://settings/intl-fa-multiplier/%d", multiplier);
+        kbo_webview_append_ootp_choice_option(buffer, href, current_choice_label, 1);
     }
 
     for (size_t i = 0; i < sizeof(presets) / sizeof(presets[0]); i++) {
         int value = presets[i];
-        kbo_window_text_appendf(
-            buffer,
-            "<option value='%d' %s>%dx</option>",
-            value,
-            value == multiplier ? "selected" : "",
-            value);
+        char href[96] = {0};
+        char label[32] = {0};
+        snprintf(href, sizeof(href), "kbo://settings/intl-fa-multiplier/%d", value);
+        snprintf(label, sizeof(label), "%dx", value);
+        kbo_webview_append_ootp_choice_option(buffer, href, label, value == multiplier);
     }
 
     int quality_cap_enabled = kbo_get_foreign_fa_quality_cap_enabled_setting();
     kbo_window_text_appendf(
         buffer,
-        "</select></div><div class='settingRow'><label class='settingLabel' for='foreignFaQualityCapSelect'>");
+        "</div></details></div><div class='settingRow'><label class='settingLabel' for='foreignFaQualityCapSelect'>");
     kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x83\x9d\xec\x84\xb1 \xed\x92\x88\xec\xa7\x88 \xec\xba\xa1", "Foreign FA quality cap"));
-    kbo_window_text_appendf(
-        buffer,
-        "</label><select id='foreignFaQualityCapSelect' class='ootpSelect' onchange=\"if(this.value){location.href='kbo://settings/foreign-fa-quality-cap/'+this.value}\">"
-        "<option value='on' %s>ON</option>"
-        "<option value='off' %s>OFF</option>"
-        "</select></div>",
-        quality_cap_enabled ? "selected" : "",
-        quality_cap_enabled ? "" : "selected");
+    kbo_window_text_appendf(buffer, "</label>");
+    kbo_webview_begin_ootp_choice(buffer, "foreignFaQualityCapSelect", quality_cap_enabled ? "ON" : "OFF");
+    kbo_webview_append_ootp_choice_option(buffer, "kbo://settings/foreign-fa-quality-cap/on", "ON", quality_cap_enabled);
+    kbo_webview_append_ootp_choice_option(buffer, "kbo://settings/foreign-fa-quality-cap/off", "OFF", !quality_cap_enabled);
+    kbo_webview_end_ootp_choice(buffer);
+    kbo_window_text_appendf(buffer, "</div>");
 
     kbo_window_text_appendf(
         buffer,
@@ -112,7 +108,7 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         kbo_html_append_escaped(buffer, kbo_hub_text(non_asian_quality_cap_labels_ko[i], non_asian_quality_cap_labels_en[i]));
         kbo_window_text_appendf(
             buffer,
-            "</label><input id='nonAsianQualityCap%d' class='ootpSelect salaryInput' type='number' min='0' max='%d' step='500' value='%d' "
+            "</label><input id='nonAsianQualityCap%d' class='ootpSelect salaryInput' type='text' inputmode='numeric' pattern='[0-9]*' data-min='0' data-max='%d' data-step='500' value='%d' "
             "onchange=\"location.href='kbo://settings/foreign-fa-non-asian-quality-cap/%d/'+this.value\" "
             "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
             i,
@@ -136,7 +132,7 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         kbo_html_append_escaped(buffer, kbo_hub_text(baseline_labels_ko[i], baseline_labels_en[i]));
         kbo_window_text_appendf(
             buffer,
-            "</label><input id='foreignBaseline%d' class='ootpSelect salaryInput' type='number' min='0' max='20000000' step='1000' value='%d' "
+            "</label><input id='foreignBaseline%d' class='ootpSelect salaryInput' type='text' inputmode='numeric' pattern='[0-9]*' data-min='0' data-max='20000000' data-step='1000' value='%d' "
             "onchange=\"location.href='kbo://settings/foreign-fa-baseline/%d/'+this.value\" "
             "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
             i,
@@ -157,7 +153,7 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         kbo_html_append_escaped(buffer, kbo_hub_text(baseline_labels_ko[i], baseline_labels_en[i]));
         kbo_window_text_appendf(
             buffer,
-            "</label><input id='asianQuotaBaseline%d' class='ootpSelect salaryInput' type='number' min='0' max='20000000' step='1000' value='%d' "
+            "</label><input id='asianQuotaBaseline%d' class='ootpSelect salaryInput' type='text' inputmode='numeric' pattern='[0-9]*' data-min='0' data-max='20000000' data-step='1000' value='%d' "
             "onchange=\"location.href='kbo://settings/asian-quota-fa-baseline/%d/'+this.value\" "
             "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
             i,

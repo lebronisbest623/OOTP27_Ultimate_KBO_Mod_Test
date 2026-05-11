@@ -6,6 +6,13 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
         return;
     }
 
+    static KboFaMarketClassification s_cached_rows[KBO_FA_MARKET_CLASSIFICATION_MAX];
+    static KboFaMarketScanSummary s_cached_summary;
+    static uint32_t s_cached_league_id = 0u;
+    static uint32_t s_cached_today = 0u;
+    static uint32_t s_cached_year = 0u;
+    static int s_cached_count = -1;
+
     KboFaMarketClassification* rows = (KboFaMarketClassification*)HeapAlloc(
         GetProcessHeap(),
         HEAP_ZERO_MEMORY,
@@ -15,14 +22,35 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
         return;
     }
 
+    uint32_t today = 0u;
+    uint32_t current_year = 0u;
+    kbo_get_current_yyyymmdd(&today);
+    kbo_current_year_relaxed(&current_year);
+
     KboFaMarketScanSummary summary = {0};
-    int count = kbo_collect_fa_market_classifications(
-        selected_league_id,
-        rows,
-        KBO_FA_MARKET_CLASSIFICATION_MAX,
-        &summary,
-        1,
-        "f2_webview");
+    int count = 0;
+    if (s_cached_count >= 0
+            && s_cached_league_id == selected_league_id
+            && s_cached_today == today
+            && s_cached_year == current_year) {
+        count = s_cached_count;
+        summary = s_cached_summary;
+        memcpy(rows, s_cached_rows, (SIZE_T)count * sizeof(rows[0]));
+    } else {
+        count = kbo_collect_fa_market_classifications(
+            selected_league_id,
+            rows,
+            KBO_FA_MARKET_CLASSIFICATION_MAX,
+            &summary,
+            0,
+            "f2_webview");
+        s_cached_league_id = selected_league_id;
+        s_cached_today = today;
+        s_cached_year = current_year;
+        s_cached_count = count;
+        s_cached_summary = summary;
+        memcpy(s_cached_rows, rows, (SIZE_T)count * sizeof(rows[0]));
+    }
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights faCases'>");
     kbo_window_text_appendf(

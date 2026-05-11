@@ -12,6 +12,8 @@
 #include "../../../fa_compensation/records/fa_compensation_records.h"
 #include "../../../fa_compensation/state/fa_compensation_state.h"
 #include "../../../fa_market_classification/api/fa_market_classification.h"
+#include "../../../core/dates/core_current_date.h"
+#include "../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../support/assets/names/support_names.h"
 #include "ui_fa_views.h"
 #include "../../support/roster/cells/ui_roster_cells.h"

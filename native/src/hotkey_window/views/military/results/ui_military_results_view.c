@@ -1,4 +1,5 @@
 #include "../internal/ui_military_view_internal.h"
+#include "../../mod/info/ui_mod_info_views_internal.h"
 
 void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint32_t* selected_results_year)
 {
@@ -92,31 +93,34 @@ void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint3
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights'>");
     kbo_window_text_appendf(buffer, "<div class='rosterTopBar'><div class='rosterTopText'>");
     kbo_html_append_escaped(buffer, summary_text);
+    char selected_year_label[16] = "-";
+    if (selected_year != 0u) {
+        snprintf(selected_year_label, sizeof(selected_year_label), "%u", selected_year);
+    }
     kbo_window_text_appendf(
         buffer,
         "</div><div class='rosterTopControls'><span class='rosterTopLabel'>YEAR:</span>"
-        "<select class='ootpSelect rosterYearSelect' onchange=\"if(this.value){location.href='kbo://military/results/year/'+this.value}\">");
+        "<div class='rosterYearChoice'>");
+    kbo_webview_begin_ootp_choice(buffer, "militaryResultsYearSelect", selected_year_label);
     if (year_count > 0) {
         for (int y = 0; y < year_count; y++) {
-            kbo_window_text_appendf(
-                buffer,
-                "<option value='%u' %s>%u</option>",
-                (uint32_t)years[y],
-                (uint32_t)years[y] == selected_year ? "selected" : "",
-                (uint32_t)years[y]);
+            char href[96] = {0};
+            char label[16] = {0};
+            snprintf(href, sizeof(href), "kbo://military/results/year/%u", (uint32_t)years[y]);
+            snprintf(label, sizeof(label), "%u", (uint32_t)years[y]);
+            kbo_webview_append_ootp_choice_option(buffer, href, label, (uint32_t)years[y] == selected_year);
         }
     } else {
         if (selected_year != 0u) {
-            kbo_window_text_appendf(
-                buffer,
-                "<option value='%u' selected>%u</option>",
-                selected_year,
-                selected_year);
+            char href[96] = {0};
+            snprintf(href, sizeof(href), "kbo://military/results/year/%u", selected_year);
+            kbo_webview_append_ootp_choice_option(buffer, href, selected_year_label, 1);
         } else {
-            kbo_window_text_appendf(buffer, "<option value='' selected>-</option>");
+            kbo_webview_append_ootp_choice_option(buffer, "kbo://military/results/year/0", "-", 1);
         }
     }
-    kbo_window_text_appendf(buffer, "</select></div></div>");
+    kbo_webview_end_ootp_choice(buffer);
+    kbo_window_text_appendf(buffer, "</div></div></div>");
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable resultRosterTable'><thead><tr>"

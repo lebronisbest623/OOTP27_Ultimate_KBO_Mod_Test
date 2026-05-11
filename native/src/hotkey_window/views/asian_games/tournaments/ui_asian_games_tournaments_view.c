@@ -104,6 +104,33 @@ const char* kbo_webview_asian_games_tournament_phase(
     return "Upcoming";
 }
 
+int kbo_webview_asian_games_tournament_is_announced(
+    const KboAsianGamesScheduleSeed* schedule,
+    uint32_t current_year)
+{
+    if (schedule == NULL || schedule->year == 0u) {
+        return 0;
+    }
+    if (!ascii_equals_ignore_case(schedule->status, "projected")) {
+        return 1;
+    }
+    return current_year != 0u && schedule->year <= current_year + 6u;
+}
+
+int kbo_webview_asian_games_tournament_is_scheduled(
+    const KboAsianGamesScheduleSeed* schedule,
+    uint32_t today,
+    uint32_t current_year)
+{
+    if (!kbo_webview_asian_games_tournament_is_announced(schedule, current_year)) {
+        return 0;
+    }
+    if (today != 0u && schedule->final_date != 0u && today > schedule->final_date) {
+        return 0;
+    }
+    return schedule != NULL && schedule->year >= current_year;
+}
+
 void kbo_webview_append_asian_games_tournament_row(
     KboWindowTextBuffer* buffer,
     const KboAsianGamesScheduleSeed* schedule,
@@ -180,9 +207,14 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
     KboAsianGamesScheduleSeed schedules[64];
     memset(schedules, 0, sizeof(schedules));
     int count = 0;
-    for (uint32_t year = 2026u; year <= 2200u && count < (int)(sizeof(schedules) / sizeof(schedules[0])); year++) {
+    uint32_t display_through_year = current_year + 6u;
+    if (display_through_year > 2200u) {
+        display_through_year = 2200u;
+    }
+    for (uint32_t year = current_year; year <= display_through_year && count < (int)(sizeof(schedules) / sizeof(schedules[0])); year++) {
         KboAsianGamesScheduleSeed schedule;
-        if (kbo_get_asian_games_schedule_for_year(year, &schedule)) {
+        if (kbo_get_asian_games_schedule_for_year(year, &schedule)
+                && kbo_webview_asian_games_tournament_is_scheduled(&schedule, today, current_year)) {
             schedules[count++] = schedule;
         }
     }
@@ -206,7 +238,7 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
         snprintf(
             summary_text,
             sizeof(summary_text),
-            "View: Tournaments - %d Listed - Official: %d / Provisional: %d / Projected: %d",
+            "View: Tournaments - %d Scheduled - Official: %d / Provisional: %d / Projected: %d",
             count,
             official_count,
             provisional_count,

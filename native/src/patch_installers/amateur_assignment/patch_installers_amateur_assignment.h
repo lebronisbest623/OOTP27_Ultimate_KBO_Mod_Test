@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_PATCH_INSTALLERS_AMATEUR_ASSIGNMENT_H_
+#define KBOFIX_SRC_PATCH_INSTALLERS_AMATEUR_ASSIGNMENT_H_
+
+int install_kbo_amateur_assignment_batch_probe_patch(void);
+
+#endif

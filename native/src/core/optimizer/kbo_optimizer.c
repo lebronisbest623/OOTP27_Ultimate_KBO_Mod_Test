@@ -1,0 +1,151 @@
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../logging/core_log.h"
+#include "kbo_optimizer.h"
+
+static int kbo_optimizer_get_tool_path(char* out, size_t out_size, int* out_is_python_script)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+    if (out_is_python_script != NULL) {
+        *out_is_python_script = 0;
+    }
+
+    HMODULE module = NULL;
+    if (!GetModuleHandleExA(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            (LPCSTR)&kbo_optimizer_get_tool_path,
+            &module)) {
+        return 0;
+    }
+
+    char module_path[MAX_PATH * 3] = {0};
+    DWORD len = GetModuleFileNameA(module, module_path, (DWORD)sizeof(module_path));
+    if (len == 0 || len >= sizeof(module_path)) {
+        return 0;
+    }
+    char* slash = strrchr(module_path, '\\');
+    if (slash == NULL) {
+        return 0;
+    }
+    slash[1] = '\0';
+
+    snprintf(out, out_size, "%stools\\kbo_optimizer.exe", module_path);
+    if (GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES) {
+        return 1;
+    }
+
+    snprintf(out, out_size, "%stools\\kbo_optimizer.py", module_path);
+    if (GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES) {
+        if (out_is_python_script != NULL) {
+            *out_is_python_script = 1;
+        }
+        return 1;
+    }
+
+    snprintf(out, out_size, "%stools\\amateur_assignment_optimizer.exe", module_path);
+    if (GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES) {
+        return 1;
+    }
+
+    snprintf(out, out_size, "%stools\\amateur_assignment_optimizer.py", module_path);
+    int exists = GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES;
+    if (exists && out_is_python_script != NULL) {
+        *out_is_python_script = 1;
+    }
+    if (!exists) {
+        static volatile LONG missing_log_count = 0;
+        if (InterlockedIncrement(&missing_log_count) <= 8) {
+            append_logf(
+                "KBO optimizer missing exe=%stools\\kbo_optimizer.exe script=%stools\\kbo_optimizer.py",
+                module_path,
+                module_path);
+        }
+    }
+    return exists;
+}
+
+int kbo_optimizer_run_mode(
+    const char* mode,
+    const char* request_path,
+    const char* result_path,
+    DWORD timeout_ms)
+{
+    if (mode == NULL || mode[0] == '\0'
+            || request_path == NULL || request_path[0] == '\0'
+            || result_path == NULL || result_path[0] == '\0') {
+        return 0;
+    }
+
+    char tool_path[MAX_PATH * 3] = {0};
+    int is_python_script = 0;
+    if (!kbo_optimizer_get_tool_path(tool_path, sizeof(tool_path), &is_python_script)) {
+        return 0;
+    }
+
+    DeleteFileA(result_path);
+
+    char command[MAX_PATH * 10] = {0};
+    if (is_python_script) {
+        snprintf(
+            command,
+            sizeof(command),
+            "python \"%s\" --mode %s \"%s\" \"%s\"",
+            tool_path,
+            mode,
+            request_path,
+            result_path);
+    } else {
+        snprintf(
+            command,
+            sizeof(command),
+            "\"%s\" --mode %s \"%s\" \"%s\"",
+            tool_path,
+            mode,
+            request_path,
+            result_path);
+    }
+
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    memset(&pi, 0, sizeof(pi));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+
+    if (!CreateProcessA(NULL, command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        static volatile LONG create_fail_count = 0;
+        if (InterlockedIncrement(&create_fail_count) <= 8) {
+            append_logf("KBO optimizer launch failed mode=%s gle=%lu tool=%s", mode, GetLastError(), tool_path);
+        }
+        return 0;
+    }
+
+    DWORD wait = WaitForSingleObject(pi.hProcess, timeout_ms != 0u ? timeout_ms : 8000u);
+    DWORD exit_code = 1u;
+    if (wait == WAIT_TIMEOUT) {
+        TerminateProcess(pi.hProcess, 1);
+        append_logf("KBO optimizer timed out mode=%s timeout_ms=%lu", mode, timeout_ms != 0u ? timeout_ms : 8000u);
+    } else {
+        GetExitCodeProcess(pi.hProcess, &exit_code);
+    }
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+
+    int ok = wait != WAIT_TIMEOUT
+        && exit_code == 0u
+        && GetFileAttributesA(result_path) != INVALID_FILE_ATTRIBUTES;
+    if (!ok) {
+        static volatile LONG fail_count = 0;
+        if (InterlockedIncrement(&fail_count) <= 8) {
+            append_logf("KBO optimizer failed mode=%s exit=%lu result=%s", mode, exit_code, result_path);
+        }
+    }
+    return ok;
+}

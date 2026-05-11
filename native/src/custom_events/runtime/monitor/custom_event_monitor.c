@@ -9,7 +9,6 @@
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../runtime_memory/runtime_memory.h"
-#include "../../../bootstrap/abi/forward_declarations.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
 
 void kbo_custom_event_monitor_tick(

@@ -1,4 +1,5 @@
 #include "../../hotkey_window_runtime_internal.h"
+#include "../../hotkey_window_domain_contract.h"
 
 const char* kbo_hub_foreign_slot_code_for_player(uint8_t* player)
 {

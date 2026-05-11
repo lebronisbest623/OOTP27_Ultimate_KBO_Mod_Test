@@ -1,4 +1,5 @@
 #include "../../hotkey_window_runtime_internal.h"
+#include "../../hotkey_window_domain_contract.h"
 
 void kbo_webview_append_asian_quota_view(KboWindowTextBuffer* buffer)
 {

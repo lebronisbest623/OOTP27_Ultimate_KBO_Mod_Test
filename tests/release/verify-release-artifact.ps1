@@ -26,12 +26,15 @@ $requiredFiles = @(
     "assets\fonts\JejuGothic-OFL.txt",
     "assets\icons\github-mark.png",
     "data\seeds\allstar_teams.csv",
+    "data\seeds\asian_games_projected_hosts.csv",
     "data\seeds\asian_games_schedule_seed.csv",
     "data\seeds\college_reputation_seed.csv",
     "data\seeds\fa_rules.json",
     "data\seeds\foreign_replacement_players_seed.csv",
     "data\seeds\high_school_reputation_seed.csv",
-    "data\seeds\military_service_seed.csv"
+    "data\seeds\military_service_seed.csv",
+    "tools\kbo_optimizer.exe",
+    "tools\kbo_optimizer.py"
 )
 
 foreach ($requiredFile in $requiredFiles) {

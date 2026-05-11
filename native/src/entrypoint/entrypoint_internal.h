@@ -42,6 +42,7 @@
 #include "../patch_installers/foreign/signability/submit_offer/patch_installers_foreign_submit_offer_probe.h"
 #include "../patch_installers/foreign/roster_limits/trade/patch_installers_foreign_trade_check.h"
 #include "../patch_installers/foreign/intl_established_fa/patch_installers_intl_established_fa.h"
+#include "../patch_installers/amateur_assignment/patch_installers_amateur_assignment.h"
 #include "../patch_installers/military/patch_installers_military.h"
 #include "../patch_installers/season_phase/patch_installers_season_phase_probe.h"
 #include "../season_phase_monitor/season_phase_monitor.h"
