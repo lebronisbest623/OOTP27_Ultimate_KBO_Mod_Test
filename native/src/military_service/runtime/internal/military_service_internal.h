@@ -19,6 +19,7 @@
 #include "../../../fa_market_classification/api/fa_market_classification.h"
 #include "../../../fa_requalification/fa_requalification.h"
 #include "../../../foreign/replacement_seed/api/foreign_replacement_seed.h"
+#include "../../../foreign/roster_audit/api/foreign_roster_audit.h"
 #include "../../../team/assignment/assignment/team_assignment.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"

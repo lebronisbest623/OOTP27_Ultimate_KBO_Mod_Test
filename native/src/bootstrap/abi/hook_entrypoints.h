@@ -63,6 +63,15 @@ __declspec(noinline) uint8_t ootp_kbo_callup_foreign_pitcher_limit_allows_wrappe
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit);
 __declspec(noinline) uint8_t ootp_kbo_callup_foreign_total_limit_allows_wrapper(
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit);
+__declspec(noinline) uint8_t ootp_kbo_roster_move_active_trace_wrapper(
+    uintptr_t team_ptr, uintptr_t player_ptr, uintptr_t arg3, uintptr_t arg4,
+    uintptr_t arg5, uintptr_t arg6, uintptr_t arg7, uintptr_t arg8);
+__declspec(noinline) uint8_t ootp_kbo_roster_move_secondary_trace_wrapper(
+    uintptr_t team_ptr, uintptr_t player_ptr, uintptr_t arg3, uintptr_t arg4,
+    uintptr_t arg5, uintptr_t arg6, uintptr_t arg7, uintptr_t arg8);
+__declspec(noinline) uint8_t ootp_kbo_roster_move_assignment_trace_wrapper(
+    uintptr_t team_ptr, uintptr_t player_ptr, uintptr_t arg3, uintptr_t arg4,
+    uintptr_t arg5, uintptr_t arg6, uintptr_t arg7, uintptr_t arg8);
 __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     uintptr_t league_ptr,
     uint32_t value,

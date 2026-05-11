@@ -3,6 +3,9 @@
 
 void kbo_set_team_add_player_guard_trampoline(void* trampoline);
 void kbo_clear_team_add_player_guard_trampoline(void);
+void kbo_set_roster_move_active_trace_trampoline(void* trampoline);
+void kbo_set_roster_move_secondary_trace_trampoline(void* trampoline);
+void kbo_set_roster_move_assignment_trace_trampoline(void* trampoline);
 uint8_t kbo_team_add_player_guard_call_original(
     uintptr_t team_ptr,
     uintptr_t player_ptr,

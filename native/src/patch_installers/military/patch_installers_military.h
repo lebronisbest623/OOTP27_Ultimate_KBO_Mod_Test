@@ -4,5 +4,6 @@
 int install_kbo_military_service_entry_patch(void);
 int install_kbo_military_status_update_patch(void);
 int install_kbo_military_team_add_guard_patch(void);
+int install_kbo_foreign_roster_move_trace_patches(void);
 
 #endif

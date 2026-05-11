@@ -289,3 +289,139 @@ int install_kbo_military_team_add_guard_patch(void)
     return 1;
 }
 
+typedef void (*KboRosterMoveTraceSetTrampolineFn)(void*);
+
+static int install_kbo_foreign_roster_move_trace_patch(
+    HMODULE exe,
+    const char* label,
+    uint32_t target_rva,
+    const uint8_t* expected,
+    size_t patch_len,
+    void* wrapper,
+    KboRosterMoveTraceSetTrampolineFn set_trampoline)
+{
+    uint8_t* rva_target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, target_rva);
+    if (memory_range_readable(rva_target, patch_len) && is_rax_absolute_jump_patch(rva_target)) {
+        append_logf("%s already installed target=%p", label, rva_target);
+        return 1;
+    }
+
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(
+        exe,
+        target_rva,
+        expected,
+        patch_len,
+        label);
+    if (target == NULL) {
+        return 0;
+    }
+    if (is_rax_absolute_jump_patch(target)) {
+        append_logf("%s already installed target=%p", label, target);
+        return 1;
+    }
+
+    uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, patch_len);
+    if (trampoline == NULL) {
+        append_logf("failed to allocate %s trampoline", label);
+        return 0;
+    }
+    set_trampoline(trampoline);
+
+    uint8_t patch[32] = {0};
+    if (patch_len > sizeof(patch) || patch_len < 12) {
+        append_logf("%s invalid patch_len=%llu", label, (unsigned long long)patch_len);
+        return 0;
+    }
+    memset(patch, 0x90, patch_len);
+    patch[0] = 0x48;
+    patch[1] = 0xB8;
+    write_u64(&patch[2], (uint64_t)(uintptr_t)wrapper);
+    patch[10] = 0xFF;
+    patch[11] = 0xE0;
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, patch_len, PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        return 0;
+    }
+
+    memcpy(target, patch, patch_len);
+    FlushInstructionCache(GetCurrentProcess(), target, patch_len);
+
+    DWORD ignored = 0;
+    VirtualProtect(target, patch_len, old_protect, &ignored);
+
+    append_logf(
+        "installed %s target=%p rva=0x%llx stub=%p trampoline=%p wrapper=%p",
+        label,
+        target,
+        (unsigned long long)((uintptr_t)target - (uintptr_t)exe),
+        wrapper,
+        trampoline,
+        wrapper);
+    return 1;
+}
+
+int install_kbo_foreign_roster_move_trace_patches(void)
+{
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        append_log_line("GetModuleHandleA(NULL) failed for KBO foreign roster-move trace patches");
+        return 0;
+    }
+
+    char host[MAX_PATH] = {0};
+    GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
+    if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
+        append_logf("host is not ootp27.exe, skipping KBO foreign roster-move trace patches host=%s", host);
+        return 0;
+    }
+
+    const uint8_t active_expected[20] = {
+        0x48, 0x89, 0x5C, 0x24, 0x20,
+        0x44, 0x88, 0x44, 0x24, 0x18,
+        0x48, 0x89, 0x54, 0x24, 0x10,
+        0x48, 0x89, 0x4C, 0x24, 0x08
+    };
+    const uint8_t secondary_expected[15] = {
+        0x44, 0x88, 0x44, 0x24, 0x18,
+        0x48, 0x89, 0x54, 0x24, 0x10,
+        0x48, 0x89, 0x4C, 0x24, 0x08
+    };
+    const uint8_t assignment_expected[15] = {
+        0x44, 0x88, 0x4C, 0x24, 0x20,
+        0x44, 0x88, 0x44, 0x24, 0x18,
+        0x53,
+        0x56,
+        0x57,
+        0x41, 0x55
+    };
+
+    int ok = 1;
+    ok &= install_kbo_foreign_roster_move_trace_patch(
+        exe,
+        "KBO foreign roster-move active trace A52950",
+        OOTP27_ROSTER_MOVE_ACTIVE_TRACE_RVA,
+        active_expected,
+        sizeof(active_expected),
+        &ootp_kbo_roster_move_active_trace_wrapper,
+        &kbo_set_roster_move_active_trace_trampoline);
+    ok &= install_kbo_foreign_roster_move_trace_patch(
+        exe,
+        "KBO foreign roster-move secondary trace A565F0",
+        OOTP27_ROSTER_MOVE_SECONDARY_TRACE_RVA,
+        secondary_expected,
+        sizeof(secondary_expected),
+        &ootp_kbo_roster_move_secondary_trace_wrapper,
+        &kbo_set_roster_move_secondary_trace_trampoline);
+    ok &= install_kbo_foreign_roster_move_trace_patch(
+        exe,
+        "KBO foreign roster-move assignment trace AB9280",
+        OOTP27_ROSTER_MOVE_ASSIGNMENT_TRACE_RVA,
+        assignment_expected,
+        sizeof(assignment_expected),
+        &ootp_kbo_roster_move_assignment_trace_wrapper,
+        &kbo_set_roster_move_assignment_trace_trampoline);
+    return ok;
+}
+
