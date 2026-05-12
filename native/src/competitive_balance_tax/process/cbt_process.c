@@ -67,7 +67,7 @@ static void kbo_cbt_compute_team_payrolls(
     *team_count_out = team_count;
 }
 
-static void kbo_cbt_insert_violation_news(
+static void __attribute__((unused)) kbo_cbt_insert_violation_news(
     uint32_t league_id,
     uint32_t year,
     uint32_t month,
@@ -106,6 +106,58 @@ static void kbo_cbt_insert_violation_news(
         draft_penalty
             ? "\n\n드래프트 1라운드 지명권 9단계 하락 페널티 적용 (수동 조정 필요)"
             : "");
+
+    insert_kbo_league_news_sql(year, month, day, league_id, 2u, title, body, "cbt_violation");
+    insert_kbo_league_news_table_sql(year, month, day, league_id, title, body, "cbt_violation");
+}
+
+static void kbo_cbt_insert_violation_news_v2(
+    uint32_t league_id,
+    uint32_t year,
+    uint32_t month,
+    uint32_t day,
+    const KboCbtRecord* rec,
+    const KboCbtRules* rules)
+{
+    if (league_id == 0u || rec == NULL || rules == NULL) {
+        return;
+    }
+
+    const char* team_name = rec->team_name[0] != '\0' ? rec->team_name : "Team";
+
+    char title[256] = {0};
+    snprintf(title, sizeof(title),
+        "[KBO CBT] %s exceeds %u cap",
+        team_name,
+        rec->season);
+
+    int draft_penalty = (int)rec->consecutive_count >= (int)rules->draft_penalty_min_consecutive;
+
+    char penalty_text[192] = {0};
+    if (draft_penalty) {
+        snprintf(penalty_text, sizeof(penalty_text),
+            "\n\nDraft penalty: amateur assignment priority is lowered by %u stages.",
+            rules->draft_penalty_stages);
+    }
+
+    char body[1024] = {0};
+    snprintf(body, sizeof(body),
+        "%s exceeded the KBO competitive balance tax threshold for the %u season.\n\n"
+        "Payroll: %d\n"
+        "Threshold: %d\n"
+        "Overage: %d\n"
+        "Tax rate: %u%%\n"
+        "Tax due: %d\n"
+        "Consecutive overage seasons: %u%s",
+        team_name,
+        rec->season,
+        rec->payroll,
+        rec->threshold,
+        rec->overage,
+        rec->tax_rate_pct,
+        rec->tax_amount,
+        rec->consecutive_count,
+        penalty_text);
 
     insert_kbo_league_news_sql(year, month, day, league_id, 2u, title, body, "cbt_violation");
     insert_kbo_league_news_table_sql(year, month, day, league_id, title, body, "cbt_violation");
@@ -231,7 +283,7 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
                 source != NULL ? source : "");
 
             if (league_id != 0u) {
-                kbo_cbt_insert_violation_news(league_id, year, month, day, &rec, &rules);
+                kbo_cbt_insert_violation_news_v2(league_id, year, month, day, &rec, &rules);
             }
         } else {
             append_logf(

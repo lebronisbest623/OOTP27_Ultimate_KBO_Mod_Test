@@ -38,6 +38,10 @@ Asian-quota foreign players are tracked separately from regular foreign-player l
 
 When a registered foreign player is injured, a temporary replacement slot can be opened. The slot closes when the original player returns.
 
+### Competitive Balance Tax
+
+Domestic payroll is measured from the opening-day salary snapshot, using each club's top configured domestic salaries. Clubs above the threshold receive tax records, league news, and draft-priority penalties after repeated violations.
+
 ### Asian Games National Team Events
 
 The native runtime creates custom Asian Games events and handles selection, departure, replacement, return, and news generation. Roster selection balances club representation automatically.
@@ -65,6 +69,8 @@ KBOLauncher.exe          <- C# launcher
           |  |- injury/                   injury replacement slots
           |  |- quota/                    Asian quota and call-up policy
           |  |- roster_audit/             read-only roster diagnostics
+          |- native/src/competitive_balance_tax/
+          |                                payroll cap records and draft penalties
           |- native/src/military_service/ military-service loans
           |  |- seed/                     player seed resolution
           |- native/src/custom_events/    Asian Games and priority events
@@ -181,6 +187,7 @@ Runtime flags live in one JSON file:
 | `enable_launcher_injection` | off | Enable automatic launcher injection |
 | `enable_foreign_waiver_ai` | on | Enable AI reserve-right decisions |
 | `enable_single_division_allstar_events` | on | Enable single-division All-Star support |
+| `disable_kbo_competitive_balance_tax` | off | Disable CBT processing and draft penalties |
 | `kbo_league_id.txt` | 100 | KBO league ID override file |
 
 ---

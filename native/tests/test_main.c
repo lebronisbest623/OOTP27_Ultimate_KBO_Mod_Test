@@ -1012,6 +1012,14 @@ static void test_flag_key_from_file_name(void)
     assert(kbo_flag_key_from_file_name("abcd.txt", tight, sizeof(tight)));
     assert(strcmp(tight, "abcd") == 0);
 
+    assert(strcmp(
+        kbo_flag_legacy_json_key_for_key("enable_foreign_ai_roster_management"),
+        "enable_foreign_ai_roster_research_hooks") == 0);
+    assert(strcmp(
+        kbo_flag_legacy_json_key_for_key("disable_kbo_no_minor_contract_patch"),
+        "disable_kbo_no_minor_contract_experimental_patch") == 0);
+    assert(kbo_flag_legacy_json_key_for_key("enable_launcher_injection") == NULL);
+
     /* NULL/empty inputs and zero-sized output buffer are rejected. */
     assert(!kbo_flag_key_from_file_name(NULL, out, sizeof(out)));
     assert(!kbo_flag_key_from_file_name("", out, sizeof(out)));

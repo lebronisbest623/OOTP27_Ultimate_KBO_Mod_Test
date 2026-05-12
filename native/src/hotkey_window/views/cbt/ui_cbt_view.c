@@ -208,10 +208,10 @@ static void kbo_webview_append_cbt_records_view(KboWindowTextBuffer* buffer)
 
     char summary[256] = {0};
     if (count <= 0) {
-        snprintf(summary, sizeof(summary), "No records yet — snapshot taken at opening day");
+        snprintf(summary, sizeof(summary), "No records yet - snapshot taken at opening day");
     } else {
         snprintf(summary, sizeof(summary),
-            "%d records — %d violation%s",
+            "%d records - %d violation%s",
             count, violations, violations == 1 ? "" : "s");
     }
     kbo_webview_append_roster_top_bar(buffer, summary);
@@ -327,9 +327,9 @@ static void kbo_webview_append_cbt_rules_view(KboWindowTextBuffer* buffer)
     kbo_window_text_appendf(buffer,
         "<tr><td>Top Player Count</td><td>%u</td></tr>"
         "<tr><td>Annual Cap Increase</td><td>%u%%</td></tr>"
-        "<tr><td>Tax Rate — 1st violation</td><td>%u%%</td></tr>"
-        "<tr><td>Tax Rate — 2nd violation</td><td>%u%%</td></tr>"
-        "<tr><td>Tax Rate — 3rd+ violation</td><td>%u%%</td></tr>"
+        "<tr><td>Tax Rate - 1st violation</td><td>%u%%</td></tr>"
+        "<tr><td>Tax Rate - 2nd violation</td><td>%u%%</td></tr>"
+        "<tr><td>Tax Rate - 3rd+ violation</td><td>%u%%</td></tr>"
         "<tr><td>Draft Penalty (min consecutive)</td><td>%u</td></tr>"
         "<tr><td>Draft Penalty (stages)</td><td>%u</td></tr>",
         rules.top_player_count,

@@ -28,6 +28,7 @@ $requiredFiles = @(
     "data\seeds\allstar_teams.csv",
     "data\seeds\asian_games_projected_hosts.csv",
     "data\seeds\asian_games_schedule_seed.csv",
+    "data\seeds\cbt_rules.json",
     "data\seeds\college_reputation_seed.csv",
     "data\seeds\fa_rules.json",
     "data\seeds\foreign_injury_replacements_seed.csv",

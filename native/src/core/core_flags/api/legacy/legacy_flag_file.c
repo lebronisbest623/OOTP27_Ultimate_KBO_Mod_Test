@@ -29,6 +29,21 @@ static int kbo_legacy_localappdata_flag_file_exists(const char* file_name)
     return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
+static int kbo_legacy_localappdata_flag_key_exists(const char* key)
+{
+    if (key == NULL || key[0] == '\0') {
+        return 0;
+    }
+
+    char file_name[160] = {0};
+    int written = snprintf(file_name, sizeof(file_name), "%s.txt", key);
+    if (written <= 0 || written >= (int)sizeof(file_name)) {
+        return 0;
+    }
+
+    return kbo_legacy_localappdata_flag_file_exists(file_name);
+}
+
 int read_kbo_localappdata_flag_file(const char* file_name)
 {
     char key[128] = {0};
@@ -58,9 +73,21 @@ int read_kbo_localappdata_flag_file(const char* file_name)
     }
     InterlockedExchange(&cache_lock, 0);
 
+    const char* legacy_json_key = kbo_flag_legacy_json_key_for_key(key);
+
     int value = 0;
-    int found = kbo_read_localappdata_json_flag_value(key, file_name, &value);
-    value = found ? (value ? 1 : 0) : kbo_legacy_localappdata_flag_file_exists(file_name);
+    int found = kbo_read_localappdata_json_flag_value(
+        key,
+        legacy_json_key != NULL ? legacy_json_key : file_name,
+        &value);
+    if (found) {
+        value = value ? 1 : 0;
+    } else {
+        value = kbo_legacy_localappdata_flag_file_exists(file_name);
+        if (!value && legacy_json_key != NULL) {
+            value = kbo_legacy_localappdata_flag_key_exists(legacy_json_key);
+        }
+    }
 
     while (InterlockedCompareExchange(&cache_lock, 1, 0) != 0) {
         Sleep(0);

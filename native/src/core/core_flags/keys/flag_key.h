@@ -4,5 +4,6 @@
 #include <stddef.h>
 
 int kbo_flag_key_from_file_name(const char* file_name, char* out, size_t out_size);
+const char* kbo_flag_legacy_json_key_for_key(const char* key);
 
 #endif

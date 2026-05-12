@@ -29,6 +29,7 @@ public sealed class ReleasePackageIgnoreTests
     [InlineData("\"data\\seeds\\allstar_teams.csv\"")]
     [InlineData("\"data\\seeds\\asian_games_projected_hosts.csv\"")]
     [InlineData("\"data\\seeds\\asian_games_schedule_seed.csv\"")]
+    [InlineData("\"data\\seeds\\cbt_rules.json\"")]
     [InlineData("\"data\\seeds\\college_reputation_seed.csv\"")]
     [InlineData("\"data\\seeds\\fa_rules.json\"")]
     [InlineData("\"data\\seeds\\foreign_injury_replacements_seed.csv\"")]

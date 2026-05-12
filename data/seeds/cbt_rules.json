@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "top_player_count": 40,
+  "threshold_override": 0,
+  "annual_increase_pct": 5,
+  "tax_rate_1": 50,
+  "tax_rate_2": 100,
+  "tax_rate_3plus": 150,
+  "draft_penalty_min_consecutive": 2,
+  "draft_penalty_stages": 9
+}
