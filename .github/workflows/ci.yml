@@ -49,6 +49,10 @@ jobs:
         shell: pwsh
         run: .\tools\generate-supported-builds.ps1
 
+      - name: Build native DLL
+        shell: pwsh
+        run: .\native\build.ps1
+
       - name: Build managed solution
         run: dotnet build .\OOTP27-KBO-Launcher.sln --configuration Release --no-restore
 
@@ -58,10 +62,6 @@ jobs:
       - name: Verify native architecture
         shell: pwsh
         run: .\tools\check-native-architecture.ps1 -BaselinePath .\tools\native-architecture-baseline.json
-
-      - name: Build native DLL
-        shell: pwsh
-        run: .\native\build.ps1
 
       - name: Test native helpers
         shell: pwsh
