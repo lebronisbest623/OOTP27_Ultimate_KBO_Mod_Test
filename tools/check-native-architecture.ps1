@@ -5,7 +5,7 @@ param(
     [int] $MaxInternalHeaderLines = 300,
     [Alias("Rule")]
     [string[]] $OnlyRule,
-    [string] $BaselinePath,
+    [string] $BaselinePath = (Join-Path $PSScriptRoot "native-architecture-baseline.json"),
     [string] $WriteBaselinePath,
     [switch] $IncludeDebt,
     [switch] $Strict,
@@ -183,7 +183,7 @@ foreach ($Fact in $SourceFacts) {
             -Data @{ pattern = "foreign|military|asian_games|allstar|fa_compensation|fa_market|amateur" }
     }
 
-    if ($Fact.Text -match '\bCreateThread\s*\(' -and $Fact.Text -notmatch 'kbo_runtime_threads_should_continue|kbo_runtime_sleep_should_continue') {
+    if ($Fact.Text -match '\bCreateThread\s*\(' -and $Fact.Text -notmatch 'kbo_runtime_threads_should_continue|kbo_runtime_sleep_should_continue|kbo_register_runtime_thread') {
         Add-Finding `
             -Rule "native.thread.lifecycle-guard" `
             -Severity "warn" `

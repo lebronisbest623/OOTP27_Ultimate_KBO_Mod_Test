@@ -113,7 +113,9 @@ int32_t kbo_foreign_fa_remap_demand_from_salary_ladder(int32_t demand, uint8_t* 
 DWORD WINAPI kbo_foreign_fa_demand_restore_timer_thread(void* param)
 {
     (void)param;
-    Sleep(750);
+    if (!kbo_runtime_sleep_should_continue(750)) {
+        return 0;
+    }
     kbo_restore_foreign_fa_demand_salary_ladder("offer_build_timer");
     return 0;
 }

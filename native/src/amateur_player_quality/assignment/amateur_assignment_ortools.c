@@ -1095,7 +1095,9 @@ static DWORD WINAPI kbo_amateur_league_batch_flush_thread(LPVOID parameter)
 {
     (void)parameter;
     for (;;) {
-        Sleep(250);
+        if (!kbo_runtime_sleep_should_continue(250)) {
+            break;
+        }
         if (kbo_amateur_reroute_disabled_cached()) {
             break;
         }

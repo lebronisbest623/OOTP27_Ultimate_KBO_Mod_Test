@@ -1,6 +1,5 @@
 #include "../internal/amateur_player_quality_internal.h"
 #include "../../bootstrap/profiling/profiler.h"
-
 static volatile LONG g_kbo_amateur_reroute_disable_cached = -1;
 static volatile LONG g_kbo_amateur_reroute_disable_tick = 0;
 static volatile LONG g_kbo_amateur_reroute_verbose_cached = -1;
@@ -396,16 +395,5 @@ void kbo_amateur_team_add_player_note_original_success(uintptr_t team_ptr, uintp
         after_league_id);
     KBO_PROFILE_END(profile_debug_csv, "amateur.note_success.debug_csv");
     KBO_PROFILE_END(profile_note_success, "amateur.note_success.debug_csv_done");
-}
-
-int kbo_amateur_player_age_eligible(uint32_t league_id, int16_t age)
-{
-    if (league_id == KBO_COLLEGE_LEAGUE_ID) {
-        return age >= 17 && age <= 25;
-    }
-    if (league_id == KBO_HIGH_SCHOOL_LEAGUE_ID) {
-        return age >= 14 && age <= 18;
-    }
-    return 0;
 }
 

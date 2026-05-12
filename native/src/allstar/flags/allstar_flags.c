@@ -473,7 +473,9 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
             return 0;
         }
 
-        Sleep(1000);
+        if (!kbo_runtime_sleep_should_continue(1000)) {
+            break;
+        }
     }
 
     append_log_line("KBO all-star force retry gave up: league not found after 180 attempts");

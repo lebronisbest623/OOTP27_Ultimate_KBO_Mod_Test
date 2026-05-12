@@ -1,4 +1,4 @@
-#include "../internal/amateur_player_quality_internal.h"
+#include "../../internal/amateur_player_quality_internal.h"
 
 int kbo_amateur_assignment_already_processed(uint32_t player_id, uint32_t team_id)
 {
@@ -303,6 +303,17 @@ int kbo_amateur_assignment_effective_player_tier(int player_tier, int max_team_t
         return max_team_tier;
     }
     return player_tier;
+}
+
+int kbo_amateur_player_age_eligible(uint32_t league_id, int16_t age)
+{
+    if (league_id == KBO_COLLEGE_LEAGUE_ID) {
+        return age >= 17 && age <= 25;
+    }
+    if (league_id == KBO_HIGH_SCHOOL_LEAGUE_ID) {
+        return age >= 14 && age <= 18;
+    }
+    return 0;
 }
 
 int kbo_amateur_assignment_debug_csv_empty(HANDLE file)
