@@ -479,6 +479,62 @@ int install_kbo_foreign_roster_move_trace_patches(void)
     return ok;
 }
 
+int install_kbo_player_team_assignment_trace_patches(void)
+{
+    if (read_kbo_localappdata_flag_file("disable_kbo_player_team_assignment_trace.txt")) {
+        append_log_line("KBO player team assignment trace skipped: disable_kbo_player_team_assignment_trace is true");
+        return 1;
+    }
+
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        append_log_line("GetModuleHandleA(NULL) failed for KBO player team assignment trace patches");
+        return 0;
+    }
+
+    char host[MAX_PATH] = {0};
+    GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
+    if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
+        append_logf("host is not ootp27.exe, skipping KBO player team assignment trace patches host=%s", host);
+        return 0;
+    }
+
+    const uint8_t clear_expected[20] = {
+        0x48, 0x89, 0x5C, 0x24, 0x08,
+        0x57,
+        0x48, 0x83, 0xEC, 0x20,
+        0x83, 0x79, 0x58, 0x00,
+        0x0F, 0xB6, 0xFA,
+        0x48, 0x8B, 0xD9
+    };
+    const uint8_t set_expected[20] = {
+        0x48, 0x89, 0x5C, 0x24, 0x08,
+        0x48, 0x89, 0x6C, 0x24, 0x10,
+        0x48, 0x89, 0x74, 0x24, 0x18,
+        0x57,
+        0x48, 0x83, 0xEC, 0x20
+    };
+
+    int ok = 1;
+    ok &= install_kbo_foreign_roster_move_trace_patch(
+        exe,
+        "KBO player clear-team trace 7D7870",
+        OOTP27_PLAYER_CLEAR_TEAM_TRACE_RVA,
+        clear_expected,
+        sizeof(clear_expected),
+        &ootp_kbo_player_clear_team_trace_wrapper,
+        &kbo_set_player_clear_team_trace_trampoline);
+    ok &= install_kbo_foreign_roster_move_trace_patch(
+        exe,
+        "KBO player set-team trace 7D78E0",
+        OOTP27_PLAYER_SET_TEAM_TRACE_RVA,
+        set_expected,
+        sizeof(set_expected),
+        &ootp_kbo_player_set_team_trace_wrapper,
+        &kbo_set_player_set_team_trace_trampoline);
+    return ok;
+}
+
 int install_kbo_player_eval_double_trace_patch(void)
 {
     if (read_kbo_localappdata_flag_file("disable_foreign_roster_eval_bias.txt")) {

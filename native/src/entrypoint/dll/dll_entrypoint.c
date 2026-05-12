@@ -44,6 +44,9 @@ DWORD WINAPI patch_thread(LPVOID parameter)
     install_kbo_early_foreign_policy_hooks_once("presave_bootstrap");
     install_kbo_early_no_minor_contract_hooks_once("presave_bootstrap");
     if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_research_hooks.txt")) {
+        install_kbo_military_team_add_guard_patch();
+        install_kbo_foreign_roster_move_trace_patches();
+        install_kbo_player_team_assignment_trace_patches();
         install_kbo_player_eval_double_trace_patch();
         install_kbo_ai_player_quality_trace_patch();
         install_kbo_ai_roster_role_check_trace_patch();
@@ -153,6 +156,11 @@ static DWORD WINAPI kbo_hot_reinject_ai_roster_trace_thread(LPVOID parameter)
     if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_availability_trace.txt")) {
         install_kbo_ai_roster_availability_trace_patch();
     }
+    if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_player_team_assignment_trace.txt")) {
+        install_kbo_military_team_add_guard_patch();
+        install_kbo_foreign_roster_move_trace_patches();
+        install_kbo_player_team_assignment_trace_patches();
+    }
     append_log_line("KBO hot reinject AI roster trace finished");
     return 0;
 }
@@ -176,7 +184,8 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
             g_kbo_process_instance_mutex = NULL;
             if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_reconcile_trace.txt")
                     || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_roster_flow_trace.txt")
-                    || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_availability_trace.txt")) {
+                    || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_availability_trace.txt")
+                    || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_player_team_assignment_trace.txt")) {
                 HANDLE thread = CreateThread(NULL, 0, kbo_hot_reinject_ai_roster_trace_thread, instance, 0, NULL);
                 if (thread != NULL) {
                     kbo_register_runtime_thread(thread, "hot reinject AI roster trace");

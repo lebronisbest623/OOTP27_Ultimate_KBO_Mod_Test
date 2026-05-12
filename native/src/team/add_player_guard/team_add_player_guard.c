@@ -112,6 +112,15 @@ typedef void (__fastcall *OotpKboAiRosterApplySelectionFn)(
     uintptr_t player_ptr,
     int32_t target_slot,
     int32_t roster_code);
+typedef void (__fastcall *OotpKboPlayerClearTeamTraceFn)(
+    uintptr_t player_ptr,
+    uint8_t loan_flag);
+typedef void (__fastcall *OotpKboPlayerSetTeamTraceFn)(
+    uintptr_t player_ptr,
+    int32_t team_id,
+    int32_t active_team_id,
+    int32_t league_id,
+    uint8_t loan_flag);
 
 static OotpKboTeamAddPlayerExFn g_kbo_team_add_player_guard_trampoline = NULL;
 static OotpKboTeamAddPlayerExFn g_kbo_roster_move_active_trace_trampoline = NULL;
@@ -140,6 +149,8 @@ static OotpKboAiRosterContextFlowFn g_kbo_ai_roster_secondary_alt_flow_trace_tra
 static OotpKboAiRosterMarkSelectedFn g_kbo_ai_roster_mark_selected_trace_trampoline = NULL;
 static OotpKboAiRosterSelectionReconcileFn g_kbo_ai_roster_selection_reconcile_trace_trampoline = NULL;
 static OotpKboAiRosterApplySelectionFn g_kbo_ai_roster_apply_selection_trace_trampoline = NULL;
+static OotpKboPlayerClearTeamTraceFn g_kbo_player_clear_team_trace_trampoline = NULL;
+static OotpKboPlayerSetTeamTraceFn g_kbo_player_set_team_trace_trampoline = NULL;
 static volatile LONG g_kbo_team_add_amateur_verbose_cached = -1;
 static volatile LONG g_kbo_team_add_amateur_verbose_tick = 0;
 static volatile LONG g_kbo_team_add_retry_rejected_cached = -1;
@@ -537,6 +548,20 @@ static int kbo_ai_roster_foreign_apply_rescue_enabled(void)
         disabled = g_kbo_ai_roster_foreign_apply_rescue_disabled_cached;
     }
     return kbo_custom_foreign_policy_enabled() && disabled != 1;
+}
+
+static int kbo_ai_roster_foreign_apply_rescue_team_add_enabled(void)
+{
+    return kbo_custom_foreign_policy_enabled()
+        && read_kbo_localappdata_flag_file("enable_ai_roster_foreign_apply_rescue_team_add.txt")
+        && !read_kbo_localappdata_flag_file("disable_ai_roster_foreign_apply_rescue_team_add.txt");
+}
+
+static int kbo_ai_roster_foreign_source_select_rescue_enabled(void)
+{
+    return kbo_custom_foreign_policy_enabled()
+        && read_kbo_localappdata_flag_file("enable_ai_roster_foreign_source_select_rescue.txt")
+        && !read_kbo_localappdata_flag_file("disable_ai_roster_foreign_source_select_rescue.txt");
 }
 
 static uint32_t kbo_ai_roster_foreign_sort_f06_bonus(void)
@@ -1611,6 +1636,274 @@ static int32_t kbo_ai_roster_source_branch_min_order(uint32_t mask)
     return 0;
 }
 
+static int64_t kbo_ai_roster_source_select_rescue_score(
+    const KboAiRosterForeignCandidateSummary* summary,
+    uint8_t* player)
+{
+    if (summary == NULL || player == NULL) {
+        return INT64_MIN;
+    }
+
+    int64_t score = 0;
+    score += (int64_t)summary->overall * 6;
+    score += (int64_t)summary->ratings * 4;
+    score += (int64_t)summary->talent * 2;
+    score += (int64_t)summary->score_fe4 * 150;
+    score += (int64_t)summary->score_fe0 * 80;
+    score += (int64_t)summary->f25 * 12;
+    score += (int64_t)kbo_read_player_i16(player, 0xf06u) * 8;
+    score -= (int64_t)summary->status26 * 40;
+    return score;
+}
+
+static int kbo_ai_player_quality_minor_foreign_callup_allows(
+    int32_t team_arg,
+    uint8_t* player,
+    uint32_t* out_team_id,
+    int* out_allowed);
+
+static uintptr_t kbo_ai_roster_choose_source_select_rescue_candidate(
+    uintptr_t source_vector_ptr,
+    int32_t source_count,
+    uintptr_t native_result_ptr,
+    int32_t* out_source_index,
+    uint32_t* out_active_team_id,
+    int64_t* out_score,
+    KboAiRosterForeignCandidateSummary* out_summary)
+{
+    if (out_source_index != NULL) {
+        *out_source_index = -1;
+    }
+    if (out_active_team_id != NULL) {
+        *out_active_team_id = 0u;
+    }
+    if (out_score != NULL) {
+        *out_score = 0;
+    }
+    if (out_summary != NULL) {
+        memset(out_summary, 0, sizeof(*out_summary));
+        out_summary->index = -1;
+    }
+
+    int source_select_enabled = kbo_ai_roster_foreign_source_select_rescue_enabled();
+    if (!source_select_enabled
+            || source_vector_ptr == 0u
+            || source_count <= 0) {
+        static volatile LONG precheck_skip_log_count = 0;
+        LONG precheck_slot = InterlockedIncrement(&precheck_skip_log_count);
+        if (precheck_slot <= 200) {
+            append_logf(
+                "ootp ai roster foreign source-select rescue skip #%ld reason=precheck enabled=%d custom_policy=%d team_add_enabled=%d source_flag=%d source_disable=%d source_vector=%p source_count=%d native=%p",
+                precheck_slot,
+                source_select_enabled,
+                kbo_custom_foreign_policy_enabled(),
+                kbo_ai_roster_foreign_apply_rescue_team_add_enabled(),
+                read_kbo_localappdata_flag_file("enable_ai_roster_foreign_source_select_rescue.txt"),
+                read_kbo_localappdata_flag_file("disable_ai_roster_foreign_source_select_rescue.txt"),
+                (void*)source_vector_ptr,
+                source_count,
+                (void*)native_result_ptr);
+        }
+        return 0u;
+    }
+
+    if (kbo_player_pointer_plausible(native_result_ptr)
+            && memory_range_readable((void*)native_result_ptr, OOTP27_PLAYER_SCAN_BYTES)
+            && kbo_player_is_foreign_for_kbo_rights((uint8_t*)native_result_ptr)) {
+        static volatile LONG native_foreign_skip_log_count = 0;
+        LONG native_foreign_slot = InterlockedIncrement(&native_foreign_skip_log_count);
+        if (native_foreign_slot <= 200) {
+            uint8_t* native_player = (uint8_t*)native_result_ptr;
+            append_logf(
+                "ootp ai roster foreign source-select rescue skip #%ld reason=native_already_foreign source_count=%d native=%u current=%u active=%u league=%u status26=%u f25=%u f62=%u f65=%u",
+                native_foreign_slot,
+                source_count,
+                *(uint32_t*)(native_player + OOTP27_PLAYER_ID_OFFSET),
+                *(uint32_t*)(native_player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET),
+                *(uint32_t*)(native_player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET),
+                *(uint32_t*)(native_player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET),
+                (uint32_t)native_player[0x26u],
+                (uint32_t)native_player[0xf25u],
+                (uint32_t)native_player[0xf62u],
+                (uint32_t)native_player[0xf65u]);
+        }
+        return 0u;
+    }
+
+    int32_t scanned_count = source_count > KBO_AI_ROSTER_SELECT_SCAN_LIMIT
+        ? KBO_AI_ROSTER_SELECT_SCAN_LIMIT
+        : source_count;
+    if (scanned_count <= 0) {
+        return 0u;
+    }
+
+    uintptr_t best_ptr = 0u;
+    int32_t best_index = -1;
+    uint32_t best_active_team_id = 0u;
+    int64_t best_score = INT64_MIN;
+    KboAiRosterForeignCandidateSummary best_summary = {0};
+    best_summary.index = -1;
+    KboAiRosterForeignCandidateSummary best_seen_summary = {0};
+    best_seen_summary.index = -1;
+    int64_t best_seen_score = INT64_MIN;
+    uint32_t best_seen_active_team_id = 0u;
+    int best_seen_callup_allowed = 0;
+    const char* best_seen_reason = "none";
+    int foreign_seen_count = 0;
+    int gate_ready_count = 0;
+    int callup_ready_count = 0;
+    int already_active_count = 0;
+    uint32_t kbo_league_id = kbo_get_foreign_waiver_league_id();
+
+    for (int32_t i = 0; i < scanned_count; i++) {
+        uintptr_t candidate_ptr = kbo_pointer_vector_value_at(source_vector_ptr, i, source_count);
+        if (!kbo_player_pointer_plausible(candidate_ptr)
+                || !memory_range_readable((void*)candidate_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+            continue;
+        }
+
+        uint8_t* candidate = (uint8_t*)candidate_ptr;
+        if (!kbo_player_is_foreign_for_kbo_rights(candidate)) {
+            continue;
+        }
+
+        KboAiRosterForeignCandidateSummary summary;
+        kbo_fill_ai_roster_foreign_candidate_summary(&summary, i, candidate);
+        foreign_seen_count++;
+        int64_t seen_score = kbo_ai_roster_source_select_rescue_score(&summary, candidate);
+        uint32_t seen_active_team_id = 0u;
+        int seen_callup_allowed = 0;
+        const char* seen_reason = "candidate_gate";
+        if (summary.player_id == 0u
+                || summary.f25 < KBO_AI_ROSTER_FOREIGN_F25_MIN
+                || candidate[0xf65u] != 0u
+                || (summary.status26 != 0u && summary.status26 != 1u)) {
+            if (seen_score > best_seen_score) {
+                best_seen_score = seen_score;
+                best_seen_summary = summary;
+                best_seen_active_team_id = seen_active_team_id;
+                best_seen_callup_allowed = seen_callup_allowed;
+                best_seen_reason = seen_reason;
+            }
+            continue;
+        }
+        gate_ready_count++;
+
+        uint32_t active_team_id = 0u;
+        int callup_allowed = 0;
+        if (!kbo_ai_player_quality_minor_foreign_callup_allows(
+                (int32_t)summary.league_id,
+                candidate,
+                &active_team_id,
+                &callup_allowed)
+                || !callup_allowed
+                || active_team_id == 0u) {
+            seen_reason = "callup_not_allowed";
+            seen_active_team_id = active_team_id;
+            seen_callup_allowed = callup_allowed;
+            if (seen_score > best_seen_score) {
+                best_seen_score = seen_score;
+                best_seen_summary = summary;
+                best_seen_active_team_id = seen_active_team_id;
+                best_seen_callup_allowed = seen_callup_allowed;
+                best_seen_reason = seen_reason;
+            }
+            continue;
+        }
+        callup_ready_count++;
+
+        if (kbo_league_id != 0u
+                && summary.current_team_id == active_team_id
+                && summary.active_team_id == active_team_id
+                && summary.league_id == kbo_league_id) {
+            seen_reason = "already_active";
+            seen_active_team_id = active_team_id;
+            seen_callup_allowed = callup_allowed;
+            already_active_count++;
+            if (seen_score > best_seen_score) {
+                best_seen_score = seen_score;
+                best_seen_summary = summary;
+                best_seen_active_team_id = seen_active_team_id;
+                best_seen_callup_allowed = seen_callup_allowed;
+                best_seen_reason = seen_reason;
+            }
+            continue;
+        }
+
+        seen_reason = "candidate_selected";
+        seen_active_team_id = active_team_id;
+        seen_callup_allowed = callup_allowed;
+        if (seen_score > best_seen_score) {
+            best_seen_score = seen_score;
+            best_seen_summary = summary;
+            best_seen_active_team_id = seen_active_team_id;
+            best_seen_callup_allowed = seen_callup_allowed;
+            best_seen_reason = seen_reason;
+        }
+        int64_t score = seen_score;
+        if (score > best_score) {
+            best_score = score;
+            best_ptr = candidate_ptr;
+            best_index = i;
+            best_active_team_id = active_team_id;
+            best_summary = summary;
+        }
+    }
+
+    if (best_ptr == 0u) {
+        static volatile LONG no_candidate_skip_log_count = 0;
+        LONG no_candidate_slot = InterlockedIncrement(&no_candidate_skip_log_count);
+        if (no_candidate_slot <= 300 || foreign_seen_count > 0) {
+            append_logf(
+                "ootp ai roster foreign source-select rescue skip #%ld reason=no_candidate source_count=%d scanned=%d foreign_seen=%d gate_ready=%d callup_ready=%d already_active=%d best_seen_reason=%s best_seen=%u best_seen_score=%lld best_seen_active_team=%u best_seen_callup=%d current=%u active=%u league=%u default_team=%u status24=%u status25=%u status26=%u f25=%u f65=%u fe0=%d fe4=%d overall=%d talent=%d ratings=%d kbo_league=%u",
+                no_candidate_slot,
+                source_count,
+                scanned_count,
+                foreign_seen_count,
+                gate_ready_count,
+                callup_ready_count,
+                already_active_count,
+                best_seen_reason,
+                best_seen_summary.player_id,
+                (long long)best_seen_score,
+                best_seen_active_team_id,
+                best_seen_callup_allowed,
+                best_seen_summary.current_team_id,
+                best_seen_summary.active_team_id,
+                best_seen_summary.league_id,
+                best_seen_summary.default_team_id,
+                best_seen_summary.status24,
+                best_seen_summary.status25,
+                best_seen_summary.status26,
+                best_seen_summary.f25,
+                best_seen_summary.player_ptr != 0u
+                    ? (uint32_t)((uint8_t*)best_seen_summary.player_ptr)[0xf65u]
+                    : 0u,
+                best_seen_summary.score_fe0,
+                best_seen_summary.score_fe4,
+                best_seen_summary.overall,
+                best_seen_summary.talent,
+                best_seen_summary.ratings,
+                kbo_league_id);
+        }
+        return 0u;
+    }
+
+    if (out_source_index != NULL) {
+        *out_source_index = best_index;
+    }
+    if (out_active_team_id != NULL) {
+        *out_active_team_id = best_active_team_id;
+    }
+    if (out_score != NULL) {
+        *out_score = best_score;
+    }
+    if (out_summary != NULL) {
+        *out_summary = best_summary;
+    }
+    return best_ptr;
+}
+
 static void kbo_log_ai_roster_source_local_gate_trace(
     LONG select_slot,
     uint32_t caller_rva,
@@ -2377,6 +2670,18 @@ void kbo_set_ai_roster_apply_selection_trace_trampoline(void* trampoline)
         (OotpKboAiRosterApplySelectionFn)(uintptr_t)trampoline;
 }
 
+void kbo_set_player_clear_team_trace_trampoline(void* trampoline)
+{
+    g_kbo_player_clear_team_trace_trampoline =
+        (OotpKboPlayerClearTeamTraceFn)(uintptr_t)trampoline;
+}
+
+void kbo_set_player_set_team_trace_trampoline(void* trampoline)
+{
+    g_kbo_player_set_team_trace_trampoline =
+        (OotpKboPlayerSetTeamTraceFn)(uintptr_t)trampoline;
+}
+
 uint8_t kbo_team_add_player_guard_call_original(
     uintptr_t team_ptr,
     uintptr_t player_ptr,
@@ -2759,6 +3064,281 @@ KBO_DEFINE_ROSTER_MOVE_TRACE_WRAPPER(
     ootp_kbo_roster_move_assignment_trace_wrapper,
     "assignment_move_ab9280",
     g_kbo_roster_move_assignment_trace_trampoline)
+
+static uint32_t kbo_read_player_u32_or_zero(uint8_t* player, uint32_t offset)
+{
+    return player != NULL && memory_range_readable(player + offset, sizeof(uint32_t))
+        ? *(uint32_t*)(player + offset)
+        : 0u;
+}
+
+static uint8_t kbo_read_player_u8_or_zero(uint8_t* player, uint32_t offset)
+{
+    return player != NULL && memory_range_readable(player + offset, sizeof(uint8_t))
+        ? player[offset]
+        : 0u;
+}
+
+static void kbo_log_player_team_assignment_trace(
+    const char* label,
+    uint32_t caller_rva,
+    uintptr_t player_ptr,
+    int32_t arg_team_id,
+    int32_t arg_active_team_id,
+    int32_t arg_league_id,
+    uint8_t loan_flag,
+    uint32_t before_current_team_id,
+    uint32_t before_active_team_id,
+    uint32_t before_original_team_id,
+    uint32_t before_league_id,
+    uint32_t before_loan_team_id,
+    uint32_t before_loan_league_id,
+    uint32_t before_default_team_id,
+    uint8_t before_status_flags,
+    uint8_t before_restricted,
+    uint8_t before_secondary_restricted,
+    uint8_t before_dfa,
+    uint8_t before_loan_active)
+{
+    if (!kbo_player_pointer_plausible(player_ptr)
+            || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+        return;
+    }
+
+    uint8_t* player = (uint8_t*)player_ptr;
+    if (!kbo_player_is_foreign_for_kbo_rights(player)) {
+        return;
+    }
+
+    static volatile LONG assignment_log_count = 0;
+    LONG slot = InterlockedIncrement(&assignment_log_count);
+    if (slot > 1800) {
+        if (slot == 1801) {
+            append_log_line("player team assignment trace suppressed after 1800 entries");
+        }
+        return;
+    }
+
+    uint32_t player_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_ID_OFFSET);
+    uint32_t nation_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_NATION_ID_OFFSET);
+    uint32_t after_current_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t after_active_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    uint32_t after_original_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
+    uint32_t after_league_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+    uint32_t after_loan_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+    uint32_t after_loan_league_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_LOAN_LEAGUE_ID_OFFSET);
+    uint32_t after_default_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET);
+    uint8_t after_status_flags = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_STATUS_FLAGS_OFFSET);
+    uint8_t after_restricted = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET);
+    uint8_t after_secondary_restricted =
+        kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET);
+    uint8_t after_dfa = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_DFA_FLAG_OFFSET);
+    uint8_t after_loan_active = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET);
+
+    append_logf(
+        "player team assignment trace #%ld label=%s caller_rva=0x%x player=%u nation=%u args_team=%d args_active=%d args_league=%d loan_flag=%u current=%u->%u active=%u->%u original=%u->%u league=%u->%u loan_team=%u->%u loan_league=%u->%u default_team=%u->%u status_flags=%u->%u restricted=%u->%u secondary=%u->%u dfa=%u->%u loan_active=%u->%u contract_level=%u pos_group=%u pos_role=%u overall=%d talent=%d ratings=%d",
+        slot,
+        label != NULL ? label : "",
+        caller_rva,
+        player_id,
+        nation_id,
+        arg_team_id,
+        arg_active_team_id,
+        arg_league_id,
+        (uint32_t)loan_flag,
+        before_current_team_id,
+        after_current_team_id,
+        before_active_team_id,
+        after_active_team_id,
+        before_original_team_id,
+        after_original_team_id,
+        before_league_id,
+        after_league_id,
+        before_loan_team_id,
+        after_loan_team_id,
+        before_loan_league_id,
+        after_loan_league_id,
+        before_default_team_id,
+        after_default_team_id,
+        (uint32_t)before_status_flags,
+        (uint32_t)after_status_flags,
+        (uint32_t)before_restricted,
+        (uint32_t)after_restricted,
+        (uint32_t)before_secondary_restricted,
+        (uint32_t)after_secondary_restricted,
+        (uint32_t)before_dfa,
+        (uint32_t)after_dfa,
+        (uint32_t)before_loan_active,
+        (uint32_t)after_loan_active,
+        (uint32_t)kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET),
+        (uint32_t)kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_POSITION_GROUP_OFFSET),
+        (uint32_t)kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_POSITION_ROLE_OFFSET),
+        kbo_read_player_i16(player, OOTP27_PLAYER_OVERALL_VALUE_OFFSET),
+        kbo_read_player_i16(player, OOTP27_PLAYER_TALENT_VALUE_OFFSET),
+        kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET));
+}
+
+static void kbo_snapshot_player_team_assignment_fields(
+    uintptr_t player_ptr,
+    uint32_t* current_team_id,
+    uint32_t* active_team_id,
+    uint32_t* original_team_id,
+    uint32_t* league_id,
+    uint32_t* loan_team_id,
+    uint32_t* loan_league_id,
+    uint32_t* default_team_id,
+    uint8_t* status_flags,
+    uint8_t* restricted,
+    uint8_t* secondary_restricted,
+    uint8_t* dfa,
+    uint8_t* loan_active)
+{
+    uint8_t* player = kbo_player_pointer_plausible(player_ptr) ? (uint8_t*)player_ptr : NULL;
+    *current_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    *active_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    *original_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
+    *league_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+    *loan_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+    *loan_league_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_LOAN_LEAGUE_ID_OFFSET);
+    *default_team_id = kbo_read_player_u32_or_zero(player, OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET);
+    *status_flags = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_STATUS_FLAGS_OFFSET);
+    *restricted = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET);
+    *secondary_restricted =
+        kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET);
+    *dfa = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_DFA_FLAG_OFFSET);
+    *loan_active = kbo_read_player_u8_or_zero(player, OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET);
+}
+
+__declspec(noinline) void ootp_kbo_player_clear_team_trace_wrapper(
+    uintptr_t player_ptr,
+    uint8_t loan_flag)
+{
+    uintptr_t caller_ptr = (uintptr_t)__builtin_return_address(0);
+    HMODULE host_exe = GetModuleHandleA(NULL);
+    uint32_t caller_rva = host_exe != NULL && caller_ptr >= (uintptr_t)host_exe
+        ? (uint32_t)(caller_ptr - (uintptr_t)host_exe)
+        : 0u;
+
+    uint32_t before_current_team_id = 0u;
+    uint32_t before_active_team_id = 0u;
+    uint32_t before_original_team_id = 0u;
+    uint32_t before_league_id = 0u;
+    uint32_t before_loan_team_id = 0u;
+    uint32_t before_loan_league_id = 0u;
+    uint32_t before_default_team_id = 0u;
+    uint8_t before_status_flags = 0u;
+    uint8_t before_restricted = 0u;
+    uint8_t before_secondary_restricted = 0u;
+    uint8_t before_dfa = 0u;
+    uint8_t before_loan_active = 0u;
+    kbo_snapshot_player_team_assignment_fields(
+        player_ptr,
+        &before_current_team_id,
+        &before_active_team_id,
+        &before_original_team_id,
+        &before_league_id,
+        &before_loan_team_id,
+        &before_loan_league_id,
+        &before_default_team_id,
+        &before_status_flags,
+        &before_restricted,
+        &before_secondary_restricted,
+        &before_dfa,
+        &before_loan_active);
+
+    OotpKboPlayerClearTeamTraceFn original = g_kbo_player_clear_team_trace_trampoline;
+    if (original != NULL) {
+        original(player_ptr, loan_flag);
+    }
+
+    kbo_log_player_team_assignment_trace(
+        "clear_team_7d7870",
+        caller_rva,
+        player_ptr,
+        0,
+        0,
+        0,
+        loan_flag,
+        before_current_team_id,
+        before_active_team_id,
+        before_original_team_id,
+        before_league_id,
+        before_loan_team_id,
+        before_loan_league_id,
+        before_default_team_id,
+        before_status_flags,
+        before_restricted,
+        before_secondary_restricted,
+        before_dfa,
+        before_loan_active);
+}
+
+__declspec(noinline) void ootp_kbo_player_set_team_trace_wrapper(
+    uintptr_t player_ptr,
+    int32_t team_id,
+    int32_t active_team_id,
+    int32_t league_id,
+    uint8_t loan_flag)
+{
+    uintptr_t caller_ptr = (uintptr_t)__builtin_return_address(0);
+    HMODULE host_exe = GetModuleHandleA(NULL);
+    uint32_t caller_rva = host_exe != NULL && caller_ptr >= (uintptr_t)host_exe
+        ? (uint32_t)(caller_ptr - (uintptr_t)host_exe)
+        : 0u;
+
+    uint32_t before_current_team_id = 0u;
+    uint32_t before_active_team_id = 0u;
+    uint32_t before_original_team_id = 0u;
+    uint32_t before_league_id = 0u;
+    uint32_t before_loan_team_id = 0u;
+    uint32_t before_loan_league_id = 0u;
+    uint32_t before_default_team_id = 0u;
+    uint8_t before_status_flags = 0u;
+    uint8_t before_restricted = 0u;
+    uint8_t before_secondary_restricted = 0u;
+    uint8_t before_dfa = 0u;
+    uint8_t before_loan_active = 0u;
+    kbo_snapshot_player_team_assignment_fields(
+        player_ptr,
+        &before_current_team_id,
+        &before_active_team_id,
+        &before_original_team_id,
+        &before_league_id,
+        &before_loan_team_id,
+        &before_loan_league_id,
+        &before_default_team_id,
+        &before_status_flags,
+        &before_restricted,
+        &before_secondary_restricted,
+        &before_dfa,
+        &before_loan_active);
+
+    OotpKboPlayerSetTeamTraceFn original = g_kbo_player_set_team_trace_trampoline;
+    if (original != NULL) {
+        original(player_ptr, team_id, active_team_id, league_id, loan_flag);
+    }
+
+    kbo_log_player_team_assignment_trace(
+        "set_team_7d78e0",
+        caller_rva,
+        player_ptr,
+        team_id,
+        active_team_id,
+        league_id,
+        loan_flag,
+        before_current_team_id,
+        before_active_team_id,
+        before_original_team_id,
+        before_league_id,
+        before_loan_team_id,
+        before_loan_league_id,
+        before_default_team_id,
+        before_status_flags,
+        before_restricted,
+        before_secondary_restricted,
+        before_dfa,
+        before_loan_active);
+}
 
 __declspec(noinline) double ootp_kbo_player_eval_double_trace_wrapper(
     uintptr_t player_ptr,
@@ -5130,6 +5710,84 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
         }
     }
 
+    uintptr_t native_result_ptr = result_ptr;
+    int32_t rescue_source_index = -1;
+    uint32_t rescue_active_team_id = 0u;
+    int64_t rescue_score = 0;
+    KboAiRosterForeignCandidateSummary rescue_summary;
+    uintptr_t rescue_ptr = kbo_ai_roster_choose_source_select_rescue_candidate(
+        source_vector_ptr,
+        source_count,
+        native_result_ptr,
+        &rescue_source_index,
+        &rescue_active_team_id,
+        &rescue_score,
+        &rescue_summary);
+    if (rescue_ptr != 0u && rescue_ptr != native_result_ptr) {
+        uint32_t native_player_id = 0u;
+        int native_foreign = 0;
+        int32_t native_score_fe0 = 0;
+        int32_t native_score_fe4 = 0;
+        int16_t native_overall = 0;
+        int16_t native_ratings = 0;
+        if (kbo_player_pointer_plausible(native_result_ptr)
+                && memory_range_readable((void*)native_result_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+            uint8_t* native_player = (uint8_t*)native_result_ptr;
+            native_player_id = *(uint32_t*)(native_player + OOTP27_PLAYER_ID_OFFSET);
+            native_foreign = kbo_player_is_foreign_for_kbo_rights(native_player);
+            native_score_fe0 = kbo_read_ai_roster_select_score(native_result_ptr, KBO_AI_ROSTER_SELECT_SCORE_FE0_OFFSET);
+            native_score_fe4 = kbo_read_ai_roster_select_score(native_result_ptr, KBO_AI_ROSTER_SELECT_SCORE_FE4_OFFSET);
+            native_overall = kbo_read_player_i16(native_player, OOTP27_PLAYER_OVERALL_VALUE_OFFSET);
+            native_ratings = kbo_read_player_i16(native_player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
+        }
+
+        static volatile LONG rescue_log_count = 0;
+        LONG rescue_slot = InterlockedIncrement(&rescue_log_count);
+        append_logf(
+            "ootp ai roster foreign source-select rescue #%ld caller_rva=0x%x context=%p slot_index=%d depth_hint=%d source_count=%d native=%u native_foreign=%d native_fe0=%d native_fe4=%d native_overall=%d native_ratings=%d override=%u source_idx=%d active_team=%u score=%lld current=%u active=%u league=%u default_team=%u status24=%u status25=%u status26=%u f25=%u f62=%u f65=%u f06=%d fe0=%d fe4=%d overall=%d talent=%d ratings=%d local_candidates=%d local_foreign=%d local_targets=%d",
+            rescue_slot,
+            caller_rva,
+            (void*)context_ptr,
+            slot_index,
+            depth_hint,
+            source_count,
+            native_player_id,
+            native_foreign,
+            native_score_fe0,
+            native_score_fe4,
+            native_overall,
+            native_ratings,
+            rescue_summary.player_id,
+            rescue_source_index,
+            rescue_active_team_id,
+            (long long)rescue_score,
+            rescue_summary.current_team_id,
+            rescue_summary.active_team_id,
+            rescue_summary.league_id,
+            rescue_summary.default_team_id,
+            rescue_summary.status24,
+            rescue_summary.status25,
+            rescue_summary.status26,
+            rescue_summary.f25,
+            (uint32_t)((uint8_t*)rescue_ptr)[0xf62u],
+            (uint32_t)((uint8_t*)rescue_ptr)[0xf65u],
+            kbo_read_player_i16((uint8_t*)rescue_ptr, 0xf06u),
+            rescue_summary.score_fe0,
+            rescue_summary.score_fe4,
+            rescue_summary.overall,
+            rescue_summary.talent,
+            rescue_summary.ratings,
+            live_trace.candidate_count,
+            live_trace.foreign_count,
+            live_trace.target_count);
+        result_ptr = rescue_ptr;
+        selected_source_index = rescue_source_index;
+    }
+    selected_local_index = kbo_ai_roster_select_live_trace_selected_index(&live_trace, result_ptr);
+    selected_last_sort_rank = kbo_ai_roster_select_live_trace_last_sorted_rank(
+        &live_trace,
+        selected_local_index);
+
     uint8_t* player = NULL;
     uint32_t player_id = 0u;
     uint32_t nation_id = 0u;
@@ -6164,6 +6822,175 @@ static uint8_t kbo_ai_roster_context_flow_apply_rescue_active_move(
     return result;
 }
 
+static uint8_t kbo_ai_roster_context_flow_apply_rescue_team_add(
+    uintptr_t context_ptr,
+    const KboAiRosterFlowContextSnapshot* before,
+    uint32_t active_team_id,
+    int callup_allowed,
+    uintptr_t slot_block_ptr,
+    uint16_t target_slot)
+{
+    int team_add_enabled = kbo_ai_roster_foreign_apply_rescue_team_add_enabled();
+    if (context_ptr == 0u
+            || before == NULL
+            || !before->selected.plausible
+            || before->selected.ptr == 0u
+            || before->selected.player_id == 0u
+            || active_team_id == 0u
+            || !callup_allowed
+            || g_kbo_team_add_player_guard_trampoline == NULL
+            || !team_add_enabled) {
+        static volatile LONG precheck_skip_log_count = 0;
+        LONG precheck_slot = InterlockedIncrement(&precheck_skip_log_count);
+        if (precheck_slot <= 300
+                || (before != NULL && before->selected.target)) {
+            append_logf(
+                "ootp ai roster foreign apply rescue team-add skip #%ld reason=precheck context=%p before=%p plausible=%d ptr=%p player=%u target=%d foreign=%d current=%u active=%u league=%u default_team=%u status24=%u status25=%u status26=%u f62=%u f65=%u f06=%d active_team=%u callup_allowed=%d trampoline=%p enabled=%d custom_policy=%d enable_flag=%d disable_flag=%d source_select_enabled=%d slot_block=%p target_slot=%u",
+                precheck_slot,
+                (void*)context_ptr,
+                (const void*)before,
+                before != NULL ? before->selected.plausible : 0,
+                before != NULL ? (void*)before->selected.ptr : NULL,
+                before != NULL ? before->selected.player_id : 0u,
+                before != NULL ? before->selected.target : 0,
+                before != NULL ? before->selected.foreign : 0,
+                before != NULL ? before->selected.current_team_id : 0u,
+                before != NULL ? before->selected.active_team_id : 0u,
+                before != NULL ? before->selected.league_id : 0u,
+                before != NULL ? before->selected.default_team_id : 0u,
+                before != NULL ? before->selected.status24 : 0u,
+                before != NULL ? before->selected.status25 : 0u,
+                before != NULL ? before->selected.status26 : 0u,
+                before != NULL ? before->selected.f62 : 0u,
+                before != NULL ? before->selected.f65 : 0u,
+                before != NULL ? before->selected.f06 : 0,
+                active_team_id,
+                callup_allowed,
+                (void*)g_kbo_team_add_player_guard_trampoline,
+                team_add_enabled,
+                kbo_custom_foreign_policy_enabled(),
+                read_kbo_localappdata_flag_file("enable_ai_roster_foreign_apply_rescue_team_add.txt"),
+                read_kbo_localappdata_flag_file("disable_ai_roster_foreign_apply_rescue_team_add.txt"),
+                kbo_ai_roster_foreign_source_select_rescue_enabled(),
+                (void*)slot_block_ptr,
+                target_slot);
+        }
+        return 0u;
+    }
+
+    uint8_t* active_team = find_kbo_team_by_numeric_id_any_league(active_team_id, 1);
+    if (active_team == NULL || !memory_range_readable(active_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        append_logf(
+            "ootp ai roster foreign apply rescue team-add skip reason=no_active_team context=%p player=%u active_team=%u slot_block=%p target_slot=%u",
+            (void*)context_ptr,
+            before->selected.player_id,
+            active_team_id,
+            (void*)slot_block_ptr,
+            target_slot);
+        return 0u;
+    }
+
+    uint32_t team_id = *(uint32_t*)(active_team + OOTP27_KBO_TEAM_ID_OFFSET);
+    uint32_t team_league_id = *(uint32_t*)(active_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+    if (team_id != active_team_id) {
+        append_logf(
+            "ootp ai roster foreign apply rescue team-add skip reason=team_mismatch context=%p player=%u active_team=%u found_team=%u team_league=%u slot_block=%p target_slot=%u",
+            (void*)context_ptr,
+            before->selected.player_id,
+            active_team_id,
+            team_id,
+            team_league_id,
+            (void*)slot_block_ptr,
+            target_slot);
+        return 0u;
+    }
+
+    if (before->selected.current_team_id == team_id
+            && before->selected.active_team_id == team_id
+            && before->selected.league_id == team_league_id) {
+        append_logf(
+            "ootp ai roster foreign apply rescue team-add skip reason=already_active context=%p player=%u team=%u team_league=%u slot_block=%p target_slot=%u",
+            (void*)context_ptr,
+            before->selected.player_id,
+            team_id,
+            team_league_id,
+            (void*)slot_block_ptr,
+            target_slot);
+        return 0u;
+    }
+
+    uint32_t before_current_team_id = before->selected.current_team_id;
+    uint32_t before_active_team_id = before->selected.active_team_id;
+    uint32_t before_league_id = before->selected.league_id;
+    uint32_t before_status24 = before->selected.status24;
+    uint32_t before_status25 = before->selected.status25;
+    uint32_t before_status26 = before->selected.status26;
+    uint32_t before_f62 = before->selected.f62;
+    uint32_t before_f65 = before->selected.f65;
+    uint32_t before_f68 = before->selected.f68;
+    uint32_t before_f1a = before->selected.f1a;
+
+    uint8_t result = g_kbo_team_add_player_guard_trampoline(
+        (uintptr_t)active_team,
+        before->selected.ptr,
+        0u,
+        0u,
+        0u,
+        0u,
+        0u,
+        0u);
+
+    KboAiRosterFlowPlayerSnapshot after_player;
+    kbo_ai_roster_flow_read_player(before->selected.ptr, &after_player);
+
+    static volatile LONG trace_log_count = 0;
+    LONG trace_slot = InterlockedIncrement(&trace_log_count);
+    if (trace_slot <= 300 || before->selected.target || after_player.target) {
+        append_logf(
+            "ootp ai roster foreign apply rescue team-add #%ld result=%u context=%p slot_block=%p target_slot=%u team=%u team_league=%u player=%u target=%d foreign=%d nation=%u current=%u->%u active=%u->%u league=%u->%u default_team=%u status24=%u->%u status25=%u->%u status26=%u->%u f62=%u->%u f65=%u->%u f68=%u->%u f1a=%u->%u f3e=%u f06=%d fec=%u ef8=%d overall=%d ratings=%d",
+            trace_slot,
+            (uint32_t)result,
+            (void*)context_ptr,
+            (void*)slot_block_ptr,
+            target_slot,
+            team_id,
+            team_league_id,
+            before->selected.player_id,
+            before->selected.target,
+            before->selected.foreign,
+            before->selected.nation_id,
+            before_current_team_id,
+            after_player.current_team_id,
+            before_active_team_id,
+            after_player.active_team_id,
+            before_league_id,
+            after_player.league_id,
+            before->selected.default_team_id,
+            before_status24,
+            after_player.status24,
+            before_status25,
+            after_player.status25,
+            before_status26,
+            after_player.status26,
+            before_f62,
+            after_player.f62,
+            before_f65,
+            after_player.f65,
+            before_f68,
+            after_player.f68,
+            before_f1a,
+            after_player.f1a,
+            after_player.f3e,
+            after_player.f06,
+            after_player.fec,
+            after_player.ef8,
+            after_player.overall,
+            after_player.ratings);
+    }
+
+    return result;
+}
+
 static int kbo_ai_roster_context_flow_apply_rescue(
     uintptr_t context_ptr,
     const KboAiRosterFlowContextSnapshot* before,
@@ -6210,7 +7037,10 @@ static int kbo_ai_roster_context_flow_apply_rescue(
         return 0;
     }
 
-    if (before->selected.f65 != 0u || before->selected.status26 != 0u) {
+    int team_add_rescue_enabled = kbo_ai_roster_foreign_apply_rescue_team_add_enabled();
+    if (before->selected.f65 != 0u
+            || (before->selected.status26 != 0u
+                && (!team_add_rescue_enabled || before->selected.status26 != 1u))) {
         kbo_ai_roster_context_flow_apply_rescue_skip_log(
             "not_clean_candidate",
             context_ptr,
@@ -6254,6 +7084,13 @@ static int kbo_ai_roster_context_flow_apply_rescue(
     uint32_t after_slot_code = kbo_ai_roster_slot_code_at(slot_block_ptr, target_slot);
     uint32_t after_slot_player_id = kbo_ai_roster_slot_player_at(slot_block_ptr, target_slot);
     if (after_slot_player_id == before->selected.player_id) {
+        kbo_ai_roster_context_flow_apply_rescue_team_add(
+            context_ptr,
+            before,
+            active_team_id,
+            callup_allowed,
+            slot_block_ptr,
+            target_slot);
         kbo_ai_roster_context_flow_apply_rescue_active_move(
             context_ptr,
             before,

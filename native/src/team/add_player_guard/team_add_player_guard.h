@@ -29,6 +29,8 @@ void kbo_set_ai_roster_secondary_alt_flow_trace_trampoline(void* trampoline);
 void kbo_set_ai_roster_mark_selected_trace_trampoline(void* trampoline);
 void kbo_set_ai_roster_selection_reconcile_trace_trampoline(void* trampoline);
 void kbo_set_ai_roster_apply_selection_trace_trampoline(void* trampoline);
+void kbo_set_player_clear_team_trace_trampoline(void* trampoline);
+void kbo_set_player_set_team_trace_trampoline(void* trampoline);
 uint8_t kbo_team_add_player_guard_call_original(
     uintptr_t team_ptr,
     uintptr_t player_ptr,

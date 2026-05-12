@@ -160,6 +160,15 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
     uintptr_t player_ptr,
     int32_t target_slot,
     int32_t roster_code);
+__declspec(noinline) void ootp_kbo_player_clear_team_trace_wrapper(
+    uintptr_t player_ptr,
+    uint8_t loan_flag);
+__declspec(noinline) void ootp_kbo_player_set_team_trace_wrapper(
+    uintptr_t player_ptr,
+    int32_t team_id,
+    int32_t active_team_id,
+    int32_t league_id,
+    uint8_t loan_flag);
 __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     uintptr_t league_ptr,
     uint32_t value,

@@ -1279,3 +1279,77 @@ Current inference:
   explicit enable flag, try `A49D80(active_team, player, 0, 0, 0, 0, ?, 0)` as
   the post-slot rescue. The `?` should be tested from the two observed native
   patterns: all-zero args from `0x1075138`, then `arg7=1` from `0xA54FC1`.
+
+## 2026-05-12 follow-up: real assignment instrumentation and A49D80 experiment
+
+The 5368 log narrowed the failure further:
+
+- `5368` is not a release/zero-team case. The latest snapshot kept him at
+  `current=18`, `active=9`, `league=101`.
+- The AI did evaluate and select him: the traces show `selected=5368`,
+  `f25=100`, sort rank `0`, and the custom foreign call-up policy allowed the
+  move for team `9`.
+- The previous rescue then skipped him as `not_clean_candidate` only because
+  `status26=1`. This was too strict for the common minor foreign case.
+
+Patch added:
+
+- Added read-only traces for:
+  - `0x7D7870` as `player team assignment trace label=clear_team_7d7870`.
+  - `0x7D78E0` as `player team assignment trace label=set_team_7d78e0`.
+- The traces log player `current/active/original/league`, loan fields,
+  default team, roster flags, and caller RVA before/after the native write.
+- Added an explicit opt-in experiment:
+  `enable_ai_roster_foreign_apply_rescue_team_add.txt`.
+- When that flag is present, apply-rescue allows the observed
+  `status26=1` minor foreign candidate, writes the AI slot, then calls the
+  original `A49D80(active_team, player, 0, 0, 0, 0, 0, 0)` path.
+- The previous dangerous `A52950` active-move attempt remains gated by
+  `enable_ai_roster_foreign_apply_rescue_move.txt` and the existing disable
+  flag.
+
+Next validation:
+
+- Do not hot-inject into an in-progress play session.
+- For a clean test run, restart with the rebuilt DLL and enable only:
+  `enable_foreign_ai_roster_research_hooks.txt` and
+  `enable_ai_roster_foreign_apply_rescue_team_add.txt`.
+- Advance one day and inspect:
+  `ootp ai roster foreign apply rescue team-add`,
+  `player team assignment trace`, and the roster audit for players such as
+  `5368`.
+
+## 2026-05-12 source select rescue experiment
+
+The `pid=34968` run showed that the assignment traces and A49D80 team-add
+experiment were installed, but `5368` did not reach the apply-rescue path:
+
+- `5368` repeatedly passed availability and custom call-up checks:
+  `current=18`, `active=9`, `league=101`, `status26=1`, `f25=100`.
+- In `ootp ai roster select source foreign summary #173/#175`, `5368` was the
+  only foreign source candidate (`source_targets=1`) but the returned selection
+  was domestic (`3576` / `5411`).
+- No `ootp ai roster foreign apply rescue team-add` or
+  `player team assignment trace` fired for `5368`, so the failure moved earlier
+  than team-add: the native select return pointer still favored domestic
+  fallback players.
+
+Patch added:
+
+- Added opt-in `enable_ai_roster_foreign_source_select_rescue.txt`.
+- When the native DD86C0 select function returns a non-foreign player, the
+  wrapper now scans the same source vector for the best KBO minor-league foreign
+  candidate that passes the custom foreign call-up limit.
+- The override is narrow: it requires `f25 >= 100`, `f65 == 0`,
+  `status26 == 0 || status26 == 1`, a valid active parent team, and the
+  existing `enable_ai_roster_foreign_apply_rescue_team_add.txt` experiment.
+- New log:
+  `ootp ai roster foreign source-select rescue`.
+
+Next validation:
+
+- Restart OOTP with the rebuilt DLL; do not hot-inject into the current session.
+- Advance one day and inspect for:
+  `ootp ai roster foreign source-select rescue`,
+  `ootp ai roster foreign apply rescue team-add`,
+  and `player team assignment trace`.

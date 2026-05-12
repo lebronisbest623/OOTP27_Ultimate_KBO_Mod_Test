@@ -28,5 +28,6 @@ int install_kbo_ai_roster_secondary_alt_flow_trace_patch(void);
 int install_kbo_ai_roster_mark_selected_trace_patch(void);
 int install_kbo_ai_roster_selection_reconcile_trace_patch(void);
 int install_kbo_ai_roster_apply_selection_trace_patch(void);
+int install_kbo_player_team_assignment_trace_patches(void);
 
 #endif

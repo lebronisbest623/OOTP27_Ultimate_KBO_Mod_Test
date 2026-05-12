@@ -7,6 +7,28 @@
 #include <string.h>
 #include <windows.h>
 
+static int kbo_legacy_localappdata_flag_file_exists(const char* file_name)
+{
+    if (file_name == NULL || file_name[0] == '\0') {
+        return 0;
+    }
+
+    char local_app_data[32768] = {0};
+    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
+    if (got == 0 || got >= (DWORD)sizeof(local_app_data)) {
+        return 0;
+    }
+
+    char path[32768] = {0};
+    int written = snprintf(path, sizeof(path), "%s\\OOTP-KBO\\%s", local_app_data, file_name);
+    if (written <= 0 || written >= (int)sizeof(path)) {
+        return 0;
+    }
+
+    DWORD attrs = GetFileAttributesA(path);
+    return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0;
+}
+
 int read_kbo_localappdata_flag_file(const char* file_name)
 {
     char key[128] = {0};
@@ -38,7 +60,7 @@ int read_kbo_localappdata_flag_file(const char* file_name)
 
     int value = 0;
     int found = kbo_read_localappdata_json_flag_value(key, file_name, &value);
-    value = found ? (value ? 1 : 0) : 0;
+    value = found ? (value ? 1 : 0) : kbo_legacy_localappdata_flag_file_exists(file_name);
 
     while (InterlockedCompareExchange(&cache_lock, 1, 0) != 0) {
         Sleep(0);
