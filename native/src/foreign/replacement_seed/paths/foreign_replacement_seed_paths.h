@@ -8,6 +8,5 @@
 int kbo_get_save_foreign_replacement_players_seed_path(char* out, size_t out_size);
 int kbo_get_global_foreign_replacement_players_seed_path(char* out, size_t out_size);
 int kbo_get_save_foreign_replacement_players_resolved_path(char* out, size_t out_size);
-int kbo_get_current_players_dat_path(char* out, size_t out_size);
 
 #endif

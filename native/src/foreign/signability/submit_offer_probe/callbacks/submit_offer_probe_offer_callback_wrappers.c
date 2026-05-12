@@ -8,7 +8,9 @@ static int kbo_no_minor_force_contract_offer_major_terms(
     uint8_t* out_major_flag,
     int32_t* out_floor)
 {
+    KBO_PROFILE_BEGIN(profile_no_minor_force_terms);
     if (offer_ptr == 0 || !memory_range_readable((void*)offer_ptr, 0xd0)) {
+        KBO_PROFILE_END(profile_no_minor_force_terms, "no_minor.force_terms.bad_offer");
         return 0;
     }
 
@@ -61,6 +63,9 @@ static int kbo_no_minor_force_contract_offer_major_terms(
                 salary_floor);
         }
     }
+    KBO_PROFILE_END(profile_no_minor_force_terms, changed
+        ? "no_minor.force_terms.changed"
+        : "no_minor.force_terms.unchanged");
     return changed;
 }
 
@@ -71,6 +76,7 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
     uintptr_t value,
     uintptr_t original_func_ptr)
 {
+    KBO_PROFILE_BEGIN(profile_no_minor_offer_callback);
     int result = 0;
     uint32_t player_id = 0;
     int32_t selected_mode = -1;
@@ -127,6 +133,7 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
         }
     }
 
+    KBO_PROFILE_END(profile_no_minor_offer_callback, "no_minor.offer_callback.total");
     return result;
 }
 
@@ -137,6 +144,7 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
     uintptr_t value,
     uintptr_t original_func_ptr)
 {
+    KBO_PROFILE_BEGIN(profile_no_minor_contract_callback);
     int result = 0;
     int32_t selected_player = -1;
     int32_t before_salary = -1;
@@ -204,6 +212,7 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
         }
     }
 
+    KBO_PROFILE_END(profile_no_minor_contract_callback, "no_minor.contract_callback.total");
     return result;
 }
 

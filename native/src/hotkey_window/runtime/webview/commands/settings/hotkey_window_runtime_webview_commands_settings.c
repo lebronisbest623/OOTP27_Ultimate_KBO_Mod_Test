@@ -43,6 +43,25 @@ int kbo_webview_handle_settings_command(const char* cmd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "settings/asian-quota-salary-limit/", 35) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
+        int value = atoi(cmd + 35);
+        int clamped = kbo_clamp_asian_quota_salary_limit_value(value);
+        if (kbo_set_asian_quota_salary_limit(value)) {
+            append_logf("settings webview: Asian quota salary limit=%d", clamped);
+        } else {
+            append_logf("settings webview: failed to write Asian quota salary limit=%d", value);
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     const char* non_asian_quality_cap_prefix = "settings/foreign-fa-non-asian-quality-cap/";
     size_t non_asian_quality_cap_prefix_len = strlen(non_asian_quality_cap_prefix);
     if (strncmp(cmd, non_asian_quality_cap_prefix, non_asian_quality_cap_prefix_len) == 0) {

@@ -145,7 +145,7 @@ int kbo_resolve_foreign_replacement_player_seeds_locked(void)
         if (seed->key[0] >= '0' && seed->key[0] <= '9') {
             player_id = (uint32_t)strtoul(seed->key, NULL, 10);
         } else {
-            player_id = kbo_resolve_foreign_replacement_player_seed_from_players_dat(seed->key, &resolved_slot_type);
+            player_id = kbo_resolve_foreign_replacement_player_seed_key(seed->key, &resolved_slot_type);
         }
         if (player_id != 0u) {
             seed->player_id = player_id;

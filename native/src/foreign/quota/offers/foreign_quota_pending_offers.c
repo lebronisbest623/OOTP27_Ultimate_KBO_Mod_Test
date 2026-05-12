@@ -6,6 +6,7 @@
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../bootstrap/abi/hook_entrypoints.h"
 #include "../../../bootstrap/profiling/perf_probe.h"
+#include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/core_flags/api/flags_api.h"
@@ -86,6 +87,7 @@ void kbo_custom_foreign_count_pending_offers(
         return;
     }
 
+    KBO_PROFILE_BEGIN(profile_foreign_pending_offers);
     kbo_custom_foreign_pending_offer_lock();
 
     int write_index = 0;
@@ -116,6 +118,7 @@ void kbo_custom_foreign_count_pending_offers(
     g_kbo_custom_foreign_pending_offer_count = write_index;
 
     kbo_custom_foreign_pending_offer_unlock();
+    KBO_PROFILE_END(profile_foreign_pending_offers, "foreign_policy.pending_offers.count");
 
     if (out_asian_pending != NULL) { *out_asian_pending = asian_pending; }
     if (out_non_asian_pending != NULL) { *out_non_asian_pending = non_asian_pending; }

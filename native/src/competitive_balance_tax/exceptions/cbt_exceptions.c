@@ -1,0 +1,540 @@
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "cbt_exceptions.h"
+#include "../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../core/files/save_paths/core_save_paths.h"
+#include "../../core/logging/core_log.h"
+#include "../../fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
+#include "../../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
+#include "../../fa_salary_snapshot/paths/salary_snapshot_paths_dates.h"
+#include "../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../hotkey_window/support/assets/names/support_names.h"
+
+#define KBO_CBT_EXCEPTION_AUTO_TEAM_MAX 64
+
+typedef struct KboCbtSeasonSeedRow {
+    char player_key[64];
+    char team_code[16];
+    int season_count;
+} KboCbtSeasonSeedRow;
+
+static KboCbtSeasonSeedRow g_cbt_season_seed[KBO_CBT_EXCEPTION_SEASON_SEED_MAX];
+static int g_cbt_season_seed_count = 0;
+static volatile LONG g_cbt_season_seed_loaded = 0;
+static volatile LONG g_cbt_season_seed_lock = 0;
+
+static void kbo_cbt_exception_lock(volatile LONG* lock)
+{
+    while (InterlockedCompareExchange(lock, 1, 0) != 0) {
+        Sleep(0);
+    }
+}
+
+static void kbo_cbt_exception_unlock(volatile LONG* lock)
+{
+    InterlockedExchange(lock, 0);
+}
+
+static int kbo_cbt_exception_designation_path(char* out, size_t out_size)
+{
+    return kbo_get_save_scoped_data_file("cbt_exception_players.csv", out, out_size);
+}
+
+static int kbo_cbt_exception_seed_path(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return 0;
+    }
+    out[0] = '\0';
+    char local_app_data[MAX_PATH] = {0};
+    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
+    if (got == 0u || got >= (DWORD)sizeof(local_app_data)) {
+        return 0;
+    }
+    int written = snprintf(out, out_size, "%s\\OOTP-KBO\\cbt_player_team_seasons_seed.csv", local_app_data);
+    return written > 0 && written < (int)out_size;
+}
+
+static int kbo_cbt_exception_bundled_seed_path(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    HMODULE module = GetModuleHandleA("KBOFix.dll");
+    if (module == NULL) {
+        module = GetModuleHandleA(NULL);
+    }
+
+    char path[MAX_PATH] = {0};
+    DWORD len = GetModuleFileNameA(module, path, (DWORD)sizeof(path));
+    if (len == 0u || len >= (DWORD)sizeof(path)) {
+        return 0;
+    }
+    char* slash = strrchr(path, '\\');
+    if (slash == NULL) {
+        return 0;
+    }
+    *(slash + 1) = '\0';
+
+    int written = snprintf(out, out_size, "%sdata\\seeds\\cbt_player_team_seasons_seed.csv", path);
+    return written > 0 && written < (int)out_size;
+}
+
+static void kbo_cbt_exception_copy_team_seed_code(uint32_t team_id, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    kbo_hub_copy_team_abbrev_by_id(team_id, out, out_size, "");
+    if (_stricmp(out, "HAN") == 0) {
+        snprintf(out, out_size, "HH");
+    } else if (_stricmp(out, "KT") == 0) {
+        snprintf(out, out_size, "kt");
+    } else {
+        size_t n = strlen(out);
+        if (n > 1u && out[n - 1u] == '2') {
+            out[n - 1u] = '\0';
+        }
+    }
+}
+
+static void kbo_cbt_exception_ensure_seed_loaded(void)
+{
+    if (InterlockedCompareExchange(&g_cbt_season_seed_loaded, 1, 1) == 1) {
+        return;
+    }
+
+    kbo_cbt_exception_lock(&g_cbt_season_seed_lock);
+    if (g_cbt_season_seed_loaded) {
+        kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
+        return;
+    }
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_cbt_exception_seed_path(path, sizeof(path))) {
+        InterlockedExchange(&g_cbt_season_seed_loaded, 1);
+        kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
+        return;
+    }
+
+    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        append_logf("KBO CBT exception seed unavailable path=%s", path);
+        if (kbo_cbt_exception_bundled_seed_path(path, sizeof(path))) {
+            file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        }
+        if (file == INVALID_HANDLE_VALUE) {
+            append_logf("KBO CBT exception bundled seed unavailable path=%s", path);
+            InterlockedExchange(&g_cbt_season_seed_loaded, 1);
+            kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
+            return;
+        }
+    }
+
+    DWORD size = GetFileSize(file, NULL);
+    if (size == INVALID_FILE_SIZE || size == 0u || size > 4u * 1024u * 1024u) {
+        CloseHandle(file);
+        InterlockedExchange(&g_cbt_season_seed_loaded, 1);
+        kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
+        return;
+    }
+
+    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
+    if (buffer == NULL) {
+        CloseHandle(file);
+        InterlockedExchange(&g_cbt_season_seed_loaded, 1);
+        kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
+        return;
+    }
+
+    DWORD read = 0;
+    if (ReadFile(file, buffer, size, &read, NULL)) {
+        buffer[read] = '\0';
+        char* cursor = buffer;
+        while (*cursor != '\0' && g_cbt_season_seed_count < KBO_CBT_EXCEPTION_SEASON_SEED_MAX) {
+            char* next = strchr(cursor, '\n');
+            if (next != NULL) {
+                *next = '\0';
+            }
+            char* p = cursor;
+            while (*p == ' ' || *p == '\t' || *p == '\r') {
+                p++;
+            }
+            if (*p != '\0' && *p != '#' && strncmp(p, "player_key,", 11) != 0) {
+                KboCbtSeasonSeedRow row;
+                memset(&row, 0, sizeof(row));
+                char field[128] = {0};
+                for (int fi = 0; fi <= 4 && *p != '\0'; fi++) {
+                    if (!kbo_fa_salary_snapshot_parse_csv_field(&p, field, sizeof(field))) {
+                        break;
+                    }
+                    if (fi == 0) {
+                        snprintf(row.player_key, sizeof(row.player_key), "%s", field);
+                    } else if (fi == 3) {
+                        snprintf(row.team_code, sizeof(row.team_code), "%s", field);
+                    } else if (fi == 4) {
+                        row.season_count = (int)strtol(field, NULL, 10);
+                    }
+                }
+                if (row.player_key[0] != '\0' && row.team_code[0] != '\0') {
+                    g_cbt_season_seed[g_cbt_season_seed_count++] = row;
+                }
+            }
+            if (next == NULL) {
+                break;
+            }
+            cursor = next + 1;
+        }
+    }
+
+    CloseHandle(file);
+    HeapFree(GetProcessHeap(), 0, buffer);
+    append_logf("KBO CBT exception seed loaded rows=%d path=%s", g_cbt_season_seed_count, path);
+    InterlockedExchange(&g_cbt_season_seed_loaded, 1);
+    kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
+}
+
+int kbo_cbt_exception_player_eligible(uint32_t team_id, const char* player_key, int* out_season_count)
+{
+    if (out_season_count != NULL) {
+        *out_season_count = 0;
+    }
+    if (team_id == 0u || player_key == NULL || player_key[0] == '\0') {
+        return 0;
+    }
+    char team_code[16] = {0};
+    kbo_cbt_exception_copy_team_seed_code(team_id, team_code, sizeof(team_code));
+    if (team_code[0] == '\0') {
+        return 0;
+    }
+
+    kbo_cbt_exception_ensure_seed_loaded();
+    for (int i = 0; i < g_cbt_season_seed_count; i++) {
+        if (_stricmp(g_cbt_season_seed[i].player_key, player_key) == 0
+                && _stricmp(g_cbt_season_seed[i].team_code, team_code) == 0) {
+            if (out_season_count != NULL) {
+                *out_season_count = g_cbt_season_seed[i].season_count;
+            }
+            return g_cbt_season_seed[i].season_count >= 7;
+        }
+    }
+    return 0;
+}
+
+int kbo_cbt_exception_resolve_opening_day(uint32_t season, uint32_t* out_opening_day)
+{
+    if (out_opening_day != NULL) {
+        *out_opening_day = 0u;
+    }
+    if (season < 1982u || season > 2200u) {
+        return 0;
+    }
+
+    uint32_t league_id = kbo_resolve_kbo_league_id();
+    uintptr_t league_ptr = league_id != 0u ? kbo_find_league_ptr_from_global_vectors(league_id) : 0u;
+    uint32_t opening_day = 0u;
+    if (league_ptr != 0u
+            && kbo_fa_salary_snapshot_read_opening_day(league_ptr, &opening_day)
+            && opening_day / 10000u == season) {
+        if (out_opening_day != NULL) {
+            *out_opening_day = opening_day;
+        }
+        return 1;
+    }
+
+    if (kbo_fa_salary_snapshot_load_schedule_opening_day(season, &opening_day)
+            && opening_day / 10000u == season) {
+        if (out_opening_day != NULL) {
+            *out_opening_day = opening_day;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+int kbo_cbt_exception_designation_window_open(uint32_t season, uint32_t current_date)
+{
+    uint32_t opening_day = 0u;
+    if (current_date == 0u || !kbo_cbt_exception_resolve_opening_day(season, &opening_day)) {
+        return 0;
+    }
+    return current_date >= opening_day && current_date <= kbo_add_days_yyyymmdd(opening_day, 6u);
+}
+
+int kbo_cbt_exception_load_designations(KboCbtExceptionDesignation* rows, int max)
+{
+    if (rows == NULL || max <= 0) {
+        return 0;
+    }
+    memset(rows, 0, (SIZE_T)max * sizeof(rows[0]));
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_cbt_exception_designation_path(path, sizeof(path))) {
+        return 0;
+    }
+    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+    DWORD size = GetFileSize(file, NULL);
+    if (size == INVALID_FILE_SIZE || size == 0u || size > 256u * 1024u) {
+        CloseHandle(file);
+        return 0;
+    }
+    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
+    if (buffer == NULL) {
+        CloseHandle(file);
+        return 0;
+    }
+    DWORD read = 0;
+    int count = 0;
+    if (ReadFile(file, buffer, size, &read, NULL)) {
+        buffer[read] = '\0';
+        char* cursor = buffer;
+        int header = 0;
+        while (*cursor != '\0' && count < max) {
+            char* next = strchr(cursor, '\n');
+            if (next != NULL) { *next = '\0'; }
+            char* p = cursor;
+            while (*p == ' ' || *p == '\t' || *p == '\r') { p++; }
+            if (!header) {
+                header = 1;
+            } else if (*p >= '0' && *p <= '9') {
+                KboCbtExceptionDesignation row;
+                memset(&row, 0, sizeof(row));
+                char field[128] = {0};
+                for (int fi = 0; fi <= 3 && *p != '\0'; fi++) {
+                    if (!kbo_fa_salary_snapshot_parse_csv_field(&p, field, sizeof(field))) { break; }
+                    if (fi == 0) row.season = (uint32_t)strtoul(field, NULL, 10);
+                    else if (fi == 1) row.team_id = (uint32_t)strtoul(field, NULL, 10);
+                    else if (fi == 2) snprintf(row.player_key, sizeof(row.player_key), "%s", field);
+                    else if (fi == 3) snprintf(row.player_name, sizeof(row.player_name), "%s", field);
+                }
+                if (row.season != 0u && row.team_id != 0u && row.player_key[0] != '\0') {
+                    rows[count++] = row;
+                }
+            }
+            if (next == NULL) { break; }
+            cursor = next + 1;
+        }
+    }
+    CloseHandle(file);
+    HeapFree(GetProcessHeap(), 0, buffer);
+    return count;
+}
+
+static int kbo_cbt_exception_write_designations(const KboCbtExceptionDesignation* rows, int count)
+{
+    char path[MAX_PATH] = {0};
+    if (!kbo_cbt_exception_designation_path(path, sizeof(path))) {
+        return 0;
+    }
+    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        append_logf("KBO CBT exception designation open failed path=%s gle=%lu", path, GetLastError());
+        return 0;
+    }
+    DWORD written = 0;
+    const char* header = "season,team_id,player_key,player_name\r\n";
+    WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
+    for (int i = 0; i < count; i++) {
+        if (rows[i].season == 0u || rows[i].team_id == 0u || rows[i].player_key[0] == '\0') {
+            continue;
+        }
+        char line[256] = {0};
+        int len = snprintf(line, sizeof(line), "%u,%u,", rows[i].season, rows[i].team_id);
+        if (len > 0) { WriteFile(file, line, (DWORD)len, &written, NULL); }
+        kbo_fa_salary_snapshot_write_csv_text(file, rows[i].player_key);
+        WriteFile(file, ",", 1, &written, NULL);
+        kbo_fa_salary_snapshot_write_csv_text(file, rows[i].player_name);
+        WriteFile(file, "\r\n", 2, &written, NULL);
+    }
+    CloseHandle(file);
+    return 1;
+}
+
+int kbo_cbt_exception_save_designation(uint32_t season, uint32_t team_id, const char* player_key, const char* player_name)
+{
+    if (season < 1982u || season > 2200u || team_id == 0u || player_key == NULL || player_key[0] == '\0') {
+        return 0;
+    }
+    if (!kbo_cbt_exception_player_eligible(team_id, player_key, NULL)) {
+        append_logf("KBO CBT exception rejected season=%u team=%u player_key=%s reason=ineligible", season, team_id, player_key);
+        return 0;
+    }
+    KboCbtExceptionDesignation rows[KBO_CBT_EXCEPTION_MAX];
+    int count = kbo_cbt_exception_load_designations(rows, KBO_CBT_EXCEPTION_MAX);
+    int slot = -1;
+    for (int i = 0; i < count; i++) {
+        if (rows[i].season == season && rows[i].team_id == team_id) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot < 0) {
+        if (count >= KBO_CBT_EXCEPTION_MAX) {
+            return 0;
+        }
+        slot = count++;
+    }
+    memset(&rows[slot], 0, sizeof(rows[slot]));
+    rows[slot].season = season;
+    rows[slot].team_id = team_id;
+    snprintf(rows[slot].player_key, sizeof(rows[slot].player_key), "%s", player_key);
+    snprintf(rows[slot].player_name, sizeof(rows[slot].player_name), "%s", player_name != NULL ? player_name : "");
+    return kbo_cbt_exception_write_designations(rows, count);
+}
+
+int kbo_cbt_exception_clear_designation(uint32_t season, uint32_t team_id)
+{
+    KboCbtExceptionDesignation rows[KBO_CBT_EXCEPTION_MAX];
+    int count = kbo_cbt_exception_load_designations(rows, KBO_CBT_EXCEPTION_MAX);
+    int out = 0;
+    for (int i = 0; i < count; i++) {
+        if (rows[i].season == season && rows[i].team_id == team_id) {
+            continue;
+        }
+        rows[out++] = rows[i];
+    }
+    return kbo_cbt_exception_write_designations(rows, out);
+}
+
+int kbo_cbt_exception_find_designation(
+    const KboCbtExceptionDesignation* rows,
+    int count,
+    uint32_t season,
+    uint32_t team_id,
+    const char* player_key)
+{
+    if (rows == NULL || count <= 0 || season == 0u || team_id == 0u || player_key == NULL || player_key[0] == '\0') {
+        return -1;
+    }
+    for (int i = 0; i < count; i++) {
+        if (rows[i].season == season
+                && rows[i].team_id == team_id
+                && _stricmp(rows[i].player_key, player_key) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int kbo_cbt_exception_auto_designate_missing(uint32_t season, const char* source)
+{
+    if (season < 1982u || season > 2200u) {
+        return 0;
+    }
+
+    KboFaSalarySnapshotGrade* grades = (KboFaSalarySnapshotGrade*)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        (SIZE_T)KBO_FA_SALARY_SNAPSHOT_GRADE_MAX * sizeof(KboFaSalarySnapshotGrade));
+    if (grades == NULL) {
+        append_logf("KBO CBT exception auto skipped season=%u source=%s reason=grade_alloc_failed", season, source != NULL ? source : "");
+        return 0;
+    }
+
+    int grade_count = kbo_fa_salary_snapshot_load_grade_rows(
+        season,
+        grades,
+        KBO_FA_SALARY_SNAPSHOT_GRADE_MAX,
+        NULL,
+        0);
+    if (grade_count <= 0) {
+        HeapFree(GetProcessHeap(), 0, grades);
+        append_logf("KBO CBT exception auto skipped season=%u source=%s reason=no_salary_snapshot", season, source != NULL ? source : "");
+        return 0;
+    }
+
+    KboCbtExceptionDesignation existing[KBO_CBT_EXCEPTION_MAX];
+    int existing_count = kbo_cbt_exception_load_designations(existing, KBO_CBT_EXCEPTION_MAX);
+
+    uint32_t team_ids[KBO_CBT_EXCEPTION_AUTO_TEAM_MAX] = {0};
+    int32_t best_salary[KBO_CBT_EXCEPTION_AUTO_TEAM_MAX] = {0};
+    int best_grade_index[KBO_CBT_EXCEPTION_AUTO_TEAM_MAX];
+    int team_count = 0;
+    for (int i = 0; i < KBO_CBT_EXCEPTION_AUTO_TEAM_MAX; i++) {
+        best_grade_index[i] = -1;
+    }
+
+    for (int i = 0; i < grade_count; i++) {
+        KboFaSalarySnapshotGrade* grade = &grades[i];
+        if (grade->ranking_team_id == 0u
+                || grade->foreign_flag != 0u
+                || grade->salary <= 0
+                || grade->player_key[0] == '\0') {
+            continue;
+        }
+        if (kbo_cbt_exception_find_designation(existing, existing_count, season, grade->ranking_team_id, grade->player_key) >= 0) {
+            continue;
+        }
+
+        int team_slot = -1;
+        for (int t = 0; t < team_count; t++) {
+            if (team_ids[t] == grade->ranking_team_id) {
+                team_slot = t;
+                break;
+            }
+        }
+        if (team_slot < 0) {
+            int has_existing_for_team = 0;
+            for (int e = 0; e < existing_count; e++) {
+                if (existing[e].season == season && existing[e].team_id == grade->ranking_team_id) {
+                    has_existing_for_team = 1;
+                    break;
+                }
+            }
+            if (has_existing_for_team || team_count >= KBO_CBT_EXCEPTION_AUTO_TEAM_MAX) {
+                continue;
+            }
+            team_slot = team_count++;
+            team_ids[team_slot] = grade->ranking_team_id;
+        }
+
+        int season_count = 0;
+        if (!kbo_cbt_exception_player_eligible(grade->ranking_team_id, grade->player_key, &season_count)) {
+            continue;
+        }
+        if (best_grade_index[team_slot] < 0 || grade->salary > best_salary[team_slot]) {
+            best_grade_index[team_slot] = i;
+            best_salary[team_slot] = grade->salary;
+        }
+    }
+
+    int created = 0;
+    for (int t = 0; t < team_count; t++) {
+        int index = best_grade_index[t];
+        if (index < 0) {
+            continue;
+        }
+        KboFaSalarySnapshotGrade* grade = &grades[index];
+        if (kbo_cbt_exception_save_designation(season, grade->ranking_team_id, grade->player_key, grade->player_name)) {
+            created++;
+            append_logf(
+                "KBO CBT exception auto designated season=%u team=%u player_key=%s player_name=%s salary=%d credit=%d source=%s",
+                season,
+                grade->ranking_team_id,
+                grade->player_key,
+                grade->player_name,
+                grade->salary,
+                grade->salary / 2,
+                source != NULL ? source : "");
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, grades);
+    append_logf(
+        "KBO CBT exception auto complete season=%u created=%d source=%s",
+        season,
+        created,
+        source != NULL ? source : "");
+    return created;
+}

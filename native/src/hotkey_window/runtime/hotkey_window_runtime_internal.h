@@ -95,6 +95,7 @@ typedef struct KboWebViewNavHandler {
 } KboWebViewNavHandler;
 
 #define KBO_WM_TOGGLE_SERVICE_MONITOR (WM_APP + 0x4b0u)
+#define KBO_WM_REFRESH_HUB            (WM_APP + 0x4b1u)
 #define KBO_HUB_CONTROL_EDIT            3
 #define KBO_HUB_CONTROL_FOREIGN_LIST    41
 #define KBO_HUB_CONTROL_FOREIGN_KEEP    42
@@ -232,6 +233,7 @@ HWND kbo_find_ootp_main_window(void);
 int kbo_foreground_is_this_process(void);
 void kbo_show_or_hide_hotkey_window(void);
 int kbo_queue_hotkey_window_toggle(void);
+int kbo_request_hotkey_window_refresh(const char* source);
 LRESULT CALLBACK kbo_hotkey_keyboard_proc(int code, WPARAM wparam, LPARAM lparam);
 int kbo_hub_argb_team_color_to_hex(uint32_t argb, char* out, size_t out_size);
 int kbo_hub_copy_team_bar_colors(uint32_t team_id, char* primary, size_t primary_size, char* secondary, size_t secondary_size);

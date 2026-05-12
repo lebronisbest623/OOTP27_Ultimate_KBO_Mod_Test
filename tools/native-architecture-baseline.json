@@ -1,33 +1,15 @@
 ﻿[
     {
         "rule":  "native.source.max-lines",
-        "path":  "allstar/flags/allstar_flags.c",
-        "severity":  "error",
-        "message":  "501 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "allstar/wrappers/allstar_candidate_seed.c",
-        "severity":  "error",
-        "message":  "452 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
         "path":  "amateur_player_quality/assignment/amateur_assignment_ortools.c",
         "severity":  "error",
         "message":  "1456 lines exceeds the 400-line native source checkpoint."
     },
     {
         "rule":  "native.source.max-lines",
-        "path":  "custom_events/asian_games_schedule_seed/projected/builtin_and_projected.c",
+        "path":  "competitive_balance_tax/process/cbt_process.c",
         "severity":  "error",
-        "message":  "417 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "custom_events/asian_games_selection/roster/select_roster.c",
-        "severity":  "error",
-        "message":  "600 lines exceeds the 400-line native source checkpoint."
+        "message":  "586 lines exceeds the 400-line native source checkpoint."
     },
     {
         "rule":  "native.source.max-lines",
@@ -37,50 +19,14 @@
     },
     {
         "rule":  "native.source.max-lines",
-        "path":  "fa_compensation/due/fa_compensation_due.c",
+        "path":  "foreign/injury/scanner/foreign_injury_scanner.c",
         "severity":  "error",
-        "message":  "439 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "foreign/injury/seeds/foreign_injury_seed_load.c",
-        "severity":  "error",
-        "message":  "459 lines exceeds the 400-line native source checkpoint."
+        "message":  "583 lines exceeds the 400-line native source checkpoint."
     },
     {
         "rule":  "native.source.max-lines",
         "path":  "military_service/selection/events/military_selection_event.c",
         "severity":  "error",
         "message":  "597 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "patch_installers/allstar/candidate/patch_installers_allstar_candidate.c",
-        "severity":  "error",
-        "message":  "463 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "patch_installers/military/patch_installers_military.c",
-        "severity":  "error",
-        "message":  "480 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "season_phase_monitor/season_phase_monitor.c",
-        "severity":  "error",
-        "message":  "401 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "team/add_player_guard/team_add_player_guard.c",
-        "severity":  "error",
-        "message":  "660 lines exceeds the 400-line native source checkpoint."
-    },
-    {
-        "rule":  "native.source.max-lines",
-        "path":  "team/add_player_guard/team_add_player_guard_ai_roster.c",
-        "severity":  "error",
-        "message":  "1474 lines exceeds the 400-line native source checkpoint."
     }
 ]

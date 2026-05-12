@@ -26,6 +26,8 @@ int kbo_dispatch_custom_event(
     int is_asian_games_selection_event = kbo_custom_event_name_is_asian_games_selection(name);
     int is_asian_games_departure_event = kbo_custom_event_name_is_asian_games_departure(name);
     int is_asian_games_final_event = kbo_custom_event_name_is_asian_games_final(name);
+    int is_cbt_deadline_event = kbo_custom_event_name_is_cbt_exception_deadline(name);
+    int is_cbt_announcement_event = kbo_custom_event_name_is_cbt_announcement(name);
 
     if (is_open_event) {
         if (g_kbo_foreign_priority_last_open_event_fired_date == event_yyyymmdd) {
@@ -94,6 +96,12 @@ int kbo_dispatch_custom_event(
     }
     if (is_asian_games_final_event) {
         return kbo_handle_asian_games_final_event(event_yyyymmdd, source);
+    }
+    if (is_cbt_deadline_event) {
+        return kbo_handle_cbt_deadline_event(event_yyyymmdd, source);
+    }
+    if (is_cbt_announcement_event) {
+        return kbo_handle_cbt_announcement_event(event_yyyymmdd, source);
     }
 
     return 0;

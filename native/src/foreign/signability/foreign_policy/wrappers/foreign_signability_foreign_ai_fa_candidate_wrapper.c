@@ -2,6 +2,212 @@
 
 /* AI FA status candidate hook wrapper. Included from native/KBOFix.c. */
 
+#define KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT 8192
+#define KBO_AI_FA_STATUS_FORCED_REPLACEMENT_MAX 32
+
+static int kbo_ai_fa_status_candidate_slot_accessible(uintptr_t candidate_array, int32_t index)
+{
+    if (candidate_array == 0 || index < 0 || index >= KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT) {
+        return 0;
+    }
+    return memory_range_readable(
+        (void*)(candidate_array + ((uintptr_t)index * sizeof(uintptr_t))),
+        sizeof(uintptr_t));
+}
+
+static int kbo_ai_fa_status_candidate_array_contains(
+    uintptr_t candidate_array,
+    int32_t count,
+    uintptr_t player_ptr)
+{
+    if (candidate_array == 0 || player_ptr == 0 || count <= 0) {
+        return 0;
+    }
+
+    int32_t limit = count;
+    if (limit > KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT) {
+        limit = KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT;
+    }
+
+    for (int32_t i = 0; i < limit; i++) {
+        if (!kbo_ai_fa_status_candidate_slot_accessible(candidate_array, i)) {
+            break;
+        }
+        if (*(uintptr_t*)(candidate_array + ((uintptr_t)i * sizeof(uintptr_t))) == player_ptr) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int32_t kbo_ai_fa_status_insert_candidate_ptr(
+    uintptr_t frame_ptr,
+    uintptr_t candidate_array,
+    int32_t insert_index,
+    uintptr_t player_ptr)
+{
+    if (player_ptr == 0 || !kbo_ai_fa_status_candidate_slot_accessible(candidate_array, insert_index)) {
+        return insert_index;
+    }
+
+    *(uintptr_t*)(candidate_array + ((uintptr_t)insert_index * sizeof(uintptr_t))) = player_ptr;
+    if (frame_ptr > OOTP27_AI_FA_STATUS_FRAME_INSERT_COUNT_DELTA) {
+        *(int32_t*)(frame_ptr - OOTP27_AI_FA_STATUS_FRAME_INSERT_COUNT_DELTA) = insert_index + 1;
+    }
+    return insert_index + 1;
+}
+
+static int kbo_ai_fa_status_released_replacement_can_enter_market(uint8_t* player, uint32_t expected_player_id)
+{
+    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+    if (*(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET) != expected_player_id) {
+        return 0;
+    }
+    if (player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET] != 0u) {
+        return 0;
+    }
+    if (*(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) != 0u
+            || *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) != 0u
+            || *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) != 0u) {
+        return 0;
+    }
+    if (*(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET) != 0u) {
+        return 0;
+    }
+    if (player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET] != 0u) {
+        return 0;
+    }
+    return kbo_player_is_foreign_for_kbo_rights(player);
+}
+
+static int kbo_ai_fa_status_forced_replacement_id_already_collected(
+    const uint32_t* player_ids,
+    int count,
+    uint32_t player_id)
+{
+    for (int i = 0; i < count; i++) {
+        if (player_ids[i] == player_id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void kbo_ai_fa_status_ensure_injury_records_throttled(void)
+{
+    static volatile LONG ensure_guard = 0;
+    static volatile LONG last_ensure_tick = 0;
+
+    DWORD now = GetTickCount();
+    LONG last = InterlockedCompareExchange(&last_ensure_tick, 0, 0);
+    if (last != 0 && now - (DWORD)last < 5000u) {
+        return;
+    }
+
+    if (InterlockedCompareExchange(&ensure_guard, 1, 0) != 0) {
+        return;
+    }
+    kbo_ensure_foreign_injury_replacements_loaded();
+    InterlockedExchange(&last_ensure_tick, (LONG)GetTickCount());
+    InterlockedExchange(&ensure_guard, 0);
+}
+
+static int kbo_ai_fa_status_force_recently_attempted(uintptr_t frame_ptr, uintptr_t candidate_array)
+{
+    static uintptr_t last_frame_ptr = 0;
+    static uintptr_t last_candidate_array = 0;
+    static DWORD last_attempt_tick = 0u;
+
+    DWORD now = GetTickCount();
+    if (last_frame_ptr == frame_ptr
+            && last_candidate_array == candidate_array
+            && last_attempt_tick != 0u
+            && now - last_attempt_tick < 1000u) {
+        return 1;
+    }
+
+    last_frame_ptr = frame_ptr;
+    last_candidate_array = candidate_array;
+    last_attempt_tick = now;
+    return 0;
+}
+
+static int32_t kbo_ai_fa_status_force_closed_replacement_market_candidates(
+    uintptr_t frame_ptr,
+    uint32_t requester_team_id,
+    uintptr_t candidate_array,
+    int32_t insert_index)
+{
+    if (candidate_array == 0 || insert_index < 0 || !kbo_foreign_injury_replacement_enabled()) {
+        return insert_index;
+    }
+
+    if (kbo_ai_fa_status_force_recently_attempted(frame_ptr, candidate_array)) {
+        return insert_index;
+    }
+
+    kbo_ai_fa_status_ensure_injury_records_throttled();
+
+    uint32_t player_ids[KBO_AI_FA_STATUS_FORCED_REPLACEMENT_MAX] = {0};
+    int player_count = 0;
+
+    kbo_lock_foreign_injury_replacements();
+    int record_count = g_kbo_foreign_injury_replacement_count;
+    if (record_count > KBO_FOREIGN_INJURY_REPLACEMENT_MAX) {
+        record_count = KBO_FOREIGN_INJURY_REPLACEMENT_MAX;
+    }
+    for (int i = 0; i < record_count && player_count < KBO_AI_FA_STATUS_FORCED_REPLACEMENT_MAX; i++) {
+        const KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[i];
+        if (rec->status != KBO_FOREIGN_INJURY_STATUS_CLOSED || rec->replacement_player_id == 0u) {
+            continue;
+        }
+        if (kbo_ai_fa_status_forced_replacement_id_already_collected(
+                player_ids,
+                player_count,
+                rec->replacement_player_id)) {
+            continue;
+        }
+        player_ids[player_count++] = rec->replacement_player_id;
+    }
+    kbo_unlock_foreign_injury_replacements();
+
+    for (int i = 0; i < player_count; i++) {
+        uint32_t forced_player_id = player_ids[i];
+        uint8_t* forced_player = kbo_find_player_by_id(forced_player_id, NULL, NULL);
+        if (!kbo_ai_fa_status_released_replacement_can_enter_market(forced_player, forced_player_id)) {
+            continue;
+        }
+
+        uintptr_t forced_player_ptr = (uintptr_t)forced_player;
+        if (kbo_ai_fa_status_candidate_array_contains(candidate_array, insert_index, forced_player_ptr)) {
+            continue;
+        }
+
+        int32_t before_index = insert_index;
+        insert_index = kbo_ai_fa_status_insert_candidate_ptr(
+            frame_ptr,
+            candidate_array,
+            insert_index,
+            forced_player_ptr);
+        if (insert_index != before_index) {
+            static LONG force_log_count = 0;
+            LONG slot = InterlockedIncrement(&force_log_count);
+            if (slot <= 200) {
+                append_logf(
+                    "foreign injury replacement FA market candidate forced player=%u requester_team=%u index=%d next=%d",
+                    forced_player_id,
+                    requester_team_id,
+                    before_index,
+                    insert_index);
+            }
+        }
+    }
+
+    return insert_index;
+}
+
 __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     uintptr_t frame_ptr,
     uintptr_t player_ptr,
@@ -30,11 +236,19 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
                 (int32_t)requester_team_id,
                 "ai_fa_status_candidate",
                 &player_id)) {
-        return insert_index;
+        return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+            frame_ptr,
+            requester_team_id,
+            candidate_array,
+            insert_index);
     }
 
     if (kbo_military_ai_fa_candidate_should_block(player_id, requester_team_id, insert_index)) {
-        return insert_index;
+        return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+            frame_ptr,
+            requester_team_id,
+            candidate_array,
+            insert_index);
     }
 
     if (player_id != 0u
@@ -54,7 +268,11 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
                 insert_index,
                 today);
         }
-        return insert_index;
+        return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+            frame_ptr,
+            requester_team_id,
+            candidate_array,
+            insert_index);
     }
 
     if (player_id != 0u
@@ -95,18 +313,23 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
                     today);
             }
             kbo_record_recent_custom_foreign_policy_block(player_id, requester_team_id, today);
-            return insert_index;
+            return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+                frame_ptr,
+                requester_team_id,
+                candidate_array,
+                insert_index);
         }
     }
 
-    if (candidate_array == 0) {
-        return insert_index;
-    }
-    if (!memory_range_readable((void*)(candidate_array + ((uintptr_t)insert_index * sizeof(uintptr_t))), sizeof(uintptr_t))) {
-        return insert_index;
-    }
-    *(uintptr_t*)(candidate_array + ((uintptr_t)insert_index * sizeof(uintptr_t))) = player_ptr;
-    *(int32_t*)(frame_ptr - OOTP27_AI_FA_STATUS_FRAME_INSERT_COUNT_DELTA) = insert_index + 1;
-    return insert_index + 1;
+    insert_index = kbo_ai_fa_status_insert_candidate_ptr(
+        frame_ptr,
+        candidate_array,
+        insert_index,
+        player_ptr);
+    return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+        frame_ptr,
+        requester_team_id,
+        candidate_array,
+        insert_index);
 }
 

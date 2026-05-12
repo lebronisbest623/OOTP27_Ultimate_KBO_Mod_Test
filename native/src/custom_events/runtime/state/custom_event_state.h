@@ -32,5 +32,7 @@ extern const char g_kbo_military_selection_event_title[];
 extern const char g_kbo_asian_games_selection_event_title[];
 extern const char g_kbo_asian_games_departure_event_title[];
 extern const char g_kbo_asian_games_final_event_title[];
+extern const char g_kbo_cbt_exception_deadline_event_title[];
+extern const char g_kbo_cbt_announcement_event_title[];
 
 #endif

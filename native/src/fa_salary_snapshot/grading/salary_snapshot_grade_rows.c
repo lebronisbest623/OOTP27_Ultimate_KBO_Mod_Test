@@ -194,7 +194,7 @@ int kbo_fa_salary_snapshot_load_grade_rows(
         if (*p >= '0' && *p <= '9') {
             KboFaSalarySnapshotGrade grade_row;
             memset(&grade_row, 0, sizeof(grade_row));
-            for (int field_index = 0; field_index <= 21 && *p != '\0'; field_index++) {
+            for (int field_index = 0; field_index <= 34 && *p != '\0'; field_index++) {
                 char field[128] = {0};
                 if (!kbo_fa_salary_snapshot_parse_csv_field(&p, field, sizeof(field))) {
                     break;
@@ -205,6 +205,7 @@ int kbo_fa_salary_snapshot_load_grade_rows(
                 case 1: grade_row.season = kbo_fa_salary_snapshot_parse_u32(field); break;
                 case 2: grade_row.opening_day = kbo_fa_salary_snapshot_parse_u32(field); break;
                 case 5: grade_row.player_id = kbo_fa_salary_snapshot_parse_u32(field); break;
+                case 6: snprintf(grade_row.player_name, sizeof(grade_row.player_name), "%s", field); break;
                 case 10: grade_row.ranking_team_id = kbo_fa_salary_snapshot_parse_u32(field); break;
                 case 16: grade_row.foreign_flag = kbo_fa_salary_snapshot_parse_u32(field) != 0u ? 1u : 0u; break;
                 case 17: grade_row.salary = kbo_fa_salary_snapshot_parse_i32(field); break;
@@ -212,6 +213,7 @@ int kbo_fa_salary_snapshot_load_grade_rows(
                 case 19: grade_row.overall_ordinal = kbo_fa_salary_snapshot_parse_u32(field); break;
                 case 20: grade_row.team_rank = kbo_fa_salary_snapshot_parse_u32(field); break;
                 case 21: grade_row.team_ordinal = kbo_fa_salary_snapshot_parse_u32(field); break;
+                case 34: snprintf(grade_row.player_key, sizeof(grade_row.player_key), "%s", field); break;
                 default: break;
                 }
             }

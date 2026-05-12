@@ -195,7 +195,7 @@ void enable_kbo_allstar_flags(uintptr_t league_ptr, const char* source)
     (void)write_kbo_allstar_flags(league_ptr, source);
 }
 
-static int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t league_id, const char* source)
+int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t league_id, const char* source)
 {
     OotpBuildInfo info = read_ootp_build_info();
     if (kbo_ootp_build_is_steam_2026_05_04(info)) {
@@ -298,7 +298,7 @@ static uintptr_t find_kbo_allstar_core_league_from_extended_global_vectors(uint3
     return 0;
 }
 
-static uintptr_t find_kbo_allstar_core_fallback_league(uint32_t league_id)
+uintptr_t find_kbo_allstar_core_fallback_league(uint32_t league_id)
 {
     uintptr_t cached = (uintptr_t)g_cached_core_allstar_league_ptr;
     LONG cached_id = g_cached_core_allstar_league_id;
@@ -329,35 +329,6 @@ static uintptr_t find_kbo_allstar_core_fallback_league(uint32_t league_id)
     }
 
     return 0;
-}
-
-__declspec(noinline) void ootp_kbo_enable_allstar_setting(uintptr_t league_ptr)
-{
-    if (kbo_allstar_league_context_enabled(league_ptr)) {
-        enable_kbo_allstar_flags(league_ptr, "allstar_settings_ui");
-        return;
-    }
-
-    if (enable_kbo_allstar_raw_flags_if_kbo_context(league_ptr, "allstar_settings_ui_raw")) {
-        return;
-    }
-
-    uint32_t league_id = kbo_get_foreign_waiver_league_id();
-    if (league_id == 0u) {
-        league_id = kbo_resolve_kbo_league_id();
-    }
-    if (enable_kbo_allstar_flags_for_core_league(league_ptr, league_id, "allstar_settings_ui_core_fallback")) {
-        append_logf(
-            "KBO all-star settings UI wrote real league flags by core fallback league_id=%u league=%p",
-            league_id,
-            (void*)league_ptr);
-        return;
-    }
-
-    append_logf(
-        "KBO all-star settings UI could not write real league flags league_id=%u league=%p",
-        league_id,
-        (void*)league_ptr);
 }
 
 void force_kbo_allstar_flags_for_configured_league(const char* source)
@@ -414,87 +385,4 @@ int force_kbo_allstar_flags_for_league_pointer(uintptr_t league_ptr, const char*
     InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)normalized);
     seed_kbo_allstar_schedule_dates(normalized, source != NULL ? source : "allstar_force_flags_pointer");
     return 1;
-}
-
-static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
-{
-    (void)parameter;
-
-    for (int attempt = 1; attempt <= 180; attempt++) {
-        uint32_t league_id = kbo_get_foreign_waiver_league_id();
-        if (league_id == 0u) {
-            league_id = kbo_resolve_kbo_league_id();
-        }
-
-        uintptr_t captured = (uintptr_t)InterlockedCompareExchangePointer(
-            (PVOID volatile*)&g_allstar_schedule_import_league_ptr,
-            NULL,
-            NULL);
-        if (captured != 0
-                && enable_kbo_allstar_raw_flags_if_kbo_context(captured, "startup_retry_captured_raw")) {
-            append_logf(
-                "KBO all-star force retry using captured raw league attempt=%d league_id=%u league=%p",
-                attempt,
-                league_id,
-                (void*)captured);
-            seed_kbo_allstar_schedule_dates(captured, "startup_retry_captured_raw");
-            if (run_kbo_allstar_native_event_generation(captured, "startup_retry_captured_raw")) {
-                append_log_line("KBO all-star force retry completed by captured raw league");
-                return 0;
-            }
-        }
-
-        patch_kbo_allstar_team_names_for_league_id(league_id, "startup_retry");
-        patch_kbo_allstar_team_names_for_known_exhibition_teams("startup_retry");
-
-        uintptr_t league_ptr = kbo_find_allstar_league_ptr(league_id);
-        if (league_ptr != 0) {
-            append_logf("KBO all-star force retry found league attempt=%d league_id=%u league=%p", attempt, league_id, (void*)league_ptr);
-            enable_kbo_allstar_flags(league_ptr, "startup_retry");
-            InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
-            seed_kbo_allstar_schedule_dates(league_ptr, "startup_retry");
-            run_kbo_allstar_native_event_generation(league_ptr, "startup_retry");
-            append_log_line("KBO all-star force retry completed");
-            return 0;
-        }
-
-        league_ptr = find_kbo_allstar_core_fallback_league(league_id);
-        if (league_ptr != 0
-                && enable_kbo_allstar_flags_for_core_league(league_ptr, league_id, "startup_retry_core_fallback")) {
-            append_logf(
-                "KBO all-star force retry found league by core fallback attempt=%d league_id=%u league=%p",
-                attempt,
-                league_id,
-                (void*)league_ptr);
-            InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
-            seed_kbo_allstar_schedule_dates(league_ptr, "startup_retry_core_fallback");
-            run_kbo_allstar_native_event_generation(league_ptr, "startup_retry_core_fallback");
-            append_log_line("KBO all-star force retry completed by core fallback");
-            return 0;
-        }
-
-        if (!kbo_runtime_sleep_should_continue(1000)) {
-            break;
-        }
-    }
-
-    append_log_line("KBO all-star force retry gave up: league not found after 180 attempts");
-    return 0;
-}
-
-void start_kbo_allstar_force_retry_thread(void)
-{
-    static LONG started = 0;
-    if (InterlockedCompareExchange(&started, 1, 0) != 0) {
-        return;
-    }
-
-    HANDLE thread = CreateThread(NULL, 0, kbo_allstar_force_retry_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "all-star force retry");
-        append_log_line("KBO all-star force retry thread started");
-    } else {
-        InterlockedExchange(&started, 0);
-        append_log_line("KBO all-star force retry thread failed to start");
-    }
 }

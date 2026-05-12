@@ -14,7 +14,9 @@
 #include "../core/logging/core_log.h"
 #include "../core/files/save_paths/core_save_paths.h"
 #include "../custom_events/asian_games/player_eval/asian_games_player_eval.h"
+#include "../custom_events/diagnostics/cbt_service_time_probe.h"
 #include "../custom_events/runtime/monitor/custom_event_monitor.h"
+#include "../competitive_balance_tax/events/cbt_events.h"
 #include "../fa_requalification/fa_requalification.h"
 #include "../fa_salary_snapshot/threads/salary_snapshot_phase_events.h"
 #include "../fa_salary_snapshot/threads/salary_snapshot_thread.h"
@@ -70,6 +72,9 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter);
 void start_kbo_full_runtime_marker_wait_thread(HINSTANCE instance);
 void install_kbo_early_foreign_policy_hooks_once(const char* source);
 void install_kbo_early_no_minor_contract_hooks_once(const char* source);
+int kbo_no_minor_contract_patch_enabled(void);
+int install_kbo_no_minor_contract_patch_once(const char* source);
+void start_kbo_delayed_no_minor_contract_patch_install_thread(void);
 DWORD WINAPI patch_thread(LPVOID parameter);
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved);
 

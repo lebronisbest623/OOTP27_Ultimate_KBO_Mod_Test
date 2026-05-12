@@ -51,6 +51,28 @@ int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uin
         return 0;
     }
 
+    typedef struct KboPlayerVectorLookupCache {
+        uintptr_t global;
+        uintptr_t vector;
+        int32_t count;
+        uint32_t offset;
+        DWORD tick;
+    } KboPlayerVectorLookupCache;
+    static KboPlayerVectorLookupCache cache = {0};
+
+    DWORD now = GetTickCount();
+    if (cache.global == global
+            && cache.vector != 0
+            && cache.count > 0
+            && cache.tick != 0u
+            && now - cache.tick <= 1000u
+            && memory_range_readable((void*)cache.vector, (SIZE_T)cache.count * sizeof(uintptr_t))) {
+        if (out_vector != NULL) { *out_vector = cache.vector; }
+        if (out_count  != NULL) { *out_count  = cache.count;  }
+        if (out_offset != NULL) { *out_offset = cache.offset; }
+        return 1;
+    }
+
     int best_matches     = 0;
     uintptr_t best_vector = 0;
     int32_t   best_count  = 0;
@@ -94,6 +116,11 @@ int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uin
     if (out_vector != NULL) { *out_vector = best_vector; }
     if (out_count  != NULL) { *out_count  = best_count;  }
     if (out_offset != NULL) { *out_offset = best_offset; }
+    cache.global = global;
+    cache.vector = best_vector;
+    cache.count = best_count;
+    cache.offset = best_offset;
+    cache.tick = now;
     return 1;
 }
 
@@ -144,6 +171,29 @@ uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_dele
         return NULL;
     }
 
+    enum { KBO_TEAM_NUMERIC_LOOKUP_CACHE_SIZE = 256 };
+    typedef struct KboTeamNumericLookupCacheEntry {
+        uintptr_t global;
+        uint32_t team_id;
+        int allow_deleted;
+        uintptr_t team_ptr;
+        DWORD tick;
+    } KboTeamNumericLookupCacheEntry;
+    static KboTeamNumericLookupCacheEntry lookup_cache[KBO_TEAM_NUMERIC_LOOKUP_CACHE_SIZE] = {{0}};
+
+    DWORD now = GetTickCount();
+    uint32_t slot_index = (team_id ^ (team_id >> 8) ^ (allow_deleted ? 0x9e3779b9u : 0u)) % KBO_TEAM_NUMERIC_LOOKUP_CACHE_SIZE;
+    KboTeamNumericLookupCacheEntry* cached = &lookup_cache[slot_index];
+    if (cached->global == global
+            && cached->team_id == team_id
+            && cached->allow_deleted == allow_deleted
+            && cached->team_ptr != 0
+            && cached->tick != 0u
+            && now - cached->tick <= 1000u
+            && memory_range_readable((void*)cached->team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return (uint8_t*)cached->team_ptr;
+    }
+
     uintptr_t team_vector = *(uintptr_t*)(global + OOTP27_KBO_TEAM_VECTOR_OFFSET);
     int32_t   team_count  = *(int32_t*)(global  + OOTP27_KBO_TEAM_COUNT_OFFSET);
     if (team_vector == 0 || team_count <= 0 || team_count > 10000
@@ -162,9 +212,19 @@ uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_dele
             continue;
         }
         if (*(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET) == team_id) {
+            cached->global = global;
+            cached->team_id = team_id;
+            cached->allow_deleted = allow_deleted;
+            cached->team_ptr = team_ptr;
+            cached->tick = now;
             return team;
         }
     }
 
+    cached->global = global;
+    cached->team_id = team_id;
+    cached->allow_deleted = allow_deleted;
+    cached->team_ptr = 0;
+    cached->tick = now;
     return NULL;
 }

@@ -32,8 +32,6 @@ int kbo_persist_foreign_replacement_player_resolved_cache_locked(void);
 
 /* Foreign replacement-player seed memory-key resolution. Included from native/KBOFix.c. */
 
-/* Foreign replacement-player seed players.dat resolution. Included from native/KBOFix.c. */
-
 /* Foreign replacement-player seed import table. Included from native/KBOFix.c. */
 
 /* Foreign replacement-player resolved cache IO. Included from native/KBOFix.c. */

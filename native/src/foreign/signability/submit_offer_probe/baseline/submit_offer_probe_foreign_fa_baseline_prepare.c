@@ -159,7 +159,7 @@ void kbo_log_financials_salary_baseline_probe(const char* source)
 
     static LONG log_count = 0;
     LONG slot = InterlockedIncrement(&log_count);
-    if (slot > 80 && !read_kbo_localappdata_flag_file("enable_kbo_financials_salary_baseline_probe_log.txt")) {
+    if (slot > 5 && !read_kbo_localappdata_flag_file("enable_kbo_financials_salary_baseline_probe_log.txt")) {
         return;
     }
 

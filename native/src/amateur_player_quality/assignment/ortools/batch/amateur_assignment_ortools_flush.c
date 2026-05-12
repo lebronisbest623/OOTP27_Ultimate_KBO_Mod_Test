@@ -1,0 +1,265 @@
+#include "..\amateur_assignment_ortools_internal.h"
+
+void kbo_amateur_apply_deferred_original_fallback(
+    KboAmateurDeferredTeamAdd* deferred_team_adds,
+    int32_t deferred_count,
+    uint32_t league_id,
+    const char* reason)
+{
+    int applied = 0;
+    int skipped_cross_league = 0;
+    for (int32_t i = 0; i < deferred_count; i++) {
+        KboAmateurDeferredTeamAdd* item = &deferred_team_adds[i];
+        if (kbo_resolve_amateur_assignment_league_id_for_team_and_player(
+                (uint8_t*)item->team_ptr,
+                (uint8_t*)item->player_ptr) != league_id) {
+            skipped_cross_league++;
+            continue;
+        }
+        uint8_t result = kbo_team_add_player_guard_call_original(
+            item->team_ptr,
+            item->player_ptr,
+            item->arg3,
+            item->arg4,
+            item->arg5,
+            item->arg6,
+            item->arg7,
+            item->arg8);
+        if (result != 0u) {
+            applied++;
+            kbo_amateur_team_add_player_note_original_success(
+                item->team_ptr,
+                item->player_ptr,
+                "deferred_original_fallback",
+                result);
+        }
+    }
+    if (deferred_count > 0) {
+        append_logf(
+            "amateur deferred team-add fallback applied league=%u applied=%d/%d skipped_cross_league=%d reason=%s",
+            league_id,
+            applied,
+            deferred_count,
+            skipped_cross_league,
+            reason != NULL ? reason : "");
+    }
+}
+
+int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
+{
+    uint32_t league_id = 0u;
+    int32_t accumulated_players = 0;
+    int32_t optimizer_player_count = 0;
+    int32_t accumulated_teams = 0;
+    int32_t deferred_count = 0;
+    uintptr_t league_players[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
+    uintptr_t league_source_teams[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
+    KboAmateurDeferredTeamAdd deferred_team_adds[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
+
+    kbo_amateur_batch_lock();
+    league_id = g_kbo_amateur_league_batch_league_id;
+    accumulated_players = g_kbo_amateur_league_batch_player_count;
+    accumulated_teams = g_kbo_amateur_league_batch_team_count;
+    deferred_count = g_kbo_amateur_deferred_team_add_count;
+    DWORD idle_ms = (accumulated_teams >= KBO_AMATEUR_LEAGUE_BATCH_NEAR_COMPLETE_TEAMS
+            || accumulated_players >= KBO_AMATEUR_LEAGUE_BATCH_NEAR_COMPLETE_PLAYERS)
+        ? KBO_AMATEUR_LEAGUE_BATCH_NEAR_COMPLETE_IDLE_MS
+        : KBO_AMATEUR_LEAGUE_BATCH_IDLE_MS;
+    if ((league_id != KBO_HIGH_SCHOOL_LEAGUE_ID && league_id != KBO_COLLEGE_LEAGUE_ID)
+            || accumulated_players <= 1
+            || accumulated_teams <= 0
+            || (!force && GetTickCount() - g_kbo_amateur_league_batch_last_tick < idle_ms)) {
+        kbo_amateur_batch_unlock();
+        return 0;
+    }
+    memcpy(league_players, g_kbo_amateur_league_batch_players, (size_t)accumulated_players * sizeof(uintptr_t));
+    memcpy(league_source_teams, g_kbo_amateur_league_batch_source_teams, (size_t)accumulated_players * sizeof(uintptr_t));
+    memcpy(deferred_team_adds, g_kbo_amateur_deferred_team_adds, (size_t)deferred_count * sizeof(deferred_team_adds[0]));
+    kbo_amateur_league_batch_clear(league_id);
+    kbo_amateur_batch_unlock();
+
+    optimizer_player_count = accumulated_players;
+    if (deferred_count > 0) {
+        memset(league_players, 0, sizeof(league_players));
+        memset(league_source_teams, 0, sizeof(league_source_teams));
+        optimizer_player_count = 0;
+        for (int32_t i = 0; i < deferred_count && optimizer_player_count < KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX; i++) {
+            KboAmateurDeferredTeamAdd* item = &deferred_team_adds[i];
+            if (item->league_id != league_id || item->player_id == 0u || item->player_ptr == 0 || item->team_ptr == 0) {
+                continue;
+            }
+            if (kbo_amateur_local_player_list_has_id(league_players, optimizer_player_count, item->player_id)) {
+                continue;
+            }
+            league_players[optimizer_player_count] = item->player_ptr;
+            league_source_teams[optimizer_player_count] = item->team_ptr;
+            optimizer_player_count++;
+        }
+    }
+    if (optimizer_player_count <= 1) {
+        kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "no_optimizer_players");
+        return 0;
+    }
+
+    KboAmateurAssignmentCandidate* candidates = NULL;
+    int count = kbo_amateur_assignment_get_cached_candidates(league_id, &candidates);
+    if (count <= 1 || candidates == NULL) {
+        kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "no_candidates");
+        return 0;
+    }
+
+    char tool_path[MAX_PATH * 3] = {0};
+    char request_path[MAX_PATH * 3] = {0};
+    char result_path[MAX_PATH * 3] = {0};
+    int is_python_script = 0;
+    if (!kbo_amateur_ortools_get_tool_path(tool_path, sizeof(tool_path), &is_python_script)
+            || !kbo_get_save_scoped_data_file("amateur_assignment_ortools_batch_request.csv", request_path, sizeof(request_path))
+            || !kbo_get_save_scoped_data_file("amateur_assignment_ortools_batch_result.csv", result_path, sizeof(result_path))) {
+        kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "path_unavailable");
+        return 0;
+    }
+
+    if (!kbo_amateur_ortools_write_batch_request(
+            request_path,
+            league_players,
+            league_source_teams,
+            optimizer_player_count,
+            league_id,
+            candidates,
+            count,
+            deferred_count > 0)) {
+        kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "write_failed");
+        return 0;
+    }
+    if (!kbo_amateur_ortools_run(tool_path, is_python_script, request_path, result_path)) {
+        kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "ortools_failed");
+        return 0;
+    }
+    int assigned = kbo_amateur_ortools_read_batch_result(result_path, league_id);
+    append_logf(
+        "amateur OR-Tools league batch prepared league=%u teams=%d/%d players=%d assignments=%d deferred=%d reason=%s",
+        league_id,
+        accumulated_teams,
+        count,
+        optimizer_player_count,
+        assigned,
+        deferred_count,
+        reason != NULL ? reason : "");
+    int applied = 0;
+    int fallback_applied = 0;
+    int target_not_found = 0;
+    int target_add_failed = 0;
+    int source_retry_applied = 0;
+    int still_failed = 0;
+    for (int32_t i = 0; i < deferred_count; i++) {
+        KboAmateurDeferredTeamAdd* item = &deferred_team_adds[i];
+        uintptr_t source_team_ptr = kbo_amateur_candidate_team_ptr_by_id(candidates, count, item->source_team_id);
+        if (source_team_ptr == 0) {
+            if (kbo_resolve_amateur_assignment_league_id_for_team_and_player(
+                    (uint8_t*)item->team_ptr,
+                    (uint8_t*)item->player_ptr) != item->league_id) {
+                still_failed++;
+                continue;
+            }
+            source_team_ptr = item->team_ptr;
+        }
+        uintptr_t target_team_ptr = source_team_ptr;
+        uint32_t target_team_id = kbo_amateur_batch_lookup(item->league_id, item->player_id);
+        int target_found = 1;
+        if (target_team_id != 0u && target_team_id != item->source_team_id) {
+            target_found = 0;
+            for (int c = 0; c < count; c++) {
+                if (candidates[c].team_id == target_team_id) {
+                    target_team_ptr = (uintptr_t)candidates[c].team;
+                    target_found = 1;
+                    break;
+                }
+            }
+            if (!target_found) {
+                target_not_found++;
+                fallback_applied++;
+                target_team_ptr = source_team_ptr;
+            }
+        } else {
+            fallback_applied++;
+        }
+        uint8_t result = kbo_team_add_player_guard_call_original(
+            target_team_ptr,
+            item->player_ptr,
+            item->arg3,
+            item->arg4,
+            item->arg5,
+            item->arg6,
+            item->arg7,
+            item->arg8);
+        if (result == 0u && target_team_ptr != source_team_ptr) {
+            target_add_failed++;
+            result = kbo_team_add_player_guard_call_original(
+                source_team_ptr,
+                item->player_ptr,
+                item->arg3,
+                item->arg4,
+                item->arg5,
+                item->arg6,
+                item->arg7,
+                item->arg8);
+            if (result != 0u) {
+                source_retry_applied++;
+                target_team_ptr = source_team_ptr;
+            }
+        }
+        if (result == 0u
+                && source_team_ptr != item->team_ptr
+                && kbo_resolve_amateur_assignment_league_id_for_team_and_player(
+                    (uint8_t*)item->team_ptr,
+                    (uint8_t*)item->player_ptr) == item->league_id) {
+            result = kbo_team_add_player_guard_call_original(
+                item->team_ptr,
+                item->player_ptr,
+                item->arg3,
+                item->arg4,
+                item->arg5,
+                item->arg6,
+                item->arg7,
+                item->arg8);
+            if (result != 0u) {
+                source_retry_applied++;
+                target_team_ptr = item->team_ptr;
+            }
+        }
+        if (result != 0u) {
+            applied++;
+            kbo_amateur_team_add_player_note_original_success(
+                target_team_ptr,
+                item->player_ptr,
+                target_team_ptr == source_team_ptr ? "deferred_original_success" : "deferred_ortools_success",
+                result);
+        } else {
+            still_failed++;
+            static volatile LONG failed_log_count = 0;
+            LONG slot = InterlockedIncrement(&failed_log_count);
+            if (slot <= 20 || kbo_amateur_verbose_log_enabled_cached()) {
+                append_logf(
+                    "amateur deferred team-add failed player=%u source_team=%u target_team=%u target_found=%d",
+                    item->player_id,
+                    item->source_team_id,
+                    target_team_id,
+                    target_found);
+            }
+        }
+    }
+    if (deferred_count > 0) {
+        append_logf(
+            "amateur deferred team-add batch applied league=%u applied=%d/%d fallback_original=%d target_not_found=%d target_add_failed=%d source_retry_applied=%d still_failed=%d",
+            league_id,
+            applied,
+            deferred_count,
+            fallback_applied,
+            target_not_found,
+            target_add_failed,
+            source_retry_applied,
+            still_failed);
+    }
+    return assigned;
+}
+

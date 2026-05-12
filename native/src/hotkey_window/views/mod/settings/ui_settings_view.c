@@ -82,6 +82,7 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
     }
 
     int quality_cap_enabled = kbo_get_foreign_fa_quality_cap_enabled_setting();
+    int asian_quota_salary_limit = kbo_get_asian_quota_salary_limit();
     kbo_window_text_appendf(
         buffer,
         "</div></details></div><div class='settingRow'><label class='settingLabel' for='foreignFaQualityCapSelect'>");
@@ -92,6 +93,17 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
     kbo_webview_append_ootp_choice_option(buffer, "kbo://settings/foreign-fa-quality-cap/off", "OFF", !quality_cap_enabled);
     kbo_webview_end_ootp_choice(buffer);
     kbo_window_text_appendf(buffer, "</div>");
+
+    kbo_window_text_appendf(
+        buffer,
+        "<div class='settingRow'><label class='settingLabel' for='asianQuotaSalaryLimit'>");
+    kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x84\xec\xbf\xbc\xed\x84\xb0 \xec\x97\xb0\xeb\xb4\x89 \xec\x83\x81\xed\x95\x9c", "Asian quota salary limit"));
+    kbo_window_text_appendf(
+        buffer,
+        "</label><input id='asianQuotaSalaryLimit' class='ootpSelect salaryInput' type='text' inputmode='numeric' pattern='[0-9]*' data-min='0' data-max='20000000' data-step='1000' value='%d' "
+        "onchange=\"location.href='kbo://settings/asian-quota-salary-limit/'+this.value\" "
+        "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
+        asian_quota_salary_limit);
 
     kbo_window_text_appendf(
         buffer,

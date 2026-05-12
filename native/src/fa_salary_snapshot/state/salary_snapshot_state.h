@@ -33,6 +33,7 @@ typedef struct KboFaSalarySnapshotRow {
     uint32_t team_rank;
     uint32_t team_ordinal;
     char player_name[96];
+    char player_key[64];
 } KboFaSalarySnapshotRow;
 
 typedef struct KboFaSalarySnapshotGrade {
@@ -48,6 +49,8 @@ typedef struct KboFaSalarySnapshotGrade {
     uint32_t team_rank;
     uint32_t team_ordinal;
     char grade[12];
+    char player_key[64];
+    char player_name[96];
 } KboFaSalarySnapshotGrade;
 
 extern volatile LONG g_kbo_fa_salary_snapshot_thread_started;

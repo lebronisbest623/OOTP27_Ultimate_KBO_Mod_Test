@@ -144,7 +144,7 @@ uint8_t kbo_callup_foreign_limit_allows_with_asian_quota(
         }
         return 1u;
     }
-    if (!kbo_nation_is_asian_quota_candidate(nation_id)) {
+    if (!kbo_player_is_asian_quota_candidate(player)) {
         return 0u;
     }
 

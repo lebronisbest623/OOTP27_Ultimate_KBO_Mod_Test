@@ -78,6 +78,30 @@ static int kbo_copy_log_string_safe(const char* source, char* out, size_t out_si
     return len > 0;
 }
 
+static uint32_t kbo_league_news_stable_message_id(
+    uint32_t year,
+    uint32_t month,
+    uint32_t day,
+    uint32_t league_id,
+    const char* title)
+{
+    uint32_t hash = 2166136261u;
+    hash ^= league_id;
+    hash *= 16777619u;
+    if (title != NULL) {
+        for (size_t i = 0; title[i] != '\0' && i < 512u; i++) {
+            hash ^= (uint8_t)title[i];
+            hash *= 16777619u;
+        }
+    }
+
+    return 900000000u
+        + ((year % 100u) * 10000000u)
+        + (month * 100000u)
+        + (day * 1000u)
+        + (hash % 997u);
+}
+
 int insert_kbo_league_news_sql(
     uint32_t year,
     uint32_t month,
@@ -136,15 +160,7 @@ int insert_kbo_league_news_sql(
         return 0;
     }
 
-    uint32_t message_id = 8000000u
-        + ((year % 100u) * 10000u)
-        + (month * 100u)
-        + day;
-    if (title != NULL && strstr(title, "Depart") != NULL) {
-        message_id += 100000u;
-    } else if (title != NULL && (strstr(title, "Return") != NULL || strstr(title, "Gold") != NULL || strstr(title, "Win") != NULL)) {
-        message_id += 200000u;
-    }
+    uint32_t message_id = kbo_league_news_stable_message_id(year, month, day, league_id, log_title);
 
     char delete_sql[1400] = {0};
     snprintf(

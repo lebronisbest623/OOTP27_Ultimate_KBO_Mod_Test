@@ -8,6 +8,7 @@
 
 #include "../../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../../bootstrap/abi/hook_entrypoints.h"
+#include "../../../../bootstrap/profiling/profiler.h"
 #include "../../../../core/core_flags/api/flags_api.h"
 #include "../../../../core/logging/core_log.h"
 #include "../../../../runtime_memory/runtime_memory.h"

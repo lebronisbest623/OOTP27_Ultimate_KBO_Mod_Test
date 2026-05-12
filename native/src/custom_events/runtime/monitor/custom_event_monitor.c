@@ -36,14 +36,16 @@ void kbo_custom_event_monitor_tick(
     if (last_scheduled_yyyymmdd != NULL && today_yyyymmdd != *last_scheduled_yyyymmdd) {
         int foreign_schedule = kbo_schedule_foreign_priority_custom_events(source);
         int asian_schedule = kbo_schedule_asian_games_custom_events(source);
-        if (foreign_schedule >= 0 && asian_schedule >= 0) {
+        int cbt_schedule = kbo_schedule_cbt_custom_events(source);
+        if (foreign_schedule >= 0 && asian_schedule >= 0 && cbt_schedule >= 0) {
             *last_scheduled_yyyymmdd = today_yyyymmdd;
         } else {
             append_logf(
-                "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d",
+                "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d cbt=%d",
                 today_yyyymmdd,
                 foreign_schedule,
-                asian_schedule);
+                asian_schedule,
+                cbt_schedule);
         }
     }
     if (last_scanned_yyyymmdd != NULL && today_yyyymmdd != *last_scanned_yyyymmdd) {
@@ -67,13 +69,13 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
     uint32_t last_scheduled_yyyymmdd = 0u;
     uint32_t last_scanned_yyyymmdd = 0u;
     while (kbo_runtime_threads_should_continue()) {
+        if (!kbo_runtime_sleep_should_continue(5000)) {
+            break;
+        }
         kbo_custom_event_monitor_tick(
             &last_scheduled_yyyymmdd,
             &last_scanned_yyyymmdd,
             g_kbo_default_event_source);
-        if (!kbo_runtime_sleep_should_continue(5000)) {
-            break;
-        }
     }
     InterlockedExchange(&g_kbo_custom_event_monitor_started, 0);
     append_log_line("KBO custom event monitor stopped");

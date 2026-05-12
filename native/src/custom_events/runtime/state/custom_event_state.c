@@ -36,4 +36,8 @@ const char g_kbo_asian_games_departure_event_title[] =
     "[KBO] Asian Games Player Departure";
 const char g_kbo_asian_games_final_event_title[] =
     "[KBO] Asian Games Final";
+const char g_kbo_cbt_exception_deadline_event_title[] =
+    "[KBO CBT] Exception Player Deadline";
+const char g_kbo_cbt_announcement_event_title[] =
+    "[KBO CBT] Competitive Balance Tax Announcement";
 

@@ -262,6 +262,11 @@ LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM wparam, 
         kbo_show_or_hide_hotkey_window();
         return 0;
 
+    case KBO_WM_REFRESH_HUB:
+        kbo_refresh_hotkey_window_layout(hwnd);
+        append_logf("KBO F2 hub refreshed by request hwnd=%p", (void*)hwnd);
+        return 0;
+
     case WM_CLOSE:
         ShowWindow(hwnd, SW_HIDE);
         return 0;

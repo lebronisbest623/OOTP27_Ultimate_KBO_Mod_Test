@@ -34,5 +34,6 @@
 #include "../../../military_service/selection/events/military_selection_event.h"
 #include "../../../foreign/common/events/foreign_waiver_events.h"
 #include "../../../fa_compensation/due/fa_compensation_due.h"
+#include "../../../competitive_balance_tax/events/cbt_events.h"
 
 #endif

@@ -137,7 +137,7 @@ void kbo_webview_append_selected_view(KboWindowTextBuffer* buffer, uint32_t curr
     } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_REPUTATION) {
         kbo_webview_append_reputation_view(buffer, g_kbo_hub_selected_league_id);
     } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_CBT) {
-        kbo_webview_append_cbt_view(buffer, g_kbo_hub_selected_cbt_subview);
+        kbo_webview_append_cbt_view(buffer, g_kbo_hub_selected_cbt_subview, g_kbo_hub_selected_team_id);
     } else {
         kbo_webview_append_fallback_text_view(buffer);
     }
@@ -245,8 +245,10 @@ void kbo_webview_append_sub_tabs(KboWindowTextBuffer* buffer)
 const char* kbo_hub_cbt_subnav_label(int index)
 {
     switch (index) {
-        case KBO_HUB_CBT_SUBVIEW_RECORDS: return "Records";
-        case KBO_HUB_CBT_SUBVIEW_RULES:   return "Rules";
+        case KBO_HUB_CBT_SUBVIEW_OVERVIEW: return "Overview";
+        case KBO_HUB_CBT_SUBVIEW_HISTORY:  return "History";
+        case KBO_HUB_CBT_SUBVIEW_EXCEPTIONS: return "Exceptions";
+        case KBO_HUB_CBT_SUBVIEW_RULES:    return "Rules";
         default: return "";
     }
 }

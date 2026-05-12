@@ -29,12 +29,6 @@ void kbo_lock_foreign_replacement_player_seeds(void);
 void kbo_unlock_foreign_replacement_player_seeds(void);
 int kbo_player_memory_contains_ascii_seed_key(uint8_t* player, const char* key);
 uint32_t kbo_resolve_foreign_replacement_player_seed_key(const char* key, uint8_t* out_slot_type);
-int kbo_buffer_contains_u32_le(const uint8_t* data, size_t size, uint32_t value);
-uint32_t kbo_foreign_resolve_player_id_from_players_dat_record_start(
-    const uint8_t* raw,
-    size_t read,
-    size_t key_pos);
-uint32_t kbo_resolve_foreign_replacement_player_seed_from_players_dat(const char* key, uint8_t* out_slot_type);
 int kbo_add_foreign_replacement_player_seed_locked(const KboForeignReplacementPlayerSeed* seed);
 int kbo_import_foreign_replacement_player_seed_file_locked(const char* path, const char* source);
 int kbo_load_foreign_replacement_player_resolved_cache_locked(void);

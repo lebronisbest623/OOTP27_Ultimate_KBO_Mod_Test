@@ -8,5 +8,7 @@ int enable_kbo_allstar_raw_flags_if_kbo_context(uintptr_t league_ptr, const char
 int force_kbo_allstar_flags_for_league_pointer(uintptr_t league_ptr, const char* source);
 void force_kbo_allstar_flags_for_configured_league(const char* source);
 void start_kbo_allstar_force_retry_thread(void);
+uintptr_t find_kbo_allstar_core_fallback_league(uint32_t league_id);
+int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t league_id, const char* source);
 
 #endif

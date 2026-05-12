@@ -5,14 +5,39 @@
 
 #include "../../bootstrap/profiling/profiler.h"
 #include "../../competitive_balance_tax/api/competitive_balance_tax.h"
+#include "../../competitive_balance_tax/events/cbt_events.h"
+#include "../../competitive_balance_tax/exceptions/cbt_exceptions.h"
 #include "../../competitive_balance_tax/records/cbt_records.h"
 #include "../../core/dates/core_current_date.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
+#include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../paths/salary_snapshot_paths_dates.h"
 #include "../state/salary_snapshot_state.h"
 #include "../capture/salary_snapshot_write_capture.h"
+
+static int kbo_fa_salary_snapshot_cbt_records_exist_for_season(uint32_t season)
+{
+    KboCbtRecord* records = (KboCbtRecord*)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        (SIZE_T)KBO_CBT_RECORDS_MAX * sizeof(KboCbtRecord));
+    if (records == NULL) {
+        return 0;
+    }
+
+    int count = kbo_cbt_load_records(records, KBO_CBT_RECORDS_MAX, NULL, 0);
+    int found = 0;
+    for (int i = 0; i < count; i++) {
+        if (records[i].season == season) {
+            found = 1;
+            break;
+        }
+    }
+    HeapFree(GetProcessHeap(), 0, records);
+    return found;
+}
 
 static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
 {
@@ -22,7 +47,9 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
     uint32_t last_log_date = 0u;
     uint32_t last_log_opening_day = 0u;
     uint32_t captured_season = 0u;
-    uint32_t cbt_backfill_done_season = 0u;
+    uint32_t cbt_event_schedule_done_season = 0u;
+    uint32_t cbt_due_process_done_season = 0u;
+    uint32_t cbt_auto_exception_done_season = 0u;
     uint32_t cached_message_date = 0u;
     int cached_message_found = 0;
     DWORD cached_message_checked_ms = 0u;
@@ -116,12 +143,71 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             opening_day = date;
         }
 
+        int snapshot_exists = captured_season == year || kbo_fa_salary_snapshot_file_exists(year);
+        uint32_t cbt_announcement_day = opening_day / 10000u == year
+            ? kbo_add_days_yyyymmdd(opening_day, 7u)
+            : 0u;
+
+        if (snapshot_exists && opening_day / 10000u == year && date >= opening_day) {
+            captured_season = year;
+            if (cbt_auto_exception_done_season != year) {
+                cbt_auto_exception_done_season = year;
+                kbo_cbt_exception_auto_designate_missing(year, "snapshot_thread_default_exception");
+            }
+            if (cbt_announcement_day != 0u && date < cbt_announcement_day) {
+                if (date != last_log_date || opening_day != last_log_opening_day) {
+                    append_logf(
+                        "KBO CBT waiting for exception designation window date=%u season=%u opening_day=%u announce=%u",
+                        date,
+                        year,
+                        opening_day,
+                        cbt_announcement_day);
+                    last_log_date = date;
+                    last_log_opening_day = opening_day;
+                }
+                if (profile_snapshot_thread_tick_active) {
+                    kbo_profiler_end("fa_salary_snapshot.thread.cbt_wait_exception_window", &profile_snapshot_thread_tick);
+                }
+                continue;
+            }
+            if (cbt_event_schedule_done_season != year) {
+                cbt_event_schedule_done_season = year;
+                append_logf(
+                    "KBO FA salary snapshot CBT event schedule date=%u season=%u opening_day=%u announce=%u reason=snapshot_exists",
+                    date,
+                    year,
+                    opening_day,
+                    cbt_announcement_day);
+                kbo_schedule_cbt_custom_events("snapshot_thread_cbt_schedule");
+            }
+            if (cbt_announcement_day != 0u
+                    && date >= cbt_announcement_day
+                    && cbt_due_process_done_season != year
+                    && !kbo_fa_salary_snapshot_cbt_records_exist_for_season(year)) {
+                cbt_due_process_done_season = year;
+                append_logf(
+                    "KBO CBT due fallback processing date=%u season=%u opening_day=%u announce=%u reason=no_records_after_announcement",
+                    date,
+                    year,
+                    opening_day,
+                    cbt_announcement_day);
+                kbo_process_competitive_balance_tax_for_date(
+                    year,
+                    cbt_announcement_day,
+                    "snapshot_thread_cbt_due_fallback");
+            }
+            if (profile_snapshot_thread_tick_active) {
+                kbo_profiler_end("fa_salary_snapshot.thread.already_captured", &profile_snapshot_thread_tick);
+            }
+            continue;
+        }
+
         int in_opening_window = kbo_fa_salary_snapshot_current_date_in_opening_window(date, opening_day);
         int late_missing_snapshot_backfill =
             !in_opening_window
             && opening_day / 10000u == year
             && date > opening_day
-            && !kbo_fa_salary_snapshot_file_exists(year);
+            && !snapshot_exists;
         if (!in_opening_window && !late_missing_snapshot_backfill) {
             if (date != last_log_date || opening_day != last_log_opening_day) {
                 append_logf(
@@ -143,29 +229,6 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
                 date,
                 opening_day,
                 league_id);
-        }
-
-        if (captured_season == year || kbo_fa_salary_snapshot_file_exists(year)) {
-            captured_season = year;
-            if (cbt_backfill_done_season != year) {
-                cbt_backfill_done_season = year;
-                KboCbtRecord cbt_check[KBO_CBT_RECORDS_MAX];
-                int cbt_count = kbo_cbt_load_records(cbt_check, KBO_CBT_RECORDS_MAX, NULL, 0);
-                int has_record = 0;
-                for (int ci = 0; ci < cbt_count; ci++) {
-                    if (cbt_check[ci].season == year) { has_record = 1; break; }
-                }
-                if (!has_record) {
-                    append_logf(
-                        "KBO FA salary snapshot CBT backfill date=%u season=%u reason=snapshot_exists_cbt_missing",
-                        date, year);
-                    kbo_process_competitive_balance_tax(year, "snapshot_thread_cbt_backfill");
-                }
-            }
-            if (profile_snapshot_thread_tick_active) {
-                kbo_profiler_end("fa_salary_snapshot.thread.already_captured", &profile_snapshot_thread_tick);
-            }
-            continue;
         }
 
         if (kbo_capture_fa_salary_opening_day_snapshot(

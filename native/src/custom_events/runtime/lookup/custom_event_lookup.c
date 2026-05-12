@@ -192,7 +192,9 @@ int kbo_custom_event_name_matches_local(const char* name)
         || kbo_custom_event_name_is_military_selection(name)
         || kbo_custom_event_name_is_asian_games_selection(name)
         || kbo_custom_event_name_is_asian_games_departure(name)
-        || kbo_custom_event_name_is_asian_games_final(name);
+        || kbo_custom_event_name_is_asian_games_final(name)
+        || kbo_custom_event_name_is_cbt_exception_deadline(name)
+        || kbo_custom_event_name_is_cbt_announcement(name);
 }
 
 int kbo_custom_event_exists_by_title_for_date(

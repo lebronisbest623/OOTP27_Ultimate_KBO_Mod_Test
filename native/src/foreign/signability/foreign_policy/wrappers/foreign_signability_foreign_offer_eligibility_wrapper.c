@@ -16,9 +16,11 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     }
 
     uint8_t original_result = 0;
+    KBO_PROFILE_BEGIN(profile_foreign_offer_original);
     if (original_func != NULL) {
         original_result = original_func((void*)player_ptr, team_id, flag);
     }
+    KBO_PROFILE_END(profile_foreign_offer_original, "foreign_policy.offer_eligibility.original");
 
     if (player_ptr == 0 || team_id <= 0
             || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_ID_OFFSET + sizeof(uint32_t))) {

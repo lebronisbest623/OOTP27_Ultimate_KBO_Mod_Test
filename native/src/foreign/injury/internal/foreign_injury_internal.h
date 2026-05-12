@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/files/atomic/core_atomic_file.h"
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
@@ -64,6 +65,10 @@ void kbo_lock_foreign_injury_replacements(void);
 void kbo_unlock_foreign_injury_replacements(void);
 int kbo_load_foreign_injury_replacements_locked(const char* path);
 int kbo_parse_foreign_injury_replacement_seed_line(
+    const char* line,
+    uint32_t today,
+    KboForeignInjuryReplacement* out);
+int kbo_parse_foreign_injury_replacement_key_seed_line(
     const char* line,
     uint32_t today,
     KboForeignInjuryReplacement* out);

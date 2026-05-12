@@ -39,3 +39,13 @@ int kbo_custom_event_name_is_asian_games_final(const char* name)
 {
     return ascii_equals_ignore_case(name, g_kbo_asian_games_final_event_title);
 }
+
+int kbo_custom_event_name_is_cbt_exception_deadline(const char* name)
+{
+    return ascii_equals_ignore_case(name, g_kbo_cbt_exception_deadline_event_title);
+}
+
+int kbo_custom_event_name_is_cbt_announcement(const char* name)
+{
+    return ascii_equals_ignore_case(name, g_kbo_cbt_announcement_event_title);
+}

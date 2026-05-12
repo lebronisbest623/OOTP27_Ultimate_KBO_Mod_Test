@@ -257,6 +257,21 @@ int kbo_queue_hotkey_window_toggle(void)
     return 1;
 }
 
+int kbo_request_hotkey_window_refresh(const char* source)
+{
+    HWND hwnd = g_kbo_hotkey_window;
+    if (hwnd == NULL || !IsWindow(hwnd) || !IsWindowVisible(hwnd)) {
+        return 0;
+    }
+
+    append_logf(
+        "KBO F2 hub refresh requested source=%s hwnd=%p",
+        source != NULL ? source : "",
+        (void*)hwnd);
+    PostMessageA(hwnd, KBO_WM_REFRESH_HUB, 0, 0);
+    return 1;
+}
+
 LRESULT CALLBACK kbo_hotkey_keyboard_proc(int code, WPARAM wparam, LPARAM lparam)
 {
     if (code == HC_ACTION && (wparam == WM_KEYDOWN || wparam == WM_SYSKEYDOWN) && lparam != 0) {

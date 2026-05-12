@@ -1,4 +1,107 @@
 #include "../internal/foreign_replacement_seed_internal.h"
+#include "../../../team/names/team_string.h"
+
+static LONG g_kbo_foreign_replacement_seed_unresolved_log_count = 0;
+
+static int kbo_seed_key_text_matches(const char* text, const char* key)
+{
+    char copied[KBO_FOREIGN_REPLACEMENT_PLAYER_KEY_BYTES] = {0};
+    if (text == NULL || key == NULL || key[0] == '\0') {
+        return 0;
+    }
+    if (!copy_limited_ascii_string(text, copied, sizeof(copied))) {
+        return 0;
+    }
+    return _stricmp(copied, key) == 0;
+}
+
+static int kbo_player_memory_string_slot_contains_ascii_seed_key(uint8_t* player, uint32_t offset, const char* key)
+{
+    if (player == NULL || key == NULL || offset >= OOTP27_PLAYER_SCAN_BYTES) {
+        return 0;
+    }
+
+    char text[KBO_FOREIGN_REPLACEMENT_PLAYER_KEY_BYTES] = {0};
+    if (offset + OOTP27_KBO_STRING_OBJECT_TEXT_OFFSET + sizeof(uintptr_t) <= OOTP27_PLAYER_SCAN_BYTES
+            && copy_ootp_string_object_text(player, offset, text, sizeof(text))
+            && _stricmp(text, key) == 0) {
+        return 1;
+    }
+
+    if (offset + sizeof(uintptr_t) <= OOTP27_PLAYER_SCAN_BYTES
+            && memory_range_readable(player + offset, sizeof(uintptr_t))) {
+        uintptr_t ptr = *(uintptr_t*)(player + offset);
+        if (ptr != 0u && kbo_seed_key_text_matches((const char*)ptr, key)) {
+            return 1;
+        }
+    }
+
+    if (kbo_seed_key_text_matches((const char*)(player + offset), key)) {
+        return 1;
+    }
+    return 0;
+}
+
+static uintptr_t* kbo_foreign_replacement_seed_copy_player_vector_snapshot(
+    uintptr_t player_vector,
+    int32_t player_count,
+    const char** out_failure_reason)
+{
+    if (out_failure_reason != NULL) {
+        *out_failure_reason = "unknown";
+    }
+    if (player_vector == 0u || player_count <= 0 || player_count > 200000) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "invalid_vector"; }
+        return NULL;
+    }
+    if ((SIZE_T)player_count > ((SIZE_T)-1 / sizeof(uintptr_t))) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "count_overflow"; }
+        return NULL;
+    }
+
+    SIZE_T player_vector_bytes = (SIZE_T)player_count * sizeof(uintptr_t);
+    if (!memory_range_readable((void*)player_vector, player_vector_bytes)) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "unreadable_vector"; }
+        return NULL;
+    }
+
+    uintptr_t* snapshot = (uintptr_t*)HeapAlloc(GetProcessHeap(), 0, player_vector_bytes);
+    if (snapshot == NULL) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "alloc_failed"; }
+        return NULL;
+    }
+
+    SIZE_T bytes_read = 0;
+    if (!ReadProcessMemory(
+            GetCurrentProcess(),
+            (LPCVOID)player_vector,
+            snapshot,
+            player_vector_bytes,
+            &bytes_read)
+            || bytes_read != player_vector_bytes) {
+        HeapFree(GetProcessHeap(), 0, snapshot);
+        if (out_failure_reason != NULL) { *out_failure_reason = "copy_failed"; }
+        return NULL;
+    }
+
+    if (out_failure_reason != NULL) {
+        *out_failure_reason = NULL;
+    }
+    return snapshot;
+}
+
+static void kbo_log_foreign_replacement_seed_unresolved(const char* key, const char* reason, int32_t player_count)
+{
+    LONG n = InterlockedIncrement(&g_kbo_foreign_replacement_seed_unresolved_log_count);
+    if (n > 80) {
+        return;
+    }
+    append_logf(
+        "foreign replacement player seed unresolved key=%s reason=%s players=%d",
+        key != NULL ? key : "",
+        reason != NULL ? reason : "",
+        (int)player_count);
+}
 
 void kbo_lock_foreign_replacement_player_seeds(void)
 {
@@ -21,6 +124,13 @@ int kbo_player_memory_contains_ascii_seed_key(uint8_t* player, const char* key)
     size_t key_len = strlen(key);
     if (key_len < 3u || key_len >= KBO_FOREIGN_REPLACEMENT_PLAYER_KEY_BYTES || key_len >= OOTP27_PLAYER_SCAN_BYTES) {
         return 0;
+    }
+
+    static const uint32_t export_key_offsets[] = { 0x1140u, 0x1188u, 0x11a0u };
+    for (int i = 0; i < (int)(sizeof(export_key_offsets) / sizeof(export_key_offsets[0])); i++) {
+        if (kbo_player_memory_string_slot_contains_ascii_seed_key(player, export_key_offsets[i], key)) {
+            return 1;
+        }
     }
 
     for (size_t i = 0; i + key_len < OOTP27_PLAYER_SCAN_BYTES; i++) {
@@ -51,6 +161,17 @@ uint32_t kbo_resolve_foreign_replacement_player_seed_key(const char* key, uint8_
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        kbo_log_foreign_replacement_seed_unresolved(key, "player_vector_missing", player_count);
+        return 0u;
+    }
+
+    const char* snapshot_failure_reason = NULL;
+    uintptr_t* snapshot = kbo_foreign_replacement_seed_copy_player_vector_snapshot(
+        player_vector,
+        player_count,
+        &snapshot_failure_reason);
+    if (snapshot == NULL) {
+        kbo_log_foreign_replacement_seed_unresolved(key, snapshot_failure_reason, player_count);
         return 0u;
     }
 
@@ -58,7 +179,7 @@ uint32_t kbo_resolve_foreign_replacement_player_seed_key(const char* key, uint8_
     uint8_t first_slot_type = 0u;
     int matches = 0;
     for (int32_t i = 0; i < player_count; i++) {
-        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        uintptr_t player_ptr = snapshot[i];
         if (!kbo_player_pointer_plausible(player_ptr)) {
             continue;
         }
@@ -81,6 +202,7 @@ uint32_t kbo_resolve_foreign_replacement_player_seed_key(const char* key, uint8_
         matches++;
     }
 
+    HeapFree(GetProcessHeap(), 0, snapshot);
     if (first_match != 0u) {
         if (out_slot_type != NULL) {
             *out_slot_type = first_slot_type;
@@ -91,165 +213,10 @@ uint32_t kbo_resolve_foreign_replacement_player_seed_key(const char* key, uint8_
             first_match,
             matches,
             first_slot_type == KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA ? "Asian quota" : "Regular");
+    } else {
+        kbo_log_foreign_replacement_seed_unresolved(key, "memory_scan_no_match", player_count);
     }
     return first_match;
-}
-
-int kbo_buffer_contains_u32_le(const uint8_t* data, size_t size, uint32_t value)
-{
-    if (data == NULL || size < 4u || value == 0u) {
-        return 0;
-    }
-    uint8_t bytes[4];
-    bytes[0] = (uint8_t)(value & 0xffu);
-    bytes[1] = (uint8_t)((value >> 8) & 0xffu);
-    bytes[2] = (uint8_t)((value >> 16) & 0xffu);
-    bytes[3] = (uint8_t)((value >> 24) & 0xffu);
-    for (size_t i = 0; i + 4u <= size; i++) {
-        if (memcmp(data + i, bytes, sizeof(bytes)) == 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-uint32_t kbo_foreign_resolve_player_id_from_players_dat_record_start(
-    const uint8_t* raw,
-    size_t read,
-    size_t key_pos)
-{
-    if (raw == NULL || read < 16u || key_pos < 16u) {
-        return 0u;
-    }
-
-    size_t min_start = key_pos > 512u ? key_pos - 512u : 0u;
-    for (size_t start = key_pos - 16u; ; start--) {
-        if (start + 16u <= read) {
-            uint32_t candidate_id =
-                (uint32_t)raw[start]
-                | ((uint32_t)raw[start + 1u] << 8)
-                | ((uint32_t)raw[start + 2u] << 16)
-                | ((uint32_t)raw[start + 3u] << 24);
-            uint32_t first_name_id =
-                (uint32_t)raw[start + 4u]
-                | ((uint32_t)raw[start + 5u] << 8)
-                | ((uint32_t)raw[start + 6u] << 16)
-                | ((uint32_t)raw[start + 7u] << 24);
-            uint32_t last_name_id =
-                (uint32_t)raw[start + 8u]
-                | ((uint32_t)raw[start + 9u] << 8)
-                | ((uint32_t)raw[start + 10u] << 16)
-                | ((uint32_t)raw[start + 11u] << 24);
-            uint8_t day = raw[start + 12u];
-            uint8_t month = raw[start + 13u];
-            uint16_t year = (uint16_t)raw[start + 14u] | ((uint16_t)raw[start + 15u] << 8);
-            if (candidate_id != 0u
-                    && first_name_id != 0u
-                    && last_name_id != 0u
-                    && day >= 1u && day <= 31u
-                    && month >= 1u && month <= 12u
-                    && year >= 1800u && year <= 2100u) {
-                uint8_t* candidate = kbo_find_player_by_id(candidate_id, NULL, NULL);
-                if (candidate != NULL && kbo_player_pointer_plausible((uintptr_t)candidate)) {
-                    return candidate_id;
-                }
-            }
-        }
-        if (start == min_start || start == 0u) {
-            break;
-        }
-    }
-    return 0u;
-}
-
-uint32_t kbo_resolve_foreign_replacement_player_seed_from_players_dat(const char* key, uint8_t* out_slot_type)
-{
-    if (out_slot_type != NULL) {
-        *out_slot_type = 0u;
-    }
-    if (key == NULL || key[0] == '\0' || (key[0] >= '0' && key[0] <= '9')) {
-        return 0u;
-    }
-
-    char players_dat_path[MAX_PATH] = {0};
-    if (!kbo_get_current_players_dat_path(players_dat_path, sizeof(players_dat_path))) {
-        append_logf("foreign replacement player seed unresolved key=%s reason=players.dat missing or save not written", key);
-        return 0u;
-    }
-
-    HANDLE file = CreateFileA(players_dat_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign replacement player seed unresolved key=%s reason=players.dat open failed gle=%lu", key, (unsigned long)GetLastError());
-        return 0u;
-    }
-
-    LARGE_INTEGER file_size;
-    file_size.QuadPart = 0;
-    if (!GetFileSizeEx(file, &file_size) || file_size.QuadPart <= 0 || file_size.QuadPart > 512ll * 1024ll * 1024ll) {
-        CloseHandle(file);
-        append_logf("foreign replacement player seed unresolved key=%s reason=players.dat size unsupported", key);
-        return 0u;
-    }
-
-    uint8_t* raw = (uint8_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)file_size.QuadPart);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0u;
-    }
-
-    DWORD read = 0;
-    int read_ok = ReadFile(file, raw, (DWORD)file_size.QuadPart, &read, NULL) && read == (DWORD)file_size.QuadPart;
-    CloseHandle(file);
-    if (!read_ok) {
-        HeapFree(GetProcessHeap(), 0, raw);
-        append_logf("foreign replacement player seed unresolved key=%s reason=players.dat read failed", key);
-        return 0u;
-    }
-
-    size_t key_len = strlen(key);
-    uint32_t matched_player_id = 0u;
-    uint8_t matched_slot_type = 0u;
-    int ambiguous = 0;
-    for (size_t pos = 0; pos + key_len <= (size_t)read; pos++) {
-        if (memcmp(raw + pos, key, key_len) != 0) {
-            continue;
-        }
-        char before = pos > 0u ? (char)raw[pos - 1u] : '\0';
-        char after = (char)raw[pos + key_len];
-        if (kbo_ascii_is_seed_id_char(before) || kbo_ascii_is_seed_id_char(after)) {
-            continue;
-        }
-
-        uint32_t record_player_id = kbo_foreign_resolve_player_id_from_players_dat_record_start(raw, (size_t)read, pos);
-        if (record_player_id != 0u) {
-            uint8_t* candidate = kbo_find_player_by_id(record_player_id, NULL, NULL);
-            if (matched_player_id != 0u && matched_player_id != record_player_id) {
-                ambiguous = 1;
-                break;
-            }
-            matched_player_id = record_player_id;
-            matched_slot_type = candidate != NULL && kbo_player_is_asian_quota_candidate(candidate)
-                ? KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA
-                : KBO_FOREIGN_INJURY_SLOT_REGULAR;
-        }
-    }
-
-    HeapFree(GetProcessHeap(), 0, raw);
-    if (ambiguous) {
-        append_logf("foreign replacement player seed unresolved key=%s reason=players.dat ambiguous", key);
-        return 0u;
-    }
-    if (matched_player_id != 0u) {
-        if (out_slot_type != NULL) {
-            *out_slot_type = matched_slot_type;
-        }
-        append_logf(
-            "foreign replacement player seed resolved via players.dat key=%s player=%u slot=%s",
-            key,
-            matched_player_id,
-            matched_slot_type == KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA ? "Asian quota" : "Regular");
-    }
-    return matched_player_id;
 }
 
 int kbo_add_foreign_replacement_player_seed_locked(const KboForeignReplacementPlayerSeed* seed)

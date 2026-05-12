@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_HOTKEY_WINDOW_API_HOTKEY_WINDOW_REFRESH_H_
+#define KBOFIX_SRC_HOTKEY_WINDOW_API_HOTKEY_WINDOW_REFRESH_H_
+
+int kbo_request_hotkey_window_refresh(const char* source);
+
+#endif

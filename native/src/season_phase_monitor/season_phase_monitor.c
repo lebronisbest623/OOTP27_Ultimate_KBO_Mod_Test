@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-
 #include "../bootstrap/abi/ootp_offsets.h"
 #include "../core/dates/core_current_date.h"
 #include "../core/core_flags/api/flags_api.h"

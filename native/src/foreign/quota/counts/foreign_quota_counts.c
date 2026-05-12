@@ -4,6 +4,7 @@
 
 #include "foreign_quota_counts.h"
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
@@ -25,7 +26,10 @@ void kbo_count_team_asian_quota_probe(
         return;
     }
 
-    enum { KBO_FOREIGN_ORG_COUNT_CACHE_SIZE = 64 };
+    enum {
+        KBO_FOREIGN_ORG_COUNT_CACHE_SIZE = 64,
+        KBO_FOREIGN_ORG_COUNT_CACHE_TTL_MS = 60000u
+    };
     typedef struct KboForeignOrgCountCacheEntry {
         uint32_t team_id;
         uint32_t foreign_count;
@@ -38,16 +42,21 @@ void kbo_count_team_asian_quota_probe(
     DWORD now = GetTickCount();
     uint32_t slot_index = (team_id ^ (team_id >> 4)) % KBO_FOREIGN_ORG_COUNT_CACHE_SIZE;
     KboForeignOrgCountCacheEntry* cached = &count_cache[slot_index];
-    if (cached->team_id == team_id && cached->tick != 0u && now - cached->tick <= 500u) {
+    KBO_PROFILE_BEGIN(profile_foreign_org_count);
+    if (cached->team_id == team_id
+            && cached->tick != 0u
+            && now - cached->tick <= KBO_FOREIGN_ORG_COUNT_CACHE_TTL_MS) {
         if (out_foreign_count != NULL) { *out_foreign_count = cached->foreign_count; }
         if (out_asian_quota_count != NULL) { *out_asian_quota_count = cached->asian_count; }
         if (out_non_asian_foreign_count != NULL) { *out_non_asian_foreign_count = cached->non_asian_count; }
+        KBO_PROFILE_END(profile_foreign_org_count, "foreign_policy.org_count.cache_hit");
         return;
     }
 
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        KBO_PROFILE_END(profile_foreign_org_count, "foreign_policy.org_count.no_vector");
         return;
     }
 
@@ -85,7 +94,7 @@ void kbo_count_team_asian_quota_probe(
             continue;
         }
         foreign_count++;
-        if (kbo_nation_is_asian_quota_candidate(nation_id)) {
+        if (kbo_player_is_asian_quota_candidate(player)) {
             asian_count++;
         } else {
             non_asian_count++;
@@ -100,6 +109,7 @@ void kbo_count_team_asian_quota_probe(
     cached->asian_count = asian_count;
     cached->non_asian_count = non_asian_count;
     cached->tick = now;
+    KBO_PROFILE_END(profile_foreign_org_count, "foreign_policy.org_count.scanned");
 }
 
 void kbo_count_team_asian_quota_probe_fresh(
@@ -143,7 +153,7 @@ void kbo_count_team_asian_quota_probe_fresh(
             continue;
         }
         foreign_count++;
-        if (kbo_nation_is_asian_quota_candidate(nation_id)) {
+        if (kbo_player_is_asian_quota_candidate(player)) {
             asian_count++;
         } else {
             non_asian_count++;
@@ -184,8 +194,7 @@ void kbo_count_active_asian_quota_by_position(
         if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
             continue;
         }
-        uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
-        if (!kbo_nation_is_asian_quota_candidate(nation_id)) {
+        if (!kbo_player_is_asian_quota_candidate(player)) {
             continue;
         }
 
@@ -234,7 +243,7 @@ void kbo_count_active_foreign_for_asian_quota(
             continue;
         }
         int pitcher = (*(uint8_t*)(player + OOTP27_PLAYER_POSITION_GROUP_OFFSET) == 1u);
-        int asian = kbo_nation_is_asian_quota_candidate(nation_id);
+        int asian = kbo_player_is_asian_quota_candidate(player);
         if (pitcher) {
             if (asian) { asian_pitchers++; } else { non_asian_pitchers++; }
         } else {

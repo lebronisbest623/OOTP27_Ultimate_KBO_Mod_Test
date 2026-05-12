@@ -50,14 +50,31 @@ int kbo_persist_foreign_injury_replacements_locked(void)
 
 void kbo_ensure_foreign_injury_replacements_loaded(void)
 {
+    KBO_PROFILE_BEGIN(profile_foreign_injury_ensure);
     char path[MAX_PATH] = {0};
     if (!kbo_get_foreign_injury_replacement_path(path, sizeof(path))) {
+        KBO_PROFILE_END(profile_foreign_injury_ensure, "foreign_injury.ensure.no_path");
         return;
     }
 
+    static DWORD last_empty_import_attempt_tick = 0u;
     kbo_lock_foreign_injury_replacements();
-    if (strcmp(g_kbo_foreign_injury_replacement_loaded_path, path) != 0) {
+    int path_changed = strcmp(g_kbo_foreign_injury_replacement_loaded_path, path) != 0;
+    if (path_changed) {
+        last_empty_import_attempt_tick = 0u;
         kbo_load_foreign_injury_replacements_locked(path);
+    }
+    DWORD now = GetTickCount();
+    int should_import_seed = path_changed;
+    if (!should_import_seed
+            && g_kbo_foreign_injury_replacement_count == 0
+            && (last_empty_import_attempt_tick == 0u
+                || now < last_empty_import_attempt_tick
+                || now - last_empty_import_attempt_tick > 60000u)) {
+        should_import_seed = 1;
+    }
+    if (should_import_seed) {
+        last_empty_import_attempt_tick = now;
         uint32_t today = 0u;
         kbo_get_current_yyyymmdd(&today);
         int imported = 0;
@@ -74,6 +91,9 @@ void kbo_ensure_foreign_injury_replacements_loaded(void)
         }
     }
     kbo_unlock_foreign_injury_replacements();
+    KBO_PROFILE_END(profile_foreign_injury_ensure, should_import_seed
+        ? "foreign_injury.ensure.import_checked"
+        : "foreign_injury.ensure.cached");
 }
 
 int kbo_find_foreign_injury_replacement_locked(uint32_t injured_player_id, int include_closed)
@@ -164,6 +184,7 @@ int kbo_team_has_foreign_injury_slot_for_candidate(
     uint32_t* out_injured_player_id,
     uint32_t* out_replacement_player_id)
 {
+    KBO_PROFILE_BEGIN(profile_foreign_injury_slot_candidate);
     int result = 0;
     kbo_ensure_foreign_injury_replacements_loaded();
     kbo_lock_foreign_injury_replacements();
@@ -174,6 +195,9 @@ int kbo_team_has_foreign_injury_slot_for_candidate(
         out_injured_player_id,
         out_replacement_player_id);
     kbo_unlock_foreign_injury_replacements();
+    KBO_PROFILE_END(profile_foreign_injury_slot_candidate, result
+        ? "foreign_injury.slot_candidate.hit"
+        : "foreign_injury.slot_candidate.miss");
     return result;
 }
 
@@ -246,7 +270,7 @@ void kbo_emit_foreign_injury_replacement_news(
             snprintf(
                 body,
                 sizeof(body),
-                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> is no longer listed as unavailable.\n\nThe temporary replacement <%s:player#%u> has been removed from the club's active foreign-player slot.",
+                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> has returned to the club's top roster.\n\nThe temporary replacement <%s:player#%u> has been removed from the club's active foreign-player slot.",
                 rec->team_id,
                 rec->team_id,
                 player_name,
@@ -257,7 +281,7 @@ void kbo_emit_foreign_injury_replacement_news(
             snprintf(
                 body,
                 sizeof(body),
-                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> is no longer listed as unavailable.\n\nNo linked replacement player was found in the active slot record.",
+                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> has returned to the club's top roster.\n\nNo linked replacement player was found in the active slot record.",
                 rec->team_id,
                 rec->team_id,
                 player_name,

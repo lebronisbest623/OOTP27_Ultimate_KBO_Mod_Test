@@ -406,8 +406,12 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $LauncherOutputDirs = @(
     (Join-Path $RepoRoot "bin\Release\net8.0"),
     (Join-Path $RepoRoot "bin\Debug\net8.0"),
+    (Join-Path $RepoRoot "bin\Release\net8.0\win-x64"),
+    (Join-Path $RepoRoot "bin\Debug\net8.0\win-x64"),
     (Join-Path $RepoRoot "src\KBOLauncher\bin\Release\net8.0"),
-    (Join-Path $RepoRoot "src\KBOLauncher\bin\Debug\net8.0")
+    (Join-Path $RepoRoot "src\KBOLauncher\bin\Debug\net8.0"),
+    (Join-Path $RepoRoot "src\KBOLauncher\bin\Release\net8.0\win-x64"),
+    (Join-Path $RepoRoot "src\KBOLauncher\bin\Debug\net8.0\win-x64")
 )
 foreach ($LauncherOutputDir in $LauncherOutputDirs) {
     if (Test-Path $LauncherOutputDir) {
@@ -421,6 +425,10 @@ foreach ($LauncherOutputDir in $LauncherOutputDirs) {
         }
         $AssetsPath = Join-Path $OutDir "assets"
         $SyncedCount += Copy-DirectoryFilesIfNewer -SourceDir $AssetsPath -DestinationDir (Join-Path $LauncherOutputDir "assets")
+        $SeedPath = Join-Path $RepoRoot "data\seeds"
+        if (Test-Path $SeedPath) {
+            $SyncedCount += Copy-DirectoryFilesIfNewer -SourceDir $SeedPath -DestinationDir (Join-Path $LauncherOutputDir "data\seeds")
+        }
         Write-Host "Synced native payload to $LauncherOutputDir ($SyncedCount files copied)"
     }
 }

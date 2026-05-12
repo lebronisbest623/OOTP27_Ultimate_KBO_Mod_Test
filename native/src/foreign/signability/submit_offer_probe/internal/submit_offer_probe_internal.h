@@ -11,6 +11,7 @@
 #include "../../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../../bootstrap/abi/hook_entrypoints.h"
 #include "../../../../build_verify/build_verify.h"
+#include "../../../../bootstrap/profiling/profiler.h"
 #include "../../../../core/core_flags/api/flags_api.h"
 #include "../../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../../core/logging/core_log.h"
@@ -42,9 +43,9 @@ typedef struct KboForeignFaDemandRemapRecord {
     int32_t mapped_demand;
 } KboForeignFaDemandRemapRecord;
 #define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INITIAL_DELAY_MS 1000u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_INTERVAL_MS 250u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS 60u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INTERVAL_MS 5000u
+#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_INTERVAL_MS 2000u
+#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS 5u
+#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INTERVAL_MS 60000u
 #define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS 80
 
 extern LONG g_kbo_no_minor_contract_demand_floor_enabled;

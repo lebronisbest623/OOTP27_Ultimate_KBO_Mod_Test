@@ -1,11 +1,6 @@
 #include "../internal/cbt_internal.h"
 
-static int __cdecl kbo_cbt_salary_compare_desc(const void* a, const void* b)
-{
-    int32_t la = *(const int32_t*)a;
-    int32_t lb = *(const int32_t*)b;
-    return lb > la ? 1 : (lb < la ? -1 : 0);
-}
+#include "../../hotkey_window/api/hotkey_window_refresh.h"
 
 static int kbo_cbt_find_team(const KboCbtTeamPayroll* teams, int count, uint32_t team_id)
 {
@@ -17,17 +12,92 @@ static int kbo_cbt_find_team(const KboCbtTeamPayroll* teams, int count, uint32_t
     return -1;
 }
 
+static uint32_t kbo_cbt_effective_top_n(uint32_t top_n)
+{
+    if (top_n == 0u) {
+        return 1u;
+    }
+    if (top_n > KBO_CBT_SALARY_SCRATCH_MAX) {
+        return KBO_CBT_SALARY_SCRATCH_MAX;
+    }
+    return top_n;
+}
+
+static void kbo_cbt_track_top_salary(KboCbtTeamPayroll* team, int32_t salary, uint32_t top_n)
+{
+    if (team == NULL || salary <= 0) {
+        return;
+    }
+
+    if (team->domestic_count < (int)top_n) {
+        team->domestic_salaries[team->domestic_count++] = salary;
+        return;
+    }
+
+    int min_index = 0;
+    int32_t min_salary = team->domestic_salaries[0];
+    for (int i = 1; i < team->domestic_count; i++) {
+        if (team->domestic_salaries[i] < min_salary) {
+            min_salary = team->domestic_salaries[i];
+            min_index = i;
+        }
+    }
+
+    if (salary > min_salary) {
+        team->domestic_salaries[min_index] = salary;
+    }
+}
+
+static int32_t kbo_cbt_adjust_salary_for_exception(
+    const KboFaSalarySnapshotGrade* grade,
+    const KboCbtExceptionDesignation* exceptions,
+    int exception_count,
+    uint32_t season,
+    int32_t* out_credit)
+{
+    if (out_credit != NULL) {
+        *out_credit = 0;
+    }
+    if (grade == NULL || grade->salary <= 0 || grade->player_key[0] == '\0') {
+        return grade != NULL ? grade->salary : 0;
+    }
+    if (kbo_cbt_exception_find_designation(
+            exceptions,
+            exception_count,
+            season,
+            grade->ranking_team_id,
+            grade->player_key) < 0) {
+        return grade->salary;
+    }
+    int32_t credit = grade->salary / 2;
+    if (out_credit != NULL) {
+        *out_credit = credit;
+    }
+    return grade->salary - credit;
+}
+
 static void kbo_cbt_compute_team_payrolls(
     const KboFaSalarySnapshotGrade* grades,
     int grade_count,
+    uint32_t season,
+    const KboCbtExceptionDesignation* exceptions,
+    int exception_count,
     uint32_t top_n,
     KboCbtTeamPayroll* teams,
     int* team_count_out)
 {
     *team_count_out = 0;
 
-    KboCbtTeamPayroll scratch[KBO_CBT_TEAM_MAX];
-    memset(scratch, 0, sizeof(scratch));
+    uint32_t effective_top_n = kbo_cbt_effective_top_n(top_n);
+    KboCbtTeamPayroll* scratch = (KboCbtTeamPayroll*)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        (SIZE_T)KBO_CBT_TEAM_MAX * sizeof(KboCbtTeamPayroll));
+    if (scratch == NULL) {
+        append_log_line("KBO CBT skipped reason=team_scratch_alloc_failed");
+        return;
+    }
+
     int team_count = 0;
 
     for (int i = 0; i < grade_count; i++) {
@@ -46,124 +116,36 @@ static void kbo_cbt_compute_team_payrolls(
         }
 
         KboCbtTeamPayroll* tp = &scratch[ti];
-        if (tp->domestic_count < KBO_CBT_SALARY_SCRATCH_MAX) {
-            tp->domestic_salaries[tp->domestic_count++] = g->salary;
-        }
+        int32_t exception_credit = 0;
+        int32_t adjusted_salary = kbo_cbt_adjust_salary_for_exception(
+            g,
+            exceptions,
+            exception_count,
+            season,
+            &exception_credit);
+        tp->exception_credit += exception_credit;
+        kbo_cbt_track_top_salary(tp, adjusted_salary, effective_top_n);
     }
 
     for (int i = 0; i < team_count; i++) {
         KboCbtTeamPayroll* tp = &scratch[i];
-        qsort(tp->domestic_salaries, (size_t)tp->domestic_count,
-            sizeof(tp->domestic_salaries[0]), kbo_cbt_salary_compare_desc);
-
-        int take = tp->domestic_count < (int)top_n ? tp->domestic_count : (int)top_n;
         int32_t sum = 0;
-        for (int j = 0; j < take; j++) {
+        for (int j = 0; j < tp->domestic_count; j++) {
             sum += tp->domestic_salaries[j];
         }
         tp->top_n_sum = sum;
         teams[i] = *tp;
     }
     *team_count_out = team_count;
-}
-
-static void __attribute__((unused)) kbo_cbt_insert_violation_news(
-    uint32_t league_id,
-    uint32_t year,
-    uint32_t month,
-    uint32_t day,
-    const KboCbtRecord* rec,
-    const KboCbtRules* rules)
-{
-    if (league_id == 0u || rec == NULL || rules == NULL) {
-        return;
-    }
-
-    char title[256] = {0};
-    snprintf(title, sizeof(title),
-        "[경쟁균형세] %s 초과 — %u시즌",
-        rec->team_name[0] != '\0' ? rec->team_name : "팀",
-        rec->season);
-
-    int draft_penalty = (int)rec->consecutive_count >= (int)rules->draft_penalty_min_consecutive;
-
-    char body[1024] = {0};
-    snprintf(body, sizeof(body),
-        "%s 구단이 %u 시즌 경쟁균형세 상한(%d)을 초과하였습니다.\n\n"
-        "페이롤: %d\n"
-        "초과액: %d\n"
-        "세율: %u%%\n"
-        "납부액: %d\n"
-        "연속 초과: %u회%s",
-        rec->team_name[0] != '\0' ? rec->team_name : "해당 팀",
-        rec->season,
-        rec->threshold,
-        rec->payroll,
-        rec->overage,
-        rec->tax_rate_pct,
-        rec->tax_amount,
-        rec->consecutive_count,
-        draft_penalty
-            ? "\n\n드래프트 1라운드 지명권 9단계 하락 페널티 적용 (수동 조정 필요)"
-            : "");
-
-    insert_kbo_league_news_sql(year, month, day, league_id, 2u, title, body, "cbt_violation");
-    insert_kbo_league_news_table_sql(year, month, day, league_id, title, body, "cbt_violation");
-}
-
-static void kbo_cbt_insert_violation_news_v2(
-    uint32_t league_id,
-    uint32_t year,
-    uint32_t month,
-    uint32_t day,
-    const KboCbtRecord* rec,
-    const KboCbtRules* rules)
-{
-    if (league_id == 0u || rec == NULL || rules == NULL) {
-        return;
-    }
-
-    const char* team_name = rec->team_name[0] != '\0' ? rec->team_name : "Team";
-
-    char title[256] = {0};
-    snprintf(title, sizeof(title),
-        "[KBO CBT] %s exceeds %u cap",
-        team_name,
-        rec->season);
-
-    int draft_penalty = (int)rec->consecutive_count >= (int)rules->draft_penalty_min_consecutive;
-
-    char penalty_text[192] = {0};
-    if (draft_penalty) {
-        snprintf(penalty_text, sizeof(penalty_text),
-            "\n\nDraft penalty: amateur assignment priority is lowered by %u stages.",
-            rules->draft_penalty_stages);
-    }
-
-    char body[1024] = {0};
-    snprintf(body, sizeof(body),
-        "%s exceeded the KBO competitive balance tax threshold for the %u season.\n\n"
-        "Payroll: %d\n"
-        "Threshold: %d\n"
-        "Overage: %d\n"
-        "Tax rate: %u%%\n"
-        "Tax due: %d\n"
-        "Consecutive overage seasons: %u%s",
-        team_name,
-        rec->season,
-        rec->payroll,
-        rec->threshold,
-        rec->overage,
-        rec->tax_rate_pct,
-        rec->tax_amount,
-        rec->consecutive_count,
-        penalty_text);
-
-    insert_kbo_league_news_sql(year, month, day, league_id, 2u, title, body, "cbt_violation");
-    insert_kbo_league_news_table_sql(year, month, day, league_id, title, body, "cbt_violation");
+    HeapFree(GetProcessHeap(), 0, scratch);
 }
 
 void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
+{
+    kbo_process_competitive_balance_tax_for_date(season, 0u, source);
+}
+
+void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news_yyyymmdd, const char* source)
 {
     if (season < 1982u || season > 2200u) {
         return;
@@ -215,14 +197,26 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
     }
 
     /* Compute per-team domestic payroll (top N) */
-    KboCbtTeamPayroll teams[KBO_CBT_TEAM_MAX];
-    memset(teams, 0, sizeof(teams));
+    KboCbtTeamPayroll* teams = (KboCbtTeamPayroll*)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        (SIZE_T)KBO_CBT_TEAM_MAX * sizeof(KboCbtTeamPayroll));
+    if (teams == NULL) {
+        append_logf("KBO CBT skipped season=%u source=%s reason=team_alloc_failed", season, source != NULL ? source : "");
+        HeapFree(GetProcessHeap(), 0, grades);
+        return;
+    }
+
     int team_count = 0;
-    kbo_cbt_compute_team_payrolls(grades, grade_count, rules.top_player_count, teams, &team_count);
+    kbo_cbt_exception_auto_designate_missing(season, source != NULL ? source : "cbt_process");
+    KboCbtExceptionDesignation exceptions[KBO_CBT_EXCEPTION_MAX];
+    int exception_count = kbo_cbt_exception_load_designations(exceptions, KBO_CBT_EXCEPTION_MAX);
+    kbo_cbt_compute_team_payrolls(grades, grade_count, season, exceptions, exception_count, rules.top_player_count, teams, &team_count);
     HeapFree(GetProcessHeap(), 0, grades);
 
     if (team_count == 0) {
         append_logf("KBO CBT skipped season=%u source=%s reason=no_teams", season, source != NULL ? source : "");
+        HeapFree(GetProcessHeap(), 0, teams);
         return;
     }
 
@@ -231,6 +225,7 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
         GetProcessHeap(), HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_CBT_RECORDS_MAX * sizeof(KboCbtRecord));
     if (records == NULL) {
+        HeapFree(GetProcessHeap(), 0, teams);
         return;
     }
     int record_count = kbo_cbt_load_records(records, KBO_CBT_RECORDS_MAX, NULL, 0);
@@ -238,6 +233,7 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
     uint32_t year = season;
     uint32_t month = 4u;
     uint32_t day = 1u;
+    kbo_cbt_news_date(season, news_yyyymmdd, &year, &month, &day);
     uint32_t league_id = kbo_resolve_kbo_league_id();
 
     int new_violations = 0;
@@ -268,6 +264,7 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
         rec.tax_amount       = tax_amount;
         rec.consecutive_count = consecutive_count;
         rec.processed_date   = year * 10000u + month * 100u + day;
+        kbo_cbt_copy_team_name(team_id, rec.team_name, sizeof(rec.team_name));
 
         if (record_count < KBO_CBT_RECORDS_MAX) {
             records[record_count++] = rec;
@@ -277,9 +274,10 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
             new_violations++;
             int draft_penalty = (int)consecutive_count >= (int)rules.draft_penalty_min_consecutive;
             append_logf(
-                "KBO CBT violation season=%u team=%u payroll=%d threshold=%d overage=%d rate=%u%% tax=%d consecutive=%u draft_penalty=%d source=%s",
+                "KBO CBT violation season=%u team=%u payroll=%d threshold=%d overage=%d rate=%u%% tax=%d consecutive=%u draft_penalty=%d exception_credit=%d source=%s",
                 season, team_id, payroll, threshold, overage,
                 tax_rate, tax_amount, consecutive_count, draft_penalty,
+                teams[i].exception_credit,
                 source != NULL ? source : "");
 
             if (league_id != 0u) {
@@ -287,14 +285,29 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
             }
         } else {
             append_logf(
-                "KBO CBT clean season=%u team=%u payroll=%d threshold=%d source=%s",
+                "KBO CBT clean season=%u team=%u payroll=%d threshold=%d exception_credit=%d source=%s",
                 season, team_id, payroll, threshold,
+                teams[i].exception_credit,
                 source != NULL ? source : "");
         }
     }
 
     kbo_cbt_save_records(records, record_count);
+    if (league_id != 0u) {
+        kbo_cbt_insert_opening_day_summary_news(
+            league_id,
+            year,
+            month,
+            day,
+            season,
+            records,
+            record_count,
+            team_count,
+            &rules);
+    }
+    kbo_request_hotkey_window_refresh("competitive_balance_tax_processed");
     HeapFree(GetProcessHeap(), 0, records);
+    HeapFree(GetProcessHeap(), 0, teams);
 
     append_logf(
         "KBO CBT processed season=%u teams=%d violations=%d threshold=%d source=%s",

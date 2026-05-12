@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
@@ -205,6 +206,36 @@ int kbo_nation_is_asian_quota_candidate(uint32_t nation_id)
     return 0;
 }
 
+static int32_t kbo_player_asian_quota_salary(uint8_t* player)
+{
+    if (player == NULL
+            || !memory_range_readable(player + OOTP27_PLAYER_CONTRACT_START_YEAR_OFFSET, sizeof(int32_t))
+            || !memory_range_readable(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET, OOTP27_PLAYER_CONTRACT_SALARY_YEARS * sizeof(int32_t))) {
+        return 0;
+    }
+
+    int32_t y1_salary = *(int32_t*)(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET);
+    if (y1_salary > 0) {
+        return y1_salary;
+    }
+
+    if (memory_range_readable(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET, sizeof(int32_t))) {
+        int32_t demand = *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET);
+        if (demand > 0) {
+            return demand;
+        }
+    }
+
+    for (uint32_t i = 1; i < OOTP27_PLAYER_CONTRACT_SALARY_YEARS; i++) {
+        int32_t salary = *(int32_t*)(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET + (i * sizeof(int32_t)));
+        if (salary > 0) {
+            return salary;
+        }
+    }
+
+    return 0;
+}
+
 #define KBO_FOREIGN_INJURY_SLOT_REGULAR         1
 #define KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA     2
 
@@ -213,6 +244,10 @@ int kbo_player_is_asian_quota_candidate(uint8_t* player)
     if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
         return 0;
     }
-    return kbo_nation_is_asian_quota_candidate(*(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET));
+    if (!kbo_nation_is_asian_quota_candidate(*(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET))) {
+        return 0;
+    }
+    int32_t salary = kbo_player_asian_quota_salary(player);
+    return salary > 0 && salary <= kbo_get_asian_quota_salary_limit();
 }
 

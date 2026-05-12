@@ -8,20 +8,24 @@ int kbo_fast_block_fa_candidate_before_original(
     const char* context,
     uint32_t* out_player_id)
 {
+    KBO_PROFILE_BEGIN(profile_fa_fast_block);
     if (out_player_id != NULL) {
         *out_player_id = 0u;
     }
     if (!kbo_fix_enabled() || requesting_team_id <= 0) {
+        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.disabled");
         return 0;
     }
 
     uint32_t requester_team_id = (uint32_t)requesting_team_id;
     if (kbo_military_fa_candidate_fast_block(player_ptr, requester_team_id, context, out_player_id)) {
+        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.military");
         return 1;
     }
 
     if (player_ptr == 0 || !kbo_player_pointer_plausible(player_ptr)
             || !memory_range_readable((void*)(player_ptr + OOTP27_PLAYER_ID_OFFSET), sizeof(uint32_t))) {
+        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.bad_player");
         return 0;
     }
 
@@ -31,11 +35,13 @@ int kbo_fast_block_fa_candidate_before_original(
         *out_player_id = player_id;
     }
     if (player_id == 0u) {
+        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.bad_player_id");
         return 0;
     }
 
     uint32_t today = 0u;
     if (!kbo_get_foreign_waiver_current_yyyymmdd(&today)) {
+        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.no_date");
         return 0;
     }
 
@@ -62,6 +68,7 @@ int kbo_fast_block_fa_candidate_before_original(
             } else if (slot == 41) {
                 append_log_line("FA fast-block foreign_reserve log suppressed after 40 entries");
             }
+            KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.reserve_blocked");
             return 1;
         }
     }
@@ -99,10 +106,12 @@ int kbo_fast_block_fa_candidate_before_original(
             } else if (slot == 41) {
                 append_log_line("FA fast-block custom_foreign_policy log suppressed after 40 entries");
             }
+            KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.custom_blocked");
             return 1;
         }
     }
 
+    KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.allowed");
     return 0;
 }
 
