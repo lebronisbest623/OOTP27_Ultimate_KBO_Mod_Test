@@ -43,35 +43,14 @@ DWORD WINAPI patch_thread(LPVOID parameter)
 
     install_kbo_early_foreign_policy_hooks_once("presave_bootstrap");
     install_kbo_early_no_minor_contract_hooks_once("presave_bootstrap");
-    if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_research_hooks.txt")) {
+    if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")) {
         install_kbo_military_team_add_guard_patch();
-        install_kbo_foreign_roster_move_trace_patches();
-        install_kbo_player_team_assignment_trace_patches();
-        install_kbo_player_eval_double_trace_patch();
-        install_kbo_ai_player_quality_trace_patch();
-        install_kbo_ai_roster_role_check_trace_patch();
-        install_kbo_ai_roster_post_sort_gate_score_trace_patch();
-        install_kbo_ai_roster_f65_update_trace_patch();
-        install_kbo_ai_roster_eligibility_trace_patch();
-        install_kbo_ai_roster_availability_trace_patch();
-        install_kbo_ai_team_player_fit_trace_patch();
-        install_kbo_player_team_status_lookup_trace_patch();
-        install_kbo_player_default_status_lookup_trace_patch();
-        install_kbo_pointer_vector_push_trace_patch();
-        install_kbo_pointer_vector_sort_trace_patch();
-        install_kbo_ai_roster_priority_compare_patch();
-        install_kbo_ai_roster_type_compare_patch();
-        install_kbo_ai_roster_score_compare_patch();
         install_kbo_ai_roster_select_trace_patch();
         install_kbo_ai_roster_primary_apply_flow_trace_patch();
-        install_kbo_ai_roster_secondary_main_flow_trace_patch();
-        install_kbo_ai_roster_secondary_alt_flow_trace_patch();
-        install_kbo_ai_roster_mark_selected_trace_patch();
-        install_kbo_ai_roster_selection_reconcile_trace_patch();
         install_kbo_ai_roster_apply_selection_trace_patch();
         start_kbo_foreign_roster_daily_audit_thread();
     } else {
-        append_log_line("KBO foreign AI roster research hooks skipped: enable_foreign_ai_roster_research_hooks is false");
+        append_log_line("KBO foreign AI roster management skipped: enable_foreign_ai_roster_management is false");
     }
     if (!read_kbo_localappdata_flag_file("disable_amateur_assignment_reroute.txt")) {
         install_kbo_amateur_assignment_batch_probe_patch();
@@ -129,39 +108,27 @@ DWORD WINAPI patch_thread(LPVOID parameter)
     return 0;
 }
 
-static DWORD WINAPI kbo_hot_reinject_ai_roster_trace_thread(LPVOID parameter)
+static DWORD WINAPI kbo_hot_reinject_ai_roster_management_thread(LPVOID parameter)
 {
     (void)parameter;
 
-    append_log_line("KBO hot reinject AI roster trace requested");
+    append_log_line("KBO hot reinject foreign AI roster management requested");
     if (!read_kbo_localappdata_flag_file("enable_experimental_runtime_hooks.txt")) {
-        append_log_line("KBO hot reinject AI roster trace skipped: experimental runtime hooks disabled");
+        append_log_line("KBO hot reinject foreign AI roster management skipped: experimental runtime hooks disabled");
         return 0;
     }
 
     if (!verify_ootp_build()) {
-        append_log_line("KBO hot reinject AI roster trace skipped: build verification failed");
+        append_log_line("KBO hot reinject foreign AI roster management skipped: build verification failed");
         return 0;
     }
 
-    if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_reconcile_trace.txt")) {
-        install_kbo_ai_roster_selection_reconcile_trace_patch();
-    }
-    if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_roster_flow_trace.txt")) {
-        install_kbo_ai_roster_primary_apply_flow_trace_patch();
-        install_kbo_ai_roster_secondary_main_flow_trace_patch();
-        install_kbo_ai_roster_secondary_alt_flow_trace_patch();
-        install_kbo_ai_roster_mark_selected_trace_patch();
-    }
-    if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_availability_trace.txt")) {
-        install_kbo_ai_roster_availability_trace_patch();
-    }
-    if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_player_team_assignment_trace.txt")) {
-        install_kbo_military_team_add_guard_patch();
-        install_kbo_foreign_roster_move_trace_patches();
-        install_kbo_player_team_assignment_trace_patches();
-    }
-    append_log_line("KBO hot reinject AI roster trace finished");
+    install_kbo_military_team_add_guard_patch();
+    install_kbo_ai_roster_select_trace_patch();
+    install_kbo_ai_roster_primary_apply_flow_trace_patch();
+    install_kbo_ai_roster_apply_selection_trace_patch();
+    start_kbo_foreign_roster_daily_audit_thread();
+    append_log_line("KBO hot reinject foreign AI roster management finished");
     return 0;
 }
 
@@ -182,13 +149,11 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
         if (g_kbo_process_instance_mutex != NULL && GetLastError() == ERROR_ALREADY_EXISTS) {
             CloseHandle(g_kbo_process_instance_mutex);
             g_kbo_process_instance_mutex = NULL;
-            if (read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_reconcile_trace.txt")
-                    || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_roster_flow_trace.txt")
-                    || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_availability_trace.txt")
-                    || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_player_team_assignment_trace.txt")) {
-                HANDLE thread = CreateThread(NULL, 0, kbo_hot_reinject_ai_roster_trace_thread, instance, 0, NULL);
+            if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")
+                    || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_roster_flow_trace.txt")) {
+                HANDLE thread = CreateThread(NULL, 0, kbo_hot_reinject_ai_roster_management_thread, instance, 0, NULL);
                 if (thread != NULL) {
-                    kbo_register_runtime_thread(thread, "hot reinject AI roster trace");
+                    kbo_register_runtime_thread(thread, "hot reinject foreign AI roster management");
                 }
             }
             return TRUE;

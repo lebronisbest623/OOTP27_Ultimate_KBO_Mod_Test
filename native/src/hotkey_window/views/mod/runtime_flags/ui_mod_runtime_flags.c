@@ -41,7 +41,7 @@ static const KboModRuntimeFlagSetting KBO_MOD_RUNTIME_FLAG_SETTINGS[] = {
     { "enable_intl_established_fa_quality_probe_patch", "International FA quality probe", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_kbo_season_phase_monitor", "Season phase monitor", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
 
-    { "enable_foreign_ai_roster_research_hooks", "Foreign AI roster research hooks", 1, 0, NULL, KBO_MOD_FLAG_DIAGNOSTIC },
+    { "enable_foreign_ai_roster_management", "Foreign AI roster management", 1, 0, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_amateur_assignment_verbose_log", "Amateur assignment verbose log", 1, 0, NULL, KBO_MOD_FLAG_DIAGNOSTIC },
 
     { "enable_fa_requalification", "FA requalification", 1, 0, NULL, KBO_MOD_FLAG_LEGACY },

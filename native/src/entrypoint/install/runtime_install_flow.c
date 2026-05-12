@@ -519,7 +519,6 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     if (enable_sangmu_fa_block_core || enable_fa_compensation_core || enable_amateur_assignment_core) {
         if (!read_kbo_localappdata_flag_file("disable_kbo_military_team_add_guard_patch.txt")) {
             install_kbo_military_team_add_guard_patch();
-            install_kbo_foreign_roster_move_trace_patches();
         } else {
             append_log_line("KBO military team-add guard patch disabled: kbo_flags.json disable_kbo_military_team_add_guard_patch is true");
         }
@@ -651,9 +650,6 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
                     && !read_kbo_localappdata_flag_file("disable_kbo_military_team_add_guard_patch.txt")) {
                 append_log_line("KBO early amateur team-add guard installing after roster marker");
                 early_amateur_team_add_guard_installed = install_kbo_military_team_add_guard_patch();
-                if (early_amateur_team_add_guard_installed) {
-                    install_kbo_foreign_roster_move_trace_patches();
-                }
             }
 
             uint32_t today_serial = kbo_current_date_serial();
