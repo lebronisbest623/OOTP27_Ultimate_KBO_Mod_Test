@@ -42,6 +42,7 @@ internal static partial class KboFlags
         new("enable_fa_requalification", null, true, RuntimeFlagLifecycle.Legacy),
         new("enable_foreign_waiver_ai", true, true, RuntimeFlagLifecycle.User),
         new("enable_foreign_waiver_background_scanner", true, true, RuntimeFlagLifecycle.Recovery),
+        new("enable_foreign_ai_roster_research_hooks", false, true, RuntimeFlagLifecycle.Diagnostic),
         new("enable_foreign_waiver_event_probe", null, true, RuntimeFlagLifecycle.Diagnostic),
         new("enable_intl_established_fa_quality_probe_patch", true, true, RuntimeFlagLifecycle.Recovery),
         new("enable_kbo_ai_fa_fallback_patch", true, true, RuntimeFlagLifecycle.Recovery),

@@ -16,12 +16,14 @@
 #include "../../../core/news/live/core_live_news.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../runtime_memory/runtime_memory.h"
+#include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/names/team_name_cache.h"
 #include "../../common/csv/foreign_csv_parse.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../../common/policy/foreign_waiver_policy.h"
+#include "../../replacement_seed/api/foreign_replacement_seed.h"
 #include "../paths/foreign_injury_paths.h"
 #ifndef KBO_FOREIGN_INJURY_SLOT_REGULAR
 #define KBO_FOREIGN_INJURY_SLOT_REGULAR         1

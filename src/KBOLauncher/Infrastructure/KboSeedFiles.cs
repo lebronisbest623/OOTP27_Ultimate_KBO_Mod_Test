@@ -65,6 +65,47 @@ internal static class KboSeedFiles
         ]);
     }
 
+    public static void RemoveRetiredBundledKboDataFileIfUnchanged(string fileName, string label)
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localDir = Path.Combine(local, "OOTP-KBO");
+        RemoveRetiredBundledKboDataFileIfUnchanged(localDir, fileName, label);
+    }
+
+    internal static void RemoveRetiredBundledKboDataFileIfUnchanged(string localDir, string fileName, string label)
+    {
+        var localPath = Path.Combine(localDir, fileName);
+        if (!File.Exists(localPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var meaningfulLines = File.ReadAllLines(localPath)
+                .Select(line => line.Trim())
+                .Where(line => line.Length > 0 && !line.StartsWith("#", StringComparison.Ordinal) && !line.StartsWith(";", StringComparison.Ordinal))
+                .ToArray();
+
+            var isRetiredForeignReplacementSeed = string.Equals(fileName, "foreign_replacement_players_seed.csv", StringComparison.OrdinalIgnoreCase)
+                && meaningfulLines.All(line =>
+                    line.StartsWith("verhadr01,", StringComparison.OrdinalIgnoreCase)
+                    || line.StartsWith("olougja01,", StringComparison.OrdinalIgnoreCase));
+
+            if (!isRetiredForeignReplacementSeed)
+            {
+                return;
+            }
+
+            File.Delete(localPath);
+            Console.WriteLine($"{label}: removed retired bundled seed {localPath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to remove retired {fileName}: {ex.Message}");
+        }
+    }
+
     internal static void EnsureBundledKboDataFile(
         string localDir,
         string fileName,

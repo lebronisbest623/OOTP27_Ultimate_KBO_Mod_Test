@@ -19,7 +19,8 @@ internal static partial class LauncherApp
         EnsureBundledKboDataFile("asian_games_projected_hosts.csv", "Asian Games projected host seed");
         EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
         EnsureBundledKboDataFile("fa_rules.json", "FA rules");
-        EnsureBundledKboDataFile("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
+        EnsureBundledKboDataFile("foreign_injury_replacements_seed.csv", "Foreign injury replacement seed");
+        RemoveRetiredBundledKboDataFileIfUnchanged("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
         EnsureBundledKboDataFile("college_reputation_seed.csv", "College reputation seed");
         EnsureBundledKboDataFile("high_school_reputation_seed.csv", "High-school reputation seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");

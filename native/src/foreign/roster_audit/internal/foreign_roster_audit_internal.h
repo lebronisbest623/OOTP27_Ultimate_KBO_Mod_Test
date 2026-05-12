@@ -15,6 +15,7 @@
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
+#include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../paths/foreign_roster_audit_paths.h"
 #define KBO_FOREIGN_ROSTER_AUDIT_MAX 8192
@@ -39,6 +40,7 @@ extern KboForeignRosterAuditState g_kbo_foreign_roster_audit[KBO_FOREIGN_ROSTER_
 extern int g_kbo_foreign_roster_audit_count;
 extern uint32_t g_kbo_foreign_roster_audit_generation;
 extern char g_kbo_foreign_roster_audit_save_path[MAX_PATH];
+extern LONG g_kbo_foreign_roster_daily_audit_started;
 
 int kbo_foreign_roster_audit_csv_empty(HANDLE file);
 uint32_t kbo_foreign_roster_audit_get_player_original_team_id(uint8_t* player);
@@ -67,5 +69,7 @@ void kbo_write_foreign_roster_snapshot_row(
     const KboForeignRosterAuditState* state);
 HANDLE kbo_open_foreign_roster_snapshot_file(void);
 void audit_foreign_roster_state(const char* source, int write_snapshot);
+DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter);
+void start_kbo_foreign_roster_daily_audit_thread(void);
 
 #endif

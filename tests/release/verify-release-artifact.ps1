@@ -30,7 +30,7 @@ $requiredFiles = @(
     "data\seeds\asian_games_schedule_seed.csv",
     "data\seeds\college_reputation_seed.csv",
     "data\seeds\fa_rules.json",
-    "data\seeds\foreign_replacement_players_seed.csv",
+    "data\seeds\foreign_injury_replacements_seed.csv",
     "data\seeds\high_school_reputation_seed.csv",
     "data\seeds\military_service_seed.csv",
     "tools\kbo_optimizer.exe",

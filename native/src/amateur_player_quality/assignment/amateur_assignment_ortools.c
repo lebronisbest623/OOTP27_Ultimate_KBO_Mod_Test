@@ -208,14 +208,15 @@ static int kbo_amateur_ortools_write_request(
     int32_t target_max_players = kbo_amateur_assignment_target_max_players(league_id);
     fprintf(
         file,
-        "player_id,league_id,age,quality_score,player_tier,target_reputation,current_team_id,current_reputation,target_max_players,team_id,reputation,team_tier,player_count,hitter_count,rejected\r\n");
+        "player_id,league_id,age,quality_score,player_tier,target_reputation,current_team_id,current_reputation,target_max_players,team_id,reputation,team_tier,player_count,hitter_count,rejected,draft_penalty_stages\r\n");
 
     for (int i = 0; i < count; i++) {
         int team_tier = kbo_amateur_assignment_team_tier(league_id, candidates[i].reputation);
         int rejected = kbo_amateur_assignment_target_rejected(league_id, candidates[i].team_id);
+        int draft_penalty = kbo_cbt_draft_penalty_stages_for_team(candidates[i].team_id);
         fprintf(
             file,
-            "%u,%u,%d,%d,%d,%d,%u,%u,%d,%u,%u,%d,%d,%d,%d\r\n",
+            "%u,%u,%d,%d,%d,%d,%u,%u,%d,%u,%u,%d,%d,%d,%d,%d\r\n",
             player_id,
             league_id,
             (int)age,
@@ -230,7 +231,8 @@ static int kbo_amateur_ortools_write_request(
             team_tier,
             candidates[i].player_count,
             candidates[i].hitter_count,
-            rejected);
+            rejected,
+            draft_penalty);
     }
 
     fclose(file);
@@ -344,7 +346,7 @@ static int kbo_amateur_ortools_write_batch_request(
 
     fprintf(
         file,
-        "player_id,league_id,age,quality_score,player_tier,target_reputation,current_team_id,current_reputation,is_hitter,role_bucket,position_group,position_role,source_batch_count,source_hitter_batch_count,source_pitcher_batch_count,source_catcher_batch_count,source_infielder_batch_count,source_outfielder_batch_count,source_first_base_batch_count,source_second_base_batch_count,source_third_base_batch_count,source_shortstop_batch_count,source_left_field_batch_count,source_center_field_batch_count,source_right_field_batch_count,source_designated_hitter_batch_count,target_max_players,team_id,reputation,team_tier,player_count,hitter_count,pitcher_count,catcher_count,infielder_count,outfielder_count,first_base_count,second_base_count,third_base_count,shortstop_count,left_field_count,center_field_count,right_field_count,designated_hitter_count,rejected,batch_mode\r\n");
+        "player_id,league_id,age,quality_score,player_tier,target_reputation,current_team_id,current_reputation,is_hitter,role_bucket,position_group,position_role,source_batch_count,source_hitter_batch_count,source_pitcher_batch_count,source_catcher_batch_count,source_infielder_batch_count,source_outfielder_batch_count,source_first_base_batch_count,source_second_base_batch_count,source_third_base_batch_count,source_shortstop_batch_count,source_left_field_batch_count,source_center_field_batch_count,source_right_field_batch_count,source_designated_hitter_batch_count,target_max_players,team_id,reputation,team_tier,player_count,hitter_count,pitcher_count,catcher_count,infielder_count,outfielder_count,first_base_count,second_base_count,third_base_count,shortstop_count,left_field_count,center_field_count,right_field_count,designated_hitter_count,rejected,batch_mode,draft_penalty_stages\r\n");
 
     int written_players = 0;
     for (int32_t p = 0; p < player_count; p++) {
@@ -413,13 +415,14 @@ static int kbo_amateur_ortools_write_batch_request(
             if (rejected) {
                 continue;
             }
+            int draft_penalty = kbo_cbt_draft_penalty_stages_for_team(candidates[i].team_id);
             if (!wrote_player) {
                 written_players++;
                 wrote_player = 1;
             }
             fprintf(
                 file,
-                "%u,%u,%d,%d,%d,%d,%u,%u,%d,%s,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\r\n",
+                "%u,%u,%d,%d,%d,%d,%u,%u,%d,%s,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d\r\n",
                 player_id,
                 league_id,
                 (int)age,
@@ -465,7 +468,8 @@ static int kbo_amateur_ortools_write_batch_request(
                 candidates[i].right_field_count,
                 candidates[i].designated_hitter_count,
                 rejected,
-                incoming_batch ? "incoming" : "roster");
+                incoming_batch ? "incoming" : "roster",
+                draft_penalty);
         }
     }
 

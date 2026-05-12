@@ -4,6 +4,8 @@
 #include <windows.h>
 
 #include "../../bootstrap/profiling/profiler.h"
+#include "../../competitive_balance_tax/api/competitive_balance_tax.h"
+#include "../../competitive_balance_tax/records/cbt_records.h"
 #include "../../core/dates/core_current_date.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
@@ -20,10 +22,16 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
     uint32_t last_log_date = 0u;
     uint32_t last_log_opening_day = 0u;
     uint32_t captured_season = 0u;
+    uint32_t cbt_backfill_done_season = 0u;
     uint32_t cached_message_date = 0u;
     int cached_message_found = 0;
     DWORD cached_message_checked_ms = 0u;
     uint32_t quiet_opening_unavailable_year = 0u;
+    /* Per-tick caches to avoid repeated file I/O and memory scans. */
+    uintptr_t cached_league_ptr = 0u;
+    uint32_t cached_league_ptr_year = 0u;
+    uint32_t cached_schedule_year = 0u;
+    uint32_t cached_schedule_opening_day = 0u;
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue(KBO_FA_SALARY_SNAPSHOT_THREAD_SLEEP_MS)) {
             break;
@@ -49,10 +57,29 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
         uint32_t date = year * 10000u + month * 100u + day;
 
         uint32_t league_id = kbo_resolve_kbo_league_id();
-        uintptr_t league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);
+
+        /* Cache league_ptr per season: kbo_find_league_ptr_from_global_vectors
+         * scans 18 memory regions per call which adds up when called every second. */
+        uintptr_t league_ptr = 0u;
+        if (cached_league_ptr_year == year && cached_league_ptr != 0u) {
+            league_ptr = cached_league_ptr;
+        } else {
+            league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);
+            if (league_ptr != 0u) {
+                cached_league_ptr = league_ptr;
+                cached_league_ptr_year = year;
+            }
+        }
+
         uint32_t opening_day = 0u;
         if (league_ptr == 0 || !kbo_fa_salary_snapshot_read_opening_day(league_ptr, &opening_day)) {
-            if (kbo_fa_salary_snapshot_load_schedule_opening_day(year, &opening_day)) {
+            /* Cache schedule file result: reading the LSDL file every second is
+             * wasteful; the schedule doesn't change during a session. */
+            if (cached_schedule_year == year && cached_schedule_opening_day != 0u) {
+                opening_day = cached_schedule_opening_day;
+            } else if (kbo_fa_salary_snapshot_load_schedule_opening_day(year, &opening_day)) {
+                cached_schedule_year = year;
+                cached_schedule_opening_day = opening_day;
                 if (date != last_log_date || opening_day != last_log_opening_day) {
                     append_logf(
                         "KBO FA salary snapshot opening day fallback date=%u opening_day=%u league=%u source=schedule",
@@ -120,6 +147,21 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
 
         if (captured_season == year || kbo_fa_salary_snapshot_file_exists(year)) {
             captured_season = year;
+            if (cbt_backfill_done_season != year) {
+                cbt_backfill_done_season = year;
+                KboCbtRecord cbt_check[KBO_CBT_RECORDS_MAX];
+                int cbt_count = kbo_cbt_load_records(cbt_check, KBO_CBT_RECORDS_MAX, NULL, 0);
+                int has_record = 0;
+                for (int ci = 0; ci < cbt_count; ci++) {
+                    if (cbt_check[ci].season == year) { has_record = 1; break; }
+                }
+                if (!has_record) {
+                    append_logf(
+                        "KBO FA salary snapshot CBT backfill date=%u season=%u reason=snapshot_exists_cbt_missing",
+                        date, year);
+                    kbo_process_competitive_balance_tax(year, "snapshot_thread_cbt_backfill");
+                }
+            }
             if (profile_snapshot_thread_tick_active) {
                 kbo_profiler_end("fa_salary_snapshot.thread.already_captured", &profile_snapshot_thread_tick);
             }

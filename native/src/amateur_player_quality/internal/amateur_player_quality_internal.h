@@ -18,6 +18,7 @@
 #include "../../team/add_player_guard/team_add_player_guard.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_string.h"
+#include "../../competitive_balance_tax/draft/cbt_draft_penalty.h"
 
 extern KboAmateurReputationSeed g_kbo_amateur_reputation_seeds[KBO_AMATEUR_REPUTATION_SEED_MAX];
 extern int g_kbo_amateur_reputation_seed_count;

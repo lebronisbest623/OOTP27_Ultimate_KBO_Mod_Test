@@ -277,17 +277,11 @@ DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
 {
     (void)parameter;
     append_log_line("KBO military service day tick thread started");
-    uint32_t last_foreign_roster_audit_date = 0u;
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue(5000)) {
             break;
         }
         kbo_tick_military_service_days("military_days_tick", NULL);
-        uint32_t today_serial = kbo_current_date_serial();
-        if (today_serial != 0u && today_serial != last_foreign_roster_audit_date) {
-            audit_foreign_roster_state("foreign_roster_daily_date_change", 1);
-            last_foreign_roster_audit_date = today_serial;
-        }
     }
     InterlockedExchange(&g_military_days_tick_started, 0);
     append_log_line("KBO military service day tick thread stopped");

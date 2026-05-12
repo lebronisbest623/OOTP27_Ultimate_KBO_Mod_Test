@@ -232,7 +232,38 @@ void kbo_emit_foreign_injury_replacement_news(
 
     char title[128] = {0};
     char body[1024] = {0};
-    if (phase != NULL && strcmp(phase, "pending") == 0) {
+    if (phase != NULL && strcmp(phase, "closed") == 0) {
+        char replacement_name[96] = {0};
+        uint8_t* replacement = kbo_find_player_by_id(rec->replacement_player_id, NULL, NULL);
+        if (replacement != NULL) {
+            kbo_copy_player_display_name(replacement, replacement_name, sizeof(replacement_name));
+        }
+        if (replacement_name[0] == '\0' && rec->replacement_player_id != 0u) {
+            snprintf(replacement_name, sizeof(replacement_name), "Player #%u", rec->replacement_player_id);
+        }
+        snprintf(title, sizeof(title), "[KBO] Foreign Injury Replacement Window Closed");
+        if (rec->replacement_player_id != 0u) {
+            snprintf(
+                body,
+                sizeof(body),
+                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> is no longer listed as unavailable.\n\nThe temporary replacement <%s:player#%u> has been removed from the club's active foreign-player slot.",
+                rec->team_id,
+                rec->team_id,
+                player_name,
+                rec->injured_player_id,
+                replacement_name,
+                rec->replacement_player_id);
+        } else {
+            snprintf(
+                body,
+                sizeof(body),
+                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> is no longer listed as unavailable.\n\nNo linked replacement player was found in the active slot record.",
+                rec->team_id,
+                rec->team_id,
+                player_name,
+                rec->injured_player_id);
+        }
+    } else if (phase != NULL && strcmp(phase, "pending") == 0) {
         snprintf(title, sizeof(title), "[KBO] Foreign Injury Replacement Decision Required");
         snprintf(
             body,

@@ -10,17 +10,16 @@
 #include "../../core/core_flags/json/json_bool_parser.h"
 #include "../../core/logging/core_log.h"
 
-/* KBO official CBT thresholds in millions of KRW (백만원).
-   Assumes OOTP salary field is in millions of KRW — override via cbt_rules.json
-   if your league uses a different salary unit. */
+/* KBO CBT thresholds in USD (OOTP salary unit).
+   Use threshold_override in cbt_rules.json to override for your save. */
 typedef struct { uint32_t season; int32_t threshold; } KboCbtBuiltinRow;
 static const KboCbtBuiltinRow g_kbo_cbt_builtin[] = {
-    { 2023u, 11426 },
-    { 2024u, 11426 },
-    { 2025u, 13711 },
-    { 2026u, 14397 },
-    { 2027u, 15117 },
-    { 2028u, 15872 },
+    { 2023u,  8500000 },
+    { 2024u,  8500000 },
+    { 2025u,  9800000 },
+    { 2026u, 10300000 },
+    { 2027u, 10800000 },
+    { 2028u, 11300000 },
 };
 #define KBO_CBT_BUILTIN_COUNT ((int)(sizeof(g_kbo_cbt_builtin) / sizeof(g_kbo_cbt_builtin[0])))
 

@@ -44,6 +44,11 @@ int kbo_webview_handle_view_navigation_command(const char* cmd)
                         || g_kbo_hub_selected_fa_subview >= KBO_HUB_FA_SUBVIEW_COUNT)) {
                 g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
             }
+            if (g_kbo_hub_selected_view == KBO_HUB_VIEW_CBT
+                    && (g_kbo_hub_selected_cbt_subview < 0
+                        || g_kbo_hub_selected_cbt_subview >= KBO_HUB_CBT_SUBVIEW_COUNT)) {
+                g_kbo_hub_selected_cbt_subview = KBO_HUB_CBT_SUBVIEW_RECORDS;
+            }
         }
         kbo_webview_navigate_current();
         return 1;
@@ -92,6 +97,22 @@ int kbo_webview_handle_view_navigation_command(const char* cmd)
         if (subview >= 0 && subview < KBO_HUB_FOREIGN_SUBVIEW_COUNT) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_ASIAN_QUOTA;
             g_kbo_hub_selected_foreign_subview = subview;
+            g_kbo_hub_open_dropdown = 0;
+        }
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "cbt/", 4) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
+        int subview = atoi(cmd + 4);
+        if (subview >= 0 && subview < KBO_HUB_CBT_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_CBT;
+            g_kbo_hub_selected_cbt_subview = subview;
             g_kbo_hub_open_dropdown = 0;
         }
         kbo_webview_navigate_current();

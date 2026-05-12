@@ -2,5 +2,6 @@
 #define KBOFIX_SRC_FOREIGN_ROSTER_AUDIT_FOREIGN_ROSTER_AUDIT_H_
 
 void audit_foreign_roster_state(const char* source, int write_snapshot);
+void start_kbo_foreign_roster_daily_audit_thread(void);
 
 #endif

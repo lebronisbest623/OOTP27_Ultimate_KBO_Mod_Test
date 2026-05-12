@@ -164,6 +164,7 @@ public sealed class KboFlagsTests : IDisposable
         Assert.True(flags["enable_experimental_runtime_hooks"]);
         Assert.True(flags["enable_foreign_waiver_ai"]);
         Assert.True(flags["enable_foreign_waiver_background_scanner"]);
+        Assert.False(flags["enable_foreign_ai_roster_research_hooks"]);
         Assert.False(flags["enable_single_division_allstar_runtime_patches"]);
         Assert.False(flags["enable_single_division_allstar_settings_patch"]);
         Assert.False(flags["enable_single_division_allstar_voting_hook"]);

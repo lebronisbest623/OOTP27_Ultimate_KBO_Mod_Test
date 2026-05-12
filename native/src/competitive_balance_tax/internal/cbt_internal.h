@@ -18,6 +18,7 @@
 #include "../../fa_salary_snapshot/state/salary_snapshot_state.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../api/competitive_balance_tax.h"
+#include "../draft/cbt_draft_probe.h"
 #include "../records/cbt_records.h"
 #include "../rules/cbt_rules.h"
 

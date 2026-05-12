@@ -136,6 +136,8 @@ void kbo_webview_append_selected_view(KboWindowTextBuffer* buffer, uint32_t curr
         kbo_webview_append_settings_view(buffer);
     } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_REPUTATION) {
         kbo_webview_append_reputation_view(buffer, g_kbo_hub_selected_league_id);
+    } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_CBT) {
+        kbo_webview_append_cbt_view(buffer, g_kbo_hub_selected_cbt_subview);
     } else {
         kbo_webview_append_fallback_text_view(buffer);
     }
@@ -174,6 +176,7 @@ void kbo_webview_append_main_tabs(KboWindowTextBuffer* buffer)
         KBO_HUB_VIEW_ASIAN_QUOTA,
         KBO_HUB_VIEW_ASIAN_GAMES,
         KBO_HUB_VIEW_FA_CASES,
+        KBO_HUB_VIEW_CBT,
         KBO_HUB_VIEW_SETTINGS,
         KBO_HUB_VIEW_REPUTATION
     };
@@ -229,6 +232,22 @@ void kbo_webview_append_sub_tabs(KboWindowTextBuffer* buffer)
             kbo_html_append_escaped(buffer, kbo_hub_fa_subnav_label(i));
             kbo_window_text_appendf(buffer, "</a>");
         }
+    } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_CBT) {
+        for (int i = 0; i < KBO_HUB_CBT_SUBVIEW_COUNT; i++) {
+            kbo_window_text_appendf(buffer, "<a class='subTab %s' href='kbo://cbt/%d'>",
+                i == g_kbo_hub_selected_cbt_subview ? "active" : "", i);
+            kbo_html_append_escaped(buffer, kbo_hub_cbt_subnav_label(i));
+            kbo_window_text_appendf(buffer, "</a>");
+        }
+    }
+}
+
+const char* kbo_hub_cbt_subnav_label(int index)
+{
+    switch (index) {
+        case KBO_HUB_CBT_SUBVIEW_RECORDS: return "Records";
+        case KBO_HUB_CBT_SUBVIEW_RULES:   return "Rules";
+        default: return "";
     }
 }
 
@@ -239,6 +258,7 @@ int kbo_webview_current_view_has_sub_tabs(void)
         || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_QUOTA
         || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_GAMES
         || g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES
-        || g_kbo_hub_selected_view == KBO_HUB_VIEW_SETTINGS;
+        || g_kbo_hub_selected_view == KBO_HUB_VIEW_SETTINGS
+        || g_kbo_hub_selected_view == KBO_HUB_VIEW_CBT;
 }
 

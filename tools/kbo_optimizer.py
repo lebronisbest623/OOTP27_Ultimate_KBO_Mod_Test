@@ -141,6 +141,19 @@ def _player_role_quality_percentiles(grouped):
     return percentiles
 
 
+def _batch_draft_penalties(grouped):
+    penalties = {}
+    for rows in grouped.values():
+        for row in rows:
+            team_id = _to_int(row, "team_id")
+            if team_id == 0:
+                continue
+            stages = _to_int(row, "draft_penalty_stages")
+            if stages > 0:
+                penalties[team_id] = max(stages, penalties.get(team_id, 0))
+    return penalties
+
+
 def _team_reputation_percentiles(grouped):
     teams = {}
     for rows in grouped.values():
@@ -807,6 +820,8 @@ def _solve_batch_final_assignment_with_tolerance(grouped, role_tolerance, force_
     assignment_arcs = []
     player_percentiles = _player_role_quality_percentiles(grouped)
     team_percentiles = _team_reputation_percentiles(grouped)
+    draft_penalties = _batch_draft_penalties(grouped)
+    total_teams = max(1, len(team_percentiles))
     incoming_batch = _batch_is_incoming(grouped) if force_incoming is None else force_incoming
     detailed_roles = _batch_has_detailed_position_buckets(grouped)
     hitter_share = _batch_hitter_share(grouped, incoming_batch)
@@ -854,14 +869,18 @@ def _solve_batch_final_assignment_with_tolerance(grouped, role_tolerance, force_
             if role_node is None:
                 continue
             weight = _candidate_weight(row, -1, info["player_count"], not incoming_batch)
+            penalty_stages = draft_penalties.get(team_id, 0)
+            adjusted_team_percentile = max(
+                0.0, team_percentiles.get(team_id, 0.5) - penalty_stages / total_teams
+            )
             weight += _rank_fit_weight(
                 player_percentiles.get(player_id, 0.5),
-                team_percentiles.get(team_id, 0.5),
+                adjusted_team_percentile,
             )
             weight += int(
                 ASSORTATIVE_RANK_WEIGHT
                 * player_percentiles.get(player_id, 0.5)
-                * team_percentiles.get(team_id, 0.5)
+                * adjusted_team_percentile
             )
 
             arc = solver.add_arc_with_capacity_and_unit_cost(player_node, role_node, 1, -weight)

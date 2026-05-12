@@ -25,6 +25,12 @@ void kbo_count_active_foreign_for_asian_quota(
     uint32_t* out_asian_pitchers,
     uint32_t* out_non_asian_hitters,
     uint32_t* out_non_asian_pitchers);
+uint8_t kbo_custom_foreign_policy_callup_allows(
+    uintptr_t team_ptr,
+    uintptr_t player_ptr,
+    int32_t active_count,
+    int32_t ootp_limit,
+    int check_type);
 int kbo_custom_foreign_policy_team_allows_candidate(
     uint32_t team_id,
     uint8_t* candidate,

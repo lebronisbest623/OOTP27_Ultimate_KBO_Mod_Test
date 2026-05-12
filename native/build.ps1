@@ -224,6 +224,73 @@ function Convert-ToGccResponsePath {
     return (Resolve-Path -LiteralPath $Path).Path.Replace('\', '/')
 }
 
+function Copy-ItemIfNewer {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $SourcePath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationPath
+    )
+
+    if (-not (Test-Path -LiteralPath $SourcePath)) {
+        return $false
+    }
+
+    if (Test-Path -LiteralPath $DestinationPath) {
+        $SourceTime = (Get-Item -LiteralPath $SourcePath).LastWriteTimeUtc
+        $DestinationTime = (Get-Item -LiteralPath $DestinationPath).LastWriteTimeUtc
+        if ($DestinationTime -ge $SourceTime) {
+            return $false
+        }
+    }
+
+    Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
+    return $true
+}
+
+function Copy-DirectoryFilesIfNewer {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $SourceDir,
+
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationDir
+    )
+
+    if (-not (Test-Path -LiteralPath $SourceDir)) {
+        return 0
+    }
+
+    $CopiedCount = 0
+    Get-ChildItem -LiteralPath $SourceDir -Recurse -File | ForEach-Object {
+        $Relative = Get-PathRelativeToRoot -Path $_.FullName
+        $RelativeToSource = $Relative.Substring((Get-PathRelativeToRoot -Path $SourceDir).Length).TrimStart('\')
+        $DestinationPath = Join-Path $DestinationDir $RelativeToSource
+        $DestinationParent = Split-Path -Parent $DestinationPath
+        New-Item -ItemType Directory -Force -Path $DestinationParent | Out-Null
+        if (Copy-ItemIfNewer -SourcePath $_.FullName -DestinationPath $DestinationPath) {
+            $CopiedCount += 1
+        }
+    }
+    return $CopiedCount
+}
+
+function Get-LatestWriteTimeUtc {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.IO.FileInfo[]] $Files
+    )
+
+    $Latest = [datetime]::MinValue
+    foreach ($File in $Files) {
+        if ($File.LastWriteTimeUtc -gt $Latest) {
+            $Latest = $File.LastWriteTimeUtc
+        }
+    }
+    return $Latest
+}
+
 $Gcc = Resolve-CommandPath -Name "gcc.exe" -Candidates @(
     Get-MingwGccCandidates
 )
@@ -238,7 +305,7 @@ if ($Clean) {
     New-Item -ItemType Directory -Force -Path $ObjDir | Out-Null
 }
 
-Copy-Item -LiteralPath $WebView2Loader -Destination (Join-Path $OutDir "WebView2Loader.dll") -Force
+Copy-ItemIfNewer -SourcePath $WebView2Loader -DestinationPath (Join-Path $OutDir "WebView2Loader.dll") | Out-Null
 
 Write-Host "GCC: $Gcc"
 Write-Host "WebView2: $WebView2Root"
@@ -250,67 +317,83 @@ $NativeSources += Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -F
     Sort-Object FullName |
     ForEach-Object { $_.FullName }
 
+$DllPath = Join-Path $OutDir "KBOFix.dll"
+$NativeInputFiles = @()
+$NativeInputFiles += Get-Item -LiteralPath $NativeSources
+$NativeInputFiles += Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Include "*.h", "*.inc" -File
+$NativeInputFiles += Get-Item -LiteralPath $WebView2Loader
+
+$InputsNewestThanDll = $true
+if ((Test-Path -LiteralPath $DllPath) -and -not $Clean) {
+    $InputsNewestThanDll = (Get-LatestWriteTimeUtc -Files $NativeInputFiles) -gt (Get-Item -LiteralPath $DllPath).LastWriteTimeUtc
+}
+
 $Objects = @()
 $CompiledCount = 0
-foreach ($Source in $NativeSources) {
-    $Stem = Convert-ToObjectStem -SourcePath $Source
-    $ObjectPath = Join-Path $ObjDir "$Stem.o"
-    $DepPath = Join-Path $ObjDir "$Stem.d"
-    $Objects += $ObjectPath
-
-    if (-not (Test-ObjectOutOfDate -SourcePath $Source -ObjectPath $ObjectPath -DepPath $DepPath)) {
-        continue
-    }
-
-    Write-Host "Compiling $(Get-PathRelativeToRoot -Path $Source)"
-    $PreviousErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    $GccOutput = & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
-        -isystem $WebView2Include `
-        -MMD -MP -MF $DepPath `
-        -c $Source `
-        -o $ObjectPath 2>&1
-    $GccExitCode = $LASTEXITCODE
-    $ErrorActionPreference = $PreviousErrorActionPreference
-    $GccOutput | ForEach-Object { Write-Host $_ }
-    if ($GccExitCode -ne 0) {
-        throw "Failed to compile $Source"
-    }
-    $CompiledCount += 1
-}
-
-$DllPath = Join-Path $OutDir "KBOFix.dll"
-if (Test-LinkOutOfDate -OutputPath $DllPath -ObjectPaths $Objects -LoaderPath $WebView2Loader) {
-    Write-Host "Linking KBOFix.dll ($($Objects.Count) objects, $CompiledCount compiled)"
-    $ResponsePath = Join-Path $ObjDir "KBOFix.link.rsp"
-    $ResponseArgs = @(
-        "-shared"
-        "-o"
-        "`"$($DllPath.Replace('\', '/'))`""
-    )
-    $ResponseArgs += $Objects | ForEach-Object { "`"$(Convert-ToGccResponsePath -Path $_)`"" }
-    $ResponseArgs += @(
-        "-lgdi32"
-        "-lmsimg32"
-        "-lole32"
-        "-luuid"
-        "-lshell32"
-        "-lwindowscodecs"
-    )
-    Set-Content -LiteralPath $ResponsePath -Value ($ResponseArgs -join " ") -Encoding ASCII
-    $PreviousErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    $GccOutput = & $Gcc -shared `
-        "@$ResponsePath" 2>&1
-    $GccExitCode = $LASTEXITCODE
-    $ErrorActionPreference = $PreviousErrorActionPreference
-    $GccOutput | ForEach-Object { Write-Host $_ }
-    if ($GccExitCode -ne 0) {
-        throw "Failed to link KBOFix.dll"
-    }
+$SkipNativeBuild = (Test-Path -LiteralPath $DllPath) -and -not $InputsNewestThanDll -and -not $Clean
+if ($SkipNativeBuild) {
+    Write-Host "KBOFix.dll is up to date; skipped native dependency scan ($($NativeSources.Count) sources)."
 }
 else {
-    Write-Host "KBOFix.dll is up to date ($($Objects.Count) objects, $CompiledCount compiled)"
+    foreach ($Source in $NativeSources) {
+        $Stem = Convert-ToObjectStem -SourcePath $Source
+        $ObjectPath = Join-Path $ObjDir "$Stem.o"
+        $DepPath = Join-Path $ObjDir "$Stem.d"
+        $Objects += $ObjectPath
+
+        if (-not (Test-ObjectOutOfDate -SourcePath $Source -ObjectPath $ObjectPath -DepPath $DepPath)) {
+            continue
+        }
+
+        Write-Host "Compiling $(Get-PathRelativeToRoot -Path $Source)"
+        $PreviousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $GccOutput = & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
+            -isystem $WebView2Include `
+            -MMD -MP -MF $DepPath `
+            -c $Source `
+            -o $ObjectPath 2>&1
+        $GccExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $PreviousErrorActionPreference
+        $GccOutput | ForEach-Object { Write-Host $_ }
+        if ($GccExitCode -ne 0) {
+            throw "Failed to compile $Source"
+        }
+        $CompiledCount += 1
+    }
+
+    if (Test-LinkOutOfDate -OutputPath $DllPath -ObjectPaths $Objects -LoaderPath $WebView2Loader) {
+        Write-Host "Linking KBOFix.dll ($($Objects.Count) objects, $CompiledCount compiled)"
+        $ResponsePath = Join-Path $ObjDir "KBOFix.link.rsp"
+        $ResponseArgs = @(
+            "-shared"
+            "-o"
+            "`"$($DllPath.Replace('\', '/'))`""
+        )
+        $ResponseArgs += $Objects | ForEach-Object { "`"$(Convert-ToGccResponsePath -Path $_)`"" }
+        $ResponseArgs += @(
+            "-lgdi32"
+            "-lmsimg32"
+            "-lole32"
+            "-luuid"
+            "-lshell32"
+            "-lwindowscodecs"
+        )
+        Set-Content -LiteralPath $ResponsePath -Value ($ResponseArgs -join " ") -Encoding ASCII
+        $PreviousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $GccOutput = & $Gcc -shared `
+            "@$ResponsePath" 2>&1
+        $GccExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $PreviousErrorActionPreference
+        $GccOutput | ForEach-Object { Write-Host $_ }
+        if ($GccExitCode -ne 0) {
+            throw "Failed to link KBOFix.dll"
+        }
+    }
+    else {
+        Write-Host "KBOFix.dll is up to date ($($Objects.Count) objects, $CompiledCount compiled)"
+    }
 }
 
 if ($CompiledCount -eq 0) {
@@ -328,15 +411,16 @@ $LauncherOutputDirs = @(
 )
 foreach ($LauncherOutputDir in $LauncherOutputDirs) {
     if (Test-Path $LauncherOutputDir) {
-        Copy-Item -LiteralPath $DllPath -Destination (Join-Path $LauncherOutputDir "KBOFix.dll") -Force
+        $SyncedCount = 0
+        if (Copy-ItemIfNewer -SourcePath $DllPath -DestinationPath (Join-Path $LauncherOutputDir "KBOFix.dll")) {
+            $SyncedCount += 1
+        }
         $LoaderPath = Join-Path $OutDir "WebView2Loader.dll"
-        if (Test-Path $LoaderPath) {
-            Copy-Item -LiteralPath $LoaderPath -Destination (Join-Path $LauncherOutputDir "WebView2Loader.dll") -Force
+        if (Copy-ItemIfNewer -SourcePath $LoaderPath -DestinationPath (Join-Path $LauncherOutputDir "WebView2Loader.dll")) {
+            $SyncedCount += 1
         }
         $AssetsPath = Join-Path $OutDir "assets"
-        if (Test-Path $AssetsPath) {
-            Copy-Item -LiteralPath $AssetsPath -Destination (Join-Path $LauncherOutputDir "assets") -Recurse -Force
-        }
-        Write-Host "Synced native payload to $LauncherOutputDir"
+        $SyncedCount += Copy-DirectoryFilesIfNewer -SourceDir $AssetsPath -DestinationDir (Join-Path $LauncherOutputDir "assets")
+        Write-Host "Synced native payload to $LauncherOutputDir ($SyncedCount files copied)"
     }
 }

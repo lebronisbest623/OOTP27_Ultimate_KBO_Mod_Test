@@ -22,6 +22,7 @@
 #include "../foreign/common/policy/foreign_waiver_policy.h"
 #include "../foreign/injury/api/foreign_injury.h"
 #include "../foreign/intl_established_fa_postscan/api/intl_established_fa_postscan.h"
+#include "../foreign/roster_audit/api/foreign_roster_audit.h"
 #include "../foreign/signability/state/submit_offer_probe_state.h"
 #include "../hotkey_window/hotkey_window.h"
 #include "../military_service/military_service.h"

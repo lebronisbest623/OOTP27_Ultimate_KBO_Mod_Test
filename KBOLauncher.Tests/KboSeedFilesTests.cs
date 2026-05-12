@@ -84,6 +84,35 @@ public sealed class KboSeedFilesTests : IDisposable
     }
 
     [Fact]
+    public void RemoveRetiredBundledKboDataFileIfUnchanged_RemovesOnlyOldForeignReplacementSeed()
+    {
+        var localDir = Path.Combine(tempDir, "local");
+        var retiredPath = Path.Combine(localDir, "foreign_replacement_players_seed.csv");
+        Directory.CreateDirectory(localDir);
+        File.WriteAllText(retiredPath, """
+        # replacement_player_key,slot_type,comment
+        verhadr01,regular,Drew VerHagen
+        olougja01,regular,Jack O'Loughlin
+        """);
+
+        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
+            localDir,
+            "foreign_replacement_players_seed.csv",
+            "Foreign replacement player seed");
+
+        Assert.False(File.Exists(retiredPath));
+
+        File.WriteAllText(retiredPath, "custom01,regular,Keep me");
+
+        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
+            localDir,
+            "foreign_replacement_players_seed.csv",
+            "Foreign replacement player seed");
+
+        Assert.True(File.Exists(retiredPath));
+    }
+
+    [Fact]
     public void EnsureKboScheduleAllstarGameLine_AddsMissingTypeFourGame()
     {
         Directory.CreateDirectory(tempDir);

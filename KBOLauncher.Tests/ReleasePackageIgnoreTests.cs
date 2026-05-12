@@ -31,7 +31,7 @@ public sealed class ReleasePackageIgnoreTests
     [InlineData("\"data\\seeds\\asian_games_schedule_seed.csv\"")]
     [InlineData("\"data\\seeds\\college_reputation_seed.csv\"")]
     [InlineData("\"data\\seeds\\fa_rules.json\"")]
-    [InlineData("\"data\\seeds\\foreign_replacement_players_seed.csv\"")]
+    [InlineData("\"data\\seeds\\foreign_injury_replacements_seed.csv\"")]
     [InlineData("\"data\\seeds\\high_school_reputation_seed.csv\"")]
     [InlineData("\"data\\seeds\\military_service_seed.csv\"")]
     public void ReleaseScript_ValidatesRequiredPayloadFiles(string requiredFileLiteral)

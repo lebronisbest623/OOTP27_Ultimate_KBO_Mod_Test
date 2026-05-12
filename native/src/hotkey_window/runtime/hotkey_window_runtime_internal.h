@@ -54,6 +54,7 @@
 #include "../support/assets/nations/ui_nation_helpers.h"
 #include "../support/roster/cells/ui_roster_cells.h"
 #include "../views/mod/reputation/ui_reputation_view.h"
+#include "../views/cbt/ui_cbt_view.h"
 #include "../support/roster/sort/ui_roster_sort_script.h"
 #include "../support/roster/table/ui_roster_table_css.h"
 #include "../support/skin/ui_scrollbar_skin_css.h"
@@ -110,7 +111,8 @@ typedef struct KboWebViewNavHandler {
 #define KBO_HUB_VIEW_FA_CASES   6
 #define KBO_HUB_VIEW_SETTINGS    7
 #define KBO_HUB_VIEW_REPUTATION  8
-#define KBO_HUB_NAV_COUNT        9
+#define KBO_HUB_VIEW_CBT         9
+#define KBO_HUB_NAV_COUNT        10
 #define KBO_HUB_FOREIGN_SUBVIEW_ROSTER 0
 #define KBO_HUB_FOREIGN_SUBVIEW_RIGHTS 1
 #define KBO_HUB_FOREIGN_SUBVIEW_COUNT  2
@@ -154,6 +156,7 @@ extern int g_kbo_hub_selected_foreign_subview;
 extern int g_kbo_hub_selected_agames_subview;
 extern int g_kbo_hub_selected_military_subview;
 extern int g_kbo_hub_selected_fa_subview;
+extern int g_kbo_hub_selected_cbt_subview;
 extern uint32_t g_kbo_hub_selected_fa_compensation_player_id;
 extern uint32_t g_kbo_hub_selected_military_results_year;
 extern RECT g_kbo_hub_refresh_rect;
@@ -208,6 +211,7 @@ const char* kbo_hub_agames_subnav_label(int index);
 const char* kbo_hub_fa_subnav_label(int index);
 const char* kbo_hub_military_subnav_label(int index);
 const char* kbo_hub_mod_subnav_label(int index);
+const char* kbo_hub_cbt_subnav_label(int index);
 void kbo_hub_ensure_valid_selection(void);
 void kbo_refresh_hotkey_window(void);
 void kbo_hub_apply_fixed_window_placement(HWND hwnd, int preserve_position);
