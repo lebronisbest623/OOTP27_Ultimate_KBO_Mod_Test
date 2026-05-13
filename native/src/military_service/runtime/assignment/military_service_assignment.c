@@ -1,4 +1,25 @@
-#include "../internal/military_service_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/dates/core_current_date.h"
+#include "../../../core/news/history_stubs/core_history_stubs.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../core/season/opening_day_storyline_guard.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../team/assignment/assignment/team_assignment.h"
+#include "../../../team/lookup/team_lookup.h"
+#include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
+#include "../../players/loans/military_active_loan.h"
+#include "../../players/state/military_player_state.h"
+#include "../../seed/registry/military_seed_registry.h"
+#include "../../calendar/military_service_date.h"
+#include "../state/military_service_runtime_state.h"
+#include "military_service_assignment.h"
 
 int kbo_military_daily_roster_mutation_window_ready(
     uint32_t today_serial,

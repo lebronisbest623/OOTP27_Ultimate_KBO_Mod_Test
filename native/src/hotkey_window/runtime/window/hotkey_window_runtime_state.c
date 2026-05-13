@@ -1,4 +1,4 @@
-#include "../hotkey_window_runtime_internal.h"
+#include "hotkey_window_runtime_window_internal.h"
 
 LONG g_kbo_hotkey_window_started = 0;
 HWND g_kbo_hotkey_window = NULL;

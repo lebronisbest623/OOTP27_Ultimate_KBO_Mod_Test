@@ -1,4 +1,4 @@
-#include "../../../hotkey_window_runtime_internal.h"
+#include "../../hotkey_window_webview_internal.h"
 
 int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
 {

@@ -344,6 +344,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
 DWORD WINAPI kbo_foreign_injury_replacement_thread(LPVOID parameter)
 {
     (void)parameter;
+    kbo_foreign_injury_replacement_scan_once("foreign_injury_replacement_thread_start");
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue(7000)) {
             break;

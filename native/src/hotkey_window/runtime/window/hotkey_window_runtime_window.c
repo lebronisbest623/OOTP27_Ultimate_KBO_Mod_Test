@@ -1,4 +1,4 @@
-#include "../hotkey_window_runtime_internal.h"
+#include "hotkey_window_runtime_window_internal.h"
 
 void kbo_layout_hotkey_window(HWND hwnd)
 {

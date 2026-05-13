@@ -1,61 +1,10 @@
 #include "../internal/foreign_signability_internal.h"
+#include "candidate_array/foreign_signability_ai_fa_candidate_array.h"
+#include "retained_candidates/foreign_signability_foreign_ai_fa_retained_candidates.h"
 
 /* AI FA status candidate hook wrapper. Included from native/KBOFix.c. */
 
-#define KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT 8192
 #define KBO_AI_FA_STATUS_FORCED_REPLACEMENT_MAX 32
-
-static int kbo_ai_fa_status_candidate_slot_accessible(uintptr_t candidate_array, int32_t index)
-{
-    if (candidate_array == 0 || index < 0 || index >= KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT) {
-        return 0;
-    }
-    return memory_range_readable(
-        (void*)(candidate_array + ((uintptr_t)index * sizeof(uintptr_t))),
-        sizeof(uintptr_t));
-}
-
-static int kbo_ai_fa_status_candidate_array_contains(
-    uintptr_t candidate_array,
-    int32_t count,
-    uintptr_t player_ptr)
-{
-    if (candidate_array == 0 || player_ptr == 0 || count <= 0) {
-        return 0;
-    }
-
-    int32_t limit = count;
-    if (limit > KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT) {
-        limit = KBO_AI_FA_STATUS_CANDIDATE_ARRAY_HARD_LIMIT;
-    }
-
-    for (int32_t i = 0; i < limit; i++) {
-        if (!kbo_ai_fa_status_candidate_slot_accessible(candidate_array, i)) {
-            break;
-        }
-        if (*(uintptr_t*)(candidate_array + ((uintptr_t)i * sizeof(uintptr_t))) == player_ptr) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static int32_t kbo_ai_fa_status_insert_candidate_ptr(
-    uintptr_t frame_ptr,
-    uintptr_t candidate_array,
-    int32_t insert_index,
-    uintptr_t player_ptr)
-{
-    if (player_ptr == 0 || !kbo_ai_fa_status_candidate_slot_accessible(candidate_array, insert_index)) {
-        return insert_index;
-    }
-
-    *(uintptr_t*)(candidate_array + ((uintptr_t)insert_index * sizeof(uintptr_t))) = player_ptr;
-    if (frame_ptr > OOTP27_AI_FA_STATUS_FRAME_INSERT_COUNT_DELTA) {
-        *(int32_t*)(frame_ptr - OOTP27_AI_FA_STATUS_FRAME_INSERT_COUNT_DELTA) = insert_index + 1;
-    }
-    return insert_index + 1;
-}
 
 static int kbo_ai_fa_status_released_replacement_can_enter_market(uint8_t* player, uint32_t expected_player_id)
 {
@@ -236,6 +185,11 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
                 (int32_t)requester_team_id,
                 "ai_fa_status_candidate",
                 &player_id)) {
+        insert_index = kbo_ai_fa_status_force_retained_market_candidates(
+            frame_ptr,
+            requester_team_id,
+            candidate_array,
+            insert_index);
         return kbo_ai_fa_status_force_closed_replacement_market_candidates(
             frame_ptr,
             requester_team_id,
@@ -244,6 +198,11 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     }
 
     if (kbo_military_ai_fa_candidate_should_block(player_id, requester_team_id, insert_index)) {
+        insert_index = kbo_ai_fa_status_force_retained_market_candidates(
+            frame_ptr,
+            requester_team_id,
+            candidate_array,
+            insert_index);
         return kbo_ai_fa_status_force_closed_replacement_market_candidates(
             frame_ptr,
             requester_team_id,
@@ -268,6 +227,11 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
                 insert_index,
                 today);
         }
+        insert_index = kbo_ai_fa_status_force_retained_market_candidates(
+            frame_ptr,
+            requester_team_id,
+            candidate_array,
+            insert_index);
         return kbo_ai_fa_status_force_closed_replacement_market_candidates(
             frame_ptr,
             requester_team_id,
@@ -313,6 +277,11 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
                     today);
             }
             kbo_record_recent_custom_foreign_policy_block(player_id, requester_team_id, today);
+            insert_index = kbo_ai_fa_status_force_retained_market_candidates(
+                frame_ptr,
+                requester_team_id,
+                candidate_array,
+                insert_index);
             return kbo_ai_fa_status_force_closed_replacement_market_candidates(
                 frame_ptr,
                 requester_team_id,
@@ -321,6 +290,11 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
         }
     }
 
+    insert_index = kbo_ai_fa_status_force_retained_market_candidates(
+        frame_ptr,
+        requester_team_id,
+        candidate_array,
+        insert_index);
     insert_index = kbo_ai_fa_status_insert_candidate_ptr(
         frame_ptr,
         candidate_array,

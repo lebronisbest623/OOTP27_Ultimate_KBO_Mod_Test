@@ -56,13 +56,6 @@ const char* kbo_flag_legacy_json_key_for_key(const char* key)
         return NULL;
     }
 
-    if (strcmp(key, "disable_kbo_no_minor_contract_patch") == 0) {
-        return "disable_kbo_no_minor_contract_experimental_patch";
-    }
-
-    if (strcmp(key, "enable_foreign_ai_roster_management") == 0) {
-        return "enable_foreign_ai_roster_research_hooks";
-    }
-
+#include "runtime_flag_aliases.generated.inc"
     return NULL;
 }

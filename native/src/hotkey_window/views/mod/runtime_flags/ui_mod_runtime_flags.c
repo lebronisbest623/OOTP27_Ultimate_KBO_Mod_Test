@@ -10,42 +10,7 @@ struct KboModRuntimeFlagSetting {
 };
 
 static const KboModRuntimeFlagSetting KBO_MOD_RUNTIME_FLAG_SETTINGS[] = {
-    { "enable_foreign_waiver_ai", "Foreign waiver AI", 1, 1, NULL, KBO_MOD_FLAG_USER },
-    { "enable_foreign_ai_roster_management", "Enhanced foreign AI (Experimental)", 1, 0, NULL, KBO_MOD_FLAG_USER },
-    { "enable_single_division_allstar_events", "Single-division All-Star events", 1, 1, NULL, KBO_MOD_FLAG_USER },
-
-    { "enable_experimental_runtime_hooks", "Runtime patch engine", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_foreign_waiver_background_scanner", "Foreign waiver background scanner", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_foreign_waiver_legacy_auto_detector", "Foreign waiver legacy detector", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_foreign_trade_check_patch", "Foreign trade quota guard", 0, 1, "enable_kbo_foreign_trade_check_patch", KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_custom_foreign_policy", "Custom foreign policy", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_foreign_injury_replacement", "Foreign injury replacement", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_intl_established_fa_generation_filter", "International FA generation filter", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_fa_compensation", "FA compensation", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_salary_arbitration_no_withdraw_patch", "Salary arbitration no-withdraw", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_no_minor_contract_patch", "No minor-contract patch", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_sangmu_fa_block_core", "Military team FA block", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_military_team_add_guard_patch", "Military team add guard", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_amateur_assignment_reroute", "Amateur reputation assignment", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_single_division_allstar_runtime_patches", "Single-division All-Star runtime", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_single_division_allstar_voting_hook", "Single-division All-Star voting", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_single_division_allstar_settings_patch", "Single-division All-Star settings", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_fa_salary_opening_day_snapshot", "FA salary opening-day snapshot", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_kbo_ai_fa_status_candidate_insert_hook", "AI FA candidate hook", 1, 0, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_kbo_ai_fa_fallback_patch", "AI FA fallback patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_kbo_player_team_signability_patch", "Player-team signability patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_kbo_offer_eligibility_patch", "Offer eligibility patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_submit_offer_probe_patch", "Submit-offer probe", 0, 1, "enable_kbo_submit_offer_probe_patch", KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_foreign_signing_branch_patch", "Foreign signing branch hook", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "disable_kbo_runtime_roster_marker_guard", "Runtime roster marker guard", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_kbo_callup_foreign_limit_patch", "Foreign call-up limit patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_intl_established_fa_quality_probe_patch", "International FA quality probe", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-    { "enable_kbo_season_phase_monitor", "Season phase monitor", 0, 1, NULL, KBO_MOD_FLAG_RECOVERY },
-
-    { "enable_amateur_assignment_verbose_log", "Amateur assignment verbose log", 1, 0, NULL, KBO_MOD_FLAG_DIAGNOSTIC },
-
-    { "enable_fa_requalification", "FA requalification", 1, 0, NULL, KBO_MOD_FLAG_LEGACY },
-    { "enable_kbo_fa_signability_hooks", "Legacy FA signability hooks", 1, 0, NULL, KBO_MOD_FLAG_LEGACY }
+#include "runtime_flags.generated.inc"
 };
 
 const KboModRuntimeFlagSetting* kbo_find_mod_runtime_flag_setting(const char* key)

@@ -1,0 +1,13 @@
+#ifndef KBOFIX_SRC_MILITARY_SERVICE_RUNTIME_STATE_H_
+#define KBOFIX_SRC_MILITARY_SERVICE_RUNTIME_STATE_H_
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+extern LONG g_military_days_tick_started;
+extern LONG g_military_days_tick_log_count;
+extern LONG g_military_daily_mutation_ready_log_count;
+extern LONG g_military_seed_bootstrap_started;
+extern LONG g_military_seed_expired_skip_log_count;
+
+#endif

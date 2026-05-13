@@ -1,4 +1,4 @@
-#include "../../hotkey_window_runtime_internal.h"
+#include "../hotkey_window_runtime_content_internal.h"
 #include "../../hotkey_window_domain_contract.h"
 
 #define KBO_HUB_FOREIGN_SLOT_CACHE_TTL_MS 1000ull

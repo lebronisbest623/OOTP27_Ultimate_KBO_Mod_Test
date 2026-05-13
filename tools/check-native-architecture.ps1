@@ -262,11 +262,14 @@ foreach ($NamespaceRule in $NamespaceRootRules) {
 }
 
 $GeneratedFiles = @(
-    "build_verify/supported_builds.generated.h",
-    "build_verify/supported_builds.generated.c"
+    @{ Path = "build_verify/supported_builds.generated.h"; Suggestion = "Run tools/generate-supported-builds.ps1." },
+    @{ Path = "build_verify/supported_builds.generated.c"; Suggestion = "Run tools/generate-supported-builds.ps1." },
+    @{ Path = "core/core_flags/keys/runtime_flag_aliases.generated.inc"; Suggestion = "Run tools/generate-runtime-flags.ps1." },
+    @{ Path = "hotkey_window/views/mod/runtime_flags/runtime_flags.generated.inc"; Suggestion = "Run tools/generate-runtime-flags.ps1." }
 )
 
-foreach ($GeneratedPath in $GeneratedFiles) {
+foreach ($GeneratedFile in $GeneratedFiles) {
+    $GeneratedPath = $GeneratedFile.Path
     $FullPath = Join-Path $NativeSrc ($GeneratedPath -replace '/', '\')
     if (-not (Test-Path -LiteralPath $FullPath)) {
         Add-Finding `
@@ -274,7 +277,7 @@ foreach ($GeneratedPath in $GeneratedFiles) {
             -Severity "error" `
             -Path $GeneratedPath `
             -Message "Required generated native source is missing." `
-            -Suggestion "Run tools/generate-supported-builds.ps1." `
+            -Suggestion $GeneratedFile.Suggestion `
             -Data @{ generated = $true }
         continue
     }
@@ -286,7 +289,7 @@ foreach ($GeneratedPath in $GeneratedFiles) {
             -Severity "error" `
             -Path $GeneratedPath `
             -Message "Generated native source is missing the auto-generated marker." `
-            -Suggestion "Regenerate it instead of hand-editing generated files." `
+            -Suggestion $GeneratedFile.Suggestion `
             -Data @{ generated = $true }
     }
 }
@@ -294,10 +297,7 @@ foreach ($GeneratedPath in $GeneratedFiles) {
 if ($IncludeDebt) {
     $DebtFiles = @(
         "hotkey_window/runtime/hotkey_window_runtime_internal.h",
-        "bootstrap/abi/forward_declarations.h",
-        "military_service/runtime/military_service_internal.h",
-        "foreign/waiver_core/foreign_waiver_core_internal.h",
-        "foreign/waiver_decisions/foreign_waiver_decisions_internal.h",
+        "military_service/runtime/internal/military_service_internal.h",
         "foreign/waiver_window/foreign_waiver_window_internal.h"
     )
 

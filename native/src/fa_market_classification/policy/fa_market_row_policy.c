@@ -125,11 +125,19 @@ uint32_t kbo_fa_market_display_team_id(const KboFaMarketClassification* row)
     if (row->fa_grade_snapshot_team_id != 0u) {
         return row->fa_grade_snapshot_team_id;
     }
-    if (row->original_team_id != 0u) {
-        return row->original_team_id;
+    if (row->rights_team_id != 0u) {
+        return row->rights_team_id;
     }
-    if (row->active_team_id != 0u) {
-        return row->active_team_id;
+    if (row->original_team_id != 0u
+            && (strcmp(row->case_label, "KBO_FA_APPROVED") == 0
+                || strcmp(row->case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0
+                || strcmp(row->case_label, "KBO_FA_DEFERRED") == 0
+                || strcmp(row->case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0
+                || strcmp(row->case_label, "KBO_REQUALIFICATION_LOCKED") == 0
+                || strcmp(row->case_label, "KBO_REQUALIFICATION_ELIGIBLE") == 0
+                || strcmp(row->case_label, "DOMESTIC_RELEASED_NON_FA") == 0
+                || strcmp(row->case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0)) {
+        return row->original_team_id;
     }
     return row->current_team_id;
 }

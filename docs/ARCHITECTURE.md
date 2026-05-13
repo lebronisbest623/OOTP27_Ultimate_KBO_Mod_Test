@@ -162,10 +162,22 @@ Status files, command files, seeds, CSVs, and save-scoped persistence remain
 separate files.
 
 The F2 hub intentionally exposes recovery flags so users can disable risky
-runtime paths without editing JSON by hand. The current debt is that flag
-metadata is duplicated between the managed `KboFlags` list and the F2 hub's
-native flag table. The next cleanup should introduce one flag manifest and
-generate both surfaces.
+runtime paths without editing JSON by hand. Runtime flag metadata is sourced
+from:
+
+```text
+config/kbo-runtime-flags.json
+```
+
+`tools/generate-runtime-flags.ps1` generates:
+
+- `src/KBOLauncher/Infrastructure/KboFlags.RuntimeDefinitions.cs`
+- `native/src/core/core_flags/keys/runtime_flag_aliases.generated.inc`
+- `native/src/hotkey_window/views/mod/runtime_flags/runtime_flags.generated.inc`
+
+`KBOLauncher.Tests/KboRuntimeFlagManifestTests.cs` verifies that the manifest,
+managed defaults/aliases, native legacy alias map, and native F2 UI flag table
+match.
 
 ## Native Subsystems
 
@@ -384,21 +396,21 @@ next cleanup targets.
 1. `native/src/hotkey_window/runtime/hotkey_window_runtime_internal.h` is a
    broad private contract. It should be narrowed into smaller runtime,
    command, content, and WebView contracts.
-2. `native/src/bootstrap/abi/forward_declarations.h` remains a central
-   declaration bucket. Declarations should move into owning headers.
-3. Runtime flag metadata is duplicated between managed code and native F2 UI.
+2. `native/src/military_service/runtime/internal/military_service_internal.h`
+   still collects multiple runtime responsibilities behind a broad internal
+   contract.
+3. Runtime flag booleans are manifest-generated, but broader F2 command routes
+   and numeric settings remain hand-maintained.
 4. Supported-build rows are generated, but build-specific RVA maps are still
    hand-maintained.
 5. Several mechanically migrated domain areas still carry temporary internal
    headers and broad responsibility names. The worst cleanup targets are
-   `foreign/signability/`, `foreign/waiver_core/`,
-   `patch_installers/foreign/`, `amateur_player_quality/`, and
+   `foreign/signability/`, `patch_installers/foreign/`,
+   `amateur_player_quality/`, and
    `fa_market_classification/`. Custom events, patch installers, military
    service, and foreign-player policy now have folder-level ownership, but broad
    private contracts remain in
-   `native/src/military_service/runtime/military_service_internal.h`,
-   `native/src/foreign/waiver_core/foreign_waiver_core_internal.h`,
-   `native/src/foreign/waiver_decisions/foreign_waiver_decisions_internal.h`,
+   `native/src/military_service/runtime/internal/military_service_internal.h`
    and
    `native/src/foreign/waiver_window/foreign_waiver_window_internal.h`.
 
@@ -409,13 +421,12 @@ steps should close one responsibility boundary at a time:
 
 1. Narrow the F2 hub private contracts now that the files are grouped into
    runtime, views, support, and state folders.
-2. Shrink `bootstrap/abi/forward_declarations.h` by moving declarations into
-   owning headers.
-3. Create a runtime-flag manifest and generate managed/native UI flag metadata.
-4. Move build-specific RVA data into generated sources.
-5. Continue splitting or regrouping domain modules only when the new file owns a clear
+2. Split remaining broad domain `_internal.h` contracts into state, lifecycle,
+   command, scanner, or IO-owned headers.
+3. Move build-specific RVA data into generated sources.
+4. Continue splitting or regrouping domain modules only when the new file owns a clear
    lifecycle, table, scanner, policy, or parser.
-6. Remove temporary `_internal.h` headers when their declarations can move to
+5. Remove temporary `_internal.h` headers when their declarations can move to
    narrow owned headers without creating cycles.
 
 Each code-change commit should close one subsystem or one responsibility unit.

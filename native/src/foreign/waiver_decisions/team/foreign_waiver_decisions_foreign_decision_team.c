@@ -19,6 +19,8 @@
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../../common/policy/foreign_waiver_policy.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
+#include "../internal/foreign_waiver_decisions_state_internal.h"
+#include "../internal/foreign_waiver_decisions_team_internal.h"
 
 LONG g_kbo_foreign_waiver_decision_lock = 0;
 

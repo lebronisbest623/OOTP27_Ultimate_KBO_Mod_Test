@@ -1,0 +1,457 @@
+{
+  "flags": [
+    {
+      "key": "disable_foreign_injury_replacement",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Foreign injury replacement",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_foreign_waiver_legacy_auto_detector",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Foreign waiver legacy detector",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_intl_established_fa_generation_filter",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "International FA generation filter",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_fa_salary_opening_day_snapshot",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "FA salary opening-day snapshot",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_no_minor_contract_patch",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "No minor-contract patch",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_kbo_ai_fa_status_candidate_insert_hook",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "AI FA candidate hook",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
+      "key": "disable_kbo_custom_foreign_policy",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Custom foreign policy",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_foreign_signing_branch_patch",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Foreign signing branch hook",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_foreign_trade_check_patch",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Foreign trade quota guard",
+        "enabledValue": 0,
+        "defaultEnabled": true,
+        "companionEnableKey": "enable_kbo_foreign_trade_check_patch"
+      }
+    },
+    {
+      "key": "disable_kbo_sangmu_fa_block_core",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Military team FA block",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_submit_offer_probe_patch",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Submit-offer probe",
+        "enabledValue": 0,
+        "defaultEnabled": true,
+        "companionEnableKey": "enable_kbo_submit_offer_probe_patch"
+      }
+    },
+    {
+      "key": "disable_amateur_assignment_reroute",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Amateur reputation assignment",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_competitive_balance_tax",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_fa_compensation",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "FA compensation",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_military_team_add_guard_patch",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Military team add guard",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_runtime_roster_marker_guard",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Runtime roster marker guard",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "disable_kbo_salary_arbitration_no_withdraw_patch",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Salary arbitration no-withdraw",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_amateur_assignment_verbose_log",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic",
+      "ui": {
+        "label": "Amateur assignment verbose log",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
+      "key": "enable_experimental_runtime_hooks",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Runtime patch engine",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_fa_requalification",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Legacy",
+      "ui": {
+        "label": "FA requalification",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
+      "key": "enable_foreign_waiver_ai",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "User",
+      "ui": {
+        "label": "Foreign waiver AI",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_foreign_waiver_background_scanner",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Foreign waiver background scanner",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_foreign_ai_roster_management",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "User",
+      "ui": {
+        "label": "Enhanced foreign AI (Experimental)",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
+      "key": "enable_foreign_waiver_event_probe",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_intl_established_fa_quality_probe_patch",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "International FA quality probe",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_kbo_ai_fa_fallback_patch",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "AI FA fallback patch",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_kbo_asian_quota_probe_logs",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_callup_foreign_limit_patch",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Foreign call-up limit patch",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_kbo_cbt_service_time_probe",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_custom_foreign_offer_logs",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_diagnostic_minimal_runtime",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_fa_signability_hooks",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Legacy",
+      "ui": {
+        "label": "Legacy FA signability hooks",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
+      "key": "enable_kbo_fix",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_kbo_foreign_trade_check_patch",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_kbo_offer_eligibility_patch",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Offer eligibility patch",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_kbo_player_team_signability_patch",
+      "defaultValue": true,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Player-team signability patch",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_kbo_sangmu_offer_only",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_sangmu_signability_only",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_season_phase_monitor",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Season phase monitor",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_kbo_submit_offer_probe_patch",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_launcher_injection",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "User"
+    },
+    {
+      "key": "enable_single_division_allstar_events",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "User",
+      "ui": {
+        "label": "Single-division All-Star events",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_single_division_allstar_runtime_patches",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Single-division All-Star runtime",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_single_division_allstar_settings_patch",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Single-division All-Star settings",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    },
+    {
+      "key": "enable_single_division_allstar_voting_hook",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Single-division All-Star voting",
+        "enabledValue": 1,
+        "defaultEnabled": true
+      }
+    }
+  ],
+  "singleDivisionAllstarFlagKeys": [
+    "enable_single_division_allstar_runtime_patches",
+    "enable_single_division_allstar_settings_patch",
+    "enable_single_division_allstar_voting_hook",
+    "enable_single_division_allstar_events"
+  ],
+  "aliases": [
+    {
+      "legacyKey": "disable_kbo_no_minor_contract_experimental_patch",
+      "canonicalKey": "disable_kbo_no_minor_contract_patch"
+    },
+    {
+      "legacyKey": "enable_foreign_ai_roster_research_hooks",
+      "canonicalKey": "enable_foreign_ai_roster_management"
+    }
+  ]
+}

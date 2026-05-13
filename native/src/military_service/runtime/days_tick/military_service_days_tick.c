@@ -1,4 +1,32 @@
-#include "../internal/military_service_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../../../amateur_player_quality/api/amateur_player_quality.h"
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/dates/core_current_date.h"
+#include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/news/history_stubs/core_history_stubs.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../core/season/opening_day_storyline_guard.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../fa_market_classification/api/fa_market_classification.h"
+#include "../../../fa_requalification/fa_requalification.h"
+#include "../../../foreign/replacement_seed/api/foreign_replacement_seed.h"
+#include "../../../team/lookup/team_lookup.h"
+#include "../../military_service.h"
+#include "../../players/loans/military_active_loan.h"
+#include "../../players/state/military_player_state.h"
+#include "../../returns/military_return.h"
+#include "../../calendar/military_service_date.h"
+#include "../../seed/registry/military_seed_registry.h"
+#include "../assignment/military_service_assignment.h"
+#include "../state/military_service_runtime_state.h"
+#include "military_service_days_tick_internal.h"
+#include "military_service_tick.h"
 
 static void kbo_military_prewarm_save_scoped_bootstrap_files(const char* save_path)
 {

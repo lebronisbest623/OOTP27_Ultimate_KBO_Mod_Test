@@ -49,6 +49,10 @@ jobs:
         shell: pwsh
         run: .\tools\generate-supported-builds.ps1
 
+      - name: Generate runtime flag sources
+        shell: pwsh
+        run: .\tools\generate-runtime-flags.ps1
+
       - name: Build native DLL
         shell: pwsh
         run: .\native\build.ps1

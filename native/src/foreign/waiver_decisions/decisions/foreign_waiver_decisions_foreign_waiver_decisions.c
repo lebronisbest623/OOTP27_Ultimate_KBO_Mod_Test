@@ -1,4 +1,15 @@
-#include "../internal/foreign_waiver_decisions_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../../common/csv/foreign_csv_parse.h"
+#include "../../common/dates/foreign_waiver_date.h"
+#include "../../common/paths/foreign_waiver_paths.h"
+#include "../../waiver_core/api/foreign_waiver_core.h"
+#include "../api/foreign_waiver_decisions.h"
+#include "../internal/foreign_waiver_decisions_state_internal.h"
 
 int kbo_append_foreign_waiver_decision_record(
     const char* source,

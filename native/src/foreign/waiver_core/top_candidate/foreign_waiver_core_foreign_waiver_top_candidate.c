@@ -1,4 +1,15 @@
-#include "../internal/foreign_waiver_core_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../team/lookup/team_lookup.h"
+#include "../../common/dates/foreign_waiver_date.h"
+#include "../../common/player_eval/foreign_waiver_player_eval.h"
+#include "../../common/policy/foreign_waiver_policy.h"
+#include "../../rights/query/foreign_waiver_rights_query.h"
+#include "../api/foreign_waiver_core.h"
 
 int kbo_resolve_foreign_waiver_top_candidate_for_team(
     uint32_t team_id,

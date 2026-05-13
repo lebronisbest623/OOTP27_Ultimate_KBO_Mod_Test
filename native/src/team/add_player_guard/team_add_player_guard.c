@@ -9,52 +9,16 @@
 #include "../../bootstrap/profiling/profiler.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/logging/core_log.h"
-#include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../military_service/players/guards/military_team_add_guard.h"
 #include "../../military_service/players/team_policy/military_service_team_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../assignment/org_query/team_org_assignment_query.h"
 #include "../lookup/team_lookup.h"
+#include "foreign_policy/team_add_player_guard_foreign_purchase_restore.h"
+#include "foreign_policy/retention_trace/team_add_player_guard_foreign_retention_trace.h"
 #include "internal/team_add_player_guard_internal.h"
+#include "original_call/team_add_player_guard_original_call.h"
 #include "team_add_player_guard.h"
-
-typedef uint8_t (__fastcall *OotpKboTeamAddPlayerExFn)(
-    uintptr_t team_ptr,
-    uintptr_t player_ptr,
-    uintptr_t arg3,
-    uintptr_t arg4,
-    uintptr_t arg5,
-    uintptr_t arg6,
-    uintptr_t arg7,
-    uintptr_t arg8);
-static OotpKboTeamAddPlayerExFn g_kbo_team_add_player_guard_trampoline = NULL;
-
-void kbo_set_team_add_player_guard_trampoline(void* trampoline)
-{
-    g_kbo_team_add_player_guard_trampoline = (OotpKboTeamAddPlayerExFn)(uintptr_t)trampoline;
-}
-
-void kbo_clear_team_add_player_guard_trampoline(void)
-{
-    g_kbo_team_add_player_guard_trampoline = NULL;
-}
-
-uint8_t kbo_team_add_player_guard_call_original(
-    uintptr_t team_ptr,
-    uintptr_t player_ptr,
-    uintptr_t arg3,
-    uintptr_t arg4,
-    uintptr_t arg5,
-    uintptr_t arg6,
-    uintptr_t arg7,
-    uintptr_t arg8)
-{
-    OotpKboTeamAddPlayerExFn original = g_kbo_team_add_player_guard_trampoline;
-    if (original == NULL) {
-        return 0;
-    }
-    return original(team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
-}
 
 __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     uintptr_t team_ptr,
@@ -73,7 +37,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         ? (uint32_t)(caller_ptr - (uintptr_t)host_exe)
         : 0u;
 
-    OotpKboTeamAddPlayerExFn original = g_kbo_team_add_player_guard_trampoline;
+    KboTeamAddPlayerOriginalFn original = kbo_team_add_player_guard_get_original();
     if (original == NULL) {
         KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.no_original");
         return 0;
@@ -89,6 +53,17 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         : 0u;
     int is_military_team = team_id != 0u && kbo_team_id_is_military_service_team(team_id);
     int amateur_generation_call = kbo_amateur_generation_team_add_caller(caller_rva);
+
+    if (!kbo_team_add_original_args_readable(team_ptr, player_ptr)) {
+        kbo_team_add_log_skipped_bad_original_args(
+            caller_rva,
+            "entry",
+            team_ptr,
+            player_ptr,
+            team_ptr);
+        KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.bad_args");
+        return 0;
+    }
 
     uint32_t before_current_team_id = 0u;
     uint32_t before_active_team_id = 0u;
@@ -157,7 +132,18 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
                 player_ptr,
                 team_id,
                 before_current_team_id,
-                before_active_team_id)) {
+                before_active_team_id,
+                caller_rva)) {
+        if (player != NULL
+                && before_current_team_id == 0u
+                && before_active_team_id == 0u
+                && before_original_team_id != 0u) {
+            kbo_team_add_restore_source_team_after_blocked_foreign_purchase(
+                player,
+                before_original_team_id,
+                team_id,
+                caller_rva);
+        }
         kbo_log_foreign_team_add_trace(
             caller_rva,
             "foreign_policy_blocked",
@@ -236,6 +222,17 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     }
 
     KBO_PROFILE_BEGIN(profile_team_add_original);
+    if (!kbo_team_add_original_args_readable(effective_team_ptr, player_ptr)) {
+        kbo_team_add_log_skipped_bad_original_args(
+            caller_rva,
+            "before_original",
+            effective_team_ptr,
+            player_ptr,
+            team_ptr);
+        KBO_PROFILE_END(profile_team_add_original, "team_add_guard.original.skipped_bad_args");
+        KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.bad_effective_team");
+        return 0;
+    }
     uint8_t result = original(effective_team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
     KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original.success" : "team_add_guard.original.rejected");
     kbo_log_foreign_team_add_trace(
@@ -250,6 +247,14 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         arg6,
         arg7,
         arg8,
+        before_current_team_id,
+        before_active_team_id,
+        before_original_team_id);
+    kbo_team_add_log_foreign_retention_result(
+        caller_rva,
+        result,
+        effective_team_ptr,
+        player_ptr,
         before_current_team_id,
         before_active_team_id,
         before_original_team_id);
@@ -292,12 +297,31 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         if (retry_team_ptr == team_ptr || retry_team_ptr == effective_team_ptr) {
             break;
         }
+        if (!kbo_team_add_original_args_readable(retry_team_ptr, player_ptr)) {
+            kbo_team_add_log_skipped_bad_original_args(
+                caller_rva,
+                "retry",
+                retry_team_ptr,
+                player_ptr,
+                team_ptr);
+            break;
+        }
         effective_team_ptr = retry_team_ptr;
         KBO_PROFILE_BEGIN(profile_team_add_original);
         result = original(effective_team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
         KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original_retry.success" : "team_add_guard.original_retry.rejected");
     }
     if (result == 0u && amateur_pre_rerouted) {
+        if (!kbo_team_add_original_args_readable(team_ptr, player_ptr)) {
+            kbo_team_add_log_skipped_bad_original_args(
+                caller_rva,
+                "fallback",
+                team_ptr,
+                player_ptr,
+                effective_team_ptr);
+            KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.fallback_bad_args");
+            return 0;
+        }
         KBO_PROFILE_BEGIN(profile_team_add_original);
         result = original(team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
         KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original_fallback.success" : "team_add_guard.original_fallback.rejected");

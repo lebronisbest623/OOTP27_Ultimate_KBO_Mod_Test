@@ -1,4 +1,4 @@
-#include "../../hotkey_window_runtime_internal.h"
+#include "../hotkey_window_webview_internal.h"
 
 HRESULT STDMETHODCALLTYPE kbo_webview_nav_invoke(
     ICoreWebView2NavigationStartingEventHandler* This,

@@ -1,4 +1,14 @@
-#include "../internal/foreign_waiver_decisions_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../runtime_memory/runtime_memory.h"
+#include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
+#include "../../common/dates/foreign_waiver_date.h"
+#include "../../rights/query/foreign_waiver_rights_query.h"
+#include "../api/foreign_waiver_decisions.h"
 
 int kbo_retain_foreign_player_rights(
     uint8_t* player,

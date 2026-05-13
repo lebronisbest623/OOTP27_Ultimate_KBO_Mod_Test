@@ -1,6 +1,24 @@
-#include "../internal/foreign_waiver_decisions_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
-int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../team/lookup/team_lookup.h"
+#include "../../common/csv/foreign_csv_parse.h"
+#include "../../common/player_eval/foreign_waiver_player_eval.h"
+#include "../../common/policy/foreign_waiver_policy.h"
+#include "../../rights/query/foreign_waiver_rights_query.h"
+#include "../../waiver_core/api/foreign_waiver_core.h"
+#include "../api/foreign_waiver_decisions.h"
+#include "../internal/foreign_waiver_decisions_state_internal.h"
+#include "../internal/foreign_waiver_decisions_team_internal.h"
+
+static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
 {
     if (line == NULL || line[0] == '\0') {
         return 0;
@@ -128,7 +146,7 @@ int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
     return 1;
 }
 
-int get_kbo_foreign_waiver_cmd_path(char* out, size_t out_size)
+static int get_kbo_foreign_waiver_cmd_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size < 2) {
         return 0;
@@ -136,7 +154,7 @@ int get_kbo_foreign_waiver_cmd_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("foreign_waiver_commands.txt", out, out_size);
 }
 
-int kbo_append_foreign_waiver_cmd_line(const char* line)
+static int kbo_append_foreign_waiver_cmd_line(const char* line)
 {
     if (line == NULL || line[0] == '\0') {
         return 0;

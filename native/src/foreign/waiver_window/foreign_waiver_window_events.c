@@ -1,4 +1,24 @@
-#include "foreign_waiver_window_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../core/files/atomic/core_atomic_file.h"
+#include "../../core/core_flags/api/flags_api.h"
+#include "../../core/core_league_context_parts/event_manager/event_manager.h"
+#include "../../core/events/core_league_events.h"
+#include "../../core/logging/core_log.h"
+#include "../../runtime_memory/runtime_memory.h"
+#include "../../team/names/team_string.h"
+#include "../common/dates/foreign_waiver_date.h"
+#include "../common/events/foreign_priority_events.h"
+#include "../common/events/foreign_waiver_events.h"
+#include "../common/paths/foreign_waiver_paths.h"
+#include "../common/policy/foreign_waiver_policy.h"
+#include "events/foreign_waiver_window_events_internal.h"
+#include "state/foreign_waiver_window_state.h"
 
 void kbo_queue_foreign_priority_league_event(
     uint32_t event_yyyymmdd,

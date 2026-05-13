@@ -1,8 +1,21 @@
-#include "../internal/foreign_waiver_core_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+
+#include "../../../bootstrap/profiling/profiler.h"
+#include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/logging/core_log.h"
+#include "../../common/dates/foreign_waiver_date.h"
+#include "../../common/policy/foreign_waiver_policy.h"
+#include "../../roster_audit/api/foreign_roster_audit.h"
+#include "../api/foreign_waiver_core.h"
+#include "../internal/foreign_waiver_core_ai_internal.h"
+#include "../internal/foreign_waiver_core_io_internal.h"
 
 LONG g_kbo_foreign_waiver_scanner_started = 0;
 
-DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
+static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
 {
     (void)parameter;
     uint32_t tick = 0;

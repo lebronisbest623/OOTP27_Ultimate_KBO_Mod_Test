@@ -45,7 +45,7 @@ typedef struct KboForeignWaiverAiTargetCandidate {
     int forced;
 } KboForeignWaiverAiTargetCandidate;
 
-int kbo_apply_ai_foreign_waiver_rules(
+static int kbo_apply_ai_foreign_waiver_rules(
     uint32_t player_id,
     uint32_t player_current_team_id,
     int value_score,
@@ -87,7 +87,7 @@ int kbo_apply_ai_foreign_waiver_rules(
     return 1;
 }
 
-int kbo_ai_foreign_waiver_should_retain(
+static int kbo_ai_foreign_waiver_should_retain(
     uint8_t* player,
     uint32_t player_id,
     uint32_t decision_team_id,

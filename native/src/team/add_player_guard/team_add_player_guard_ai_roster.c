@@ -46,6 +46,71 @@ void kbo_set_ai_roster_apply_selection_trace_trampoline(void* trampoline)
         (OotpKboAiRosterApplySelectionFn)(uintptr_t)trampoline;
 }
 
+static int kbo_ai_roster_foreign_release_pressure_allows_native_replace(
+    uint32_t team_id,
+    uint32_t outgoing_player_id,
+    uint32_t incoming_player_id,
+    int32_t target_slot,
+    int32_t roster_code,
+    uint32_t* out_effective_count,
+    int32_t* out_outgoing_score,
+    int32_t* out_threshold)
+{
+    if (out_effective_count != NULL) { *out_effective_count = 0u; }
+    if (out_outgoing_score != NULL) { *out_outgoing_score = 0; }
+    if (out_threshold != NULL) { *out_threshold = 0; }
+
+    if (!read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")
+            || team_id == 0u
+            || outgoing_player_id == 0u
+            || incoming_player_id == 0u) {
+        return 0;
+    }
+
+    uint8_t* outgoing = kbo_find_player_by_id(outgoing_player_id, NULL, NULL);
+    if (outgoing == NULL
+            || !memory_range_readable(outgoing, OOTP27_PLAYER_SCAN_BYTES)
+            || !kbo_player_is_foreign_for_kbo_rights(outgoing)) {
+        return 0;
+    }
+
+    uint32_t foreign_count = 0u;
+    uint32_t asian_count = 0u;
+    uint32_t non_asian_count = 0u;
+    kbo_count_team_asian_quota_probe(team_id, &foreign_count, &asian_count, &non_asian_count);
+    (void)foreign_count;
+    uint32_t effective_count = kbo_effective_foreign_count_with_asian_quota(asian_count, non_asian_count);
+    if (out_effective_count != NULL) { *out_effective_count = effective_count; }
+    if (effective_count < KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT) {
+        return 0;
+    }
+
+    int32_t outgoing_score = kbo_foreign_waiver_value_score(outgoing);
+    int32_t threshold = kbo_get_foreign_waiver_value_threshold_for_player(outgoing);
+    if (out_outgoing_score != NULL) { *out_outgoing_score = outgoing_score; }
+    if (out_threshold != NULL) { *out_threshold = threshold; }
+    if (outgoing_score >= threshold) {
+        return 0;
+    }
+
+    static volatile LONG pressure_log_count = 0;
+    LONG slot = InterlockedIncrement(&pressure_log_count);
+    if (slot <= 300) {
+        append_logf(
+            "foreign release pressure: allow_native_replace team=%u outgoing=%u incoming=%u target_slot=%d roster_code=%d effective=%u limit=%u outgoing_score=%d threshold=%d",
+            team_id,
+            outgoing_player_id,
+            incoming_player_id,
+            target_slot,
+            roster_code,
+            effective_count,
+            KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT,
+            outgoing_score,
+            threshold);
+    }
+    return 1;
+}
+
 __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
     uintptr_t context_ptr,
     int32_t slot_index,
@@ -196,6 +261,25 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
     uint32_t player_id = player_plausible ? *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET) : 0u;
     int incoming_foreign = player_plausible && kbo_player_is_foreign_for_kbo_rights(player);
     DWORD rescue_age_ms = 0u;
+    uint32_t release_pressure_effective = 0u;
+    int32_t release_pressure_score = 0;
+    int32_t release_pressure_threshold = 0;
+    int release_pressure_allows_replace = 0;
+    if (slot_team_id != 0u
+            && before_slot_player_id != 0u
+            && player_id != 0u
+            && !incoming_foreign) {
+        release_pressure_allows_replace =
+            kbo_ai_roster_foreign_release_pressure_allows_native_replace(
+                slot_team_id,
+                before_slot_player_id,
+                player_id,
+                target_slot,
+                roster_code,
+                &release_pressure_effective,
+                &release_pressure_score,
+                &release_pressure_threshold);
+    }
     if (original != NULL
             && slot_block_ptr != 0u
             && target_slot >= 0
@@ -205,6 +289,7 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
             && !incoming_foreign
             && before_slot_player_id != 0u
             && before_slot_player_id != player_id
+            && !release_pressure_allows_replace
             && kbo_ai_roster_recent_foreign_apply_rescue_match(
                 context_ptr,
                 slot_block_ptr,
@@ -252,6 +337,25 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
                 kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET));
         }
         return;
+    }
+
+    if (release_pressure_allows_replace) {
+        static volatile LONG release_pressure_apply_log_count = 0;
+        LONG slot = InterlockedIncrement(&release_pressure_apply_log_count);
+        if (slot <= 300) {
+            append_logf(
+                "foreign release pressure: shield_bypassed context=%p slot_index=%d target_slot=%d roster_code=%d slot_team=%u outgoing=%u incoming=%u effective=%u outgoing_score=%d threshold=%d",
+                (void*)context_ptr,
+                slot_index,
+                target_slot,
+                roster_code,
+                slot_team_id,
+                before_slot_player_id,
+                player_id,
+                release_pressure_effective,
+                release_pressure_score,
+                release_pressure_threshold);
+        }
     }
 
     if (original != NULL) {

@@ -1,5 +1,6 @@
 #include "../internal/foreign_roster_audit_internal.h"
 #include "../../../team/add_player_guard/team_add_player_guard_ai_roster.h"
+#include "../../injury/api/foreign_injury.h"
 
 DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
 {
@@ -24,6 +25,7 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
         }
 
         kbo_run_foreign_ai_roster_daily_callup("foreign_roster_daily_date_change");
+        kbo_foreign_injury_replacement_scan_once("foreign_roster_daily_date_change");
         audit_foreign_roster_state("foreign_roster_daily_date_change", 1);
         last_audit_date = today;
     }

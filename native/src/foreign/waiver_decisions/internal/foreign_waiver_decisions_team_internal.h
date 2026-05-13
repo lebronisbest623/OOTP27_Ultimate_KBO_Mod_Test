@@ -1,0 +1,8 @@
+#ifndef KBOFIX_SRC_FOREIGN_WAIVER_DECISIONS_INTERNAL_FOREIGN_WAIVER_DECISIONS_TEAM_INTERNAL_H_
+#define KBOFIX_SRC_FOREIGN_WAIVER_DECISIONS_INTERNAL_FOREIGN_WAIVER_DECISIONS_TEAM_INTERNAL_H_
+
+#include <stdint.h>
+
+int kbo_original_club_priority_window_allows(uint8_t* player, uint32_t team_id, const char* action_name);
+
+#endif

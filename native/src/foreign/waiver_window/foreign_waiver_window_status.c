@@ -1,4 +1,20 @@
-#include "foreign_waiver_window_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../../bootstrap/profiling/profiler.h"
+#include "../../core/core_flags/api/flags_api.h"
+#include "../../core/dates/core_text_date.h"
+#include "../../core/logging/core_log.h"
+#include "../common/dates/foreign_waiver_date.h"
+#include "../common/events/foreign_waiver_events.h"
+#include "../common/paths/foreign_waiver_paths.h"
+#include "../common/policy/foreign_waiver_policy.h"
+#include "../waiver_core/api/foreign_waiver_core.h"
+#include "events/foreign_waiver_window_events_internal.h"
+#include "state/foreign_waiver_window_state.h"
 
 int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_serial)
 {

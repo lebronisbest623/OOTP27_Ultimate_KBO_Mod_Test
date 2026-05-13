@@ -1,4 +1,11 @@
-#include "../internal/military_service_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/logging/core_log.h"
+#include "../../military_service.h"
+#include "../days_tick/military_service_days_tick_internal.h"
+#include "../state/military_service_runtime_state.h"
 
 void start_kbo_military_seed_bootstrap_thread(void)
 {

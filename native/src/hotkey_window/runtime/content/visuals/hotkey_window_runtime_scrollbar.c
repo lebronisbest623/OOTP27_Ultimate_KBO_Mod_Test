@@ -1,4 +1,4 @@
-#include "../../hotkey_window_runtime_internal.h"
+#include "../hotkey_window_runtime_content_internal.h"
 
 int kbo_hub_estimate_visible_edit_lines(void)
 {
@@ -170,6 +170,11 @@ void kbo_hub_delete_gdi_objects(void)
     if (g_kbo_hub_brush_accent     != NULL) { DeleteObject(g_kbo_hub_brush_accent);     g_kbo_hub_brush_accent     = NULL; }
     kbo_hub_delete_skin_assets();
 }
+
+typedef struct KboMainWindowSearch {
+    DWORD pid;
+    HWND hwnd;
+} KboMainWindowSearch;
 
 BOOL CALLBACK kbo_enum_main_window_proc(HWND hwnd, LPARAM lparam)
 {

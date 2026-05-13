@@ -186,7 +186,7 @@ Runtime flags live in one JSON file:
 |---|---:|---|
 | `enable_launcher_injection` | off | Enable automatic launcher injection |
 | `enable_foreign_waiver_ai` | on | Enable AI reserve-right decisions |
-| `enable_single_division_allstar_events` | on | Enable single-division All-Star support |
+| `enable_single_division_allstar_events` | off | Enable single-division All-Star support |
 | `disable_kbo_competitive_balance_tax` | off | Disable CBT processing and draft penalties |
 | `kbo_league_id.txt` | 100 | KBO league ID override file |
 
@@ -195,6 +195,7 @@ Runtime flags live in one JSON file:
 ## Tests
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File tools\generate-runtime-flags.ps1
 dotnet test .\OOTP27-KBO-Launcher.sln --no-restore
 powershell -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
 ```

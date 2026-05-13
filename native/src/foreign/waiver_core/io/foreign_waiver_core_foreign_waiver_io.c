@@ -1,6 +1,23 @@
-#include "../internal/foreign_waiver_core_internal.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
-int get_kbo_foreign_waiver_csv_path(char* out, size_t out_size)
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/dates/core_current_date.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../team/lookup/team_lookup.h"
+#include "../../common/config/foreign_waiver_config.h"
+#include "../../common/player_eval/foreign_waiver_player_eval.h"
+#include "../../common/policy/foreign_waiver_policy.h"
+#include "../../waiver_decisions/api/foreign_waiver_decisions.h"
+#include "../api/foreign_waiver_core.h"
+#include "../internal/foreign_waiver_core_io_internal.h"
+
+static int get_kbo_foreign_waiver_csv_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size < 2) {
         return 0;
@@ -8,7 +25,7 @@ int get_kbo_foreign_waiver_csv_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("foreign_waiver_candidates.csv", out, out_size);
 }
 
-int append_foreign_waiver_candidate_csv_header(HANDLE file)
+static int append_foreign_waiver_candidate_csv_header(HANDLE file)
 {
     const char* header = "date,source,player_id,current_team_id,active_team_id,original_team_id,current_league_id,priority_window_open,priority_team_id,priority_eligible,dfa_flag,restricted,secondary_restricted,loan_active,injury_active,foreign_value_score\r\n";
     DWORD written = 0;
@@ -16,7 +33,7 @@ int append_foreign_waiver_candidate_csv_header(HANDLE file)
         && written == strlen(header);
 }
 
-int is_csv_empty(HANDLE file)
+static int is_csv_empty(HANDLE file)
 {
     DWORD high = 0;
     uint32_t low = GetFileSize(file, &high);
