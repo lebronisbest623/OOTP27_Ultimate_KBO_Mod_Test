@@ -21,6 +21,7 @@
  * Hybrid native shell: legacy feature fragments remain include-ordered here,
  * while migrated responsibilities are linked as explicit .c/.h modules.
  */
+#include "src/captain/api/captain_selection.h"
 #include "src/core/logging/core_log.h"
 #include "src/runtime_memory/runtime_memory.h"
 #include "src/core/files/atomic/core_atomic_file.h"

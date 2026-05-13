@@ -10,6 +10,7 @@
 #include "../allstar/allstar_league_context/allstar_league_context.h"
 #include "../allstar/team_patch/allstar_team_patch.h"
 #include "../build_verify/build_verify.h"
+#include "../captain/api/captain_selection.h"
 #include "../core/core_flags/api/flags_api.h"
 #include "../core/logging/core_log.h"
 #include "../core/files/save_paths/core_save_paths.h"

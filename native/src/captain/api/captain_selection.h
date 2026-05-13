@@ -1,0 +1,7 @@
+#ifndef KBOFIX_SRC_CAPTAIN_API_CAPTAIN_SELECTION_H_
+#define KBOFIX_SRC_CAPTAIN_API_CAPTAIN_SELECTION_H_
+
+int kbo_run_captain_preseason_selection_once(const char* source);
+void start_kbo_captain_preseason_selection_thread(void);
+
+#endif

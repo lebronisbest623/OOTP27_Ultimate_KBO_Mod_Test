@@ -1,0 +1,328 @@
+#include "../internal/captain_selection_internal.h"
+
+static uintptr_t* kbo_captain_copy_player_vector_snapshot(
+    uintptr_t player_vector,
+    int32_t player_count,
+    const char** out_failure_reason)
+{
+    if (out_failure_reason != NULL) {
+        *out_failure_reason = "unknown";
+    }
+    if (player_vector == 0u || player_count <= 0 || player_count > 200000) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "invalid_vector"; }
+        return NULL;
+    }
+    if ((SIZE_T)player_count > ((SIZE_T)-1 / sizeof(uintptr_t))) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "count_overflow"; }
+        return NULL;
+    }
+
+    SIZE_T bytes = (SIZE_T)player_count * sizeof(uintptr_t);
+    if (!memory_range_readable((void*)player_vector, bytes)) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "unreadable_vector"; }
+        return NULL;
+    }
+
+    uintptr_t* snapshot = (uintptr_t*)HeapAlloc(GetProcessHeap(), 0, bytes);
+    if (snapshot == NULL) {
+        if (out_failure_reason != NULL) { *out_failure_reason = "alloc_failed"; }
+        return NULL;
+    }
+
+    SIZE_T bytes_read = 0;
+    if (!ReadProcessMemory(
+            GetCurrentProcess(),
+            (LPCVOID)player_vector,
+            snapshot,
+            bytes,
+            &bytes_read)
+            || bytes_read != bytes) {
+        HeapFree(GetProcessHeap(), 0, snapshot);
+        if (out_failure_reason != NULL) { *out_failure_reason = "copy_failed"; }
+        return NULL;
+    }
+
+    if (out_failure_reason != NULL) {
+        *out_failure_reason = NULL;
+    }
+    return snapshot;
+}
+
+static int32_t kbo_captain_player_salary_for_season(uint8_t* player, uint32_t season)
+{
+    if (player == NULL
+            || !memory_range_readable(player + OOTP27_PLAYER_CONTRACT_START_YEAR_OFFSET, sizeof(int32_t))
+            || !memory_range_readable(
+                player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET,
+                OOTP27_PLAYER_CONTRACT_SALARY_YEARS * sizeof(int32_t))) {
+        return 0;
+    }
+
+    int32_t years[OOTP27_PLAYER_CONTRACT_SALARY_YEARS] = {0};
+    for (uint32_t i = 0; i < OOTP27_PLAYER_CONTRACT_SALARY_YEARS; i++) {
+        years[i] = *(int32_t*)(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET + (i * sizeof(int32_t)));
+    }
+
+    int32_t start_year = *(int32_t*)(player + OOTP27_PLAYER_CONTRACT_START_YEAR_OFFSET);
+    if (start_year >= 1982 && start_year <= 2200 && season >= (uint32_t)start_year) {
+        uint32_t index = season - (uint32_t)start_year;
+        if (index < OOTP27_PLAYER_CONTRACT_SALARY_YEARS && years[index] > 0) {
+            return years[index];
+        }
+    }
+
+    for (uint32_t i = 0; i < OOTP27_PLAYER_CONTRACT_SALARY_YEARS; i++) {
+        if (years[i] > 0) {
+            return years[i];
+        }
+    }
+    return 0;
+}
+
+static int32_t kbo_captain_salary_score(int32_t salary)
+{
+    if (salary <= 0) {
+        return 0;
+    }
+
+    int32_t score = salary / 1000;
+    if (score > 120000) {
+        score = 120000;
+    }
+    return score;
+}
+
+static int32_t kbo_captain_age_score(uint16_t age)
+{
+    if (age >= 30u && age <= 36u) {
+        return 60000;
+    }
+    if (age >= 28u && age <= 39u) {
+        return 42000;
+    }
+    if (age >= 25u && age <= 42u) {
+        return 18000;
+    }
+    return 0;
+}
+
+static int32_t kbo_captain_candidate_score(KboCaptainSelectionRow* row)
+{
+    int32_t score = 0;
+    score += row->value_score;
+    score += kbo_captain_salary_score(row->salary);
+    score += kbo_captain_age_score(row->age);
+    score += row->domestic ? 70000 : -180000;
+    score += row->active_team_id == row->team_id ? 30000 : 0;
+    score += row->current_team_id == row->team_id ? 15000 : 0;
+    score -= row->dfa ? 140000 : 0;
+    score -= row->restricted ? 50000 : 0;
+    score -= row->injured ? 12000 : 0;
+    return score;
+}
+
+static void kbo_captain_copy_team_name(uint32_t team_id, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 0);
+    if (team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        snprintf(out, out_size, "Team #%u", team_id);
+        return;
+    }
+
+    char city[64] = {0};
+    char nick[64] = {0};
+    copy_ootp_string_object_text(team, OOTP27_KBO_TEAM_CITY_STRING_OFFSET, city, sizeof(city));
+    copy_ootp_string_object_text(team, OOTP27_KBO_TEAM_NICKNAME_STRING_OFFSET, nick, sizeof(nick));
+    if (city[0] != '\0' && nick[0] != '\0') {
+        snprintf(out, out_size, "%s %s", city, nick);
+    } else if (nick[0] != '\0') {
+        snprintf(out, out_size, "%s", nick);
+    } else if (city[0] != '\0') {
+        snprintf(out, out_size, "%s", city);
+    } else {
+        snprintf(out, out_size, "Team #%u", team_id);
+    }
+}
+
+static int kbo_captain_team_index(uint32_t team_id, const uint32_t* team_ids, int team_count)
+{
+    for (int i = 0; i < team_count; i++) {
+        if (team_ids[i] == team_id) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static void kbo_captain_fill_player_row(
+    KboCaptainSelectionRow* row,
+    uint8_t* player,
+    uint32_t date,
+    uint32_t season,
+    uint32_t league_id,
+    uint32_t team_id)
+{
+    memset(row, 0, sizeof(*row));
+    row->date = date;
+    row->season = season;
+    row->league_id = league_id;
+    row->team_id = team_id;
+    kbo_captain_copy_team_name(team_id, row->team_name, sizeof(row->team_name));
+
+    row->player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    row->nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+    row->current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    row->active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    row->current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+    row->age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
+    row->salary = kbo_captain_player_salary_for_season(player, season);
+    row->overall_value = kbo_read_player_i16(player, OOTP27_PLAYER_OVERALL_VALUE_OFFSET);
+    row->talent_value = kbo_read_player_i16(player, OOTP27_PLAYER_TALENT_VALUE_OFFSET);
+    row->ratings_value = kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
+    row->career_value = kbo_read_player_i16(player, OOTP27_PLAYER_CAREER_VALUE_OFFSET);
+    row->value_score = kbo_foreign_waiver_value_score(player);
+    row->domestic = row->nation_id == OOTP27_KBO_KOREA_NATION_ID ? 1u : 0u;
+    row->dfa = player[OOTP27_PLAYER_DFA_FLAG_OFFSET] != 0u ? 1u : 0u;
+    row->restricted = (player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] != 0u
+        || player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] != 0u) ? 1u : 0u;
+    row->injured = player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] != 0u ? 1u : 0u;
+    row->score = kbo_captain_candidate_score(row);
+    kbo_copy_player_display_name(player, row->player_name, sizeof(row->player_name));
+    if (row->player_name[0] == '\0' || strcmp(row->player_name, "Unknown player") == 0) {
+        snprintf(row->player_name, sizeof(row->player_name), "Player #%u", row->player_id);
+    }
+    snprintf(row->reason, sizeof(row->reason), "heuristic:veteran_value_salary_domestic");
+}
+
+int kbo_captain_select_for_preseason(
+    uint32_t date,
+    uint32_t season,
+    uint32_t league_id,
+    KboCaptainSelectionRow* rows,
+    int max_rows,
+    int* out_selected_count)
+{
+    if (out_selected_count != NULL) {
+        *out_selected_count = 0;
+    }
+    if (rows == NULL || max_rows <= 0 || league_id == 0u || season < 1982u || season > 2200u) {
+        return 0;
+    }
+
+    uint32_t team_ids[KBO_CAPTAIN_MAX_TEAMS] = {0};
+    int scanned_teams = 0;
+    int unreadable_teams = 0;
+    int team_count = collect_kbo_league_team_ids(
+        league_id,
+        team_ids,
+        KBO_CAPTAIN_MAX_TEAMS,
+        &scanned_teams,
+        &unreadable_teams);
+    if (team_count <= 0) {
+        append_logf(
+            "KBO captain selection skipped reason=no_teams league_id=%u scanned=%d unreadable=%d",
+            league_id,
+            scanned_teams,
+            unreadable_teams);
+        return 0;
+    }
+
+    if (team_count > max_rows) {
+        team_count = max_rows;
+    }
+
+    for (int i = 0; i < team_count; i++) {
+        memset(&rows[i], 0, sizeof(rows[i]));
+        rows[i].date = date;
+        rows[i].season = season;
+        rows[i].league_id = league_id;
+        rows[i].team_id = team_ids[i];
+        rows[i].score = -2147483647;
+        kbo_captain_copy_team_name(team_ids[i], rows[i].team_name, sizeof(rows[i].team_name));
+        snprintf(rows[i].reason, sizeof(rows[i].reason), "no_eligible_candidate");
+    }
+
+    uintptr_t player_vector = 0;
+    int32_t player_count = 0;
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        append_logf("KBO captain selection skipped reason=no_player_vector league_id=%u", league_id);
+        return 0;
+    }
+
+    const char* snapshot_failure_reason = NULL;
+    uintptr_t* player_snapshot = kbo_captain_copy_player_vector_snapshot(
+        player_vector,
+        player_count,
+        &snapshot_failure_reason);
+    if (player_snapshot == NULL) {
+        append_logf(
+            "KBO captain selection skipped reason=player_vector_snapshot_failed detail=%s vector=%p count=%d",
+            snapshot_failure_reason != NULL ? snapshot_failure_reason : "",
+            (void*)player_vector,
+            player_count);
+        return 0;
+    }
+
+    int scanned_players = 0;
+    int selected_count = 0;
+    for (int32_t i = 0; i < player_count; i++) {
+        uintptr_t player_ptr = player_snapshot[i];
+        if (!kbo_player_pointer_plausible(player_ptr)
+                || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+            continue;
+        }
+
+        uint8_t* player = (uint8_t*)player_ptr;
+        uint8_t retired = player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET];
+        uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
+        if (retired != 0u || age < 18u || age > 48u) {
+            continue;
+        }
+
+        uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+        uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+        uint32_t team_id = active_team_id != 0u ? active_team_id : current_team_id;
+        int team_index = kbo_captain_team_index(team_id, team_ids, team_count);
+        if (team_index < 0 && current_team_id != team_id) {
+            team_id = current_team_id;
+            team_index = kbo_captain_team_index(team_id, team_ids, team_count);
+        }
+        if (team_index < 0) {
+            continue;
+        }
+
+        scanned_players++;
+        KboCaptainSelectionRow candidate;
+        kbo_captain_fill_player_row(&candidate, player, date, season, league_id, team_id);
+        if (rows[team_index].player_id == 0u || candidate.score > rows[team_index].score
+                || (candidate.score == rows[team_index].score
+                    && candidate.player_id < rows[team_index].player_id)) {
+            rows[team_index] = candidate;
+        }
+    }
+
+    for (int i = 0; i < team_count; i++) {
+        if (rows[i].player_id != 0u) {
+            selected_count++;
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, player_snapshot);
+    if (out_selected_count != NULL) {
+        *out_selected_count = selected_count;
+    }
+    append_logf(
+        "KBO captain selection candidates date=%u season=%u league_id=%u teams=%d players=%d selected=%d",
+        date,
+        season,
+        league_id,
+        team_count,
+        scanned_players,
+        selected_count);
+    return team_count;
+}

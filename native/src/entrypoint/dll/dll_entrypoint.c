@@ -63,6 +63,7 @@ DWORD WINAPI patch_thread(LPVOID parameter)
     start_kbo_hotkey_window_thread((HINSTANCE)parameter);
     start_kbo_cbt_event_scheduler_thread();
     start_kbo_fa_salary_snapshot_thread();
+    start_kbo_captain_preseason_selection_thread();
 
     if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
         append_log_line("KBO all-star presave bootstrap install started");
