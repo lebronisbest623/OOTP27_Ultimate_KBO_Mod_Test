@@ -14,6 +14,7 @@
 #include "../news/military_selection_news.h"
 #include "../../seed/parse/military_service_seed_parse.h"
 #include "../../runtime/days_tick/military_service_tick.h"
+#include "military_selection_policy.h"
 
 static int kbo_count_players_on_team_with_military_days(uint32_t team_id)
 {
@@ -58,17 +59,26 @@ int kbo_military_draft_candidate_score(uint8_t* player)
     int32_t talent = kbo_military_read_player_i16(player, OOTP27_PLAYER_TALENT_VALUE_OFFSET);
     int32_t ratings = kbo_military_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
     int32_t career = kbo_military_read_player_i16(player, OOTP27_PLAYER_CAREER_VALUE_OFFSET);
-    int score = talent * 55 + overall * 25 + ratings * 10 + career * 10;
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    int score =
+        talent * policy->draft_score_talent_weight
+        + overall * policy->draft_score_overall_weight
+        + ratings * policy->draft_score_ratings_weight
+        + career * policy->draft_score_career_weight;
 
     uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
-    if (age >= 21 && age <= 26) {
-        score += 300 - (int)(age - 21u) * 20;
-    } else if (age < 21) {
-        score += 120 - (int)(21u - age) * 10;
+    if ((int32_t)age >= policy->draft_score_ideal_age_min
+            && (int32_t)age <= policy->draft_score_ideal_age_max) {
+        score += policy->draft_score_ideal_age_base_bonus
+            - ((int32_t)age - policy->draft_score_ideal_age_min) * policy->draft_score_ideal_age_step_penalty;
+    } else if ((int32_t)age < policy->draft_score_ideal_age_min) {
+        score += policy->draft_score_young_base_bonus
+            - (policy->draft_score_ideal_age_min - (int32_t)age) * policy->draft_score_young_step_penalty;
     } else {
-        score += 120 - (int)(age - 26u) * 15;
+        score += policy->draft_score_old_base_bonus
+            - ((int32_t)age - policy->draft_score_ideal_age_max) * policy->draft_score_old_step_penalty;
     }
-    score += (int)(*(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET) % 97u);
+    score += (int)(*(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET) % (uint32_t)policy->draft_score_player_id_mod);
     return score;
 }
 
@@ -172,11 +182,11 @@ static int kbo_route_queued_military_draft_candidates(
         return 0;
     }
 
-    enum { KBO_MILITARY_SANG_CAPACITY = 35, KBO_MILITARY_SANG_ANNUAL_INTAKE = 18 };
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
     int on_roster = kbo_count_players_on_team_with_military_days(sang_id);
-    int slots = KBO_MILITARY_SANG_CAPACITY - on_roster;
-    if (slots > KBO_MILITARY_SANG_ANNUAL_INTAKE) {
-        slots = KBO_MILITARY_SANG_ANNUAL_INTAKE;
+    int slots = policy->sang_capacity - on_roster;
+    if (slots > policy->sang_annual_intake) {
+        slots = policy->sang_annual_intake;
     }
     if (slots <= 0) {
         append_logf("KBO military selection skipped source=%s year=%u reason=sang_full active=%d", source != NULL ? source : "", entry_year, on_roster);
@@ -304,7 +314,8 @@ int kbo_refresh_military_selection_candidates_from_memory(
         uint8_t* player = (uint8_t*)player_ptr;
         int32_t days_left = kbo_military_effective_days_left(player);
         if (player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET] == 0u
-                || days_left < KBO_MILITARY_SERVICE_DAYS - 90) {
+                || days_left < KBO_MILITARY_SERVICE_DAYS
+                    - kbo_military_selection_policy()->existing_loan_refresh_window_days) {
             continue;
         }
         uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);

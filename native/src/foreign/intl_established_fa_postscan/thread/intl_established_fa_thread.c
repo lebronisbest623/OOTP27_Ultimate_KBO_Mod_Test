@@ -1,4 +1,5 @@
 #include "../internal/intl_established_fa_postscan_internal.h"
+#include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 
 void kbo_intl_established_fa_postscan_try_run(void)
 {
@@ -54,7 +55,7 @@ DWORD WINAPI kbo_intl_established_fa_postscan_thread(LPVOID parameter)
     (void)parameter;
     append_log_line("international established FA postscan worker started");
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(1000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->intl_established_fa_postscan_sleep_ms)) {
             break;
         }
         kbo_intl_established_fa_postscan_try_run();

@@ -8,6 +8,7 @@
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/dates/core_text_date.h"
+#include "../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../state/salary_snapshot_state.h"
@@ -121,7 +122,7 @@ int kbo_fa_salary_snapshot_current_date_in_opening_window(uint32_t date, uint32_
     if (current_serial == 0u || opening_serial == 0u || current_serial < opening_serial) {
         return 0;
     }
-    return current_serial - opening_serial <= KBO_FA_SALARY_SNAPSHOT_OPENING_WINDOW_DAYS;
+    return current_serial - opening_serial <= (uint32_t)kbo_runtime_tuning_policy()->fa_salary_snapshot_opening_window_days;
 }
 
 static int kbo_fa_salary_snapshot_read_uint_attr(const char* text, const char* name, uint32_t* out_value)

@@ -32,7 +32,7 @@ static int32_t kbo_foreign_fa_reserve_right_baseline_value(int index, int asian_
 {
     int32_t base = kbo_get_foreign_fa_demand_baseline_value_for_player(index, asian_quota);
     int32_t floor = kbo_get_foreign_fa_demand_baseline_value_for_player(0, asian_quota);
-    int64_t discounted = ((int64_t)base * 85) / 100;
+    int64_t discounted = ((int64_t)base * kbo_foreign_player_policy()->reserve_demand_discount_percent) / 100;
     if (discounted < floor) {
         discounted = floor;
     }

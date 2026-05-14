@@ -1,4 +1,5 @@
 #include "../internal/submit_offer_probe_internal.h"
+#include "../../../common/policy/foreign_player_policy.h"
 
 int kbo_foreign_fa_demand_remap_already_applied(uint32_t player_id, int32_t demand)
 {
@@ -42,7 +43,9 @@ int kbo_foreign_fa_demand_remap_candidate(uint8_t* player)
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
     uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-    if (player_id == 0u || player_id > 200000000u || age < 16u || age > 60u || current_team_id != 0u) {
+    if (!kbo_foreign_policy_player_id_plausible(player_id)
+            || !kbo_foreign_policy_market_age_allowed(age)
+            || current_team_id != 0u) {
         return 0;
     }
     if (player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET] != 0u) {
@@ -55,7 +58,7 @@ int kbo_foreign_fa_demand_remap_candidate(uint8_t* player)
         return 0;
     }
     int32_t demand = *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET);
-    return demand > 0 && demand < 1000000000;
+    return kbo_foreign_policy_demand_salary_plausible(demand);
 }
 
 int32_t kbo_foreign_fa_remap_demand_from_salary_ladder(int32_t demand, uint8_t* financials, int asian_quota)
@@ -112,14 +115,12 @@ int32_t kbo_foreign_fa_remap_demand_from_salary_ladder(int32_t demand, uint8_t* 
 
 static int kbo_foreign_reserve_demand_index_for_score(int32_t score)
 {
-    if (score >= 140000) { return 8; }
-    if (score >= 120000) { return 7; }
-    if (score >= 100000) { return 6; }
-    if (score >= 85000) { return 5; }
-    if (score >= 70000) { return 4; }
-    if (score >= 55000) { return 3; }
-    if (score >= 40000) { return 2; }
-    if (score >= 25000) { return 1; }
+    const KboForeignPlayerPolicy* policy = kbo_foreign_player_policy();
+    for (int index = KBO_FOREIGN_POLICY_RESERVE_DEMAND_INDEX_COUNT - 1; index >= 1; index--) {
+        if (score >= policy->reserve_demand_score_min[index]) {
+            return index;
+        }
+    }
     return 0;
 }
 
@@ -127,7 +128,8 @@ static int32_t kbo_foreign_reserve_demand_floor_from_index(int index, int asian_
 {
     int32_t base = kbo_get_foreign_fa_demand_baseline_value_for_player(index, asian_quota);
     int32_t floor = kbo_get_foreign_fa_demand_baseline_value_for_player(0, asian_quota);
-    int64_t discounted = ((int64_t)base * 85) / 100;
+    const KboForeignPlayerPolicy* policy = kbo_foreign_player_policy();
+    int64_t discounted = ((int64_t)base * policy->reserve_demand_discount_percent) / 100;
     if (discounted < floor) {
         discounted = floor;
     }
@@ -259,7 +261,7 @@ int kbo_apply_foreign_reserve_demand_floor(uintptr_t player_ptr, const char* sou
 DWORD WINAPI kbo_foreign_fa_demand_restore_timer_thread(void* param)
 {
     (void)param;
-    if (kbo_runtime_sleep_should_continue(750)) {
+    if (kbo_runtime_sleep_should_continue((uint32_t)kbo_foreign_player_policy()->no_minor_demand_restore_timer_delay_ms)) {
         kbo_restore_foreign_fa_demand_salary_ladder("offer_build_timer");
     }
     InterlockedExchange(&g_kbo_foreign_fa_demand_restore_timer_pending, 0);

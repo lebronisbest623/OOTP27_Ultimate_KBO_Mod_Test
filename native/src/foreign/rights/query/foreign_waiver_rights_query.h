@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <windows.h>
 
-#define KBO_FOREIGN_WAIVER_RETENTION_YEARS 5
 #define KBO_FOREIGN_WAIVER_RIGHTS_MAX 1024
 
 typedef struct KboForeignWaiverRetention {

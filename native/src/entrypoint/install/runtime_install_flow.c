@@ -78,21 +78,22 @@ DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
         request.enable_offer,
         request.enable_legacy);
 
+    const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
     int stable_ticks = 0;
-    for (int attempt = 1; attempt <= 180; attempt++) {
+    for (int attempt = 1; attempt <= tuning->sangmu_delayed_install_attempts; attempt++) {
         char save_path[MAX_PATH] = {0};
         uint32_t today_serial = kbo_current_date_serial();
         int has_save = kbo_get_current_save_path(save_path, sizeof(save_path));
         if (has_save && today_serial != 0u) {
             stable_ticks++;
-            if (stable_ticks >= 6) {
+            if (stable_ticks >= tuning->sangmu_delayed_install_stable_ticks) {
                 break;
             }
         } else {
             stable_ticks = 0;
         }
 
-        if (attempt == 1 || attempt == 10 || attempt == 30 || attempt == 60 || attempt == 120) {
+        if (kbo_runtime_tuning_sangmu_delayed_install_log_attempt(attempt)) {
             append_logf(
                 "KBO Sangmu FA hooks delayed install not ready attempt=%d save=%d today=%u stable=%d",
                 attempt,
@@ -100,7 +101,7 @@ DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
                 today_serial,
                 stable_ticks);
         }
-        Sleep(1000);
+        Sleep((DWORD)tuning->sangmu_delayed_install_sleep_ms);
     }
 
     kbo_load_military_service_team_policy_override_once();
@@ -374,8 +375,9 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
     uint32_t last_date_serial = 0u;
     int stable_date_ticks = 0;
     int early_amateur_team_add_guard_installed = 0;
-    for (int attempt = 1; attempt <= 450; attempt++) {
-        int log_detail = attempt == 1 || attempt == 5 || attempt == 15 || attempt % 30 == 0;
+    const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
+    for (int attempt = 1; attempt <= tuning->runtime_marker_wait_attempts; attempt++) {
+        int log_detail = kbo_runtime_tuning_runtime_marker_log_attempt(attempt);
         if (kbo_current_save_has_required_roster_marker("runtime_marker_wait", log_detail)) {
             if (read_kbo_localappdata_flag_file("enable_kbo_cbt_service_time_probe.txt")) {
                 kbo_cbt_service_time_probe_once();
@@ -399,7 +401,7 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
                 stable_date_ticks = 0;
             }
 
-            if (stable_date_ticks >= 8) {
+            if (stable_date_ticks >= tuning->runtime_marker_wait_stable_ticks) {
                 install_kbo_full_runtime_after_roster_marker(instance);
                 return 0;
             }
@@ -414,7 +416,7 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
             last_date_serial = 0u;
             stable_date_ticks = 0;
         }
-        Sleep(2000);
+        Sleep((DWORD)tuning->runtime_marker_wait_sleep_ms);
     }
 
     append_log_line("KBO full runtime marker guard gave up: required roster marker was not found");

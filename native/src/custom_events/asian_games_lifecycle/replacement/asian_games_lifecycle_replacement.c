@@ -51,8 +51,10 @@ int kbo_asian_games_find_replacement_for_entry(
     if (kbo_league_id != 0u) {
         allowed_leagues[allowed_league_count++] = kbo_league_id;
     }
-    if (kbo_league_id == 200u && allowed_league_count < KBO_ASIAN_GAMES_MAX_ALLOWED_LEAGUES) {
-        allowed_leagues[allowed_league_count++] = 201u;
+    uint32_t included_minor_league_id = 0u;
+    if (kbo_asian_games_policy_minor_league_included(kbo_league_id, &included_minor_league_id)
+            && allowed_league_count < KBO_ASIAN_GAMES_MAX_ALLOWED_LEAGUES) {
+        allowed_leagues[allowed_league_count++] = included_minor_league_id;
     }
 
     int wildcard_count_without_old = kbo_asian_games_roster_wildcard_count_except(old_index);
@@ -101,8 +103,9 @@ int kbo_asian_games_find_replacement_for_entry(
         uint8_t role = player[OOTP27_PLAYER_POSITION_GROUP_OFFSET];
         int same_bucket = kbo_asian_games_roles_same_bucket(role, old_entry->role);
         uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
-        int wildcard = age > 24u;
-        if (wildcard && wildcard_count_without_old >= KBO_ASIAN_GAMES_MAX_WILDCARDS) {
+        const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
+        int wildcard = kbo_asian_games_policy_is_wildcard_age(age);
+        if (wildcard && wildcard_count_without_old >= policy->max_wildcards) {
             continue;
         }
         uint32_t org_id = kbo_asian_games_org_team_id_for_team(current_team_id);

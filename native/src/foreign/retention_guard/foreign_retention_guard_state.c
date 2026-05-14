@@ -5,6 +5,7 @@
 #include "foreign_retention_guard_internal.h"
 #include "../../core/logging/core_log.h"
 #include "../common/dates/foreign_waiver_date.h"
+#include "../common/policy/foreign_player_policy.h"
 #include "../rights/query/foreign_waiver_rights_query.h"
 
 static volatile LONG g_kbo_foreign_retention_guard_lock = 0;
@@ -49,7 +50,9 @@ void kbo_foreign_retention_guard_record_team_add(
         return;
     }
 
-    uint32_t expires_on = kbo_add_days_yyyymmdd(signed_on_yyyymmdd, KBO_FOREIGN_RETENTION_GUARD_DAYS);
+    uint32_t expires_on = kbo_add_days_yyyymmdd(
+        signed_on_yyyymmdd,
+        (uint32_t)kbo_foreign_player_policy()->retention_guard_days);
     if (expires_on == 0u) {
         expires_on = signed_on_yyyymmdd;
     }

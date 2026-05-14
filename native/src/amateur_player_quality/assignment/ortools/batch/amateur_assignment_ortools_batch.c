@@ -1,10 +1,11 @@
 #include "..\amateur_assignment_ortools_internal.h"
+#include "../../../../core/runtime_tuning/runtime_tuning_policy.h"
 
 static DWORD WINAPI kbo_amateur_league_batch_flush_thread(LPVOID parameter)
 {
     (void)parameter;
     for (;;) {
-        if (!kbo_runtime_sleep_should_continue(250)) {
+        if (!kbo_runtime_sleep_should_continue(kbo_runtime_tuning_policy()->amateur_assignment_ortools_batch_sleep_ms)) {
             break;
         }
         if (kbo_amateur_reroute_disabled_cached()) {
@@ -265,4 +266,3 @@ void kbo_prepare_amateur_assignment_batch_ortools(uintptr_t player_list_ptr, int
     (void)accumulated_teams;
     kbo_amateur_flush_league_batch_ortools("team_count", 1);
 }
-

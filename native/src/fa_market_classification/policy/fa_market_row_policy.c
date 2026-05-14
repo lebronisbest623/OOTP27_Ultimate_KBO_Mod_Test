@@ -13,10 +13,14 @@ int kbo_fa_market_row_is_undrafted_domestic(const KboFaMarketClassification* row
         return 0;
     }
 
-    if (row->draft_league_id == 201u && row->draft_subtype == 1u && row->age <= 25u) {
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+    if (row->draft_league_id == (uint32_t)policy->undrafted_college_league_id
+            && row->draft_subtype == (uint8_t)policy->undrafted_college_draft_subtype
+            && row->age <= (uint16_t)policy->undrafted_college_age_max) {
         return 1;
     }
-    if (row->draft_league_id == 200u && row->age <= 20u) {
+    if (row->draft_league_id == (uint32_t)policy->undrafted_high_school_league_id
+            && row->age <= (uint16_t)policy->undrafted_high_school_age_max) {
         return 1;
     }
     return 0;
@@ -39,10 +43,12 @@ int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* 
     }
 
     uint32_t original_league_id = kbo_fa_market_get_team_league_id(row->original_team_id);
-    if (original_league_id == KBO_FA_MARKET_INDEPENDENT_LEAGUE_ID) {
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+    uint32_t independent_league_id = (uint32_t)policy->independent_league_id;
+    if (original_league_id == independent_league_id) {
         return 1;
     }
-    return original_league_id == 0u && row->draft_league_id == KBO_FA_MARKET_INDEPENDENT_LEAGUE_ID;
+    return original_league_id == 0u && row->draft_league_id == independent_league_id;
 }
 
 void kbo_fa_market_set_history_reason(

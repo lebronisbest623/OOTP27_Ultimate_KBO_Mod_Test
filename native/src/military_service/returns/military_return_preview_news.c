@@ -19,12 +19,12 @@
 #include "../players/state/military_player_state.h"
 #include "../seed/parse/military_service_seed_parse.h"
 #include "../selection/events/military_selection_event.h"
+#include "../selection/events/military_selection_policy.h"
 #include "../selection/news/military_selection_news.h"
 #include "military_return_preview_news.h"
 
 #define KBO_MILITARY_RETURN_PREVIEW_MAX 32
 #define KBO_MILITARY_RETURN_PREVIEW_LIST_MAX 10
-#define KBO_MILITARY_RETURN_PREVIEW_DAYS 14
 
 typedef struct KboMilitaryReturnPreviewEntry {
     uint32_t player_id;
@@ -430,7 +430,7 @@ int kbo_emit_military_return_preview_news_if_due(uint32_t today_serial, const ch
     }
 
     const KboMilitaryReturnPreviewEntry* lead = &entries[0];
-    if (lead->days_left <= 0 || lead->days_left > KBO_MILITARY_RETURN_PREVIEW_DAYS) {
+    if (lead->days_left <= 0 || lead->days_left > kbo_military_selection_policy()->return_preview_days) {
         InterlockedExchange(&g_kbo_military_return_preview_last_checked_date, (LONG)today);
         return 0;
     }

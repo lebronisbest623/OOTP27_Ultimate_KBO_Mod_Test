@@ -1,4 +1,5 @@
 #include "../fa_requalification_internal.h"
+#include "../../core/runtime_tuning/runtime_tuning_policy.h"
 
 int kbo_restore_fa_requalification_team_control(
     const KboFaRequalificationRecord* rec,
@@ -9,7 +10,8 @@ int kbo_restore_fa_requalification_team_control(
             || rec->last_fa_year < 1982u) {
         return 0;
     }
-    if (current_year >= rec->last_fa_year + KBO_FA_REQUALIFICATION_YEARS) {
+    uint32_t team_control_years = kbo_fa_requalification_team_control_years();
+    if (current_year >= rec->last_fa_year + team_control_years) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_skip_log_count);
         if (slot <= 120) {
             append_logf(
@@ -19,7 +21,7 @@ int kbo_restore_fa_requalification_team_control(
                 rec->original_team_id,
                 current_year,
                 rec->last_fa_year,
-                rec->last_fa_year + KBO_FA_REQUALIFICATION_YEARS);
+                rec->last_fa_year + team_control_years);
         }
         return 0;
     }
@@ -91,7 +93,7 @@ int kbo_restore_fa_requalification_team_control(
             rec->original_team_id,
             current_year,
             rec->last_fa_year,
-            rec->last_fa_year + KBO_FA_REQUALIFICATION_YEARS,
+            rec->last_fa_year + team_control_years,
             old_current_team,
             old_active_team,
             old_league,
@@ -106,7 +108,7 @@ int kbo_restore_fa_requalification_team_control(
                 rec->original_team_id,
                 current_year,
                 rec->last_fa_year,
-                rec->last_fa_year + KBO_FA_REQUALIFICATION_YEARS);
+                rec->last_fa_year + team_control_years);
         }
     }
     return changed;
@@ -175,7 +177,7 @@ DWORD WINAPI kbo_fa_requalification_thread(LPVOID parameter)
 {
     (void)parameter;
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(5000)) {
+        if (!kbo_runtime_sleep_should_continue(kbo_runtime_tuning_policy()->fa_requalification_thread_sleep_ms)) {
             break;
         }
         kbo_run_fa_requalification_once("fa_requalification_monitor");

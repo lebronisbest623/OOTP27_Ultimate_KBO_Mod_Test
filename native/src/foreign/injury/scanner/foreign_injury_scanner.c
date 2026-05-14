@@ -1,4 +1,5 @@
 #include "foreign_injury_scanner_internal.h"
+#include "../../common/policy/foreign_player_policy.h"
 
 static LONG g_kbo_foreign_injury_return_wait_log_count = 0;
 
@@ -169,7 +170,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
 
         uint8_t injury_active = player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
         int16_t days_left = *(int16_t*)(player + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
-        if (!injury_active || days_left < KBO_FOREIGN_INJURY_REPLACEMENT_MIN_DAYS) {
+        if (!injury_active || days_left < kbo_foreign_player_policy()->injury_replacement_min_days) {
             continue;
         }
 
@@ -338,7 +339,7 @@ DWORD WINAPI kbo_foreign_injury_replacement_thread(LPVOID parameter)
     (void)parameter;
     kbo_foreign_injury_replacement_scan_once("foreign_injury_replacement_thread_start");
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(7000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_foreign_player_policy()->injury_replacement_scan_sleep_ms)) {
             break;
         }
         kbo_foreign_injury_replacement_scan_once("foreign_injury_replacement_thread");

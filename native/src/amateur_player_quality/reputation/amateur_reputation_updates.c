@@ -3,7 +3,7 @@
 int kbo_find_amateur_team_reputation_by_memory_team(uint32_t league_id, uint8_t* team, uint8_t* out_reputation)
 {
     if (out_reputation != NULL) {
-        *out_reputation = 70u;
+        *out_reputation = kbo_amateur_default_team_reputation();
     }
     if (league_id == 0u || team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
         return 0;
@@ -23,7 +23,7 @@ int kbo_find_amateur_team_reputation_by_memory_team(uint32_t league_id, uint8_t*
             KboAmateurResolvedTeamReputation* resolved = &g_kbo_amateur_resolved_team_reputations[g_kbo_amateur_resolved_team_reputation_count++];
             resolved->team = team;
             resolved->league_id = league_id;
-            resolved->reputation = out_reputation != NULL ? *out_reputation : 70u;
+            resolved->reputation = out_reputation != NULL ? *out_reputation : kbo_amateur_default_team_reputation();
         }
         return 1;
     }
@@ -103,8 +103,13 @@ int kbo_compare_amateur_reputation_update_rows(const void* a, const void* b)
 
 uint8_t kbo_amateur_reputation_clamp_for_league(uint32_t league_id, int32_t value)
 {
-    int32_t min_value = league_id == KBO_COLLEGE_LEAGUE_ID ? 3 : 15;
-    int32_t max_value = league_id == KBO_COLLEGE_LEAGUE_ID ? 78 : 98;
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
+    int32_t min_value = league_id == KBO_COLLEGE_LEAGUE_ID
+        ? policy->college_reputation_min
+        : policy->high_school_reputation_min;
+    int32_t max_value = league_id == KBO_COLLEGE_LEAGUE_ID
+        ? policy->college_reputation_max
+        : policy->high_school_reputation_max;
     if (value < min_value) {
         value = min_value;
     } else if (value > max_value) {
@@ -222,7 +227,7 @@ int kbo_update_amateur_reputation_for_league(uint32_t league_id, const char* sou
             continue;
         }
         uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
-        uint8_t old_rep = 70u;
+        uint8_t old_rep = kbo_amateur_default_team_reputation();
         if (team_id == 0u || !kbo_find_amateur_team_reputation_by_memory_team(league_id, team, &old_rep)) {
             continue;
         }
@@ -231,7 +236,8 @@ int kbo_update_amateur_reputation_for_league(uint32_t league_id, const char* sou
         uint16_t losses = *(uint16_t*)(team + KBO_AMATEUR_TEAM_REGULAR_LOSSES_OFFSET);
         uint16_t ties = *(uint16_t*)(team + KBO_AMATEUR_TEAM_REGULAR_TIES_OFFSET);
         uint32_t games = (uint32_t)wins + (uint32_t)losses + (uint32_t)ties;
-        if (games < KBO_AMATEUR_REPUTATION_UPDATE_MIN_GAMES || wins > 250u || losses > 250u || ties > 250u) {
+        if (games < (uint32_t)kbo_amateur_player_quality_policy()->reputation_update_min_games
+                || wins > 250u || losses > 250u || ties > 250u) {
             continue;
         }
 
@@ -255,31 +261,32 @@ int kbo_update_amateur_reputation_for_league(uint32_t league_id, const char* sou
     }
 
     qsort(rows, (size_t)row_count, sizeof(rows[0]), kbo_compare_amateur_reputation_update_rows);
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
     for (int i = 0; i < row_count; i++) {
         int32_t delta = 0;
-        if (rows[i].score >= 1600) {
-            delta += 4;
-        } else if (rows[i].score >= 1300) {
-            delta += 2;
-        } else if (rows[i].score >= 1100) {
-            delta += 1;
-        } else if (rows[i].score <= 500) {
-            delta -= 4;
-        } else if (rows[i].score <= 700) {
-            delta -= 2;
-        } else if (rows[i].score <= 900) {
-            delta -= 1;
+        if (rows[i].score >= policy->reputation_elite_score_min) {
+            delta += policy->reputation_elite_delta;
+        } else if (rows[i].score >= policy->reputation_strong_score_min) {
+            delta += policy->reputation_strong_delta;
+        } else if (rows[i].score >= policy->reputation_positive_score_min) {
+            delta += policy->reputation_positive_delta;
+        } else if (rows[i].score <= policy->reputation_poor_score_max) {
+            delta += policy->reputation_poor_delta;
+        } else if (rows[i].score <= policy->reputation_weak_score_max) {
+            delta += policy->reputation_weak_delta;
+        } else if (rows[i].score <= policy->reputation_negative_score_max) {
+            delta += policy->reputation_negative_delta;
         }
 
-        if (i < 4) {
-            delta += 2;
-        } else if (i < 10) {
-            delta += 1;
+        if (i < policy->reputation_top_major_rank_count) {
+            delta += policy->reputation_top_major_bonus;
+        } else if (i < policy->reputation_top_minor_rank_count) {
+            delta += policy->reputation_top_minor_bonus;
         }
-        if (i >= row_count - 4) {
-            delta -= 2;
-        } else if (i >= row_count - 10) {
-            delta -= 1;
+        if (i >= row_count - policy->reputation_bottom_major_rank_count) {
+            delta -= policy->reputation_bottom_major_penalty;
+        } else if (i >= row_count - policy->reputation_bottom_minor_rank_count) {
+            delta -= policy->reputation_bottom_minor_penalty;
         }
 
         rows[i].new_reputation = kbo_amateur_reputation_clamp_for_league(

@@ -1,0 +1,6 @@
+{
+  "max_scaled_count": 1000,
+  "catcher_allow_one_in": 250,
+  "market_age_min": 16,
+  "market_age_max": 60
+}

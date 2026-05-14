@@ -42,12 +42,6 @@ typedef struct KboForeignFaDemandRemapRecord {
     int32_t original_demand;
     int32_t mapped_demand;
 } KboForeignFaDemandRemapRecord;
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INITIAL_DELAY_MS 1000u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_INTERVAL_MS 2000u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS 5u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INTERVAL_MS 60000u
-#define KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS 80
-
 extern LONG g_kbo_no_minor_contract_demand_floor_enabled;
 extern KboFinancialSalaryLadderSnapshot g_kbo_foreign_fa_demand_ladder_snapshot;
 extern KboForeignFaDemandRemapRecord g_kbo_foreign_fa_demand_remap_records[512];

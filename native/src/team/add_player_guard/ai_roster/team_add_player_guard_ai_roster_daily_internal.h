@@ -9,6 +9,7 @@
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../foreign/common/policy/foreign_player_policy.h"
 #include "../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../../runtime_memory/runtime_memory.h"
@@ -18,7 +19,6 @@
 #define KBO_AI_ROSTER_SELECT_SCORE_FE0_OFFSET 0xfe0u
 #define KBO_AI_ROSTER_SELECT_SCORE_FE4_OFFSET 0xfe4u
 #define KBO_AI_ROSTER_FOREIGN_F25_MIN 100u
-#define KBO_AI_ROSTER_DAILY_CALLUP_MAX_ATTEMPTS 24
 #define KBO_AI_ROSTER_DAILY_TRIED_MAX 64
 
 typedef struct KboAiRosterDailyCandidateSummary {

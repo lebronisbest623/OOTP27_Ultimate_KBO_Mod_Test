@@ -135,7 +135,7 @@ uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr
     int16_t age = *(int16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
     uint32_t source_team_id = team_id;
     uint32_t player_team_id = kbo_amateur_player_assignment_team_id(player);
-    uint8_t current_reputation = 70u;
+    uint8_t current_reputation = kbo_amateur_default_team_reputation();
     int current_reputation_found = 0;
     if (player_team_id != 0u
             && kbo_amateur_assignment_find_candidate_info(
@@ -172,15 +172,16 @@ uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr
             NULL,
             &current_player_count,
             &current_hitter_count);
+        const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
         int32_t source_min_players = team_league_id == KBO_HIGH_SCHOOL_LEAGUE_ID
-            ? KBO_HIGH_SCHOOL_ASSIGNMENT_SOURCE_MIN_PLAYERS
-            : KBO_COLLEGE_ASSIGNMENT_SOURCE_MIN_PLAYERS;
+            ? policy->high_school_assignment_source_min_players
+            : policy->college_assignment_source_min_players;
         if (current_player_count >= 0 && current_player_count < source_min_players) {
             return team_ptr;
         }
         if (kbo_amateur_player_is_hitter(player)
                 && current_hitter_count >= 0
-                && current_hitter_count < KBO_AMATEUR_ASSIGNMENT_SOURCE_MIN_HITTERS) {
+                && current_hitter_count < policy->assignment_source_min_hitters) {
             return team_ptr;
         }
     }
@@ -241,7 +242,7 @@ uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr
     }
 
     uint32_t target_team_id = *(uint32_t*)(target_team + OOTP27_KBO_TEAM_ID_OFFSET);
-    uint8_t actual_target_reputation = 70u;
+    uint8_t actual_target_reputation = kbo_amateur_default_team_reputation();
     kbo_find_amateur_team_reputation_by_memory_team(team_league_id, target_team, &actual_target_reputation);
     int from_tier = kbo_amateur_assignment_team_tier(team_league_id, current_reputation);
     int to_tier = kbo_amateur_assignment_team_tier(team_league_id, actual_target_reputation);

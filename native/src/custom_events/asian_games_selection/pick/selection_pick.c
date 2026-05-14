@@ -28,37 +28,38 @@ int kbo_asian_games_try_select_candidate(
             || outfielder_count == NULL || wildcard_count == NULL) {
         return 0;
     }
-    if (*selected_count >= KBO_ASIAN_GAMES_ROSTER_SIZE || candidates[index].selected) {
+    const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
+    if (*selected_count >= kbo_asian_games_policy_roster_size() || candidates[index].selected) {
         return 0;
     }
 
     KboAsianGamesRosterEntry* entry = &candidates[index].entry;
     if (kbo_asian_games_role_is_pitcher(entry->role)) {
-        if (*pitcher_count >= KBO_ASIAN_GAMES_PITCHER_TARGET) {
+        if (*pitcher_count >= policy->pitcher_target) {
             return 0;
         }
     } else if (kbo_asian_games_role_is_catcher(entry->role)) {
-        if (*catcher_count >= KBO_ASIAN_GAMES_CATCHER_TARGET) {
+        if (*catcher_count >= policy->catcher_target) {
             return 0;
         }
     } else if (kbo_asian_games_role_is_infielder(entry->role)) {
-        if (*infielder_count >= KBO_ASIAN_GAMES_INFIELDER_TARGET) {
+        if (*infielder_count >= policy->infielder_target) {
             return 0;
         }
     } else if (kbo_asian_games_role_is_outfielder(entry->role)) {
-        if (*outfielder_count >= KBO_ASIAN_GAMES_OUTFIELDER_TARGET) {
+        if (*outfielder_count >= policy->outfielder_target) {
             return 0;
         }
     } else {
         return 0;
     }
 
-    int wildcard = entry->age > 24u;
-    if (wildcard && *wildcard_count >= KBO_ASIAN_GAMES_MAX_WILDCARDS) {
+    int wildcard = kbo_asian_games_policy_is_wildcard_age(entry->age);
+    if (wildcard && *wildcard_count >= policy->max_wildcards) {
         return 0;
     }
     if (enforce_team_max && candidates[index].org_team_id != 0u
-            && kbo_asian_games_roster_org_count(candidates[index].org_team_id, *selected_count) >= KBO_ASIAN_GAMES_TEAM_MAX_PLAYERS) {
+            && kbo_asian_games_roster_org_count(candidates[index].org_team_id, *selected_count) >= policy->team_max_players) {
         return 0;
     }
 
@@ -98,7 +99,8 @@ int kbo_asian_games_try_select_candidate_flex_position(
             || infielder_count == NULL || outfielder_count == NULL || wildcard_count == NULL) {
         return 0;
     }
-    if (*selected_count >= KBO_ASIAN_GAMES_ROSTER_SIZE || candidates[index].selected) {
+    const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
+    if (*selected_count >= kbo_asian_games_policy_roster_size() || candidates[index].selected) {
         return 0;
     }
 
@@ -110,12 +112,12 @@ int kbo_asian_games_try_select_candidate_flex_position(
         return 0;
     }
 
-    int wildcard = entry->age > 24u;
-    if (wildcard && *wildcard_count >= KBO_ASIAN_GAMES_MAX_WILDCARDS) {
+    int wildcard = kbo_asian_games_policy_is_wildcard_age(entry->age);
+    if (wildcard && *wildcard_count >= policy->max_wildcards) {
         return 0;
     }
     if (enforce_team_max && candidates[index].org_team_id != 0u
-            && kbo_asian_games_roster_org_count(candidates[index].org_team_id, *selected_count) >= KBO_ASIAN_GAMES_TEAM_MAX_PLAYERS) {
+            && kbo_asian_games_roster_org_count(candidates[index].org_team_id, *selected_count) >= policy->team_max_players) {
         return 0;
     }
 

@@ -23,10 +23,10 @@
 #include "../team/lookup/team_lookup.h"
 #include "../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "fa_requalification.h"
+#include "policy/fa_requalification_policy.h"
 #include <stdint.h>
 #ifndef KBO_FA_REQUALIFICATION_TYPES_DEFINED
 #define KBO_FA_REQUALIFICATION_TYPES_DEFINED
-#define KBO_FA_REQUALIFICATION_YEARS 4
 #define KBO_FA_REQUALIFICATION_MAX 4096
 typedef struct KboFaRequalificationRecord {
     uint32_t player_id;

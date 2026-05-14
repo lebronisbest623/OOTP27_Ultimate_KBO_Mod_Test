@@ -1,0 +1,22 @@
+{
+  "eligible_age_min": 18,
+  "eligible_age_max": 48,
+  "salary_score_divisor": 1000,
+  "salary_score_max": 120000,
+  "age_core_min": 30,
+  "age_core_max": 36,
+  "age_core_score": 60000,
+  "age_extended_min": 28,
+  "age_extended_max": 39,
+  "age_extended_score": 42000,
+  "age_depth_min": 25,
+  "age_depth_max": 42,
+  "age_depth_score": 18000,
+  "domestic_bonus": 70000,
+  "foreign_penalty": 180000,
+  "active_team_bonus": 30000,
+  "current_team_bonus": 15000,
+  "dfa_penalty": 140000,
+  "restricted_penalty": 50000,
+  "injured_penalty": 12000
+}

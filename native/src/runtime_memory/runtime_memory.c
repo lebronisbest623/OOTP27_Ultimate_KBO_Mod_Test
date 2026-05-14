@@ -6,6 +6,7 @@
 
 #include "../bootstrap/abi/ootp_offsets.h"
 #include "../core/logging/core_log.h"
+#include "../core/runtime_tuning/runtime_tuning_policy.h"
 #include "runtime_memory.h"
 static int protect_allows_read(DWORD protect)
 {
@@ -99,8 +100,6 @@ static int looks_like_ootp_global_db(uintptr_t candidate)
 
 static uintptr_t g_ootp_cached_global_db  = 0;
 static ULONGLONG g_ootp_last_db_scan_ms   = 0;
-/* Re-scan at most once every 3 seconds while no save is loaded. */
-#define KBO_GLOBAL_DB_SCAN_INTERVAL_MS 3000u
 
 uintptr_t get_ootp_cached_global_database(void)
 {
@@ -128,7 +127,7 @@ uintptr_t get_ootp_global_database(void)
 
     /* ---- rate-limit the scan so an empty main-menu doesn't burn CPU ---- */
     ULONGLONG now = GetTickCount64();
-    if (now - g_ootp_last_db_scan_ms < KBO_GLOBAL_DB_SCAN_INTERVAL_MS) {
+    if (now - g_ootp_last_db_scan_ms < (ULONGLONG)kbo_runtime_tuning_policy()->global_db_scan_interval_ms) {
         return 0;
     }
     g_ootp_last_db_scan_ms = now;

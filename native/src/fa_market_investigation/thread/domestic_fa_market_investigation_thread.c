@@ -12,6 +12,7 @@
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../fa_market_classification/api/fa_market_classification.h"
+#include "../../fa_market_classification/policy/fa_market_policy.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../runtime_memory/runtime_memory.h"
@@ -133,13 +134,14 @@ static int kbo_domestic_fa_row_is_quality_candidate(
     if (kbo_domestic_fa_grade_is_quality(row->grade)) {
         return 1;
     }
-    if (row->fa_grade_salary >= 100000000) {
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+    if (row->fa_grade_salary >= policy->investigation_quality_salary_min) {
         return 1;
     }
-    if (row->fa_demand >= 100000000) {
+    if (row->fa_demand >= policy->investigation_quality_demand_min) {
         return 1;
     }
-    return value_score >= 55000;
+    return value_score >= policy->investigation_quality_value_score_min;
 }
 
 static void kbo_domestic_fa_append_blocker(char* out, size_t out_size, const char* text)
@@ -181,25 +183,26 @@ static void kbo_domestic_fa_describe_blockers(
     if (strcmp(row->fa_grade_flag, "SNAPSHOT_MISSING") == 0) {
         kbo_domestic_fa_append_blocker(out, out_size, "salary_snapshot_missing");
     }
-    if (row->fa_demand >= 700000000) {
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+    if (row->fa_demand >= policy->investigation_very_high_demand_min) {
         kbo_domestic_fa_append_blocker(out, out_size, "very_high_demand");
-    } else if (row->fa_demand >= 300000000) {
+    } else if (row->fa_demand >= policy->investigation_high_demand_min) {
         kbo_domestic_fa_append_blocker(out, out_size, "high_demand");
     }
     if (strcmp(row->grade, "A") == 0 || strcmp(row->grade, "B") == 0) {
         kbo_domestic_fa_append_blocker(out, out_size, "compensation_burden");
     }
-    if (row->age >= 36u) {
+    if (row->age >= (uint16_t)policy->investigation_age_old_min) {
         kbo_domestic_fa_append_blocker(out, out_size, "age_36_plus");
-    } else if (row->age >= 34u) {
+    } else if (row->age >= (uint16_t)policy->investigation_age_veteran_min) {
         kbo_domestic_fa_append_blocker(out, out_size, "age_34_plus");
     }
-    if (market_days >= 90u) {
+    if (market_days >= (uint32_t)policy->investigation_market_days_very_long_min) {
         kbo_domestic_fa_append_blocker(out, out_size, "market_90d_plus");
-    } else if (market_days >= 45u) {
+    } else if (market_days >= (uint32_t)policy->investigation_market_days_long_min) {
         kbo_domestic_fa_append_blocker(out, out_size, "market_45d_plus");
     }
-    if (value_score >= 85000 && out[0] == '\0') {
+    if (value_score >= policy->investigation_unexplained_value_score_min && out[0] == '\0') {
         kbo_domestic_fa_append_blocker(out, out_size, "high_quality_unexplained");
     }
     if (out[0] == '\0') {
@@ -424,7 +427,8 @@ static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* so
         if (strcmp(row->fa_grade_flag, "SNAPSHOT_MISSING") == 0) {
             snapshot_missing++;
         }
-        if (row->fa_demand >= 300000000) {
+        const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+        if (row->fa_demand >= policy->investigation_high_demand_min) {
             high_demand++;
         }
         if (!kbo_domestic_fa_case_is_official_or_probable(row->case_label)) {
@@ -433,7 +437,7 @@ static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* so
 
         uint32_t history_date = kbo_domestic_fa_history_date_from_reason(row->reason);
         uint32_t market_days = kbo_domestic_fa_date_gap_days(history_date, today);
-        if (market_days >= 45u) {
+        if (market_days >= (uint32_t)policy->investigation_market_days_long_min) {
             long_market++;
         }
 
@@ -491,7 +495,10 @@ static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* so
         csv_written,
         csv_path);
 
-    int top_count = candidate_count < 20 ? candidate_count : 20;
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+    int top_count = candidate_count < policy->investigation_top_log_count
+        ? candidate_count
+        : policy->investigation_top_log_count;
     for (int i = 0; i < top_count; i++) {
         const KboDomesticFaInvestigationCandidate* candidate = &candidates[i];
         const KboFaMarketClassification* row = &candidate->row;
@@ -531,7 +538,8 @@ static DWORD WINAPI kbo_domestic_fa_market_investigation_thread(LPVOID parameter
     char last_save_path[MAX_PATH] = {0};
     int last_enabled = 0;
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(5000)) {
+        const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+        if (!kbo_runtime_sleep_should_continue((uint32_t)policy->investigation_thread_sleep_ms)) {
             break;
         }
 

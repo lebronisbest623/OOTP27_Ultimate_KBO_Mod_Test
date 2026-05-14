@@ -11,6 +11,7 @@
 #include "../common/player_eval/foreign_waiver_player_eval.h"
 #include "../common/policy/foreign_waiver_policy.h"
 #include "../intl_established_fa_postscan/api/intl_established_fa_postscan.h"
+#include "intl_established_fa_policy.h"
 
 static LONG g_kbo_intl_established_fa_quality_probe_log_count = 0;
 static LONG g_kbo_intl_established_fa_generation_filter_block_count = 0;
@@ -63,10 +64,11 @@ __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(int32_t 
     if (multiplier <= 1) {
         return original_count;
     }
+    const KboIntlEstablishedFaPolicy* policy = kbo_intl_established_fa_policy();
 
     int64_t scaled = (int64_t)original_count * (int64_t)multiplier;
-    if (scaled > 1000) {
-        scaled = 1000;
+    if (scaled > policy->max_scaled_count) {
+        scaled = policy->max_scaled_count;
     }
 
     append_logf(
@@ -87,8 +89,6 @@ __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(int32_t 
 }
 
 /* Generation-time filter for international established free agents. */
-
-#define KBO_INTL_ESTABLISHED_FA_CATCHER_ALLOW_ONE_IN 250u
 
 static int kbo_intl_established_fa_generation_filter_enabled(void)
 {
@@ -112,9 +112,10 @@ static uint32_t kbo_intl_established_fa_mix_u32(uint32_t value)
 
 static int kbo_intl_established_fa_catcher_rarity_allows(uint32_t player_id, uint32_t nation_id)
 {
+    const KboIntlEstablishedFaPolicy* policy = kbo_intl_established_fa_policy();
     uint32_t mixed = kbo_intl_established_fa_mix_u32(
         player_id ^ (nation_id * 0x9e3779b9u) ^ 0xC0A7C4E5u);
-    return (mixed % KBO_INTL_ESTABLISHED_FA_CATCHER_ALLOW_ONE_IN) == 0u;
+    return (mixed % (uint32_t)policy->catcher_allow_one_in) == 0u;
 }
 
 __declspec(noinline) uint8_t ootp_kbo_intl_established_fa_generation_filter_allows_wrapper(

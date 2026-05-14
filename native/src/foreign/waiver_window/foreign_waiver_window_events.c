@@ -16,6 +16,7 @@
 #include "../common/events/foreign_priority_events.h"
 #include "../common/events/foreign_waiver_events.h"
 #include "../common/paths/foreign_waiver_paths.h"
+#include "../common/policy/foreign_player_policy.h"
 #include "../common/policy/foreign_waiver_policy.h"
 #include "events/foreign_waiver_window_events_internal.h"
 #include "state/foreign_waiver_window_state.h"
@@ -244,13 +245,14 @@ int kbo_write_foreign_waiver_window(uint32_t start_yyyymmdd, uint32_t end_yyyymm
 
 int kbo_open_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_serial, const char* reason)
 {
-    uint32_t end_yyyymmdd = kbo_add_days_yyyymmdd(today_yyyymmdd, 20u);
+    uint32_t window_days = (uint32_t)kbo_foreign_player_policy()->waiver_window_days;
+    uint32_t end_yyyymmdd = kbo_add_days_yyyymmdd(today_yyyymmdd, window_days);
     if (end_yyyymmdd == 0u) {
         return 0;
     }
 
     g_kbo_foreign_waiver_window_start_serial = today_serial;
-    g_kbo_foreign_waiver_window_end_serial = today_serial + 20u;
+    g_kbo_foreign_waiver_window_end_serial = today_serial + window_days;
     kbo_write_foreign_waiver_window(today_yyyymmdd, end_yyyymmdd, reason);
     g_kbo_foreign_waiver_start_event_date = today_yyyymmdd;
     g_kbo_foreign_waiver_close_event_end_date = end_yyyymmdd;

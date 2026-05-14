@@ -8,6 +8,7 @@
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../bootstrap/profiling/profiler.h"
 #include "../../core/logging/core_log.h"
+#include "../../fa_market_classification/policy/fa_market_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_name_cache.h"
@@ -274,6 +275,7 @@ int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date
     int scanned = 0;
     int salary_rows = 0;
     int zero_salary_rows = 0;
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
     for (int32_t i = 0; i < player_count; i++) {
         uintptr_t player_ptr = player_snapshot[i];
         if (!kbo_player_pointer_plausible(player_ptr)
@@ -292,7 +294,9 @@ int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date
 
         uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
         uint8_t retired_flag = player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET];
-        if (retired_flag != 0u || age < 16u || age > 60u) {
+        if (retired_flag != 0u
+                || age < (uint16_t)policy->player_age_min
+                || age > (uint16_t)policy->player_age_max) {
             continue;
         }
 

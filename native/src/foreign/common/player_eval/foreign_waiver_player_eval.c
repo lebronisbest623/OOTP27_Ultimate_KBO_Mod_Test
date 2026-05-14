@@ -10,6 +10,7 @@
 #include "../../../team/lookup/team_lookup.h"
 #include "../config/foreign_waiver_config.h"
 #include "../paths/foreign_waiver_paths.h"
+#include "../policy/foreign_player_policy.h"
 #include "foreign_waiver_player_eval.h"
 
 int16_t kbo_read_player_i16(uint8_t* player, uint32_t offset)
@@ -32,7 +33,11 @@ int32_t kbo_foreign_waiver_value_score(uint8_t* player)
     int32_t ratings = kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
     int32_t career = kbo_read_player_i16(player, OOTP27_PLAYER_CAREER_VALUE_OFFSET);
 
-    return talent * 55 + overall * 25 + ratings * 10 + career * 10;
+    const KboForeignPlayerPolicy* policy = kbo_foreign_player_policy();
+    return talent * policy->value_score_talent_weight
+        + overall * policy->value_score_overall_weight
+        + ratings * policy->value_score_ratings_weight
+        + career * policy->value_score_career_weight;
 }
 
 int32_t kbo_get_foreign_waiver_value_threshold(void)
@@ -41,7 +46,7 @@ int32_t kbo_get_foreign_waiver_value_threshold(void)
     if (configured != 0u && configured <= 250000u) {
         return (int32_t)configured;
     }
-    return 85000;
+    return kbo_foreign_player_policy()->regular_value_threshold;
 }
 
 int32_t kbo_get_foreign_waiver_asian_value_threshold(void)
@@ -50,7 +55,7 @@ int32_t kbo_get_foreign_waiver_asian_value_threshold(void)
     if (configured != 0u && configured <= 250000u) {
         return (int32_t)configured;
     }
-    return 60000;
+    return kbo_foreign_player_policy()->asian_value_threshold;
 }
 
 int32_t kbo_get_foreign_waiver_value_threshold_for_player(uint8_t* player)
@@ -144,9 +149,10 @@ int kbo_load_asian_quota_nation_ids_once(void)
     }
 
     int count = 0;
-    kbo_add_asian_quota_nation_id(98u, &count); /* Japan */
-    kbo_add_asian_quota_nation_id(12u, &count); /* Australia */
-    kbo_add_asian_quota_nation_id(43u, &count); /* Taiwan */
+    const KboForeignPlayerPolicy* policy = kbo_foreign_player_policy();
+    for (int i = 0; i < policy->asian_quota_nation_count; i++) {
+        kbo_add_asian_quota_nation_id(policy->asian_quota_nation_ids[i], &count);
+    }
 
     char path[MAX_PATH] = {0};
     if (get_kbo_asian_quota_nation_ids_path(path, sizeof(path))) {

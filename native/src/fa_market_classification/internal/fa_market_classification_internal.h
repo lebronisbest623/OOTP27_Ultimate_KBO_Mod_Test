@@ -14,6 +14,7 @@
 #include "../../fa_filing/fa_filing.h"
 #include "../../fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
 #include "../../fa_requalification/fa_requalification.h"
+#include "../../fa_requalification/policy/fa_requalification_policy.h"
 #include "../../fa_rules/fa_rules.h"
 #include "../../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
@@ -24,6 +25,7 @@
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_name_cache.h"
 #include "../api/fa_market_classification.h"
+#include "../policy/fa_market_policy.h"
 #include "../seeds/fa_market_seed_cases.h"
 typedef struct KboFaMarketSqlite3 KboFaMarketSqlite3;
 typedef struct KboFaMarketSqlite3Stmt KboFaMarketSqlite3Stmt;

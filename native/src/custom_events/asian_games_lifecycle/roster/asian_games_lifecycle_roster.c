@@ -65,7 +65,7 @@ int kbo_asian_games_replacement_allowed_for_org(uint32_t new_org_id, uint32_t ol
             count++;
         }
     }
-    return count < KBO_ASIAN_GAMES_TEAM_MAX_PLAYERS;
+    return count < kbo_asian_games_roster_policy()->team_max_players;
 }
 
 int kbo_asian_games_player_unavailable_for_departure(uint8_t* player)

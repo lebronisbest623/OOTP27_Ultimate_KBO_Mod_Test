@@ -1,7 +1,6 @@
 #include "../hotkey_window_runtime_content_internal.h"
 #include "../../hotkey_window_domain_contract.h"
-
-#define KBO_HUB_FOREIGN_SLOT_CACHE_TTL_MS 1000ull
+#include "../../../../core/runtime_tuning/runtime_tuning_policy.h"
 
 static LONG g_kbo_hub_foreign_slot_cache_lock = 0;
 static ULONGLONG g_kbo_hub_foreign_slot_cache_tick = 0ull;
@@ -14,7 +13,9 @@ static void kbo_hub_refresh_foreign_slot_cache(void)
 {
     ULONGLONG now = GetTickCount64();
     ULONGLONG cached = g_kbo_hub_foreign_slot_cache_tick;
-    if (cached != 0ull && now >= cached && now - cached < KBO_HUB_FOREIGN_SLOT_CACHE_TTL_MS) {
+    if (cached != 0ull
+            && now >= cached
+            && now - cached < (ULONGLONG)kbo_runtime_tuning_policy()->hub_foreign_slot_cache_ttl_ms) {
         return;
     }
 
@@ -23,7 +24,9 @@ static void kbo_hub_refresh_foreign_slot_cache(void)
     }
 
     cached = g_kbo_hub_foreign_slot_cache_tick;
-    if (cached != 0ull && now >= cached && now - cached < KBO_HUB_FOREIGN_SLOT_CACHE_TTL_MS) {
+    if (cached != 0ull
+            && now >= cached
+            && now - cached < (ULONGLONG)kbo_runtime_tuning_policy()->hub_foreign_slot_cache_ttl_ms) {
         InterlockedExchange(&g_kbo_hub_foreign_slot_cache_lock, 0);
         return;
     }

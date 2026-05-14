@@ -45,6 +45,7 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../src/foreign/injury/api/foreign_injury.h"
 #include "../src/amateur_player_quality/api/amateur_player_quality.h"
+#include "../src/amateur_player_quality/assignment/policy/amateur_assignment_policy_values.h"
 
 int kbo_amateur_player_is_hitter(uint8_t* player);
 uint32_t kbo_amateur_player_assignment_league_id(uint8_t* player);
@@ -1177,10 +1178,11 @@ static void test_amateur_assignment_policy(void)
     assert(strcmp(kbo_amateur_position_bucket_label(9),  "P") == 0); /* out-of-range → default */
     assert(strcmp(kbo_amateur_position_bucket_label(-1), "P") == 0);
 
-    /* kbo_amateur_assignment_target_max_players: HS=34, College=40, anything else=40 */
-    assert(kbo_amateur_assignment_target_max_players(KBO_HIGH_SCHOOL_LEAGUE_ID) == KBO_HIGH_SCHOOL_ASSIGNMENT_TARGET_MAX_PLAYERS);
-    assert(kbo_amateur_assignment_target_max_players(KBO_COLLEGE_LEAGUE_ID)     == KBO_COLLEGE_ASSIGNMENT_TARGET_MAX_PLAYERS);
-    assert(kbo_amateur_assignment_target_max_players(0u)                        == KBO_COLLEGE_ASSIGNMENT_TARGET_MAX_PLAYERS);
+    /* kbo_amateur_assignment_target_max_players follows the externalized policy defaults */
+    const KboAmateurPlayerQualityPolicy* amateur_policy = kbo_amateur_player_quality_policy();
+    assert(kbo_amateur_assignment_target_max_players(KBO_HIGH_SCHOOL_LEAGUE_ID) == amateur_policy->high_school_assignment_target_max_players);
+    assert(kbo_amateur_assignment_target_max_players(KBO_COLLEGE_LEAGUE_ID)     == amateur_policy->college_assignment_target_max_players);
+    assert(kbo_amateur_assignment_target_max_players(0u)                        == amateur_policy->college_assignment_target_max_players);
 
     /* kbo_amateur_quality_score: sum of four i16 value fields */
     memset(player, 0, sizeof(player));

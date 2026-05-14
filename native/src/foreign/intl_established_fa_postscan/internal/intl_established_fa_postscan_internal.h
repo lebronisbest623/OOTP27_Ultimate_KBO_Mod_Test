@@ -14,14 +14,15 @@
 #include "../../../core/core_flags/api/settings/economic_defaults.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
-#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_DELAY_MS 4500ull
-#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_RETRY_MS 2500ull
-#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_RETRIES 8
-#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_DETAIL_LOGS 160
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_DELAY_MS ((ULONGLONG)kbo_runtime_tuning_policy()->intl_established_fa_postscan_delay_ms)
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_RETRY_MS ((ULONGLONG)kbo_runtime_tuning_policy()->intl_established_fa_postscan_retry_ms)
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_RETRIES (kbo_runtime_tuning_policy()->intl_established_fa_postscan_max_retries)
+#define KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_DETAIL_LOGS (kbo_runtime_tuning_policy()->intl_established_fa_postscan_max_detail_logs)
 typedef struct KboIntlEstablishedFaPostscanState {
     LONG pending;
     LONG batch_id;

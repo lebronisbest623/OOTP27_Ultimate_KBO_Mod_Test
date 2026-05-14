@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 
+#include "../../selection/events/military_selection_policy.h"
+
 #ifndef KBO_MILITARY_SERVICE_DAYS
-#define KBO_MILITARY_SERVICE_DAYS 545
+#define KBO_MILITARY_SERVICE_DAYS kbo_military_service_days()
 #endif
 
 #define KBO_MILITARY_SERVICE_SEED_KEY_BYTES  40

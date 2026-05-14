@@ -38,19 +38,26 @@ int32_t kbo_asian_games_player_score(uint8_t* player)
     int32_t career = kbo_read_player_i16(player, OOTP27_PLAYER_CAREER_VALUE_OFFSET);
     uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
 
-    int32_t score = talent * 45 + overall * 30 + ratings * 15 + career * 10;
-    if (age <= 24u) {
-        score += 1200;
-    } else if (age <= 27u) {
-        score += 200;
+    const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
+    int32_t score = talent * policy->score_talent_weight
+        + overall * policy->score_overall_weight
+        + ratings * policy->score_ratings_weight
+        + career * policy->score_career_weight;
+    if (age <= (uint16_t)policy->score_young_age_max) {
+        score += policy->score_young_bonus;
+    } else if (age <= (uint16_t)policy->score_prime_age_max) {
+        score += policy->score_prime_bonus;
     } else {
-        score -= (int32_t)(age - 27u) * 120;
+        uint16_t decline_after = (uint16_t)policy->score_age_decline_after;
+        if (age > decline_after) {
+            score -= (int32_t)(age - decline_after) * policy->score_age_decline_penalty_per_year;
+        }
     }
     if (player[OOTP27_PLAYER_MILITARY_EXEMPT_OFFSET] == 0u) {
-        score += 900;
+        score += policy->score_non_exempt_bonus;
     }
     if (*(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) != 0u) {
-        score += 150;
+        score += policy->score_current_team_bonus;
     }
     return score;
 }
@@ -160,9 +167,10 @@ int kbo_asian_games_team_is_service_or_ulsan(uint8_t* team)
         if (!copy_ootp_string_object_text(team, string_offsets[i], name, sizeof(name))) {
             continue;
         }
-        if (kbo_ascii_contains_ignore_case(name, "Sangmu")
-                || kbo_ascii_contains_ignore_case(name, "Police")
-                || kbo_ascii_contains_ignore_case(name, "Ulsan")) {
+        const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
+        if (kbo_ascii_contains_ignore_case(name, policy->service_team_keyword_1)
+                || kbo_ascii_contains_ignore_case(name, policy->service_team_keyword_2)
+                || kbo_ascii_contains_ignore_case(name, policy->service_team_keyword_3)) {
             return 1;
         }
     }
@@ -228,8 +236,8 @@ int kbo_asian_games_roster_org_count(uint32_t org_id, int selected_count)
     }
 
     int count = 0;
-    if (selected_count > KBO_ASIAN_GAMES_ROSTER_SIZE) {
-        selected_count = KBO_ASIAN_GAMES_ROSTER_SIZE;
+    if (selected_count > kbo_asian_games_policy_roster_size()) {
+        selected_count = kbo_asian_games_policy_roster_size();
     }
     for (int i = 0; i < selected_count; i++) {
         uint32_t roster_org_id = kbo_asian_games_org_team_id_for_team(g_kbo_asian_games_roster[i].original_team_id);
@@ -302,7 +310,7 @@ int32_t kbo_asian_games_days_until_return(uint32_t event_yyyymmdd)
     uint32_t start_serial = kbo_date_serial(year, month, day);
     uint32_t final_serial = kbo_date_serial(final_date / 10000u, (final_date / 100u) % 100u, final_date % 100u);
     if (start_serial == 0u || final_serial == 0u || final_serial < start_serial) {
-        return 16;
+        return (int32_t)kbo_asian_games_roster_policy()->fallback_return_days;
     }
     return (int32_t)(final_serial - start_serial + 1u);
 }

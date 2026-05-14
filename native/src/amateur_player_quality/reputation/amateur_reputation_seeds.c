@@ -307,7 +307,7 @@ void kbo_ensure_amateur_reputation_seeds_loaded(void)
 int kbo_find_amateur_team_reputation_for_league(uint32_t league_id, uint32_t team_id, uint8_t* out_reputation)
 {
     if (out_reputation != NULL) {
-        *out_reputation = 70u;
+        *out_reputation = kbo_amateur_default_team_reputation();
     }
     if (league_id == 0u || team_id == 0u) {
         return 0;

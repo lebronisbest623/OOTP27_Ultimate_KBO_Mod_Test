@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "foreign_fa_block_state.h"
+#include "../../common/policy/foreign_player_policy.h"
 
 volatile LONG g_kbo_foreign_offer_block_player_id = 0;
 volatile LONG g_kbo_foreign_offer_block_requester_team_id = 0;
@@ -23,8 +24,7 @@ typedef struct KboRecentForeignFaAllow {
 } KboRecentForeignFaAllow;
 
 enum {
-    KBO_RECENT_FOREIGN_FA_ALLOW_MAX = 512,
-    KBO_RECENT_FOREIGN_FA_ALLOW_TTL_MS = 10 * 60 * 1000
+    KBO_RECENT_FOREIGN_FA_ALLOW_MAX = 512
 };
 
 static KboRecentForeignFaAllow g_kbo_foreign_offer_allow_records[KBO_RECENT_FOREIGN_FA_ALLOW_MAX];
@@ -113,7 +113,7 @@ static int kbo_recent_foreign_allow_matches(
         }
         if (rec.tick == 0
                 || now < rec.tick
-                || now - rec.tick > (ULONGLONG)KBO_RECENT_FOREIGN_FA_ALLOW_TTL_MS) {
+                || now - rec.tick > (ULONGLONG)kbo_foreign_player_policy()->recent_allow_ttl_ms) {
             continue;
         }
         if (rec.tick >= best_tick) {
@@ -205,7 +205,9 @@ int kbo_recent_foreign_offer_block_matches(
     }
 
     ULONGLONG now = GetTickCount64();
-    if (cached_tick <= 0 || now < (ULONGLONG)cached_tick || now - (ULONGLONG)cached_tick > 120000ull) {
+    if (cached_tick <= 0
+            || now < (ULONGLONG)cached_tick
+            || now - (ULONGLONG)cached_tick > (ULONGLONG)kbo_foreign_player_policy()->recent_block_ttl_ms) {
         return 0;
     }
 
@@ -249,7 +251,9 @@ int kbo_recent_custom_foreign_policy_block_matches(uint32_t player_id, uint32_t 
     }
 
     ULONGLONG now = GetTickCount64();
-    if (cached_tick <= 0 || now < (ULONGLONG)cached_tick || now - (ULONGLONG)cached_tick > 120000ull) {
+    if (cached_tick <= 0
+            || now < (ULONGLONG)cached_tick
+            || now - (ULONGLONG)cached_tick > (ULONGLONG)kbo_foreign_player_policy()->recent_block_ttl_ms) {
         return 0;
     }
 

@@ -1,0 +1,85 @@
+#ifndef KBOFIX_SRC_FA_COMPENSATION_PROTECTION_POLICY_H_
+#define KBOFIX_SRC_FA_COMPENSATION_PROTECTION_POLICY_H_
+
+#include <stdint.h>
+
+typedef struct KboFaCompensationProtectionPolicy {
+    int32_t candidate_prospect_age_max;
+    int32_t candidate_prospect_bonus;
+    int32_t candidate_young_age_max;
+    int32_t candidate_young_bonus;
+    int32_t candidate_prime_age_max;
+    int32_t candidate_prime_bonus;
+    int32_t candidate_old_low_overall_age_min;
+    int32_t candidate_old_low_overall_max;
+    int32_t candidate_old_low_overall_penalty;
+    int32_t candidate_aging_age_min;
+    int32_t candidate_aging_penalty;
+    int32_t candidate_core_value_min;
+    int32_t candidate_core_bonus;
+    int32_t candidate_regular_value_min;
+    int32_t candidate_regular_bonus;
+    int32_t candidate_upside_margin;
+    int32_t candidate_upside_bonus;
+    int32_t candidate_cheap_salary_max;
+    int32_t candidate_cheap_age_max;
+    int32_t candidate_cheap_talent_margin;
+    int32_t candidate_cheap_bonus;
+    int32_t candidate_bad_contract_salary_min;
+    int32_t candidate_bad_contract_age_min;
+    int32_t candidate_bad_contract_overall_max;
+    int32_t candidate_bad_contract_penalty;
+    int32_t candidate_costly_vet_salary_min;
+    int32_t candidate_costly_vet_age_min;
+    int32_t candidate_costly_vet_penalty;
+    int32_t candidate_paid_core_salary_min;
+    int32_t candidate_paid_core_overall_min;
+    int32_t candidate_paid_core_bonus;
+    int32_t candidate_scarce_bonus;
+    int32_t candidate_deep_penalty;
+    int32_t candidate_scarce_catcher_max;
+    int32_t candidate_scarce_infielder_max;
+    int32_t candidate_scarce_outfielder_max;
+    int32_t candidate_scarce_pitcher_max;
+    int32_t candidate_deep_catcher_min;
+    int32_t candidate_deep_infielder_min;
+    int32_t candidate_deep_outfielder_min;
+    int32_t candidate_deep_pitcher_min;
+    int32_t decision_missing_player_penalty;
+    int32_t decision_prospect_age_max;
+    int32_t decision_prospect_bonus;
+    int32_t decision_young_age_max;
+    int32_t decision_young_bonus;
+    int32_t decision_prime_age_max;
+    int32_t decision_prime_bonus;
+    int32_t decision_old_age_min;
+    int32_t decision_old_penalty;
+    int32_t decision_aging_age_min;
+    int32_t decision_aging_penalty;
+    int32_t decision_unknown_salary_bonus;
+    int32_t decision_cheap_salary_max;
+    int32_t decision_cheap_bonus;
+    int32_t decision_expensive_salary_min;
+    int32_t decision_expensive_penalty;
+    int32_t decision_costly_salary_min;
+    int32_t decision_costly_penalty;
+    int32_t decision_team_need_bonus;
+    int32_t decision_surplus_penalty;
+    int32_t decision_need_catcher_below;
+    int32_t decision_need_infielder_below;
+    int32_t decision_need_outfielder_below;
+    int32_t decision_need_pitcher_below;
+    int32_t decision_surplus_catcher_above;
+    int32_t decision_surplus_infielder_above;
+    int32_t decision_surplus_outfielder_above;
+    int32_t decision_surplus_pitcher_above;
+    int32_t decision_upside_margin;
+    int32_t decision_upside_bonus;
+    int32_t cash_only_score_threshold;
+    int32_t cash_only_extra_cash_score_threshold;
+    int32_t rookie_auto_protected_age_max;
+} KboFaCompensationProtectionPolicy;
+
+const KboFaCompensationProtectionPolicy* kbo_fa_compensation_protection_policy(void);
+
+#endif

@@ -1,4 +1,5 @@
 #include "../internal/intl_established_fa_postscan_internal.h"
+#include "../../intl_established_fa/intl_established_fa_policy.h"
 
 void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanState* batch)
 {
@@ -54,6 +55,7 @@ void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanStat
     int non_asian_pitcher_adjusted_count = 0;
     int starter_pitcher_adjusted_count = 0;
     int bullpen_pitcher_adjusted_count = 0;
+    const KboIntlEstablishedFaPolicy* policy = kbo_intl_established_fa_policy();
     int64_t score_sum = 0;
     int64_t asian_score_sum = 0;
     int64_t non_asian_score_sum = 0;
@@ -195,8 +197,8 @@ void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanStat
         }
         int candidate_ok = current_team_id == 0u
             && retired_flag == 0u
-            && age >= 16
-            && age <= 60
+            && age >= policy->market_age_min
+            && age <= policy->market_age_max
             && draft_eligible == 0u
             && has_context;
         if (candidate_ok) {
@@ -204,7 +206,7 @@ void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanStat
         } else {
             if (current_team_id != 0u) { market_block_team++; }
             if (retired_flag != 0u) { market_block_retired++; }
-            if (age < 16 || age > 60) { market_block_age++; }
+            if (age < policy->market_age_min || age > policy->market_age_max) { market_block_age++; }
             if (draft_eligible != 0u) { market_block_draft_pool++; }
             if (!has_context) { market_block_context++; }
         }
@@ -260,7 +262,7 @@ void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanStat
                 candidate_ok,
                 current_team_id != 0u,
                 retired_flag != 0u,
-                age < 16 || age > 60,
+                age < policy->market_age_min || age > policy->market_age_max,
                 draft_eligible != 0u,
                 !has_context,
                 current_team_id,

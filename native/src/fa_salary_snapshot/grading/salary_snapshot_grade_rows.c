@@ -6,16 +6,20 @@
 
 #include "../csv/salary_snapshot_csv_parse.h"
 #include "../paths/salary_snapshot_paths_dates.h"
+#include "../../fa_market_classification/policy/fa_market_policy.h"
 
 static const char* kbo_fa_salary_snapshot_grade_for_ranks(uint32_t overall_rank, uint32_t team_rank, int32_t salary)
 {
     if (salary <= 0 || (overall_rank == 0u && team_rank == 0u)) {
         return "UNKNOWN";
     }
-    if ((overall_rank != 0u && overall_rank <= 30u) || (team_rank != 0u && team_rank <= 3u)) {
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+    if ((overall_rank != 0u && overall_rank <= (uint32_t)policy->salary_grade_a_overall_rank_max)
+            || (team_rank != 0u && team_rank <= (uint32_t)policy->salary_grade_a_team_rank_max)) {
         return "A";
     }
-    if ((overall_rank != 0u && overall_rank <= 60u) || (team_rank != 0u && team_rank <= 10u)) {
+    if ((overall_rank != 0u && overall_rank <= (uint32_t)policy->salary_grade_b_overall_rank_max)
+            || (team_rank != 0u && team_rank <= (uint32_t)policy->salary_grade_b_team_rank_max)) {
         return "B";
     }
     return "C";

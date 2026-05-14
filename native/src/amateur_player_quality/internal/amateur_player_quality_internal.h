@@ -9,6 +9,7 @@
 #include <string.h>
 #include "../csv/amateur_reputation_csv.h"
 #include "../api/amateur_player_quality.h"
+#include "../assignment/policy/amateur_assignment_policy_values.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/dates/core_current_date.h"
 #include "../../core/logging/core_log.h"

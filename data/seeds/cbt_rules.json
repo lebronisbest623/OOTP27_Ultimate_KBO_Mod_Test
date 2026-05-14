@@ -33,5 +33,14 @@
   "tax_rate_2": 100,
   "tax_rate_3plus": 150,
   "draft_penalty_min_consecutive": 2,
-  "draft_penalty_stages": 9
+  "draft_penalty_stages": 9,
+  "exception_deadline_days_after_opening": 6,
+  "announcement_days_after_opening": 7,
+  "event_scheduler_max_attempts": 180,
+  "event_scheduler_sleep_ms": 2000,
+  "event_scheduler_log_attempt_1": 1,
+  "event_scheduler_log_attempt_2": 10,
+  "event_scheduler_log_attempt_3": 30,
+  "event_scheduler_log_attempt_4": 60,
+  "event_scheduler_log_attempt_5": 120
 }

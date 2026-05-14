@@ -31,8 +31,7 @@ typedef struct KboCustomForeignPendingOffer {
 } KboCustomForeignPendingOffer;
 
 enum {
-    KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX = 1024,
-    KBO_CUSTOM_FOREIGN_PENDING_OFFER_TTL_DAYS = 45
+    KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX = 1024
 };
 
 KboCustomForeignPendingOffer g_kbo_custom_foreign_pending_offers[KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX];
@@ -63,7 +62,7 @@ int kbo_custom_foreign_pending_offer_is_stale(uint32_t offer_date, uint32_t toda
     return offer_serial == 0u
         || today_serial == 0u
         || offer_serial > today_serial
-        || today_serial - offer_serial > KBO_CUSTOM_FOREIGN_PENDING_OFFER_TTL_DAYS;
+        || today_serial - offer_serial > (uint32_t)kbo_foreign_player_policy()->pending_offer_ttl_days;
 }
 
 int kbo_custom_foreign_pending_offer_player_now_in_org(uint32_t team_id, uint32_t player_id)

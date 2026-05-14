@@ -10,13 +10,15 @@
 #include "../team_patch/allstar_team_patch.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
 
 static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
 {
     (void)parameter;
 
-    for (int attempt = 1; attempt <= 180; attempt++) {
+    const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
+    for (int attempt = 1; attempt <= tuning->allstar_force_retry_attempts; attempt++) {
         uint32_t league_id = kbo_get_foreign_waiver_league_id();
         if (league_id == 0u) {
             league_id = kbo_resolve_kbo_league_id();
@@ -69,12 +71,14 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
             return 0;
         }
 
-        if (!kbo_runtime_sleep_should_continue(1000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)tuning->allstar_force_retry_sleep_ms)) {
             break;
         }
     }
 
-    append_log_line("KBO all-star force retry gave up: league not found after 180 attempts");
+    append_logf(
+        "KBO all-star force retry gave up: league not found after %d attempts",
+        tuning->allstar_force_retry_attempts);
     return 0;
 }
 

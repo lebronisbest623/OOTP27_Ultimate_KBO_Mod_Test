@@ -79,7 +79,7 @@ void kbo_ensure_fa_requalification_template(void)
 
     const char* header =
         "player_id,original_team_id,last_fa_year,fa_count\r\n"
-        "# KBO FA requalification: after any FA signing, restore team control until last_fa_year + 4.\r\n";
+        "# KBO FA requalification: after any FA signing, restore team control until last_fa_year + configured team_control_years.\r\n";
     DWORD written = 0;
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
     CloseHandle(file);
@@ -200,7 +200,7 @@ int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* recor
     DWORD written = 0;
     const char* header =
         "player_id,original_team_id,last_fa_year,fa_count\r\n"
-        "# KBO FA requalification: after any FA signing, restore team control until last_fa_year + 4.\r\n";
+        "# KBO FA requalification: after any FA signing, restore team control until last_fa_year + configured team_control_years.\r\n";
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
 
     for (int i = 0; i < count; i++) {
@@ -283,7 +283,7 @@ int kbo_record_fa_requalification_signing(uint32_t player_id, uint32_t team_id, 
         player_id,
         team_id,
         signing_year,
-        signing_year + KBO_FA_REQUALIFICATION_YEARS,
+        signing_year + kbo_fa_requalification_team_control_years(),
         count,
         ok);
     kbo_unlock_fa_requalification_records();

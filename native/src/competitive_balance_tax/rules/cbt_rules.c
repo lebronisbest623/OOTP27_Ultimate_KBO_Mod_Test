@@ -39,6 +39,15 @@ static void kbo_cbt_rules_init_defaults(KboCbtRules* out)
     out->tax_rate_2                  = 100u;
     out->tax_rate_3plus              = 150u;
     out->annual_increase_pct         = 5u;
+    out->exception_deadline_days_after_opening = 6u;
+    out->announcement_days_after_opening = 7u;
+    out->event_scheduler_max_attempts = 180u;
+    out->event_scheduler_sleep_ms = 2000u;
+    out->event_scheduler_log_attempts[0] = 1u;
+    out->event_scheduler_log_attempts[1] = 10u;
+    out->event_scheduler_log_attempts[2] = 30u;
+    out->event_scheduler_log_attempts[3] = 60u;
+    out->event_scheduler_log_attempts[4] = 120u;
     out->threshold_override          = 0;
     kbo_cbt_rules_load_emergency_thresholds(out);
 }
@@ -161,6 +170,25 @@ static void kbo_cbt_rules_parse_json(KboCbtRules* out, const char* json, DWORD j
     }
     if (kbo_find_int_value_in_json(json, json_size, "draft_penalty_stages", &v) && v > 0 && v <= 100) {
         out->draft_penalty_stages = (uint32_t)v;
+    }
+    if (kbo_find_int_value_in_json(json, json_size, "exception_deadline_days_after_opening", &v) && v >= 0 && v <= 60) {
+        out->exception_deadline_days_after_opening = (uint32_t)v;
+    }
+    if (kbo_find_int_value_in_json(json, json_size, "announcement_days_after_opening", &v) && v >= 0 && v <= 60) {
+        out->announcement_days_after_opening = (uint32_t)v;
+    }
+    if (kbo_find_int_value_in_json(json, json_size, "event_scheduler_max_attempts", &v) && v > 0 && v <= 10000) {
+        out->event_scheduler_max_attempts = (uint32_t)v;
+    }
+    if (kbo_find_int_value_in_json(json, json_size, "event_scheduler_sleep_ms", &v) && v >= 100 && v <= 600000) {
+        out->event_scheduler_sleep_ms = (uint32_t)v;
+    }
+    for (int i = 0; i < 5; i++) {
+        char key[64] = {0};
+        snprintf(key, sizeof(key), "event_scheduler_log_attempt_%d", i + 1);
+        if (kbo_find_int_value_in_json(json, json_size, key, &v) && v > 0 && v <= 10000) {
+            out->event_scheduler_log_attempts[i] = (uint32_t)v;
+        }
     }
     kbo_cbt_rules_parse_thresholds(out, json, json_size);
 }

@@ -334,7 +334,12 @@ int kbo_fa_market_player_is_candidate(uint8_t* player, uint32_t league_id)
     uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
     uint8_t retired_flag = player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET];
 
-    if (player_id == 0u || current_team_id != 0u || retired_flag != 0u || age < 16u || age > 60u) {
+    const KboFaMarketPolicy* policy = kbo_fa_market_policy();
+    if (player_id == 0u
+            || current_team_id != 0u
+            || retired_flag != 0u
+            || age < (uint16_t)policy->player_age_min
+            || age > (uint16_t)policy->player_age_max) {
         return 0;
     }
     if (kbo_player_is_draft_pool_candidate(player)) {

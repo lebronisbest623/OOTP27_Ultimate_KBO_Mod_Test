@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 
+#include "foreign_player_policy.h"
+
 #ifndef KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT
-#define KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT 3u
+#define KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT kbo_custom_foreign_base_effective_limit()
 #endif
 
 int kbo_foreign_waiver_ai_enabled(void);

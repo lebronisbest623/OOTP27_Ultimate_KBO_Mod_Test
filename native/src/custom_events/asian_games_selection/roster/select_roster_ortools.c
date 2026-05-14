@@ -109,7 +109,8 @@ static int kbo_asian_games_apply_ortools_result(
 
     uint32_t selected_ids[KBO_ASIAN_GAMES_ROSTER_SIZE] = {0};
     int id_count = 0;
-    while (id_count < KBO_ASIAN_GAMES_ROSTER_SIZE && fgets(line, sizeof(line), file) != NULL) {
+    int roster_size = kbo_asian_games_policy_roster_size();
+    while (id_count < roster_size && fgets(line, sizeof(line), file) != NULL) {
         uint32_t player_id = (uint32_t)strtoul(line, NULL, 10);
         if (player_id == 0u) {
             continue;
@@ -127,9 +128,9 @@ static int kbo_asian_games_apply_ortools_result(
     }
     fclose(file);
 
-    int target_count = candidate_count < KBO_ASIAN_GAMES_ROSTER_SIZE
+    int target_count = candidate_count < roster_size
         ? candidate_count
-        : KBO_ASIAN_GAMES_ROSTER_SIZE;
+        : roster_size;
     if (id_count < target_count) {
         return 0;
     }
@@ -145,13 +146,13 @@ static int kbo_asian_games_apply_ortools_result(
     *outfielder_count = 0;
     *wildcard_count = 0;
 
-    for (int i = 0; i < id_count && *selected_count < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
+    for (int i = 0; i < id_count && *selected_count < roster_size; i++) {
         int index = kbo_asian_games_find_candidate_by_player_id(candidates, candidate_count, selected_ids[i]);
         if (index < 0) {
             return 0;
         }
         KboAsianGamesRosterEntry entry = candidates[index].entry;
-        entry.wildcard = entry.age > 24u ? 1u : 0u;
+        entry.wildcard = kbo_asian_games_policy_is_wildcard_age(entry.age) ? 1u : 0u;
         g_kbo_asian_games_roster[*selected_count] = entry;
         candidates[index].selected = 1u;
         (*selected_count)++;
@@ -204,7 +205,7 @@ int kbo_select_asian_games_roster_ortools(
             required_org_count)) {
         return 0;
     }
-    if (!kbo_optimizer_run_mode("asian_games_roster", request_path, result_path, 8000u)) {
+    if (!kbo_optimizer_run_mode("asian_games_roster", request_path, result_path, (uint32_t)kbo_asian_games_roster_policy()->ortools_timeout_ms)) {
         return 0;
     }
     int applied = kbo_asian_games_apply_ortools_result(

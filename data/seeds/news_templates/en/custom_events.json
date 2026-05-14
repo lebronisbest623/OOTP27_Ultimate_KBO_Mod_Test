@@ -6,5 +6,6 @@
   "custom_event.asian_games.departure.title": "Asian Games Player Departure",
   "custom_event.asian_games.final.title": "Asian Games Final",
   "custom_event.cbt.exception_deadline.title": "Exception Player Deadline",
-  "custom_event.cbt.announcement.title": "Competitive Balance Tax Announcement"
+  "custom_event.cbt.announcement.title": "Competitive Balance Tax Announcement",
+  "custom_event.fa.declaration.title": "FA Declaration Deadline"
 }

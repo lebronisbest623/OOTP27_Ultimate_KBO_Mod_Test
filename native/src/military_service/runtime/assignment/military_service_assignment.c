@@ -16,10 +16,13 @@
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../players/loans/military_active_loan.h"
 #include "../../players/state/military_player_state.h"
+#include "../../selection/events/military_selection_policy.h"
 #include "../../seed/registry/military_seed_registry.h"
 #include "../../calendar/military_service_date.h"
 #include "../state/military_service_runtime_state.h"
 #include "military_service_assignment.h"
+
+#define KBO_MILITARY_SERVICE_DAYS kbo_military_service_days()
 
 int kbo_military_daily_roster_mutation_window_ready(
     uint32_t today_serial,

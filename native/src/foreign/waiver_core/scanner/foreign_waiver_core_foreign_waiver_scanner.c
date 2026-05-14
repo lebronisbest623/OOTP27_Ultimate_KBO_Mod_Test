@@ -6,6 +6,7 @@
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/policy/foreign_waiver_policy.h"
 #include "../../roster_audit/api/foreign_roster_audit.h"
@@ -21,7 +22,7 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
     uint32_t tick = 0;
     uint32_t last_ai_run_date = 0u;
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(5000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->foreign_waiver_scanner_sleep_ms)) {
             break;
         }
         KBO_PROFILE_BEGIN(profile_foreign_waiver_scanner_tick);

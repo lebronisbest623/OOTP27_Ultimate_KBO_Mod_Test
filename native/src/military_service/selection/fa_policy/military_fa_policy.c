@@ -11,6 +11,7 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "military_fa_policy.h"
+#include "../events/military_selection_policy.h"
 #include "../../players/team_policy/military_service_team_policy.h"
 
 static volatile LONG g_kbo_military_fa_block_player_id = 0;
@@ -53,7 +54,10 @@ static int kbo_recent_military_fa_block_matches(uint32_t player_id, uint32_t tod
     }
 
     ULONGLONG now = GetTickCount64();
-    if (cached_tick <= 0 || now < (ULONGLONG)cached_tick || now - (ULONGLONG)cached_tick > 120000ull) {
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    if (cached_tick <= 0
+            || now < (ULONGLONG)cached_tick
+            || now - (ULONGLONG)cached_tick > (ULONGLONG)policy->fa_recent_block_ttl_ms) {
         return 0;
     }
 
@@ -97,7 +101,8 @@ int kbo_military_fa_candidate_fast_block(
 
     static volatile LONG military_fast_block_log_count = 0;
     LONG slot = InterlockedIncrement(&military_fast_block_log_count);
-    if (slot <= 120) {
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    if (slot <= policy->fa_fast_block_log_max) {
         append_logf(
             "FA fast-block source=%s reason=military_service_team player=%u requester_team=%u",
             context != NULL ? context : "",
@@ -135,7 +140,8 @@ int kbo_military_offer_eligibility_should_block(
 
     static volatile LONG military_team_offer_log_count = 0;
     LONG slot = InterlockedIncrement(&military_team_offer_log_count);
-    if (slot <= 120) {
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    if (slot <= policy->fa_offer_eligibility_log_max) {
         append_logf(
             "military service team FA offer eligibility blocked player=%u requester_team=%d original=%u flag=%d",
             player_id,
@@ -163,7 +169,8 @@ int kbo_military_signability_should_block(
 
     static volatile LONG military_team_signability_log_count = 0;
     LONG slot = InterlockedIncrement(&military_team_signability_log_count);
-    if (slot <= 200) {
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    if (slot <= policy->fa_signability_log_max) {
         append_logf(
             "military service team FA signability blocked player=%u requester_team=%d original=%d caller_rva=0x%llx",
             player_id,
@@ -183,7 +190,8 @@ int kbo_military_submit_offer_should_block(uintptr_t screen_ptr, uint32_t player
 
     static LONG military_submit_block_log_count = 0;
     LONG block_slot = InterlockedIncrement(&military_submit_block_log_count);
-    if (block_slot <= 200) {
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    if (block_slot <= policy->fa_submit_block_log_max) {
         append_logf(
             "military service team submit-offer blocked: screen=%p player=%u requester_team=%u today=%u",
             (void*)screen_ptr,
@@ -207,7 +215,8 @@ int kbo_military_ai_fa_candidate_should_block(
 
     static LONG military_ai_block_log_count = 0;
     LONG slot = InterlockedIncrement(&military_ai_block_log_count);
-    if (slot <= 300) {
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    if (slot <= policy->fa_ai_block_log_max) {
         append_logf(
             "military service team AI FA status candidate blocked player=%u requester_team=%u index=%d",
             player_id,
@@ -217,8 +226,6 @@ int kbo_military_ai_fa_candidate_should_block(
     return 1;
 }
 
-#define KBO_PLAYER_ACTION_CONTEXT_SCAN_BYTES 0x300u
-
 static uint8_t* kbo_military_player_action_context_find_player(
     uintptr_t action_context,
     uint32_t* out_offset,
@@ -226,12 +233,14 @@ static uint8_t* kbo_military_player_action_context_find_player(
 {
     if (out_offset != NULL) { *out_offset = 0xffffffffu; }
     if (out_player_id != NULL) { *out_player_id = 0u; }
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    uint32_t scan_bytes = (uint32_t)policy->fa_player_action_context_scan_bytes;
     if (action_context == 0
-            || !memory_range_readable((void*)action_context, KBO_PLAYER_ACTION_CONTEXT_SCAN_BYTES)) {
+            || !memory_range_readable((void*)action_context, scan_bytes)) {
         return NULL;
     }
 
-    for (uint32_t offset = 0; offset + sizeof(uintptr_t) <= KBO_PLAYER_ACTION_CONTEXT_SCAN_BYTES; offset += sizeof(uintptr_t)) {
+    for (uint32_t offset = 0; offset + sizeof(uintptr_t) <= scan_bytes; offset += sizeof(uintptr_t)) {
         uintptr_t candidate = *(uintptr_t*)(action_context + offset);
         if (!kbo_player_pointer_plausible(candidate)) {
             continue;
@@ -239,7 +248,7 @@ static uint8_t* kbo_military_player_action_context_find_player(
 
         uint8_t* player = (uint8_t*)candidate;
         uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
-        if (player_id == 0u || player_id > 200000000u) {
+        if (player_id == 0u || player_id > (uint32_t)policy->fa_player_id_max) {
             continue;
         }
         if (out_offset != NULL) { *out_offset = offset; }
@@ -256,12 +265,14 @@ static uint32_t kbo_military_player_action_context_find_team_id(
 {
     if (out_offset != NULL) { *out_offset = 0xffffffffu; }
     if (out_team_ptr != NULL) { *out_team_ptr = 0; }
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    uint32_t scan_bytes = (uint32_t)policy->fa_player_action_context_scan_bytes;
     if (action_context == 0
-            || !memory_range_readable((void*)action_context, KBO_PLAYER_ACTION_CONTEXT_SCAN_BYTES)) {
+            || !memory_range_readable((void*)action_context, scan_bytes)) {
         return 0u;
     }
 
-    for (uint32_t offset = 0; offset + sizeof(uintptr_t) <= KBO_PLAYER_ACTION_CONTEXT_SCAN_BYTES; offset += sizeof(uintptr_t)) {
+    for (uint32_t offset = 0; offset + sizeof(uintptr_t) <= scan_bytes; offset += sizeof(uintptr_t)) {
         uintptr_t candidate = *(uintptr_t*)(action_context + offset);
         if (candidate == 0
                 || !memory_range_readable(
@@ -301,14 +312,15 @@ int kbo_military_player_action_should_block(
     uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
     if (current_team_id != 0u
             || military_active != 0u
-            || action_id < 0x20
-            || action_id > 0x80) {
+            || action_id < kbo_military_selection_policy()->fa_action_id_min
+            || action_id > kbo_military_selection_policy()->fa_action_id_max) {
         return 0;
     }
 
     static LONG military_action_block_log_count = 0;
     LONG slot = InterlockedIncrement(&military_action_block_log_count);
-    if (slot <= 160) {
+    const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
+    if (slot <= policy->fa_player_action_log_max) {
         append_logf(
             "military service team player action blocked: context=%p action=0x%x strict=%u player=%u team=%u player_off=0x%x team_off=0x%x team_ptr=%p",
             (void*)action_context,

@@ -12,6 +12,7 @@
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_name_cache.h"
 #include "fa_compensation_protection_score.h"
+#include "fa_compensation_protection_policy.h"
 
 static int kbo_fa_role_bucket(uint8_t role);
 static int kbo_fa_team_role_count(uint32_t team_id, int role_bucket);
@@ -61,68 +62,76 @@ static int32_t kbo_fa_protection_candidate_score(
     uint8_t role = player[OOTP27_PLAYER_POSITION_ROLE_OFFSET];
     int role_bucket = kbo_fa_role_bucket(role);
     int team_role_count = kbo_fa_team_role_count(signing_team_id, role_bucket);
+    const KboFaCompensationProtectionPolicy* policy = kbo_fa_compensation_protection_policy();
 
     int32_t score = base;
     const char* age_tag = "prime";
-    if (age <= 22u) {
-        score += 1200;
+    if ((int32_t)age <= policy->candidate_prospect_age_max) {
+        score += policy->candidate_prospect_bonus;
         age_tag = "prospect";
-    } else if (age <= 25u) {
-        score += 850;
+    } else if ((int32_t)age <= policy->candidate_young_age_max) {
+        score += policy->candidate_young_bonus;
         age_tag = "young";
-    } else if (age <= 29u) {
-        score += 350;
+    } else if ((int32_t)age <= policy->candidate_prime_age_max) {
+        score += policy->candidate_prime_bonus;
         age_tag = "prime";
-    } else if (age >= 36u && overall < 45) {
-        score -= 900;
+    } else if ((int32_t)age >= policy->candidate_old_low_overall_age_min
+            && overall <= policy->candidate_old_low_overall_max) {
+        score -= policy->candidate_old_low_overall_penalty;
         age_tag = "old_low_ovr";
-    } else if (age >= 34u) {
-        score -= 350;
+    } else if ((int32_t)age >= policy->candidate_aging_age_min) {
+        score -= policy->candidate_aging_penalty;
         age_tag = "aging";
     }
 
     const char* core_tag = "depth";
-    if (overall >= 60 || career >= 60) {
-        score += 1000;
+    if (overall >= policy->candidate_core_value_min || career >= policy->candidate_core_value_min) {
+        score += policy->candidate_core_bonus;
         core_tag = "core";
-    } else if (overall >= 50 || career >= 50) {
-        score += 450;
+    } else if (overall >= policy->candidate_regular_value_min || career >= policy->candidate_regular_value_min) {
+        score += policy->candidate_regular_bonus;
         core_tag = "regular";
     }
-    if (talent > overall + 15) {
-        score += 650;
+    if (talent > overall + policy->candidate_upside_margin) {
+        score += policy->candidate_upside_bonus;
         core_tag = "upside";
     }
 
     const char* salary_tag = "salary_ok";
     if (salary <= 0) {
         salary_tag = "unknown_salary";
-    } else if (salary <= 70000000 && (age <= 27u || talent >= overall + 10)) {
-        score += 450;
+    } else if (salary <= policy->candidate_cheap_salary_max
+            && ((int32_t)age <= policy->candidate_cheap_age_max
+                || talent >= overall + policy->candidate_cheap_talent_margin)) {
+        score += policy->candidate_cheap_bonus;
         salary_tag = "cheap_control";
-    } else if (salary >= 800000000 && age >= 33u && overall < 55) {
-        score -= 1000;
+    } else if (salary >= policy->candidate_bad_contract_salary_min
+            && (int32_t)age >= policy->candidate_bad_contract_age_min
+            && overall <= policy->candidate_bad_contract_overall_max) {
+        score -= policy->candidate_bad_contract_penalty;
         salary_tag = "bad_contract";
-    } else if (salary >= 500000000 && age >= 32u) {
-        score -= 450;
+    } else if (salary >= policy->candidate_costly_vet_salary_min
+            && (int32_t)age >= policy->candidate_costly_vet_age_min) {
+        score -= policy->candidate_costly_vet_penalty;
         salary_tag = "costly_vet";
-    } else if (salary >= 300000000 && overall >= 60) {
-        score += 200;
+    } else if (salary >= policy->candidate_paid_core_salary_min
+            && overall >= policy->candidate_paid_core_overall_min) {
+        score += policy->candidate_paid_core_bonus;
         salary_tag = "paid_core";
     }
 
     const char* scarcity_tag = "normal_role";
-    if ((role_bucket == 1 && team_role_count <= 2)
-            || (role_bucket == 2 && team_role_count <= 5)
-            || (role_bucket == 3 && team_role_count <= 6)
-            || (role_bucket == 0 && team_role_count <= 12)) {
-        score += 650;
+    if ((role_bucket == 1 && team_role_count <= policy->candidate_scarce_catcher_max)
+            || (role_bucket == 2 && team_role_count <= policy->candidate_scarce_infielder_max)
+            || (role_bucket == 3 && team_role_count <= policy->candidate_scarce_outfielder_max)
+            || (role_bucket == 0 && team_role_count <= policy->candidate_scarce_pitcher_max)) {
+        score += policy->candidate_scarce_bonus;
         scarcity_tag = "scarce_role";
-    } else if ((role_bucket == 1 && team_role_count >= 5)
-            || (role_bucket == 2 && team_role_count >= 11)
-            || (role_bucket == 3 && team_role_count >= 11)
-            || (role_bucket == 0 && team_role_count >= 24)) {
-        score -= 200;
+    } else if ((role_bucket == 1 && team_role_count >= policy->candidate_deep_catcher_min)
+            || (role_bucket == 2 && team_role_count >= policy->candidate_deep_infielder_min)
+            || (role_bucket == 3 && team_role_count >= policy->candidate_deep_outfielder_min)
+            || (role_bucket == 0 && team_role_count >= policy->candidate_deep_pitcher_min)) {
+        score -= policy->candidate_deep_penalty;
         scarcity_tag = "deep_role";
     }
 
@@ -210,7 +219,8 @@ int32_t kbo_fa_compensation_player_decision_score(
 
     uint8_t* player = kbo_find_player_by_id(candidate->player_id, NULL, NULL);
     if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
-        return candidate->score - 100000;
+        const KboFaCompensationProtectionPolicy* policy = kbo_fa_compensation_protection_policy();
+        return candidate->score - policy->decision_missing_player_penalty;
     }
 
     int32_t base = kbo_foreign_waiver_value_score(player);
@@ -219,58 +229,59 @@ int32_t kbo_fa_compensation_player_decision_score(
     int32_t talent = kbo_read_player_i16(player, OOTP27_PLAYER_TALENT_VALUE_OFFSET);
     int role_bucket = kbo_fa_role_bucket(candidate->role);
     int team_role_count = kbo_fa_team_role_count(rec->original_team_id, role_bucket);
+    const KboFaCompensationProtectionPolicy* policy = kbo_fa_compensation_protection_policy();
 
     int32_t score = base;
     const char* age_tag = "prime";
-    if (candidate->age <= 22u) {
-        score += 1000;
+    if ((int32_t)candidate->age <= policy->decision_prospect_age_max) {
+        score += policy->decision_prospect_bonus;
         age_tag = "prospect";
-    } else if (candidate->age <= 25u) {
-        score += 700;
+    } else if ((int32_t)candidate->age <= policy->decision_young_age_max) {
+        score += policy->decision_young_bonus;
         age_tag = "young";
-    } else if (candidate->age <= 29u) {
-        score += 250;
+    } else if ((int32_t)candidate->age <= policy->decision_prime_age_max) {
+        score += policy->decision_prime_bonus;
         age_tag = "prime";
-    } else if (candidate->age >= 35u) {
-        score -= 900;
+    } else if ((int32_t)candidate->age >= policy->decision_old_age_min) {
+        score -= policy->decision_old_penalty;
         age_tag = "old";
-    } else if (candidate->age >= 32u) {
-        score -= 350;
+    } else if ((int32_t)candidate->age >= policy->decision_aging_age_min) {
+        score -= policy->decision_aging_penalty;
         age_tag = "aging";
     }
 
     const char* salary_tag = "salary_ok";
     if (salary <= 0) {
-        score += 150;
+        score += policy->decision_unknown_salary_bonus;
         salary_tag = "unknown_salary";
-    } else if (salary <= 70000000) {
-        score += 500;
+    } else if (salary <= policy->decision_cheap_salary_max) {
+        score += policy->decision_cheap_bonus;
         salary_tag = "cheap";
-    } else if (salary >= 600000000) {
-        score -= 900;
+    } else if (salary >= policy->decision_expensive_salary_min) {
+        score -= policy->decision_expensive_penalty;
         salary_tag = "expensive";
-    } else if (salary >= 300000000) {
-        score -= 350;
+    } else if (salary >= policy->decision_costly_salary_min) {
+        score -= policy->decision_costly_penalty;
         salary_tag = "costly";
     }
 
     const char* need_tag = "neutral_need";
-    if ((role_bucket == 1 && team_role_count < 2)
-            || (role_bucket == 2 && team_role_count < 5)
-            || (role_bucket == 3 && team_role_count < 7)
-            || (role_bucket == 0 && team_role_count < 13)) {
-        score += 700;
+    if ((role_bucket == 1 && team_role_count < policy->decision_need_catcher_below)
+            || (role_bucket == 2 && team_role_count < policy->decision_need_infielder_below)
+            || (role_bucket == 3 && team_role_count < policy->decision_need_outfielder_below)
+            || (role_bucket == 0 && team_role_count < policy->decision_need_pitcher_below)) {
+        score += policy->decision_team_need_bonus;
         need_tag = "team_need";
-    } else if ((role_bucket == 1 && team_role_count > 4)
-            || (role_bucket == 2 && team_role_count > 10)
-            || (role_bucket == 3 && team_role_count > 10)
-            || (role_bucket == 0 && team_role_count > 22)) {
-        score -= 250;
+    } else if ((role_bucket == 1 && team_role_count > policy->decision_surplus_catcher_above)
+            || (role_bucket == 2 && team_role_count > policy->decision_surplus_infielder_above)
+            || (role_bucket == 3 && team_role_count > policy->decision_surplus_outfielder_above)
+            || (role_bucket == 0 && team_role_count > policy->decision_surplus_pitcher_above)) {
+        score -= policy->decision_surplus_penalty;
         need_tag = "surplus_role";
     }
 
-    if (talent > overall + 15) {
-        score += 450;
+    if (talent > overall + policy->decision_upside_margin) {
+        score += policy->decision_upside_bonus;
     }
 
     if (reason != NULL && reason_size > 0) {
@@ -297,7 +308,8 @@ static int kbo_fa_compensation_player_is_rookie_auto_protected(
         return 0;
     }
     uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
-    if (age > 23u) {
+    const KboFaCompensationProtectionPolicy* policy = kbo_fa_compensation_protection_policy();
+    if ((int32_t)age > policy->rookie_auto_protected_age_max) {
         return 0;
     }
     uint32_t draft_league_id = *(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET);

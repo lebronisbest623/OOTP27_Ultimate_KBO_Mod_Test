@@ -11,6 +11,7 @@
 #include "../../core/events/core_league_events.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../foreign/common/policy/foreign_player_policy.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../foreign/waiver_window/state/foreign_waiver_window_state.h"
 
@@ -35,7 +36,8 @@ uint32_t kbo_recent_phase_transition_offseason_anchor(uint32_t league_id, uint32
     if (anchor_serial == 0u || today_serial == 0u || today_serial < anchor_serial) {
         return 0u;
     }
-    if (today_serial - anchor_serial > 70u) {
+    uint32_t max_age_days = (uint32_t)kbo_foreign_player_policy()->phase_transition_anchor_max_age_days;
+    if (today_serial - anchor_serial > max_age_days) {
         return 0u;
     }
     return anchor;
@@ -61,7 +63,8 @@ static uint32_t kbo_recent_foreign_waiver_marker_anchor(uint32_t today_yyyymmdd,
     }
 
     uint32_t age_days = today_serial - marker_serial;
-    if (age_days > 45u) {
+    uint32_t max_age_days = (uint32_t)kbo_foreign_player_policy()->foreign_priority_marker_max_age_days;
+    if (age_days > max_age_days) {
         return 0u;
     }
 
@@ -108,22 +111,29 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
 
     uint32_t anchor_date = offseason_starts_yyyymmdd;
     uint32_t open_date = anchor_date;
-    uint32_t close_date = kbo_add_days_yyyymmdd(anchor_date, 20u);
+    uint32_t close_date = kbo_add_days_yyyymmdd(
+        anchor_date,
+        (uint32_t)kbo_foreign_player_policy()->waiver_window_days);
+    uint32_t fa_declaration_date = kbo_add_days_yyyymmdd(anchor_date, 7u);
     uint32_t military_selection_date = kbo_add_one_month_yyyymmdd(anchor_date);
-    if (close_date == 0u) {
+    if (close_date == 0u || fa_declaration_date == 0u) {
         append_logf(
-            "KBO custom event schedule skipped source=%s reason=close_date_invalid season_end=%u anchor=%u",
+            "KBO custom event schedule skipped source=%s reason=derived_date_invalid season_end=%u anchor=%u close=%u fa_declaration=%u",
             source != NULL ? source : "",
             offseason_starts_yyyymmdd,
-            anchor_date);
+            anchor_date,
+            close_date,
+            fa_declaration_date);
         return -1;
     }
 
     char open_title[160] = {0};
     char close_title[160] = {0};
+    char fa_declaration_title[160] = {0};
     char military_title[160] = {0};
     if (!kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_OPEN, open_title, sizeof(open_title))
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_CLOSE, close_title, sizeof(close_title))
+            || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_FA_DECLARATION, fa_declaration_title, sizeof(fa_declaration_title))
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_MILITARY_SELECTION, military_title, sizeof(military_title))) {
         append_logf(
             "KBO custom event schedule skipped source=%s reason=title_unavailable season_end=%u",
@@ -140,6 +150,10 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
         league_id,
         close_date,
         0);
+    int fa_declaration_exists = kbo_custom_event_exists_by_kind_for_date(
+        league_id,
+        fa_declaration_date,
+        KBO_CUSTOM_EVENT_KIND_FA_DECLARATION);
     int military_exists = military_selection_date == 0u
         || kbo_custom_event_exists_by_kind_for_date(
             league_id,
@@ -148,6 +162,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
     if (g_kbo_foreign_priority_last_scheduled_date == offseason_starts_yyyymmdd
             && open_exists
             && close_exists
+            && fa_declaration_exists
             && military_exists) {
         static uint32_t last_logged_already_scheduled = 0u;
         if (last_logged_already_scheduled != offseason_starts_yyyymmdd) {
@@ -187,6 +202,19 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
             source != NULL ? source : g_kbo_default_event_source);
     }
 
+    int created_fa_declaration = 0;
+    if (!fa_declaration_exists) {
+        created_fa_declaration = create_kbo_league_event(
+            fa_declaration_date / 10000u,
+            (fa_declaration_date / 100u) % 100u,
+            fa_declaration_date % 100u,
+            league_id,
+            OOTP27_EVENT_TYPE_CUSTOM_EVENT,
+            fa_declaration_title,
+            0,
+            source != NULL ? source : g_kbo_default_event_source);
+    }
+
     int created_military = 0;
     if (military_selection_date != 0u
             && !military_exists) {
@@ -212,6 +240,17 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
         league_id,
         close_date,
         0);
+    fa_declaration_exists = fa_declaration_exists
+        || created_fa_declaration
+        || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            fa_declaration_date,
+            KBO_CUSTOM_EVENT_KIND_FA_DECLARATION);
+    kbo_prune_duplicate_custom_events_by_kind_for_date(
+        league_id,
+        fa_declaration_date,
+        KBO_CUSTOM_EVENT_KIND_FA_DECLARATION,
+        source);
     military_exists = military_selection_date == 0u
         || military_exists
         || created_military
@@ -221,23 +260,25 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
             KBO_CUSTOM_EVENT_KIND_MILITARY_SELECTION);
 
     append_logf(
-        "KBO custom event schedule source=%s season_end=%u anchor=%u open=%u close=%u military=%u created_open=%d created_close=%d created_military=%d ready=%d",
+        "KBO custom event schedule source=%s season_end=%u anchor=%u open=%u close=%u fa_declaration=%u military=%u created_open=%d created_close=%d created_fa_declaration=%d created_military=%d ready=%d",
         source != NULL ? source : "",
         offseason_starts_yyyymmdd,
         anchor_date,
         open_date,
         close_date,
+        fa_declaration_date,
         military_selection_date,
         created_open,
         created_close,
+        created_fa_declaration,
         created_military,
-        open_exists && close_exists && military_exists);
+        open_exists && close_exists && fa_declaration_exists && military_exists);
 
-    if (!(open_exists && close_exists && military_exists)) {
+    if (!(open_exists && close_exists && fa_declaration_exists && military_exists)) {
         return -1;
     }
     g_kbo_foreign_priority_last_scheduled_date = offseason_starts_yyyymmdd;
-    return created_open || created_close || created_military;
+    return created_open || created_close || created_fa_declaration || created_military;
 }
 
 int kbo_schedule_foreign_priority_custom_events_for_anchor(

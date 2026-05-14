@@ -13,6 +13,7 @@
 #include "../../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
 #include "../../fa_salary_snapshot/paths/salary_snapshot_paths_dates.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
+#include "../rules/cbt_rules.h"
 
 #define KBO_CBT_EXCEPTION_AUTO_TEAM_MAX 64
 
@@ -58,7 +59,10 @@ int kbo_cbt_exception_designation_window_open(uint32_t season, uint32_t current_
     if (current_date == 0u || !kbo_cbt_exception_resolve_opening_day(season, &opening_day)) {
         return 0;
     }
-    return current_date >= opening_day && current_date <= kbo_add_days_yyyymmdd(opening_day, 6u);
+    KboCbtRules rules;
+    kbo_cbt_rules_load(&rules);
+    return current_date >= opening_day
+        && current_date <= kbo_add_days_yyyymmdd(opening_day, rules.exception_deadline_days_after_opening);
 }
 
 int kbo_cbt_exception_load_designations(KboCbtExceptionDesignation* rows, int max)

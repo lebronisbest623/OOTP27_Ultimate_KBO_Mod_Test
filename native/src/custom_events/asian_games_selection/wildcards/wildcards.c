@@ -28,8 +28,9 @@ int kbo_asian_games_apply_wildcard_replacements(
         return 0;
     }
 
+    const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
     int replacements = 0;
-    while (*wildcard_count < KBO_ASIAN_GAMES_MAX_WILDCARDS) {
+    while (*wildcard_count < policy->max_wildcards) {
         int best_candidate_index = -1;
         int best_roster_index = -1;
         int best_gain = -2147483647;
@@ -39,7 +40,7 @@ int kbo_asian_games_apply_wildcard_replacements(
             int allow_cross_bucket = pass != 0;
             for (int i = 0; i < candidate_count; i++) {
                 KboAsianGamesCandidate* candidate = &candidates[i];
-                if (candidate->selected || candidate->entry.age <= 24u) {
+                if (candidate->selected || !kbo_asian_games_policy_is_wildcard_age(candidate->entry.age)) {
                     continue;
                 }
                 int candidate_military_ready = 1;
@@ -52,7 +53,7 @@ int kbo_asian_games_apply_wildcard_replacements(
 
                 for (int roster_index = 0; roster_index < selected_count; roster_index++) {
                     KboAsianGamesRosterEntry* current = &g_kbo_asian_games_roster[roster_index];
-                    if (current->wildcard != 0u || current->age > 24u) {
+                    if (current->wildcard != 0u || kbo_asian_games_policy_is_wildcard_age(current->age)) {
                         continue;
                     }
                     int same_bucket = kbo_asian_games_roles_same_bucket(candidate->entry.role, current->role);
@@ -60,16 +61,16 @@ int kbo_asian_games_apply_wildcard_replacements(
                         if (!allow_cross_bucket) {
                             continue;
                         }
-                        if (kbo_asian_games_role_is_pitcher(current->role) && *pitcher_count <= 9) {
+                        if (kbo_asian_games_role_is_pitcher(current->role) && *pitcher_count <= policy->cross_bucket_pitcher_min) {
                             continue;
                         }
-                        if (kbo_asian_games_role_is_catcher(current->role) && *catcher_count <= 2) {
+                        if (kbo_asian_games_role_is_catcher(current->role) && *catcher_count <= policy->cross_bucket_catcher_min) {
                             continue;
                         }
-                        if (kbo_asian_games_role_is_infielder(current->role) && *infielder_count <= 5) {
+                        if (kbo_asian_games_role_is_infielder(current->role) && *infielder_count <= policy->cross_bucket_infielder_min) {
                             continue;
                         }
-                        if (kbo_asian_games_role_is_outfielder(current->role) && *outfielder_count <= 4) {
+                        if (kbo_asian_games_role_is_outfielder(current->role) && *outfielder_count <= policy->cross_bucket_outfielder_min) {
                             continue;
                         }
                     }
@@ -77,13 +78,13 @@ int kbo_asian_games_apply_wildcard_replacements(
                     uint32_t old_org_id = kbo_asian_games_org_team_id_for_team(current->original_team_id);
                     if (candidate->org_team_id != 0u
                             && old_org_id != candidate->org_team_id
-                            && kbo_asian_games_roster_org_count(candidate->org_team_id, selected_count) >= KBO_ASIAN_GAMES_TEAM_MAX_PLAYERS) {
+                            && kbo_asian_games_roster_org_count(candidate->org_team_id, selected_count) >= policy->team_max_players) {
                         continue;
                     }
                     int old_org_required = kbo_asian_games_find_org_index(required_orgs, required_org_count, old_org_id) >= 0;
                     if (old_org_required
                             && old_org_id != candidate->org_team_id
-                            && kbo_asian_games_roster_org_count(old_org_id, selected_count) <= KBO_ASIAN_GAMES_TEAM_MIN_PLAYERS) {
+                            && kbo_asian_games_roster_org_count(old_org_id, selected_count) <= policy->team_min_players) {
                         continue;
                     }
 

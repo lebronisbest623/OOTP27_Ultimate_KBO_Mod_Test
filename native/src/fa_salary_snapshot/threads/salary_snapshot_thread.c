@@ -8,10 +8,12 @@
 #include "../../competitive_balance_tax/events/cbt_events.h"
 #include "../../competitive_balance_tax/exceptions/cbt_exceptions.h"
 #include "../../competitive_balance_tax/records/cbt_records.h"
+#include "../../competitive_balance_tax/rules/cbt_rules.h"
 #include "../../core/dates/core_current_date.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../paths/salary_snapshot_paths_dates.h"
 #include "../state/salary_snapshot_state.h"
@@ -59,8 +61,10 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
     uint32_t cached_league_ptr_year = 0u;
     uint32_t cached_schedule_year = 0u;
     uint32_t cached_schedule_opening_day = 0u;
+    KboCbtRules cached_cbt_rules = {0};
+    uint32_t cached_cbt_rules_date = 0u;
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(KBO_FA_SALARY_SNAPSHOT_THREAD_SLEEP_MS)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->fa_salary_snapshot_thread_sleep_ms)) {
             break;
         }
         LARGE_INTEGER profile_snapshot_thread_tick = {0};
@@ -143,9 +147,14 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             opening_day = date;
         }
 
+        if (cached_cbt_rules_date != date) {
+            kbo_cbt_rules_load(&cached_cbt_rules);
+            cached_cbt_rules_date = date;
+        }
+
         int snapshot_exists = captured_season == year || kbo_fa_salary_snapshot_file_exists(year);
         uint32_t cbt_announcement_day = opening_day / 10000u == year
-            ? kbo_add_days_yyyymmdd(opening_day, 7u)
+            ? kbo_add_days_yyyymmdd(opening_day, cached_cbt_rules.announcement_days_after_opening)
             : 0u;
 
         if (snapshot_exists && opening_day / 10000u == year && date >= opening_day) {

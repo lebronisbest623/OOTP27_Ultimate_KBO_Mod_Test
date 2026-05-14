@@ -146,6 +146,48 @@ int kbo_read_localappdata_json_int_value(const char* key, int* out_value)
     return kbo_read_localappdata_named_json_int_value("kbo_flags.json", key, out_value);
 }
 
+int kbo_read_localappdata_named_json_string_value(const char* file_name, const char* key, char* out, size_t out_size)
+{
+    if (out != NULL && out_size > 0) {
+        out[0] = '\0';
+    }
+    if (key == NULL || key[0] == '\0' || out == NULL || out_size == 0) {
+        return 0;
+    }
+
+    WCHAR path[KBO_WIDE_PATH_CHARS] = {0};
+    if (!kbo_get_localappdata_named_json_path_w(file_name, path, KBO_WIDE_PATH_CHARS)) {
+        return 0;
+    }
+
+    HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+
+    DWORD size = GetFileSize(file, NULL);
+    if (size == INVALID_FILE_SIZE || size > KBO_FLAGS_JSON_MAX_BYTES) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
+    if (buffer == NULL) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    DWORD read = 0;
+    int found = 0;
+    if (ReadFile(file, buffer, size, &read, NULL)) {
+        found = kbo_find_string_value_in_json(buffer, read, key, out, out_size);
+    }
+    CloseHandle(file);
+    HeapFree(GetProcessHeap(), 0, buffer);
+    return found;
+}
+
 static int kbo_write_all_bytes_to_file(const WCHAR* path, const char* data, DWORD size)
 {
     if (path == NULL || data == NULL) {

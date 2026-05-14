@@ -7,7 +7,6 @@
 #include "../../bootstrap/abi/ootp_offsets.h"
 
 #define KBO_FOREIGN_RETENTION_GUARD_MAX 128
-#define KBO_FOREIGN_RETENTION_GUARD_DAYS 180u
 
 typedef struct KboForeignRetentionGuardRecord {
     uint32_t player_id;

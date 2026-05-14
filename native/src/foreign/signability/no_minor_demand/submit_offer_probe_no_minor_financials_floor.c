@@ -64,7 +64,7 @@ int32_t kbo_no_minor_resolve_current_league_minimum_salary(void)
     }
 
     int32_t minimum_salary = *(int32_t*)(financials + OOTP27_LEAGUE_MINIMUM_SALARY_OFFSET);
-    if (minimum_salary <= 0 || minimum_salary > 1000000000) {
+    if (minimum_salary <= 0 || minimum_salary > kbo_foreign_player_policy()->demand_salary_max) {
         KBO_PROFILE_END(profile_no_minor_resolve_min_salary, "no_minor.resolve_min_salary.invalid");
         return 0;
     }

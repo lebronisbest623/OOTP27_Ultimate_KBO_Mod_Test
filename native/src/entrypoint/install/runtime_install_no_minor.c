@@ -61,8 +61,12 @@ DWORD WINAPI kbo_delayed_no_minor_contract_patch_install_thread(LPVOID parameter
     (void)parameter;
     append_log_line("KBO no-minor-contract delayed install thread started");
 
-    for (int attempt = 1; attempt <= 720; attempt++) {
-        if (!kbo_runtime_sleep_should_continue(attempt == 1 ? 1000u : 5000u)) {
+    const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
+    for (int attempt = 1; attempt <= tuning->no_minor_delayed_install_attempts; attempt++) {
+        uint32_t sleep_ms = attempt == 1
+            ? (uint32_t)tuning->no_minor_delayed_install_first_sleep_ms
+            : (uint32_t)tuning->no_minor_delayed_install_sleep_ms;
+        if (!kbo_runtime_sleep_should_continue(sleep_ms)) {
             break;
         }
 
@@ -78,7 +82,8 @@ DWORD WINAPI kbo_delayed_no_minor_contract_patch_install_thread(LPVOID parameter
         uint32_t today_serial = kbo_current_date_serial();
         int has_save = kbo_get_current_save_path(save_path, sizeof(save_path));
         if (today_serial == 0u || !has_save) {
-            if (attempt <= 8 || attempt % 12 == 0) {
+            if (attempt <= tuning->no_minor_delayed_install_log_initial_attempts
+                    || attempt % tuning->no_minor_delayed_install_log_interval == 0) {
                 append_logf(
                     "KBO no-minor-contract delayed install waiting attempt=%d reason=state_not_ready date_serial=%u save=%d",
                     attempt,
@@ -89,7 +94,8 @@ DWORD WINAPI kbo_delayed_no_minor_contract_patch_install_thread(LPVOID parameter
         }
 
         if (kbo_opening_day_storyline_guard_active("no_minor_contract_delayed_install", NULL, NULL)) {
-            if (attempt <= 8 || attempt % 12 == 0) {
+            if (attempt <= tuning->no_minor_delayed_install_log_initial_attempts
+                    || attempt % tuning->no_minor_delayed_install_log_interval == 0) {
                 append_logf(
                     "KBO no-minor-contract delayed install waiting attempt=%d reason=opening_day_storyline_guard save=%s",
                     attempt,

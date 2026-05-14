@@ -21,7 +21,8 @@ int kbo_no_minor_copy_player_scan(uintptr_t player_ptr, uint8_t* out)
 
     uint32_t player_id = *(uint32_t*)(out + OOTP27_PLAYER_ID_OFFSET);
     uint16_t age = *(uint16_t*)(out + OOTP27_PLAYER_AGE_OFFSET);
-    return player_id > 0u && player_id < 200000000u && age < 80u;
+    return kbo_foreign_policy_player_id_plausible(player_id)
+        && kbo_foreign_policy_player_copy_age_plausible(age);
 }
 
 int kbo_no_minor_read_player_i32(uintptr_t player_ptr, uint32_t offset, int32_t* out)
@@ -86,7 +87,9 @@ int kbo_no_minor_scan_is_teamless_demand_floor_candidate(const uint8_t* scan, ui
     uint32_t player_id = *(uint32_t*)(scan + OOTP27_PLAYER_ID_OFFSET);
     uint16_t age = *(uint16_t*)(scan + OOTP27_PLAYER_AGE_OFFSET);
     uint32_t current_team_id = *(uint32_t*)(scan + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-    if (player_id == 0u || player_id > 200000000u || age < 16u || age > 60u || current_team_id != 0u) {
+    if (!kbo_foreign_policy_player_id_plausible(player_id)
+            || !kbo_foreign_policy_market_age_allowed(age)
+            || current_team_id != 0u) {
         return 0;
     }
     if (scan[OOTP27_PLAYER_RETIRED_FLAG_OFFSET] != 0u
@@ -117,7 +120,9 @@ int kbo_no_minor_scan_is_foreign_demand_remap_candidate(const uint8_t* scan)
     uint32_t current_team_id = *(uint32_t*)(scan + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
     uint32_t nation_id = *(uint32_t*)(scan + OOTP27_PLAYER_NATION_ID_OFFSET);
     int32_t demand = *(int32_t*)(scan + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET);
-    if (player_id == 0u || player_id > 200000000u || age < 16u || age > 60u || current_team_id != 0u) {
+    if (!kbo_foreign_policy_player_id_plausible(player_id)
+            || !kbo_foreign_policy_market_age_allowed(age)
+            || current_team_id != 0u) {
         return 0;
     }
     if (scan[OOTP27_PLAYER_RETIRED_FLAG_OFFSET] != 0u) {
@@ -126,7 +131,7 @@ int kbo_no_minor_scan_is_foreign_demand_remap_candidate(const uint8_t* scan)
     if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
         return 0;
     }
-    return demand > 0 && demand < 1000000000;
+    return kbo_foreign_policy_demand_salary_plausible(demand);
 }
 
 uintptr_t* kbo_no_minor_copy_player_vector_snapshot(
@@ -220,7 +225,7 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
     KBO_PROFILE_END(profile_no_minor_write_probe_candidate, "no_minor.write_probe.candidate_check");
 
     int32_t salary_floor = salary_floor_hint;
-    if (salary_floor <= 0 || salary_floor > 1000000000) {
+    if (salary_floor <= 0 || salary_floor > kbo_foreign_player_policy()->demand_salary_max) {
         KBO_PROFILE_BEGIN(profile_no_minor_write_probe_floor);
         salary_floor = kbo_no_minor_resolve_current_league_minimum_salary();
         KBO_PROFILE_END(profile_no_minor_write_probe_floor, "no_minor.write_probe.resolve_floor");
@@ -259,7 +264,8 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
 DWORD WINAPI kbo_no_minor_contract_demand_floor_scanner_thread(LPVOID param)
 {
     (void)param;
-    if (!kbo_runtime_sleep_should_continue(KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INITIAL_DELAY_MS)) {
+    const KboForeignPlayerPolicy* policy = kbo_foreign_player_policy();
+    if (!kbo_runtime_sleep_should_continue((uint32_t)policy->no_minor_scan_initial_delay_ms)) {
         InterlockedExchange(&g_kbo_no_minor_contract_demand_floor_scanner_started, 0);
         append_log_line("stopped KBO no-minor demand floor scanner thread");
         return 0;
@@ -268,12 +274,12 @@ DWORD WINAPI kbo_no_minor_contract_demand_floor_scanner_thread(LPVOID param)
     for (uint32_t attempt = 0; kbo_runtime_threads_should_continue(); attempt++) {
         KBO_PROFILE_BEGIN(profile_no_minor_scanner_tick);
         kbo_no_minor_scan_and_floor_teamless_fa_demands("background_prescan");
-        KBO_PROFILE_END(profile_no_minor_scanner_tick, attempt < KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS
+        KBO_PROFILE_END(profile_no_minor_scanner_tick, attempt < (uint32_t)policy->no_minor_scan_warmup_attempts
             ? "no_minor.scanner_tick.warmup"
             : "no_minor.scanner_tick.steady");
-        if (!kbo_runtime_sleep_should_continue(attempt < KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_ATTEMPTS
-            ? KBO_NO_MINOR_DEMAND_FLOOR_SCAN_WARMUP_INTERVAL_MS
-            : KBO_NO_MINOR_DEMAND_FLOOR_SCAN_INTERVAL_MS)) {
+        if (!kbo_runtime_sleep_should_continue(attempt < (uint32_t)policy->no_minor_scan_warmup_attempts
+            ? (uint32_t)policy->no_minor_scan_warmup_interval_ms
+            : (uint32_t)policy->no_minor_scan_interval_ms)) {
             break;
         }
     }

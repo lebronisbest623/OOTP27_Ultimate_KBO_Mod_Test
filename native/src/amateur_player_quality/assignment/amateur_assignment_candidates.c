@@ -86,7 +86,7 @@ int kbo_amateur_assignment_collect_candidates(
         }
 
         uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
-        uint8_t reputation = 70u;
+        uint8_t reputation = kbo_amateur_default_team_reputation();
         if (team_id == 0u || !kbo_find_amateur_team_reputation_by_memory_team(league_id, team, &reputation)) {
             continue;
         }

@@ -8,6 +8,7 @@
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
 
@@ -69,7 +70,7 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
     uint32_t last_scheduled_yyyymmdd = 0u;
     uint32_t last_scanned_yyyymmdd = 0u;
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(5000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->custom_event_monitor_sleep_ms)) {
             break;
         }
         kbo_custom_event_monitor_tick(

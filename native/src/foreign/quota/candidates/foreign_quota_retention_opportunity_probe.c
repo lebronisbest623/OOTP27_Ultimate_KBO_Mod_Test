@@ -2,11 +2,11 @@
 
 #include "../internal/foreign_quota_internal.h"
 #include "../../controller/foreign_ai_controller.h"
+#include "../../common/policy/foreign_player_policy.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
 
 #define KBO_RETENTION_OPPORTUNITY_SCAN_MAX 128
 #define KBO_RETENTION_OPPORTUNITY_CACHE_SIZE 64
-#define KBO_RETENTION_OPPORTUNITY_CACHE_TTL_MS 1000u
 
 typedef struct KboForeignRetentionOpportunity {
     uint32_t team_id;
@@ -99,7 +99,7 @@ static int kbo_retention_opportunity_cache_get(
     if (cached.team_id == team_id
             && cached.today == today
             && cached.tick != 0u
-            && now - cached.tick <= KBO_RETENTION_OPPORTUNITY_CACHE_TTL_MS) {
+            && now - cached.tick <= (DWORD)kbo_foreign_player_policy()->retention_opportunity_cache_ttl_ms) {
         *out_opportunity = cached.opportunity;
         kbo_retention_opportunity_cache_unlock();
         return out_opportunity->protectable_rights > 0u;
@@ -170,12 +170,13 @@ static int kbo_retention_opportunity_cache_get(
 
 static int32_t kbo_retention_opportunity_score_margin(int32_t best_score)
 {
-    int32_t margin = best_score / 10;
-    if (margin < 10000) {
-        margin = 10000;
+    const KboForeignPlayerPolicy* policy = kbo_foreign_player_policy();
+    int32_t margin = best_score / policy->retention_margin_divisor;
+    if (margin < policy->retention_margin_min) {
+        margin = policy->retention_margin_min;
     }
-    if (margin > 25000) {
-        margin = 25000;
+    if (margin > policy->retention_margin_max) {
+        margin = policy->retention_margin_max;
     }
     return margin;
 }

@@ -1,4 +1,5 @@
 #include "..\amateur_assignment_ortools_internal.h"
+#include "../../policy/amateur_assignment_policy_values.h"
 
 void kbo_amateur_apply_deferred_original_fallback(
     KboAmateurDeferredTeamAdd* deferred_team_adds,
@@ -61,10 +62,11 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
     accumulated_players = g_kbo_amateur_league_batch_player_count;
     accumulated_teams = g_kbo_amateur_league_batch_team_count;
     deferred_count = g_kbo_amateur_deferred_team_add_count;
-    DWORD idle_ms = (accumulated_teams >= KBO_AMATEUR_LEAGUE_BATCH_NEAR_COMPLETE_TEAMS
-            || accumulated_players >= KBO_AMATEUR_LEAGUE_BATCH_NEAR_COMPLETE_PLAYERS)
-        ? KBO_AMATEUR_LEAGUE_BATCH_NEAR_COMPLETE_IDLE_MS
-        : KBO_AMATEUR_LEAGUE_BATCH_IDLE_MS;
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
+    DWORD idle_ms = (accumulated_teams >= policy->ortools_batch_near_complete_teams
+            || accumulated_players >= policy->ortools_batch_near_complete_players)
+        ? (DWORD)policy->ortools_batch_near_complete_idle_ms
+        : (DWORD)policy->ortools_batch_idle_ms;
     if ((league_id != KBO_HIGH_SCHOOL_LEAGUE_ID && league_id != KBO_COLLEGE_LEAGUE_ID)
             || accumulated_players <= 1
             || accumulated_teams <= 0
@@ -262,4 +264,3 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
     }
     return assigned;
 }
-

@@ -168,7 +168,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
                     foreign_demand_mapped++;
                     player_changed = 1;
                     LONG foreign_detail_slot = InterlockedIncrement(&foreign_detail_log_count);
-                    if (foreign_detail_slot <= KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS) {
+                    if (foreign_detail_slot <= kbo_foreign_player_policy()->no_minor_scan_max_detail_logs) {
                         append_logf(
                             "KBO foreign FA demand remapped: source=%s player=%u asian_quota=%d old_demand=%d mapped_demand=%d original_superstar=%d foreign_superstar=%d",
                             source,
@@ -187,7 +187,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         if (player_changed) {
             changed++;
             LONG detail_slot = InterlockedIncrement(&detail_log_count);
-            if (detail_slot <= KBO_NO_MINOR_DEMAND_FLOOR_SCAN_MAX_DETAIL_LOGS) {
+            if (detail_slot <= kbo_foreign_player_policy()->no_minor_scan_max_detail_logs) {
                 append_logf(
                     "KBO no-minor demand floor prescan applied: source=%s player=%u old_demand=%d floor=%d observed_contract_level=%u",
                     source,

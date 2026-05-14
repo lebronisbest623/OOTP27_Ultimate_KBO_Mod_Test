@@ -20,7 +20,7 @@ int kbo_foreign_injury_replacement_signing_exception_available(
     if (out_slot_type != NULL) { *out_slot_type = 0u; }
     if (out_injured_player_id != NULL) { *out_injured_player_id = 0u; }
     if (out_effective_count != NULL) { *out_effective_count = 0u; }
-    if (out_effective_limit != NULL) { *out_effective_limit = 3u; }
+    if (out_effective_limit != NULL) { *out_effective_limit = KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT; }
 
     if (!kbo_foreign_injury_replacement_enabled()
             || team_id == 0u
@@ -36,7 +36,7 @@ int kbo_foreign_injury_replacement_signing_exception_available(
     kbo_count_team_asian_quota_probe(team_id, &foreign_count, &asian_count, &non_asian_count);
     uint32_t effective = kbo_effective_foreign_count_with_asian_quota(asian_count, non_asian_count);
     if (out_effective_count != NULL) { *out_effective_count = effective; }
-    if (out_effective_limit != NULL) { *out_effective_limit = 4u; }
+    if (out_effective_limit != NULL) { *out_effective_limit = KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT + 1u; }
 
     int candidate_asian = kbo_player_is_asian_quota_candidate(candidate);
     uint32_t candidate_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ID_OFFSET);
@@ -54,7 +54,7 @@ int kbo_foreign_injury_replacement_signing_exception_available(
         return 1;
     }
 
-    if (effective <= 3u
+    if (effective <= KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT
             && kbo_team_has_foreign_injury_slot_for_candidate(
                 team_id,
                 KBO_FOREIGN_INJURY_SLOT_REGULAR,

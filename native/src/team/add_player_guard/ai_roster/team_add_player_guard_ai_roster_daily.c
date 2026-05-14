@@ -225,7 +225,7 @@ int kbo_run_foreign_ai_roster_daily_callup(const char* source)
     int failed = 0;
     KboAiRosterDailyCallupScan total_scan = {0};
 
-    while (attempts < KBO_AI_ROSTER_DAILY_CALLUP_MAX_ATTEMPTS
+    while (attempts < kbo_foreign_player_policy()->ai_roster_daily_callup_max_attempts
             && tried_count < KBO_AI_ROSTER_DAILY_TRIED_MAX) {
         uint32_t active_team_id = 0u;
         int64_t score = 0;

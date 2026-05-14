@@ -226,7 +226,7 @@ void kbo_classify_fa_market_row(
     const KboFaRequalificationRecord* rec =
         kbo_find_fa_market_requalification_record(records, record_count, row->player_id);
     if (rec != NULL) {
-        uint32_t eligible_year = rec->last_fa_year + KBO_FA_REQUALIFICATION_YEARS;
+        uint32_t eligible_year = rec->last_fa_year + kbo_fa_requalification_team_control_years();
         if (row->original_team_id == 0u) {
             row->original_team_id = rec->original_team_id;
         }

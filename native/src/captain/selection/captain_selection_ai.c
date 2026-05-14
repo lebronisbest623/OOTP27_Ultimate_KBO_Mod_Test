@@ -1,4 +1,5 @@
 #include "../internal/captain_selection_internal.h"
+#include "captain_selection_policy.h"
 
 static uintptr_t* kbo_captain_copy_player_vector_snapshot(
     uintptr_t player_vector,
@@ -85,39 +86,42 @@ static int32_t kbo_captain_salary_score(int32_t salary)
         return 0;
     }
 
-    int32_t score = salary / 1000;
-    if (score > 120000) {
-        score = 120000;
+    const KboCaptainSelectionPolicy* policy = kbo_captain_selection_policy();
+    int32_t score = salary / policy->salary_score_divisor;
+    if (score > policy->salary_score_max) {
+        score = policy->salary_score_max;
     }
     return score;
 }
 
 static int32_t kbo_captain_age_score(uint16_t age)
 {
-    if (age >= 30u && age <= 36u) {
-        return 60000;
+    const KboCaptainSelectionPolicy* policy = kbo_captain_selection_policy();
+    if ((int32_t)age >= policy->age_core_min && (int32_t)age <= policy->age_core_max) {
+        return policy->age_core_score;
     }
-    if (age >= 28u && age <= 39u) {
-        return 42000;
+    if ((int32_t)age >= policy->age_extended_min && (int32_t)age <= policy->age_extended_max) {
+        return policy->age_extended_score;
     }
-    if (age >= 25u && age <= 42u) {
-        return 18000;
+    if ((int32_t)age >= policy->age_depth_min && (int32_t)age <= policy->age_depth_max) {
+        return policy->age_depth_score;
     }
     return 0;
 }
 
 static int32_t kbo_captain_candidate_score(KboCaptainSelectionRow* row)
 {
+    const KboCaptainSelectionPolicy* policy = kbo_captain_selection_policy();
     int32_t score = 0;
     score += row->value_score;
     score += kbo_captain_salary_score(row->salary);
     score += kbo_captain_age_score(row->age);
-    score += row->domestic ? 70000 : -180000;
-    score += row->active_team_id == row->team_id ? 30000 : 0;
-    score += row->current_team_id == row->team_id ? 15000 : 0;
-    score -= row->dfa ? 140000 : 0;
-    score -= row->restricted ? 50000 : 0;
-    score -= row->injured ? 12000 : 0;
+    score += row->domestic ? policy->domestic_bonus : -policy->foreign_penalty;
+    score += row->active_team_id == row->team_id ? policy->active_team_bonus : 0;
+    score += row->current_team_id == row->team_id ? policy->current_team_bonus : 0;
+    score -= row->dfa ? policy->dfa_penalty : 0;
+    score -= row->restricted ? policy->restricted_penalty : 0;
+    score -= row->injured ? policy->injured_penalty : 0;
     return score;
 }
 
@@ -305,7 +309,8 @@ int kbo_captain_select_for_preseason(
         uint8_t* player = (uint8_t*)player_ptr;
         uint8_t retired = player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET];
         uint16_t age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
-        if (retired != 0u || age < 18u || age > 48u) {
+        const KboCaptainSelectionPolicy* policy = kbo_captain_selection_policy();
+        if (retired != 0u || (int32_t)age < policy->eligible_age_min || (int32_t)age > policy->eligible_age_max) {
             continue;
         }
 

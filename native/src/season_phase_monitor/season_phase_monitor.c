@@ -8,6 +8,7 @@
 #include "../core/core_flags/api/flags_api.h"
 #include "../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../core/logging/core_log.h"
+#include "../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../runtime_memory/runtime_memory.h"
 #include "season_phase_monitor.h"
 /* League season-phase diagnostics. Included from native/KBOFix.c. */
@@ -306,7 +307,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
     append_log_line("KBO season phase monitor started");
 
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(2000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->season_phase_monitor_sleep_ms)) {
             break;
         }
 

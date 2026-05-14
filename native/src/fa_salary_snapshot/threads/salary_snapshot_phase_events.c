@@ -10,6 +10,7 @@
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../paths/salary_snapshot_paths_dates.h"
 #include "../state/salary_snapshot_state.h"
@@ -156,7 +157,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_phase_event_thread(LPVOID parameter)
     append_log_line("KBO FA salary opening-day phase hook event thread started");
 
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(250)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->fa_salary_snapshot_phase_event_sleep_ms)) {
             break;
         }
         LARGE_INTEGER profile_phase_thread_tick = {0};

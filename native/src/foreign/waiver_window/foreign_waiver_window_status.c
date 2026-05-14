@@ -11,6 +11,7 @@
 #include "../common/dates/foreign_waiver_date.h"
 #include "../common/events/foreign_waiver_events.h"
 #include "../common/paths/foreign_waiver_paths.h"
+#include "../common/policy/foreign_player_policy.h"
 #include "../common/policy/foreign_waiver_policy.h"
 #include "../waiver_core/api/foreign_waiver_core.h"
 #include "events/foreign_waiver_window_events_internal.h"
@@ -51,6 +52,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.no_league_id");
         return 0;
     }
+    uint32_t window_days = (uint32_t)kbo_foreign_player_policy()->waiver_window_days;
 
     uint32_t season_end_yyyymmdd = kbo_detect_offseason_starts_event(today_yyyymmdd, configured_league_id);
     if (season_end_yyyymmdd == 0u) {
@@ -60,13 +62,13 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
                 recovered_marker / 10000u,
                 (recovered_marker / 100u) % 100u,
                 recovered_marker % 100u);
-            uint32_t recovered_end = kbo_add_days_yyyymmdd(recovered_marker, 20u);
+            uint32_t recovered_end = kbo_add_days_yyyymmdd(recovered_marker, window_days);
             if (recovered_serial != 0u
                     && recovered_end != 0u
                     && today_serial >= recovered_serial
-                    && today_serial < recovered_serial + 20u) {
+                    && today_serial < recovered_serial + window_days) {
                 g_kbo_foreign_waiver_window_start_serial = recovered_serial;
-                g_kbo_foreign_waiver_window_end_serial = recovered_serial + 20u;
+                g_kbo_foreign_waiver_window_end_serial = recovered_serial + window_days;
                 g_kbo_foreign_waiver_start_event_date = recovered_marker;
                 g_kbo_foreign_waiver_close_event_end_date = recovered_end;
                 kbo_write_foreign_waiver_window(recovered_marker, recovered_end, "recovered_recent_offseason_marker");
@@ -113,7 +115,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.invalid_marker_serial");
         return 0;
     }
-    uint32_t window_end_yyyymmdd = kbo_add_days_yyyymmdd(season_end_yyyymmdd, 20u);
+    uint32_t window_end_yyyymmdd = kbo_add_days_yyyymmdd(season_end_yyyymmdd, window_days);
     if (window_end_yyyymmdd == 0u) {
         append_logf(
             "foreign waiver auto: invalid Offseason starts window end season_end=%u today=%u",
@@ -123,14 +125,14 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.invalid_window_end");
         return 0;
     }
-    if (today_serial >= season_end_serial + 20u) {
+    if (today_serial >= season_end_serial + window_days) {
         static uint32_t last_stale_marker = 0u;
         g_kbo_foreign_waiver_last_seen_yyyymmdd = season_end_yyyymmdd;
         if (last_stale_marker != season_end_yyyymmdd) {
             last_stale_marker = season_end_yyyymmdd;
             kbo_write_foreign_waiver_window(season_end_yyyymmdd, window_end_yyyymmdd, "stale_offseason_marker_preserve_window");
             g_kbo_foreign_waiver_window_start_serial = season_end_serial;
-            g_kbo_foreign_waiver_window_end_serial = season_end_serial + 20u;
+            g_kbo_foreign_waiver_window_end_serial = season_end_serial + window_days;
             g_kbo_foreign_waiver_start_event_date = season_end_yyyymmdd;
             g_kbo_foreign_waiver_close_event_end_date = window_end_yyyymmdd;
             append_logf(
@@ -146,7 +148,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
     if (g_kbo_foreign_waiver_last_seen_yyyymmdd == season_end_yyyymmdd) {
         kbo_write_foreign_waiver_window(season_end_yyyymmdd, window_end_yyyymmdd, "already_opened_restore_window");
         g_kbo_foreign_waiver_window_start_serial = season_end_serial;
-        g_kbo_foreign_waiver_window_end_serial = season_end_serial + 20u;
+        g_kbo_foreign_waiver_window_end_serial = season_end_serial + window_days;
         g_kbo_foreign_waiver_start_event_date = season_end_yyyymmdd;
         g_kbo_foreign_waiver_close_event_end_date = window_end_yyyymmdd;
         static uint32_t last_logged_already_marker = 0u;

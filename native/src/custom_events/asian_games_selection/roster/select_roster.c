@@ -37,8 +37,10 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
     if (kbo_league_id != 0u && allowed_league_count < KBO_ASIAN_GAMES_MAX_ALLOWED_LEAGUES) {
         allowed_leagues[allowed_league_count++] = kbo_league_id;
     }
-    if (kbo_league_id == 200u && allowed_league_count < KBO_ASIAN_GAMES_MAX_ALLOWED_LEAGUES) {
-        allowed_leagues[allowed_league_count++] = 201u;
+    uint32_t included_minor_league_id = 0u;
+    if (kbo_asian_games_policy_minor_league_included(kbo_league_id, &included_minor_league_id)
+            && allowed_league_count < KBO_ASIAN_GAMES_MAX_ALLOWED_LEAGUES) {
+        allowed_leagues[allowed_league_count++] = included_minor_league_id;
     }
 
     KboAsianGamesCandidate* candidates = (KboAsianGamesCandidate*)HeapAlloc(
@@ -169,12 +171,14 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         used_ortools = 1;
     }
 
-    for (int org_index = 0; !used_ortools && org_index < required_org_count && selected_count < KBO_ASIAN_GAMES_ROSTER_SIZE; org_index++) {
+    const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
+    int roster_size = kbo_asian_games_policy_roster_size();
+    for (int org_index = 0; !used_ortools && org_index < required_org_count && selected_count < roster_size; org_index++) {
         int best_index = -1;
         for (int i = 0; i < candidate_count; i++) {
             if (candidates[i].selected
                     || candidates[i].org_team_id != required_orgs[org_index]
-                    || candidates[i].entry.age > 24u) {
+                    || kbo_asian_games_policy_is_wildcard_age(candidates[i].entry.age)) {
                 continue;
             }
             best_index = i;
@@ -202,8 +206,8 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         }
     }
 
-    for (int i = 0; !used_ortools && i < candidate_count && selected_count < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
-        if (candidates[i].entry.age > 24u) {
+    for (int i = 0; !used_ortools && i < candidate_count && selected_count < roster_size; i++) {
+        if (kbo_asian_games_policy_is_wildcard_age(candidates[i].entry.age)) {
             continue;
         }
         kbo_asian_games_try_select_candidate(
@@ -219,10 +223,10 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
             1);
     }
 
-    for (int i = 0; !used_ortools && i < candidate_count && selected_count < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
+    for (int i = 0; !used_ortools && i < candidate_count && selected_count < roster_size; i++) {
         int before_selected = selected_count;
         int before_wildcards = wildcard_count;
-        if (candidates[i].entry.age <= 24u) {
+        if (!kbo_asian_games_policy_is_wildcard_age(candidates[i].entry.age)) {
             continue;
         }
         kbo_asian_games_try_select_candidate(
@@ -241,9 +245,9 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         }
     }
 
-    for (int i = 0; !used_ortools && i < candidate_count && selected_count < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
+    for (int i = 0; !used_ortools && i < candidate_count && selected_count < roster_size; i++) {
         int before_selected = selected_count;
-        if (candidates[i].entry.age > 24u) {
+        if (kbo_asian_games_policy_is_wildcard_age(candidates[i].entry.age)) {
             continue;
         }
         kbo_asian_games_try_select_candidate_flex_position(
@@ -262,9 +266,9 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         }
     }
 
-    for (int i = 0; !used_ortools && i < candidate_count && selected_count < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
+    for (int i = 0; !used_ortools && i < candidate_count && selected_count < roster_size; i++) {
         int before_selected = selected_count;
-        if (candidates[i].entry.age <= 24u) {
+        if (!kbo_asian_games_policy_is_wildcard_age(candidates[i].entry.age)) {
             continue;
         }
         kbo_asian_games_try_select_candidate_flex_position(
@@ -340,7 +344,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         required_org_initial_selected,
         required_org_repairs,
         required_org_missing,
-        KBO_ASIAN_GAMES_TEAM_MAX_PLAYERS,
+        policy->team_max_players,
         allowed_league_count > 0 ? allowed_leagues[0] : 0u,
         allowed_league_count > 1 ? allowed_leagues[1] : 0u,
         vector_offset,

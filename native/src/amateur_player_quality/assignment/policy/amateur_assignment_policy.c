@@ -142,9 +142,10 @@ const char* kbo_amateur_position_bucket_label(int bucket)
 
 int32_t kbo_amateur_assignment_target_max_players(uint32_t league_id)
 {
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
     return league_id == KBO_HIGH_SCHOOL_LEAGUE_ID
-        ? KBO_HIGH_SCHOOL_ASSIGNMENT_TARGET_MAX_PLAYERS
-        : KBO_COLLEGE_ASSIGNMENT_TARGET_MAX_PLAYERS;
+        ? policy->high_school_assignment_target_max_players
+        : policy->college_assignment_target_max_players;
 }
 
 void kbo_read_amateur_quality_fields(
@@ -179,28 +180,29 @@ int32_t kbo_amateur_quality_score(uint8_t* player)
 
 int32_t kbo_amateur_assignment_target_reputation(uint32_t league_id, int32_t quality_score)
 {
-    int32_t target = 50;
-    if (quality_score >= 2300) {
-        target = 92;
-    } else if (quality_score >= 1800) {
-        target = 84;
-    } else if (quality_score >= 1350) {
-        target = 72;
-    } else if (quality_score >= 950) {
-        target = 58;
-    } else if (quality_score >= 600) {
-        target = 45;
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
+    int32_t target = policy->target_reputation_tier0;
+    if (quality_score >= policy->quality_tier5_cutoff) {
+        target = policy->target_reputation_tier5;
+    } else if (quality_score >= policy->quality_tier4_cutoff) {
+        target = policy->target_reputation_tier4;
+    } else if (quality_score >= policy->quality_tier3_cutoff) {
+        target = policy->target_reputation_tier3;
+    } else if (quality_score >= policy->quality_tier2_cutoff) {
+        target = policy->target_reputation_tier2;
+    } else if (quality_score >= policy->quality_tier1_cutoff) {
+        target = policy->target_reputation_tier1;
     } else {
-        target = 35;
+        target = policy->target_reputation_tier0;
     }
 
     if (league_id == KBO_COLLEGE_LEAGUE_ID) {
-        target -= 10;
+        target += policy->college_target_reputation_adjustment;
     }
-    if (target < 25) {
-        target = 25;
-    } else if (target > 95) {
-        target = 95;
+    if (target < policy->target_reputation_min) {
+        target = policy->target_reputation_min;
+    } else if (target > policy->target_reputation_max) {
+        target = policy->target_reputation_max;
     }
     return target;
 }
@@ -249,36 +251,38 @@ void kbo_amateur_assignment_mark_rejected_target(uint32_t league_id, uint32_t te
 
 int kbo_amateur_assignment_team_tier(uint32_t league_id, uint8_t reputation)
 {
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
     int32_t rep = (int32_t)reputation;
     if (league_id == KBO_COLLEGE_LEAGUE_ID) {
-        if (rep >= 68) { return 5; }
-        if (rep >= 55) { return 4; }
-        if (rep >= 42) { return 3; }
-        if (rep >= 28) { return 2; }
-        if (rep >= 15) { return 1; }
+        if (rep >= policy->college_team_tier5_rep_min) { return 5; }
+        if (rep >= policy->college_team_tier4_rep_min) { return 4; }
+        if (rep >= policy->college_team_tier3_rep_min) { return 3; }
+        if (rep >= policy->college_team_tier2_rep_min) { return 2; }
+        if (rep >= policy->college_team_tier1_rep_min) { return 1; }
         return 0;
     }
-    if (rep >= 90) { return 5; }
-    if (rep >= 80) { return 4; }
-    if (rep >= 68) { return 3; }
-    if (rep >= 56) { return 2; }
-    if (rep >= 48) { return 1; }
+    if (rep >= policy->high_school_team_tier5_rep_min) { return 5; }
+    if (rep >= policy->high_school_team_tier4_rep_min) { return 4; }
+    if (rep >= policy->high_school_team_tier3_rep_min) { return 3; }
+    if (rep >= policy->high_school_team_tier2_rep_min) { return 2; }
+    if (rep >= policy->high_school_team_tier1_rep_min) { return 1; }
     return 0;
 }
 
 int kbo_amateur_assignment_player_tier(uint32_t league_id, int32_t quality_score)
 {
     (void)league_id;
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
     int tier = 0;
-    if (quality_score >= 2300) {
+    if (quality_score >= policy->quality_tier5_cutoff) {
         tier = 5;
-    } else if (quality_score >= 1800) {
+    } else if (quality_score >= policy->quality_tier4_cutoff) {
         tier = 4;
-    } else if (quality_score >= 1350) {
+    } else if (quality_score >= policy->quality_tier3_cutoff) {
         tier = 3;
-    } else if (quality_score >= 950) {
+    } else if (quality_score >= policy->quality_tier2_cutoff) {
         tier = 2;
-    } else if (quality_score >= 600) {
+    } else if (quality_score >= policy->quality_tier1_cutoff) {
         tier = 1;
     } else {
         tier = 0;
@@ -307,11 +311,12 @@ int kbo_amateur_assignment_effective_player_tier(int player_tier, int max_team_t
 
 int kbo_amateur_player_age_eligible(uint32_t league_id, int16_t age)
 {
+    const KboAmateurPlayerQualityPolicy* policy = kbo_amateur_player_quality_policy();
     if (league_id == KBO_COLLEGE_LEAGUE_ID) {
-        return age >= 17 && age <= 25;
+        return age >= policy->college_age_min && age <= policy->college_age_max;
     }
     if (league_id == KBO_HIGH_SCHOOL_LEAGUE_ID) {
-        return age >= 14 && age <= 18;
+        return age >= policy->high_school_age_min && age <= policy->high_school_age_max;
     }
     return 0;
 }

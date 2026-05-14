@@ -59,6 +59,7 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\captain\season\captain_season.c") `
     (Join-Path $Root "src\captain\seed\captain_seed_parse.c") `
     (Join-Path $Root "src\military_service\calendar\military_service_date.c") `
+    (Join-Path $Root "src\military_service\selection\events\military_selection_policy.c") `
     (Join-Path $Root "src\military_service\seed\parse\military_service_seed_parse.c") `
     (Join-Path $Root "src\core\dates\core_text_date.c") `
     (Join-Path $Root "src\core\sql\escape\core_sql_escape.c") `
@@ -69,11 +70,13 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\core\core_flags\localappdata\localappdata_reader.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\economic_defaults.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\foreign_demand_baselines.c") `
+    (Join-Path $Root "src\amateur_player_quality\assignment\policy\amateur_assignment_policy_values.c") `
     (Join-Path $Root "src\patch_helpers\bytes\patch_bytes.c") `
     (Join-Path $Root "src\fa_filing\fa_filing_parts\fa_filing_csv_parse.c") `
     (Join-Path $Root "src\fa_salary_snapshot\csv\salary_snapshot_csv_parse.c") `
     (Join-Path $Root "src\core\files\atomic\core_atomic_file.c") `
     (Join-Path $Root "src\military_service\players\loans\military_native_loan.c") `
+    (Join-Path $Root "src\foreign\common\policy\foreign_player_policy.c") `
     (Join-Path $Root "src\foreign\common\player_eval\foreign_waiver_player_eval.c") `
     (Join-Path $Root "src\foreign\injury\state\foreign_injury_state.c") `
     (Join-Path $Root "src\amateur_player_quality\assignment\policy\amateur_assignment_policy.c")

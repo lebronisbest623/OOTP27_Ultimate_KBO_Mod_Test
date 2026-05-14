@@ -1,4 +1,5 @@
 #include "../internal/captain_selection_internal.h"
+#include "../../core/runtime_tuning/runtime_tuning_policy.h"
 
 static const char* kbo_captain_phase_label(uint8_t phase)
 {
@@ -668,7 +669,7 @@ DWORD WINAPI kbo_captain_preseason_selection_thread(LPVOID parameter)
 
     while (kbo_runtime_threads_should_continue()) {
         kbo_run_captain_selection_maintenance_once("captain_selection_thread");
-        if (!kbo_runtime_sleep_should_continue(5000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->captain_selection_thread_sleep_ms)) {
             break;
         }
     }

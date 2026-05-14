@@ -50,6 +50,10 @@ static const KboCustomEventDefinition g_kbo_custom_event_definitions[] = {
         KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
         "custom_event.cbt.announcement.title",
     },
+    {
+        KBO_CUSTOM_EVENT_KIND_FA_DECLARATION,
+        "custom_event.fa.declaration.title",
+    },
 };
 
 static INIT_ONCE g_kbo_custom_event_titles_once = INIT_ONCE_STATIC_INIT;
@@ -315,4 +319,9 @@ int kbo_custom_event_name_is_cbt_exception_deadline(const char* name)
 int kbo_custom_event_name_is_cbt_announcement(const char* name)
 {
     return kbo_custom_event_name_is_kind(name, KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
+}
+
+int kbo_custom_event_name_is_fa_declaration(const char* name)
+{
+    return kbo_custom_event_name_is_kind(name, KBO_CUSTOM_EVENT_KIND_FA_DECLARATION);
 }

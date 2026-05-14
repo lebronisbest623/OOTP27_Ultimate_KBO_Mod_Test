@@ -19,6 +19,11 @@ typedef struct KboCbtRules {
     uint32_t tax_rate_2;
     uint32_t tax_rate_3plus;
     uint32_t annual_increase_pct;
+    uint32_t exception_deadline_days_after_opening;
+    uint32_t announcement_days_after_opening;
+    uint32_t event_scheduler_max_attempts;
+    uint32_t event_scheduler_sleep_ms;
+    uint32_t event_scheduler_log_attempts[5];
     int32_t  threshold_override;
     uint32_t threshold_count;
     KboCbtThresholdRow thresholds[KBO_CBT_THRESHOLD_MAX];

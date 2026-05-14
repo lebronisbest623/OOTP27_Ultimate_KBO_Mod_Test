@@ -5,6 +5,7 @@
 #include <windows.h>
 
 #include "../state/asian_games_state.h"
+#include "../policy/asian_games_roster_policy.h"
 
 int kbo_asian_games_candidate_compare_desc(const void* left, const void* right);
 int32_t kbo_asian_games_player_score(uint8_t* player);

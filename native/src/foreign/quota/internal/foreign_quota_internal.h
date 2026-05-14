@@ -34,8 +34,7 @@ typedef struct KboCustomForeignPendingOffer {
     uint8_t asian_quota_candidate;
 } KboCustomForeignPendingOffer;
 enum {
-    KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX = 1024,
-    KBO_CUSTOM_FOREIGN_PENDING_OFFER_TTL_DAYS = 45
+    KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX = 1024
 };
 #define KBO_CUSTOM_FOREIGN_TRADE_TEAM_ID_OFFSET       0x08u
 #define KBO_CUSTOM_FOREIGN_TRADE_PLAYER_ID_OFFSET     0x10u

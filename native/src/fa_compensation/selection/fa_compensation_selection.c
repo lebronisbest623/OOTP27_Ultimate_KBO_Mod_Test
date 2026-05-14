@@ -8,6 +8,7 @@
 #include "../../core/logging/core_log.h"
 #include "../../fa_rules/fa_rules.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
+#include "../protection/fa_compensation_protection_policy.h"
 #include "../decisions/fa_compensation_decisions.h"
 #include "../protection/fa_compensation_protection_score.h"
 #include "../records/fa_compensation_records.h"
@@ -90,10 +91,13 @@ int kbo_fa_compensation_ai_prefers_cash_only(
 
     uint32_t extra_cash = rec->cash_only > rec->cash_with_player
         ? rec->cash_only - rec->cash_with_player : 0u;
-    if (selected->score < 65000) {
+    const KboFaCompensationProtectionPolicy* policy = kbo_fa_compensation_protection_policy();
+    if (selected->score < policy->cash_only_score_threshold) {
         return 1;
     }
-    if (selected->score < 80000 && rec->previous_salary > 0 && extra_cash >= (uint32_t)rec->previous_salary) {
+    if (selected->score < policy->cash_only_extra_cash_score_threshold
+            && rec->previous_salary > 0
+            && extra_cash >= (uint32_t)rec->previous_salary) {
         return 1;
     }
     return 0;

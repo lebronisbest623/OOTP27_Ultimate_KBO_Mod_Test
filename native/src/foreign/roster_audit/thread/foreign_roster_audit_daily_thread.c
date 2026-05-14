@@ -3,6 +3,7 @@
 #include "../../injury/api/foreign_injury.h"
 #include "../../retention_guard/foreign_retention_guard.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
+#include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 
 DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
 {
@@ -11,7 +12,7 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
 
     uint32_t last_audit_date = 0u;
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(5000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->foreign_roster_daily_audit_sleep_ms)) {
             break;
         }
 

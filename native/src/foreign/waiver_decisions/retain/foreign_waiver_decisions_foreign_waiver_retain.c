@@ -7,6 +7,7 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../common/dates/foreign_waiver_date.h"
+#include "../../common/policy/foreign_player_policy.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
 #include "../api/foreign_waiver_decisions.h"
 
@@ -40,7 +41,9 @@ int kbo_retain_foreign_player_rights(
     if (!kbo_get_foreign_waiver_current_yyyymmdd(&today_yyyymmdd)) {
         return 0;
     }
-    uint32_t expires_yyyymmdd = kbo_add_years_yyyymmdd(today_yyyymmdd, KBO_FOREIGN_WAIVER_RETENTION_YEARS);
+    uint32_t expires_yyyymmdd = kbo_add_years_yyyymmdd(
+        today_yyyymmdd,
+        (uint32_t)kbo_foreign_player_policy()->waiver_retention_years);
     if (expires_yyyymmdd == 0u) {
         return 0;
     }
