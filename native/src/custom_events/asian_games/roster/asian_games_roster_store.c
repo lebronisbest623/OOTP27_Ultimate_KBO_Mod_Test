@@ -22,16 +22,6 @@ int kbo_get_asian_games_roster_csv_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("asian_games_roster.csv", out, out_size);
 }
 
-int kbo_get_legacy_asian_games_roster_csv_path(char* out, size_t out_size)
-{
-    if (out == NULL || out_size == 0) {
-        return 0;
-    }
-    out[0] = '\0';
-
-    return kbo_get_global_data_file("asian_games_roster.csv", out, out_size);
-}
-
 void kbo_clear_asian_games_roster_memory(const char* source)
 {
     memset(g_kbo_asian_games_roster, 0, sizeof(g_kbo_asian_games_roster));

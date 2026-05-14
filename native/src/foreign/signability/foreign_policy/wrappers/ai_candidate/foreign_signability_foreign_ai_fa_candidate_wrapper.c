@@ -1,6 +1,6 @@
-#include "../internal/foreign_signability_internal.h"
-#include "candidate_array/foreign_signability_ai_fa_candidate_array.h"
-#include "retained_candidates/foreign_signability_foreign_ai_fa_retained_candidates.h"
+#include "../../internal/foreign_signability_internal.h"
+#include "../candidate_array/foreign_signability_ai_fa_candidate_array.h"
+#include "../retained_candidates/foreign_signability_foreign_ai_fa_retained_candidates.h"
 
 /* AI FA status candidate hook wrapper. Included from native/KBOFix.c. */
 

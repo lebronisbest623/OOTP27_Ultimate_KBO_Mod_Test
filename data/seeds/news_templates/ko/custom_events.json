@@ -7,5 +7,7 @@
   "custom_event.asian_games.final.title": "아시안게임 야구 결승",
   "custom_event.cbt.exception_deadline.title": "경쟁균형세 예외 선수 지정 마감",
   "custom_event.cbt.announcement.title": "경쟁균형세 집계 발표",
-  "custom_event.fa.declaration.title": "FA 선언 마감"
+  "custom_event.fa.declaration.title": "FA 선언 마감",
+  "custom_event.independent_team_acquisition.open.title": "2군 독립 구단 선수 영입 기간 시작",
+  "custom_event.independent_team_acquisition.open.news.body": "KBO가 2군 독립 구단의 선수 영입 기간을 열었습니다. 대상은 퓨처스리그에 참가하는 독립 구단이며, 일정은 해당 리그 개막일로부터 두 달 뒤에 맞춰졌습니다.\n\n이 기간에는 울산 웨일즈 같은 2군 독립 구단이 필요한 전력 보강을 진행할 수 있습니다. KBO 구단 소속 선수 이동과는 별도 창구로 관리되며, 실제 영입 가능 여부는 각 선수의 계약 상태와 리그 등록 조건에 따라 결정됩니다."
 }

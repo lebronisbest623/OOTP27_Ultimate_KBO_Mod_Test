@@ -6,7 +6,6 @@
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/dates/core_current_date.h"
-#include "../../../core/news/history_stubs/core_history_stubs.h"
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/season/opening_day_storyline_guard.h"
 #include "../../../core/logging/core_log.h"

@@ -14,7 +14,6 @@
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../custom_events/asian_games/player_eval/asian_games_player_eval.h"
 #include "../../custom_events/runtime/monitor/custom_event_monitor.h"
-#include "../../fa_requalification/fa_requalification.h"
 #include "../../fa_salary_snapshot/threads/salary_snapshot_phase_events.h"
 #include "../../fa_salary_snapshot/threads/salary_snapshot_thread.h"
 #include "../../foreign/waiver_core/api/foreign_waiver_core.h"
@@ -56,7 +55,6 @@ volatile LONG g_kbo_full_runtime_marker_wait_started = 0;
 typedef struct KboSangmuFaHookInstallRequest {
     int enable_signability;
     int enable_offer;
-    int enable_legacy;
 } KboSangmuFaHookInstallRequest;
 
 

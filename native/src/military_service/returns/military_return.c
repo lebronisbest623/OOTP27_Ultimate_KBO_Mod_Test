@@ -5,7 +5,6 @@
 
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/dates/core_current_date.h"
-#include "../../core/news/history_stubs/core_history_stubs.h"
 #include "../../core/logging/core_log.h"
 #include "../../core/sql/history_transactions/core_sql_history_transactions.h"
 #include "../../runtime_memory/runtime_memory.h"
@@ -146,14 +145,12 @@ int kbo_return_completed_military_loan_player(
     uint8_t old_mil_exempt     = player[OOTP27_PLAYER_MILITARY_EXEMPT_OFFSET];
     uint8_t old_mil_active     = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
 
-    char history_date[16] = {0};
     uint32_t year = 0;
     uint32_t month = 1;
     uint32_t day = 1;
     if (!kbo_current_date_is_valid(&year, &month, &day)) {
         if (!kbo_current_year_relaxed(&year) || year == 0) { year = 2001; }
     }
-    kbo_current_history_date(history_date, sizeof(history_date), year, "military_service_return");
     char service_team_name[96] = {0};
     char original_team_name[96] = {0};
     char history_text[256] = {0};
@@ -178,10 +175,6 @@ int kbo_return_completed_military_loan_player(
     int history_inserted = 0;
     int history_skipped_duplicate = 0;
     if (kbo_mark_military_return_history_once(player_id, history_yyyymmdd)) {
-        append_special_player_history_csv(
-            player_id, (uint16_t)year, history_date,
-            "military_service_return",
-            history_text);
         history_inserted = insert_kbo_player_history_sql(
             player_id,
             year,

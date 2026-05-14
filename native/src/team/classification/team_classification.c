@@ -30,6 +30,24 @@ static volatile LONG g_kbo_independent_futures_team_count = 0;
 static volatile LONG g_kbo_team_classification_loaded_state = 0;
 static volatile LONG g_kbo_team_classification_refresh_tick = 0;
 
+static void kbo_team_classification_copy_text(char* out, size_t out_size, const char* text)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    if (text == NULL) {
+        return;
+    }
+
+    size_t len = strlen(text);
+    if (len >= out_size) {
+        len = out_size - 1u;
+    }
+    memcpy(out, text, len);
+    out[len] = '\0';
+}
+
 static int kbo_team_classification_add_independent_futures_row(
     const KboTeamClassificationSeedRow* row)
 {
@@ -52,8 +70,8 @@ static int kbo_team_classification_add_independent_futures_row(
     }
 
     KboTeamClassificationEntry* entry = &g_kbo_independent_futures_teams[count];
-    snprintf(entry->team_csv_id, sizeof(entry->team_csv_id), "%s", row->team_csv_id);
-    snprintf(entry->display_name, sizeof(entry->display_name), "%s", row->display_name);
+    kbo_team_classification_copy_text(entry->team_csv_id, sizeof(entry->team_csv_id), row->team_csv_id);
+    kbo_team_classification_copy_text(entry->display_name, sizeof(entry->display_name), row->display_name);
     InterlockedExchange(&entry->team_id, 0);
     InterlockedExchange(&entry->league_id, 0);
     InterlockedExchange(&g_kbo_independent_futures_team_count, count + 1);
@@ -213,8 +231,8 @@ int kbo_collect_independent_futures_team_leagues(
             KboIndependentFuturesTeamLeague* item = &out[written];
             item->team_id = team_id;
             item->league_id = league_id;
-            snprintf(item->team_csv_id, sizeof(item->team_csv_id), "%s", entry->team_csv_id);
-            snprintf(item->display_name, sizeof(item->display_name), "%s", entry->display_name);
+            kbo_team_classification_copy_text(item->team_csv_id, sizeof(item->team_csv_id), entry->team_csv_id);
+            kbo_team_classification_copy_text(item->display_name, sizeof(item->display_name), entry->display_name);
             written++;
         }
     }

@@ -20,8 +20,7 @@
 enum {
     KBO_MOD_FLAG_USER = 0,
     KBO_MOD_FLAG_RECOVERY = 1,
-    KBO_MOD_FLAG_DIAGNOSTIC = 2,
-    KBO_MOD_FLAG_LEGACY = 3
+    KBO_MOD_FLAG_DIAGNOSTIC = 2
 };
 
 struct KboModRuntimeFlagSetting {

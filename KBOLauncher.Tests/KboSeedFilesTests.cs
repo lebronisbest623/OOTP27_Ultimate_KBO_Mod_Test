@@ -128,7 +128,11 @@ public sealed class KboSeedFilesTests : IDisposable
             }
           ],
           "retiredFiles": [
-            { "path": "foreign_replacement_players_seed.csv", "label": "Foreign replacement player seed" }
+            {
+              "path": "foreign_replacement_players_seed.csv",
+              "label": "Foreign replacement player seed",
+              "safeRemoveAllLinesStartWithAny": [ "verhadr01,", "olougja01," ]
+            }
           ]
         }
         """);
@@ -166,65 +170,6 @@ public sealed class KboSeedFilesTests : IDisposable
         global::KboSeedFiles.EnsureBundledKboDataDirectory(localDir, "news_templates", "News templates", [candidate]);
 
         File.ReadAllText(localPath).Should().Be("{\"captain.summary.title\":\"B\"}");
-    }
-
-    [Fact]
-    public void RemoveRetiredBundledKboDataFileIfUnchanged_RemovesOnlyOldForeignReplacementSeed()
-    {
-        var localDir = Path.Combine(tempDir, "local");
-        var retiredPath = Path.Combine(localDir, "foreign_replacement_players_seed.csv");
-        Directory.CreateDirectory(localDir);
-        File.WriteAllText(retiredPath, """
-        # replacement_player_key,slot_type,comment
-        verhadr01,regular,Drew VerHagen
-        olougja01,regular,Jack O'Loughlin
-        """);
-
-        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
-            localDir,
-            "foreign_replacement_players_seed.csv",
-            "Foreign replacement player seed");
-
-        File.Exists(retiredPath).Should().BeFalse();
-
-        File.WriteAllText(retiredPath, "custom01,regular,Keep me");
-
-        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
-            localDir,
-            "foreign_replacement_players_seed.csv",
-            "Foreign replacement player seed");
-
-        File.Exists(retiredPath).Should().BeTrue();
-    }
-
-    [Fact]
-    public void RemoveRetiredBundledKboDataFileIfUnchanged_RemovesFlatNewsTemplatesOnly()
-    {
-        var localDir = Path.Combine(tempDir, "local");
-        var flatCombined = Path.Combine(localDir, "news_templates.json");
-        var flatSplit = Path.Combine(localDir, "news_templates", "foreign_injury.json");
-        var languageSplit = Path.Combine(localDir, "news_templates", "ko", "foreign_injury.json");
-        Directory.CreateDirectory(Path.GetDirectoryName(languageSplit)!);
-        File.WriteAllText(flatCombined, "{\"foreign_injury.open.body\":\"old\"}");
-        File.WriteAllText(flatSplit, "{\"foreign_injury.pending.body\":\"old\"}");
-        File.WriteAllText(languageSplit, "{\"foreign_injury.pending.body\":\"keep\"}");
-
-        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
-            localDir,
-            "news_templates.json",
-            "Retired flat news templates");
-        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
-            localDir,
-            Path.Combine("news_templates", "foreign_injury.json"),
-            "Retired flat foreign injury news templates");
-        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
-            localDir,
-            Path.Combine("news_templates", "ko", "foreign_injury.json"),
-            "Language split foreign injury news templates");
-
-        File.Exists(flatCombined).Should().BeFalse();
-        File.Exists(flatSplit).Should().BeFalse();
-        File.Exists(languageSplit).Should().BeTrue();
     }
 
     [Fact]

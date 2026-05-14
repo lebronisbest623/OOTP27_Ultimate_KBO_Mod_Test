@@ -48,26 +48,14 @@ static int kbo_optimizer_get_tool_path(char* out, size_t out_size, int* out_is_p
         return 1;
     }
 
-    snprintf(out, out_size, "%stools\\amateur_assignment_optimizer.exe", module_path);
-    if (GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES) {
-        return 1;
+    static volatile LONG missing_log_count = 0;
+    if (InterlockedIncrement(&missing_log_count) <= 8) {
+        kbo_log_runtimef(
+            "KBO optimizer missing exe=%stools\\kbo_optimizer.exe script=%stools\\kbo_optimizer.py",
+            module_path,
+            module_path);
     }
-
-    snprintf(out, out_size, "%stools\\amateur_assignment_optimizer.py", module_path);
-    int exists = GetFileAttributesA(out) != INVALID_FILE_ATTRIBUTES;
-    if (exists && out_is_python_script != NULL) {
-        *out_is_python_script = 1;
-    }
-    if (!exists) {
-        static volatile LONG missing_log_count = 0;
-        if (InterlockedIncrement(&missing_log_count) <= 8) {
-            kbo_log_runtimef(
-                "KBO optimizer missing exe=%stools\\kbo_optimizer.exe script=%stools\\kbo_optimizer.py",
-                module_path,
-                module_path);
-        }
-    }
-    return exists;
+    return 0;
 }
 
 int kbo_optimizer_run_mode(

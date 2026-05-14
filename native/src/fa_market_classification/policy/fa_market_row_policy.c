@@ -1,5 +1,4 @@
 #include "../internal/fa_market_policy_internal.h"
-#include "requalification/fa_market_historical_requalification.h"
 
 int kbo_fa_market_row_is_undrafted_domestic(const KboFaMarketClassification* row)
 {
@@ -140,8 +139,6 @@ uint32_t kbo_fa_market_display_team_id(const KboFaMarketClassification* row)
                 || strcmp(row->case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0
                 || strcmp(row->case_label, "KBO_FA_DEFERRED") == 0
                 || strcmp(row->case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0
-                || strcmp(row->case_label, "KBO_REQUALIFICATION_LOCKED") == 0
-                || strcmp(row->case_label, "KBO_REQUALIFICATION_ELIGIBLE") == 0
                 || strcmp(row->case_label, "DOMESTIC_RELEASED_NON_FA") == 0
                 || strcmp(row->case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0)) {
         return row->original_team_id;
@@ -209,9 +206,6 @@ void kbo_fa_market_apply_salary_snapshot_grade(
     KboFaMarketClassification* row,
     const KboFaSalarySnapshotGrade* salary_grades,
     int salary_grade_count,
-    const KboFaRequalificationRecord* requalification_records,
-    int requalification_count,
-    uint32_t current_year,
     const KboFaRules* rules)
 {
     KboFaRules local_rules;
@@ -234,14 +228,7 @@ void kbo_fa_market_apply_salary_snapshot_grade(
     const KboFaSalarySnapshotGrade* grade =
         kbo_find_fa_salary_snapshot_grade(salary_grades, salary_grade_count, row->player_id);
     if (grade == NULL) {
-        int requalification_grade_override = kbo_fa_market_apply_requalification_grade_override(
-            row,
-            NULL,
-            requalification_records,
-            requalification_count,
-            current_year,
-            rules);
-        if (!age_grade_override && !requalification_grade_override) {
+        if (!age_grade_override) {
             snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "SNAPSHOT_MISSING");
         }
         return;
@@ -287,13 +274,6 @@ void kbo_fa_market_apply_salary_snapshot_grade(
         snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "SNAPSHOT");
     }
 
-    kbo_fa_market_apply_requalification_grade_override(
-        row,
-        grade,
-        requalification_records,
-        requalification_count,
-        current_year,
-        rules);
 }
 
 void kbo_fa_market_mark_history_case(KboFaMarketHistoryCase* history)

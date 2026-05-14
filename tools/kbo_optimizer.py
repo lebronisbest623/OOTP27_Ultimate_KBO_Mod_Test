@@ -24,7 +24,6 @@ AMATEUR_ROLE_BALANCE_TOLERANCES = (0.10, 0.15, 0.22, 0.50)
 AMATEUR_MIN_HITTER_SHARE = 0.25
 AMATEUR_MAX_HITTER_SHARE = 0.75
 AMATEUR_POSITION_BUCKETS = ("P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF")
-AMATEUR_LEGACY_BUCKETS = ("P", "H")
 ASIAN_GAMES_ROSTER_SIZE = 24
 ASIAN_GAMES_ROLE_TARGETS = {
     "P": 11,
@@ -191,20 +190,12 @@ def _optional_slot_bonus(team_percentile):
 
 
 def _batch_is_incoming(grouped):
-    source_team_ids = set()
-    target_team_ids = set()
     explicit_modes = set()
     for rows in grouped.values():
         if not rows:
             continue
-        source_team_id = _to_int(rows[0], "current_team_id")
-        if source_team_id != 0:
-            source_team_ids.add(source_team_id)
         for row in rows:
-            team_id = _to_int(row, "team_id")
-            if team_id != 0 and _to_int(row, "rejected") == 0:
-                target_team_ids.add(team_id)
-            mode = (row.get("batch_mode") or row.get("source_mode") or "").strip().lower()
+            mode = (row.get("batch_mode") or "").strip().lower()
             if mode:
                 explicit_modes.add(mode)
 
@@ -213,17 +204,7 @@ def _batch_is_incoming(grouped):
     if any(mode in ("roster", "existing_roster", "seed") for mode in explicit_modes):
         return False
 
-    team_count = len(target_team_ids)
-    if team_count <= 0:
-        return False
-
-    # Older request CSVs did not carry batch_mode. Annual freshman generation arrives
-    # as a small number of source add batches, while initial seeding moves nearly a
-    # whole league's existing roster at once.
-    return (
-        len(grouped) <= max(64, team_count * 8)
-        and len(source_team_ids) <= max(4, team_count // 8)
-    )
+    return False
 
 
 def _normalize_position_bucket(value):
@@ -253,11 +234,11 @@ def _normalize_position_bucket(value):
         "OF": "",
     }
     bucket = aliases.get(bucket, bucket)
-    return bucket if bucket in AMATEUR_POSITION_BUCKETS or bucket in AMATEUR_LEGACY_BUCKETS else ""
+    return bucket if bucket in AMATEUR_POSITION_BUCKETS else ""
 
 
 def _player_position_bucket(row):
-    bucket = _normalize_position_bucket(row.get("role_bucket") or row.get("position_bucket") or row.get("bucket"))
+    bucket = _normalize_position_bucket(row.get("role_bucket") or "")
     if bucket:
         return bucket
 
@@ -282,7 +263,7 @@ def _player_position_bucket(row):
         return "RF"
     if position_group == 10:
         return "1B"
-    return "H" if _to_int(row, "is_hitter") != 0 else "P"
+    return ""
 
 
 def _batch_has_detailed_position_buckets(grouped):
@@ -290,7 +271,7 @@ def _batch_has_detailed_position_buckets(grouped):
         if not rows:
             continue
         row = rows[0]
-        if row.get("role_bucket") or row.get("position_bucket") or row.get("position_group"):
+        if row.get("role_bucket") or row.get("position_group"):
             bucket = _player_position_bucket(row)
             if bucket in AMATEUR_POSITION_BUCKETS and bucket != "P":
                 return True
@@ -1012,7 +993,7 @@ def optimize_batch_rows(rows, result_path):
 
 
 def _role_bucket(row):
-    return (row.get("role_bucket") or row.get("bucket") or "").strip().upper()
+    return (row.get("role_bucket") or "").strip().upper()
 
 
 def _solve_asian_games_model(rows, hard_required_orgs, hard_role_minimums):

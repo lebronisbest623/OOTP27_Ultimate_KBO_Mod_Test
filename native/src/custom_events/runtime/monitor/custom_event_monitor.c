@@ -11,6 +11,7 @@
 #include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../schedules/independent/independent_team_acquisition_schedule.h"
 
 void kbo_custom_event_monitor_tick(
     uint32_t* last_scheduled_yyyymmdd,
@@ -38,19 +39,21 @@ void kbo_custom_event_monitor_tick(
         int foreign_schedule = kbo_schedule_foreign_priority_custom_events(source);
         int asian_schedule = kbo_schedule_asian_games_custom_events(source);
         int cbt_schedule = kbo_schedule_cbt_custom_events(source);
-        if (foreign_schedule >= 0 && asian_schedule >= 0 && cbt_schedule >= 0) {
+        int independent_schedule = kbo_schedule_independent_team_acquisition_custom_events(source);
+        if (foreign_schedule >= 0 && asian_schedule >= 0 && cbt_schedule >= 0 && independent_schedule >= 0) {
             *last_scheduled_yyyymmdd = today_yyyymmdd;
             if (last_scanned_yyyymmdd != NULL
-                    && (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0)) {
+                    && (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0 || independent_schedule > 0)) {
                 *last_scanned_yyyymmdd = 0u;
             }
         } else {
             kbo_log_runtimef(
-                "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d cbt=%d",
+                "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d cbt=%d independent=%d",
                 today_yyyymmdd,
                 foreign_schedule,
                 asian_schedule,
-                cbt_schedule);
+                cbt_schedule,
+                independent_schedule);
         }
     }
     if (last_scanned_yyyymmdd != NULL && today_yyyymmdd != *last_scanned_yyyymmdd) {

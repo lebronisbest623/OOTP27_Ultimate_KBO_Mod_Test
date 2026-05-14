@@ -1,19 +1,19 @@
-#include "../runtime/common/custom_events_common.h"
-#include "audit/foreign_priority_event_audit.h"
+#include "../../runtime/common/custom_events_common.h"
+#include "../audit/foreign_priority_event_audit.h"
 #include "foreign_priority_event_schedule.h"
 
 #include <stdio.h>
 
-#include "../../bootstrap/abi/ootp_offsets.h"
-#include "../../core/logging/core_log.h"
-#include "../../core/dates/core_text_date.h"
-#include "../../core/events/core_league_events.h"
-#include "../../core/core_league_context_parts/api/league_context_lookup.h"
-#include "../../foreign/common/dates/foreign_waiver_date.h"
-#include "../../foreign/common/policy/foreign_player_policy.h"
-#include "../../foreign/common/policy/foreign_waiver_policy.h"
-#include "../../foreign/waiver_window/state/foreign_waiver_window_state.h"
-#include "../runtime/catalog/custom_event_catalog.h"
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../core/dates/core_text_date.h"
+#include "../../../core/events/core_league_events.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../../foreign/common/policy/foreign_player_policy.h"
+#include "../../../foreign/common/policy/foreign_waiver_policy.h"
+#include "../../../foreign/waiver_window/state/foreign_waiver_window_state.h"
+#include "../../runtime/catalog/custom_event_catalog.h"
 
 uint32_t kbo_recent_phase_transition_offseason_anchor(uint32_t league_id, uint32_t today_yyyymmdd)
 {

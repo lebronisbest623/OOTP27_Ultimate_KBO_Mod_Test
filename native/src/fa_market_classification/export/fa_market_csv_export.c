@@ -109,20 +109,13 @@ static int kbo_collect_fa_market_classifications_internal(
         GetProcessHeap(),
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_FA_MARKET_SEED_MAX * sizeof(KboFaMarketSeedCase));
-    KboFaRequalificationRecord* records = (KboFaRequalificationRecord*)HeapAlloc(
-        GetProcessHeap(),
-        HEAP_ZERO_MEMORY,
-        (SIZE_T)KBO_FA_REQUALIFICATION_MAX * sizeof(KboFaRequalificationRecord));
     KboFaSalarySnapshotGrade* salary_grades = (KboFaSalarySnapshotGrade*)HeapAlloc(
         GetProcessHeap(),
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_FA_SALARY_SNAPSHOT_GRADE_MAX * sizeof(KboFaSalarySnapshotGrade));
-    if (seeds == NULL || records == NULL || salary_grades == NULL) {
+    if (seeds == NULL || salary_grades == NULL) {
         if (seeds != NULL) {
             HeapFree(GetProcessHeap(), 0, seeds);
-        }
-        if (records != NULL) {
-            HeapFree(GetProcessHeap(), 0, records);
         }
         if (salary_grades != NULL) {
             HeapFree(GetProcessHeap(), 0, salary_grades);
@@ -147,7 +140,6 @@ static int kbo_collect_fa_market_classifications_internal(
     char seed_path[MAX_PATH] = {0};
     char salary_snapshot_path[MAX_PATH] = {0};
     int seed_count = kbo_load_fa_market_seed_cases(seeds, KBO_FA_MARKET_SEED_MAX, seed_path, sizeof(seed_path));
-    int requalification_count = kbo_load_fa_requalification_records(records, KBO_FA_REQUALIFICATION_MAX);
     int salary_grade_count = kbo_fa_salary_snapshot_load_grade_rows(
         current_year,
         salary_grades,
@@ -158,7 +150,6 @@ static int kbo_collect_fa_market_classifications_internal(
     kbo_fa_rules_load(&fa_rules);
     if (summary != NULL) {
         summary->seed_count = seed_count;
-        summary->requalification_count = requalification_count;
         summary->salary_snapshot_count = salary_grade_count;
         snprintf(summary->seed_path, sizeof(summary->seed_path), "%s", seed_path);
         snprintf(summary->salary_snapshot_path, sizeof(summary->salary_snapshot_path), "%s", salary_snapshot_path);
@@ -250,18 +241,12 @@ static int kbo_collect_fa_market_classifications_internal(
             &rows[i],
             seeds,
             seed_count,
-            records,
-            requalification_count,
             history_case,
-            current_year,
             today);
         kbo_fa_market_apply_salary_snapshot_grade(
             &rows[i],
             salary_grades,
             salary_grade_count,
-            records,
-            requalification_count,
-            current_year,
             &fa_rules);
     }
     ULONGLONG classify_ms = GetTickCount64() - classify_started_ms;
@@ -313,7 +298,6 @@ static int kbo_collect_fa_market_classifications_internal(
             kbo_log_field_i32(&audit_fields, "scanned", scanned);
             kbo_log_field_i32(&audit_fields, "truncated", truncated);
             kbo_log_field_i32(&audit_fields, "seed_count", seed_count);
-            kbo_log_field_i32(&audit_fields, "requalification_count", requalification_count);
             kbo_log_field_i32(&audit_fields, "salary_snapshot", salary_grade_count);
             kbo_log_field_i32(&audit_fields, "write_csv", write_csv);
             kbo_log_field_i32(&audit_fields, "csv_written", summary != NULL ? summary->csv_written : 0);
@@ -328,7 +312,6 @@ static int kbo_collect_fa_market_classifications_internal(
     }
 
     HeapFree(GetProcessHeap(), 0, seeds);
-    HeapFree(GetProcessHeap(), 0, records);
     HeapFree(GetProcessHeap(), 0, salary_grades);
     if (histories != NULL) {
         HeapFree(GetProcessHeap(), 0, histories);
@@ -372,4 +355,3 @@ int kbo_collect_fa_market_classifications_page(
         write_csv,
         source);
 }
-

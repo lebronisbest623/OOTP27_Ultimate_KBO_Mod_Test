@@ -13,7 +13,7 @@
 #include "../../../../core/news/live/core_live_news.h"
 #include "../../../../custom_events/runtime/lookup/custom_event_lookup.h"
 #include "../../../../custom_events/runtime/state/custom_event_state.h"
-#include "../../../../custom_events/schedules/foreign_priority_event_schedule.h"
+#include "../../../../custom_events/schedules/priority/foreign_priority_event_schedule.h"
 #include "../../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../../../military_service/selection/draft/military_draft_queue.h"

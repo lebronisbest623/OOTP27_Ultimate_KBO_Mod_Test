@@ -16,6 +16,7 @@ typedef enum KboCustomEventKind {
     KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE,
     KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
     KBO_CUSTOM_EVENT_KIND_FA_DECLARATION,
+    KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN,
     KBO_CUSTOM_EVENT_KIND_COUNT
 } KboCustomEventKind;
 
@@ -34,5 +35,6 @@ int kbo_custom_event_name_is_asian_games_final(const char* name);
 int kbo_custom_event_name_is_cbt_exception_deadline(const char* name);
 int kbo_custom_event_name_is_cbt_announcement(const char* name);
 int kbo_custom_event_name_is_fa_declaration(const char* name);
+int kbo_custom_event_name_is_independent_team_acquisition_open(const char* name);
 
 #endif

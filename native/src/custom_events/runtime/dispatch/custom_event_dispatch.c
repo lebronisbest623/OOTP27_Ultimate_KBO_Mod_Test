@@ -9,6 +9,7 @@
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../runtime_memory/runtime_memory.h"
+#include "../../../team/independent_acquisition/independent_acquisition_window.h"
 #include "../names/custom_event_names.h"
 
 int kbo_dispatch_custom_event(
@@ -117,6 +118,9 @@ int kbo_dispatch_custom_event_by_kind(
     }
     if (kind == KBO_CUSTOM_EVENT_KIND_FA_DECLARATION) {
         return kbo_handle_fa_declaration_event(event_yyyymmdd, source);
+    }
+    if (kind == KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN) {
+        return kbo_handle_independent_team_acquisition_open_event(event_yyyymmdd, source);
     }
 
     return 0;

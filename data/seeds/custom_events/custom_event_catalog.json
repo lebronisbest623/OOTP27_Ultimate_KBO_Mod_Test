@@ -2,6 +2,7 @@
   "version": 1,
   "schedule.foreign_priority.fa_declaration_offset_days": 7,
   "schedule.foreign_priority.military_selection_offset_months": 1,
+  "schedule.independent_team_acquisition.open_offset_months": 2,
   "event.foreign_priority_open.title_key": "custom_event.foreign_priority.open.title",
   "event.foreign_priority_close.title_key": "custom_event.foreign_priority.close.title",
   "event.military_selection.title_key": "custom_event.military.selection.title",
@@ -11,10 +12,14 @@
   "event.cbt_exception_deadline.title_key": "custom_event.cbt.exception_deadline.title",
   "event.cbt_announcement.title_key": "custom_event.cbt.announcement.title",
   "event.fa_declaration.title_key": "custom_event.fa.declaration.title",
+  "event.independent_team_acquisition_open.title_key": "custom_event.independent_team_acquisition.open.title",
   "schedule": {
     "foreign_priority": {
       "fa_declaration_offset_days": 7,
       "military_selection_offset_months": 1
+    },
+    "independent_team_acquisition": {
+      "open_offset_months": 2
     }
   },
   "events": [
@@ -53,6 +58,10 @@
     {
       "kind": "fa_declaration",
       "title_key": "custom_event.fa.declaration.title"
+    },
+    {
+      "kind": "independent_team_acquisition_open",
+      "title_key": "custom_event.independent_team_acquisition.open.title"
     }
   ]
 }

@@ -8,14 +8,12 @@
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
-#include "../../../core/news/history_stubs/core_history_stubs.h"
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/season/opening_day_storyline_guard.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../../fa_market_classification/api/fa_market_classification.h"
-#include "../../../fa_requalification/fa_requalification.h"
 #include "../../../foreign/replacement_seed/api/foreign_replacement_seed.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../military_service.h"
@@ -47,8 +45,6 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
     if (kbo_opening_day_storyline_guard_active(source, NULL, NULL)) {
         return 0;
     }
-
-    flush_pending_special_player_history_sql(source);
 
     uintptr_t player_vector = 0;
     int32_t   player_count  = 0;

@@ -96,11 +96,6 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
             KBO_MOD_FLAG_DIAGNOSTIC,
             "Developer diagnostics",
             "Extra logging and probes for troubleshooting.");
-        kbo_webview_append_mod_runtime_flag_group(
-            buffer,
-            KBO_MOD_FLAG_LEGACY,
-            "Legacy compatibility",
-            "Older runtime paths kept available while saves and workflows migrate.");
         kbo_window_text_appendf(buffer, "</section></div>");
         return;
     }

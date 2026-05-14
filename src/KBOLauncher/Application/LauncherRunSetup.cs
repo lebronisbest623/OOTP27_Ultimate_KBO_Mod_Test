@@ -169,25 +169,4 @@ internal static partial class LauncherApp
         return new(allstarBootstrapRequested, injectionDecision);
     }
 
-    private static void PrepareRetiredScheduleMutationNotice(
-        string exePath,
-        string logPath,
-        LauncherOptions options,
-        bool allstarBootstrapRequested)
-    {
-        if (!options.DryRun)
-        {
-            Log(logPath, "global_major_league_schedule_mutation=retired");
-            AnsiConsole.MarkupLine("[grey]Global MLB schedule mutation is retired.[/]");
-            return;
-        }
-
-        if (allstarBootstrapRequested)
-        {
-            AnsiConsole.MarkupLine("[yellow]Dry-run: all-star presave bootstrap would run before OOTP launch.[/]");
-            return;
-        }
-
-        AnsiConsole.MarkupLine("[yellow]Dry-run: global MLB schedule mutation is retired.[/]");
-    }
 }

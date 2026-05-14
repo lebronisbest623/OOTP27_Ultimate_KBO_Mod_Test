@@ -6,7 +6,7 @@ $CSharpPath = Join-Path $RepoRoot "src\KBOLauncher\Infrastructure\KboFlags.Runti
 $NativeUiSourcePath = Join-Path $RepoRoot "native\src\hotkey_window\views\mod\runtime_flags\runtime_flags.generated.c"
 $NativeUiHeaderPath = Join-Path $RepoRoot "native\src\hotkey_window\views\mod\runtime_flags\runtime_flags.generated.h"
 
-$ValidLifecycles = @("User", "Recovery", "Diagnostic", "Legacy")
+$ValidLifecycles = @("User", "Recovery", "Diagnostic")
 
 function Test-JsonProperty($Object, [string]$Name) {
     return $Object.PSObject.Properties.Name -contains $Name
@@ -44,7 +44,6 @@ function Convert-ToNativeFlagCategory([string]$Lifecycle) {
         "User" { return "KBO_MOD_FLAG_USER" }
         "Recovery" { return "KBO_MOD_FLAG_RECOVERY" }
         "Diagnostic" { return "KBO_MOD_FLAG_DIAGNOSTIC" }
-        "Legacy" { return "KBO_MOD_FLAG_LEGACY" }
         default { throw "Unsupported runtime flag lifecycle '$Lifecycle'." }
     }
 }
@@ -136,7 +135,6 @@ $CsLines = @(
     "        User,",
     "        Recovery,",
     "        Diagnostic,",
-    "        Legacy,",
     "    }",
     "",
     "    private sealed record RuntimeFlagDefinition(",

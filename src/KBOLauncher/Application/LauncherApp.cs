@@ -72,7 +72,6 @@ internal static partial class LauncherApp
 
         var launchPlan = BuildLaunchPlan(options, isDefaultRun, buildGate.SupportedBuild);
         Log(logPath, $"injection_policy mode={launchPlan.InjectionDecision.Mode} reason={launchPlan.InjectionDecision.Reason}");
-        PrepareRetiredScheduleMutationNotice(exePath, logPath, options, launchPlan.AllstarBootstrapRequested);
         EnsureOotpKoreanFontFallback(exePath, logPath, options.DryRun);
 
         if (options.AttachPid is not null || options.AttachExisting)

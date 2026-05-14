@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "../../fa_requalification/fa_requalification.h"
 #include "../../fa_rules/fa_rules.h"
 #include "../../fa_salary_snapshot/state/salary_snapshot_state.h"
 
@@ -69,7 +68,6 @@ typedef struct KboFaMarketScanSummary {
     int rows;
     int truncated;
     int seed_count;
-    int requalification_count;
     int salary_snapshot_count;
     int csv_written;
     char csv_path[MAX_PATH];
@@ -103,18 +101,12 @@ void kbo_classify_fa_market_row(
     KboFaMarketClassification* row,
     const KboFaMarketSeedCase* seeds,
     int seed_count,
-    const KboFaRequalificationRecord* records,
-    int record_count,
     const KboFaMarketHistoryCase* history_case,
-    uint32_t current_year,
     uint32_t today);
 void kbo_fa_market_apply_salary_snapshot_grade(
     KboFaMarketClassification* row,
     const KboFaSalarySnapshotGrade* salary_grades,
     int salary_grade_count,
-    const KboFaRequalificationRecord* requalification_records,
-    int requalification_count,
-    uint32_t current_year,
     const KboFaRules* rules);
 void kbo_fa_market_format_salary(int32_t salary, char* out, size_t out_size);
 const char* kbo_fa_market_display_grade(const char* grade);

@@ -64,10 +64,9 @@ DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
     }
 
     kbo_log_runtimef(
-        "KBO Sangmu FA hooks delayed install waiting signability=%d offer=%d legacy=%d",
+        "KBO Sangmu FA hooks delayed install waiting signability=%d offer=%d",
         request.enable_signability,
-        request.enable_offer,
-        request.enable_legacy);
+        request.enable_offer);
 
     const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
     int stable_ticks = 0;
@@ -100,12 +99,12 @@ DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
 
     kbo_load_military_service_team_policy_override_once();
 
-    if (request.enable_signability || request.enable_legacy) {
+    if (request.enable_signability) {
         install_kbo_player_team_signability_patch();
     } else {
         kbo_log_runtime_line("KBO player/team signability patch delayed disabled");
     }
-    if (request.enable_offer || request.enable_legacy) {
+    if (request.enable_offer) {
         install_kbo_player_offer_eligibility_patch();
     } else {
         kbo_log_runtime_line("KBO player offer eligibility patch delayed disabled");
@@ -117,10 +116,9 @@ DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
 
 void start_kbo_delayed_sangmu_fa_hooks_install_thread(
     int enable_signability,
-    int enable_offer,
-    int enable_legacy)
+    int enable_offer)
 {
-    if (!enable_signability && !enable_offer && !enable_legacy) {
+    if (!enable_signability && !enable_offer) {
         return;
     }
     if (InterlockedCompareExchange(&g_kbo_sangmu_fa_hooks_install_started, 1, 0) != 0) {
@@ -136,7 +134,6 @@ void start_kbo_delayed_sangmu_fa_hooks_install_thread(
     }
     request->enable_signability = enable_signability;
     request->enable_offer = enable_offer;
-    request->enable_legacy = enable_legacy;
 
     if (kbo_start_runtime_thread(
             kbo_delayed_sangmu_fa_hooks_install_thread,
@@ -167,7 +164,6 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
 
     install_kbo_military_service_entry_patch();
     install_kbo_military_status_update_patch();
-    int enable_legacy_fa_signability_hooks = read_kbo_localappdata_flag_file("enable_kbo_fa_signability_hooks.txt");
     kbo_load_military_service_team_policy_override_once();
     int enable_sangmu_fa_block_default = !read_kbo_localappdata_flag_file("disable_kbo_sangmu_fa_block_core.txt");
     int enable_sangmu_signability_only = enable_sangmu_fa_block_default
@@ -199,15 +195,13 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     }
     start_kbo_delayed_sangmu_fa_hooks_install_thread(
         enable_sangmu_signability_only || read_kbo_localappdata_flag_file("enable_kbo_player_team_signability_patch.txt"),
-        enable_sangmu_offer_only || read_kbo_localappdata_flag_file("enable_kbo_offer_eligibility_patch.txt"),
-        enable_legacy_fa_signability_hooks);
-    if (enable_legacy_fa_signability_hooks || read_kbo_localappdata_flag_file("enable_kbo_ai_fa_fallback_patch.txt")) {
+        enable_sangmu_offer_only || read_kbo_localappdata_flag_file("enable_kbo_offer_eligibility_patch.txt"));
+    if (read_kbo_localappdata_flag_file("enable_kbo_ai_fa_fallback_patch.txt")) {
         install_kbo_ai_fa_signability_random_fallback_patch();
     } else {
         kbo_log_runtime_line("KBO AI FA signability fallback patch disabled: kbo_flags.json enable_kbo_ai_fa_fallback_patch is false");
     }
-    int enable_submit_offer_probe = enable_legacy_fa_signability_hooks
-        || read_kbo_localappdata_flag_file("enable_kbo_submit_offer_probe_patch.txt")
+    int enable_submit_offer_probe = read_kbo_localappdata_flag_file("enable_kbo_submit_offer_probe_patch.txt")
         || (kbo_custom_foreign_policy_enabled()
             && !read_kbo_localappdata_flag_file("disable_kbo_submit_offer_probe_patch.txt"));
     if (enable_submit_offer_probe) {
@@ -215,16 +209,14 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         kbo_log_runtime_line("KBO FA submit-offer probe patch disabled: kbo_flags.json disable_kbo_submit_offer_probe_patch is true");
     }
-    int enable_fa_requalification = read_kbo_localappdata_flag_file("enable_fa_requalification.txt");
-    int enable_fa_signing_branch = enable_fa_requalification
-        || enable_sangmu_fa_block_core
+    int enable_fa_signing_branch = enable_sangmu_fa_block_core
         || enable_fa_compensation_core
         || (kbo_custom_foreign_policy_enabled()
             && !read_kbo_localappdata_flag_file("disable_kbo_foreign_signing_branch_patch.txt"));
     if (enable_fa_signing_branch) {
         install_kbo_fa_signing_branch_patch();
     } else {
-        kbo_log_runtime_line("KBO FA signing branch hook disabled: enable_fa_requalification is false, Sangmu FA block is disabled, and custom foreign policy hook is disabled");
+        kbo_log_runtime_line("KBO FA signing branch hook disabled: Sangmu FA block is disabled, FA compensation is disabled, and custom foreign policy hook is disabled");
     }
     if (kbo_custom_foreign_policy_enabled()
             && read_kbo_localappdata_flag_file("enable_kbo_foreign_trade_check_patch.txt")
@@ -332,11 +324,6 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
         start_kbo_fa_salary_snapshot_thread();
     } else {
         kbo_log_runtime_line("KBO FA salary opening-day snapshot thread disabled: kbo_flags.json disable_kbo_fa_salary_opening_day_snapshot is true");
-    }
-    if (enable_fa_requalification) {
-        start_kbo_fa_requalification_thread();
-    } else {
-        kbo_log_runtime_line("KBO FA requalification thread disabled: kbo_flags.json enable_fa_requalification is false");
     }
     start_kbo_custom_event_monitor();
     if (read_kbo_localappdata_flag_file("enable_kbo_season_phase_monitor.txt")) {

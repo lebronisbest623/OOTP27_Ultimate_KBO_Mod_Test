@@ -47,7 +47,6 @@ Write-Host "==> Building optimizer tool..."
 $OptimizerSource = Join-Path $RepoRoot "tools\kbo_optimizer.py"
 $PyInstallerWork = Join-Path $RepoRoot "obj\pyinstaller"
 $OptimizerExe = Join-Path $RepoRoot "tools\kbo_optimizer.exe"
-$LegacyOptimizerExe = Join-Path $RepoRoot "tools\amateur_assignment_optimizer.exe"
 
 $OptimizerNeedsBuild = $RebuildOptimizer `
     -or -not (Test-Path -LiteralPath $OptimizerExe -PathType Leaf) `
@@ -56,9 +55,6 @@ $OptimizerNeedsBuild = $RebuildOptimizer `
 if ($OptimizerNeedsBuild) {
     if (Test-Path -LiteralPath $OptimizerExe) {
         Remove-Item -LiteralPath $OptimizerExe -Force
-    }
-    if (Test-Path -LiteralPath $LegacyOptimizerExe) {
-        Remove-Item -LiteralPath $LegacyOptimizerExe -Force
     }
     New-Item -ItemType Directory -Path $PyInstallerWork -Force | Out-Null
     $PyInstallerExcludes = @(

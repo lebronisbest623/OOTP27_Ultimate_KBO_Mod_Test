@@ -1,89 +1,55 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "../../bootstrap/abi/ootp_offsets.h"
-#include "../../core/files/atomic/core_atomic_file.h"
-#include "../../core/core_flags/api/flags_api.h"
-#include "../../core/core_league_context_parts/api/league_context_lookup.h"
-#include "../../core/logging/core_log.h"
-#include "../../core/files/save_paths/core_save_paths.h"
-#include "../../fa_compensation/history/fa_compensation_history.h"
-#include "../../fa_compensation/market/fa_compensation_market.h"
-#include "../../fa_market_classification/api/fa_market_classification.h"
-#include "../../fa_rules/fa_rules.h"
-#include "../../foreign/common/dates/foreign_waiver_date.h"
-#include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
-#include "../../foreign/common/policy/foreign_waiver_policy.h"
-#include "../../foreign/injury/api/foreign_injury_labels.h"
-#include "../../military_service/players/team_policy/military_service_team_policy.h"
-#include "../../runtime_memory/runtime_memory.h"
-#include "../../team/lookup/team_lookup.h"
-#include "../../team/assignment/roster_arrays/team_roster_arrays.h"
-#include "../fa_requalification.h"
-#include <stdint.h>
+#include "../../../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../../../core/core_flags/api/flags_api.h"
+#include "../../../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../../../core/dates/core_current_date.h"
+#include "../../../../../core/logging/core_log.h"
+#include "../../../../../fa_compensation/history/fa_compensation_history.h"
+#include "../../../../../military_service/players/team_policy/military_service_team_policy.h"
+#include "../../../../../runtime_memory/runtime_memory.h"
+#include "../../../../../team/lookup/team_lookup.h"
+#include "../../../../common/dates/foreign_waiver_date.h"
+#include "../../../../common/player_eval/foreign_waiver_player_eval.h"
+#include "../../../../common/policy/foreign_waiver_policy.h"
+#include "../../../../injury/api/foreign_injury.h"
+#include "../../../state/foreign_fa_block_state.h"
 
-#include "../fa_requalification_internal.h"
-/* ---- KBO FA requalification control ---- */
+static volatile LONG g_kbo_fa_signing_branch_skip_log_count = 0;
 
-#ifndef KBO_FA_REQUALIFICATION_TYPES_DEFINED
-#define KBO_FA_REQUALIFICATION_TYPES_DEFINED
-
-#define KBO_FA_REQUALIFICATION_MAX 4096
-
-typedef struct KboFaRequalificationRecord {
-    uint32_t player_id;
-    uint32_t original_team_id;
-    uint32_t last_fa_year;
-    uint32_t fa_count;
-    char last_fa_grade[12];
-} KboFaRequalificationRecord;
-
-#endif
-
-LONG g_kbo_fa_requalification_thread_started = 0;
-LONG g_kbo_fa_requalification_no_date_log_count = 0;
-LONG g_kbo_fa_requalification_no_records_log_count = 0;
-LONG g_kbo_fa_requalification_skip_log_count = 0;
-LONG g_kbo_fa_requalification_hook_skip_log_count = 0;
-volatile LONG g_kbo_fa_requalification_records_lock = 0;
-uint32_t g_kbo_fa_requalification_last_no_records_date = 0;
-
-
-
-
-
-
-
-
-
-
-uint8_t* kbo_find_fa_requalification_player_by_id(uint32_t player_id)
+static int kbo_fa_signing_team_ptr_is_kbo(
+    uintptr_t team_ptr,
+    uint32_t* out_team_id,
+    uint32_t* out_league_id)
 {
-    if (player_id == 0u) {
-        return NULL;
+    if (out_team_id != NULL) {
+        *out_team_id = 0u;
     }
-    uintptr_t player_vector = 0;
-    int32_t player_count = 0;
-    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        return NULL;
+    if (out_league_id != NULL) {
+        *out_league_id = 0u;
     }
-    for (int32_t i = 0; i < player_count; i++) {
-        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
-        if (!kbo_player_pointer_plausible(player_ptr)) {
-            continue;
-        }
-        uint8_t* player = (uint8_t*)player_ptr;
-        if (*(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET) == player_id) {
-            return player;
-        }
+    if (team_ptr == 0 || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0;
     }
-    return NULL;
-}
 
+    uint8_t* team = (uint8_t*)team_ptr;
+    uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
+    uint32_t league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+    if (out_team_id != NULL) {
+        *out_team_id = team_id;
+    }
+    if (out_league_id != NULL) {
+        *out_league_id = league_id;
+    }
+    if (team_id == 0u || team_id > 100000u || league_id == 0u || league_id > 100000u) {
+        return 0;
+    }
+
+    uint32_t kbo_league_id = kbo_resolve_kbo_league_id();
+    return kbo_league_id == 0u || league_id == kbo_league_id;
+}
 
 __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr, uintptr_t team_ptr)
 {
@@ -91,7 +57,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
         return 1;
     }
     if (!kbo_player_pointer_plausible(player_ptr)) {
-        LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
+        LONG slot = InterlockedIncrement(&g_kbo_fa_signing_branch_skip_log_count);
         if (slot <= 20) {
             kbo_log_runtimef("KBO FA signing branch skipped reason=bad_player player_ptr=%p team_ptr=%p", (void*)player_ptr, (void*)team_ptr);
         }
@@ -104,14 +70,14 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
     uint8_t* player = (uint8_t*)player_ptr;
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     if (player_id == 0u || player_id > 1000000u) {
-        LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
+        LONG slot = InterlockedIncrement(&g_kbo_fa_signing_branch_skip_log_count);
         if (slot <= 20) {
             kbo_log_runtimef("KBO FA signing branch skipped reason=bad_player_id player=%u team=%u league=%u", player_id, team_id, league_id);
         }
         return 1;
     }
 
-    int is_kbo_team = kbo_fa_requalification_team_ptr_is_kbo(team_ptr, &team_id, &league_id);
+    int is_kbo_team = kbo_fa_signing_team_ptr_is_kbo(team_ptr, &team_id, &league_id);
 
     if (kbo_team_id_is_military_service_team(team_id)) {
         static volatile LONG military_fa_signing_block_log_count = 0;
@@ -127,7 +93,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
     }
 
     if (!is_kbo_team) {
-        LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
+        LONG slot = InterlockedIncrement(&g_kbo_fa_signing_branch_skip_log_count);
         if (slot <= 20) {
             kbo_log_runtimef("KBO FA signing branch skipped reason=non_kbo_team player=%u team_ptr=%p team=%u league=%u", player_id, (void*)team_ptr, team_id, league_id);
         }
@@ -185,7 +151,7 @@ __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t pla
 
     uint32_t team_id = 0u;
     uint32_t league_id = 0u;
-    if (!kbo_fa_requalification_team_ptr_is_kbo(team_ptr, &team_id, &league_id)) {
+    if (!kbo_fa_signing_team_ptr_is_kbo(team_ptr, &team_id, &league_id)) {
         return;
     }
     if (kbo_team_id_is_military_service_team(team_id)) {
@@ -214,49 +180,4 @@ __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t pla
     }
 
     kbo_record_fa_compensation_signing(player_ptr, team_id, league_id, "fa_signing_success_post");
-
-    if (!read_kbo_localappdata_flag_file("enable_fa_requalification.txt")) {
-        return;
-    }
-
-    uint32_t signing_year = kbo_find_league_year_from_id(league_id);
-    if (signing_year < 1982u || signing_year > 2200u) {
-        uint32_t today = 0u;
-        if (kbo_get_current_yyyymmdd(&today)) {
-            signing_year = today / 10000u;
-        }
-    }
-    if (signing_year < 1982u || signing_year > 2200u) {
-        LONG skip_slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
-        if (skip_slot <= 20) {
-            kbo_log_runtimef("KBO FA signing success post skipped reason=no_signing_year player=%u team=%u league=%u", player_id, team_id, league_id);
-        }
-        return;
-    }
-
-    char last_fa_grade[12] = "UNKNOWN";
-    uint32_t today = 0u;
-    if (!kbo_get_current_yyyymmdd(&today)) {
-        today = signing_year * 10000u + 101u;
-    }
-    KboFaRules fa_rules;
-    kbo_fa_rules_load(&fa_rules);
-    KboFaMarketClassification row;
-    if (kbo_fa_compensation_build_market_row(player, &row, league_id, signing_year, today, &fa_rules)
-            && row.grade[0] != '\0') {
-        snprintf(last_fa_grade, sizeof(last_fa_grade), "%s", row.grade);
-    }
-
-    kbo_record_fa_requalification_signing_with_grade(
-        player_id,
-        team_id,
-        signing_year,
-        last_fa_grade,
-        "fa_signing_success_post");
 }
-
-
-
-
-
-

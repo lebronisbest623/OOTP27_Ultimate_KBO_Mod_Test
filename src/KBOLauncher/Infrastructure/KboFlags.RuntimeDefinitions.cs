@@ -8,7 +8,6 @@ internal static partial class KboFlags
         User,
         Recovery,
         Diagnostic,
-        Legacy,
     }
 
     private sealed record RuntimeFlagDefinition(
@@ -19,7 +18,6 @@ internal static partial class KboFlags
     private static readonly RuntimeFlagDefinition[] RuntimeFlags =
     [
         new("disable_foreign_injury_replacement", null, RuntimeFlagLifecycle.Recovery),
-        new("disable_foreign_waiver_legacy_auto_detector", null, RuntimeFlagLifecycle.Recovery),
         new("disable_intl_established_fa_generation_filter", null, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_fa_salary_opening_day_snapshot", false, RuntimeFlagLifecycle.Recovery),
         new("disable_kbo_no_minor_contract_patch", false, RuntimeFlagLifecycle.Recovery),
@@ -38,7 +36,6 @@ internal static partial class KboFlags
         new("disable_kbo_salary_arbitration_no_withdraw_patch", null, RuntimeFlagLifecycle.Recovery),
         new("enable_amateur_assignment_verbose_log", null, RuntimeFlagLifecycle.Diagnostic),
         new("enable_experimental_runtime_hooks", true, RuntimeFlagLifecycle.Recovery),
-        new("enable_fa_requalification", null, RuntimeFlagLifecycle.Legacy),
         new("enable_foreign_waiver_ai", true, RuntimeFlagLifecycle.User),
         new("enable_foreign_waiver_background_scanner", true, RuntimeFlagLifecycle.Recovery),
         new("enable_foreign_ai_roster_management", false, RuntimeFlagLifecycle.User),
@@ -53,7 +50,6 @@ internal static partial class KboFlags
         new("enable_kbo_cbt_service_time_probe", false, RuntimeFlagLifecycle.Diagnostic),
         new("enable_kbo_custom_foreign_offer_logs", null, RuntimeFlagLifecycle.Diagnostic),
         new("enable_kbo_diagnostic_minimal_runtime", null, RuntimeFlagLifecycle.Diagnostic),
-        new("enable_kbo_fa_signability_hooks", null, RuntimeFlagLifecycle.Legacy),
         new("enable_kbo_fix", null, RuntimeFlagLifecycle.Recovery),
         new("enable_kbo_foreign_trade_check_patch", true, RuntimeFlagLifecycle.Recovery),
         new("enable_kbo_offer_eligibility_patch", true, RuntimeFlagLifecycle.Recovery),

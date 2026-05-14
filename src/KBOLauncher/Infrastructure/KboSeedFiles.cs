@@ -185,18 +185,6 @@ internal static partial class KboSeedFiles
         ]);
     }
 
-    public static void RemoveRetiredBundledKboDataFileIfUnchanged(string fileName, string label)
-    {
-        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var localDir = Path.Combine(local, "OOTP-KBO");
-        RemoveRetiredBundledKboDataFileIfUnchanged(localDir, fileName, label);
-    }
-
-    internal static void RemoveRetiredBundledKboDataFileIfUnchanged(string localDir, string fileName, string label)
-    {
-        RemoveRetiredBundledKboDataFileIfUnchanged(localDir, fileName, label, retiredFile: null);
-    }
-
     private static void RemoveRetiredBundledKboDataFileIfUnchanged(
         string localDir,
         string fileName,
@@ -216,8 +204,7 @@ internal static partial class KboSeedFiles
                 .Where(line => line.Length > 0 && !line.StartsWith("#", StringComparison.Ordinal) && !line.StartsWith(";", StringComparison.Ordinal))
                 .ToArray();
 
-            if (!IsRetiredBundledKboDataFileSafeToRemove(retiredFile, meaningfulLines)
-                    && !IsLegacyRetiredBundledKboDataFileSafeToRemove(fileName, meaningfulLines))
+            if (!IsRetiredBundledKboDataFileSafeToRemove(retiredFile, meaningfulLines))
             {
                 return;
             }
@@ -251,49 +238,6 @@ internal static partial class KboSeedFiles
         }
 
         return false;
-    }
-
-    private static bool IsLegacyRetiredBundledKboDataFileSafeToRemove(string fileName, string[] meaningfulLines)
-    {
-        var normalized = fileName.Replace('\\', '/');
-        if (string.Equals(normalized, "foreign_replacement_players_seed.csv", StringComparison.OrdinalIgnoreCase))
-        {
-            return meaningfulLines.All(line =>
-                line.StartsWith("verhadr01,", StringComparison.OrdinalIgnoreCase)
-                || line.StartsWith("olougja01,", StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (string.Equals(normalized, "captain_news_templates.json", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(normalized, "news_templates.json", StringComparison.OrdinalIgnoreCase))
-        {
-            return meaningfulLines.Any(line =>
-                line.Contains("\"captain.", StringComparison.OrdinalIgnoreCase)
-                || line.Contains("\"foreign_injury.", StringComparison.OrdinalIgnoreCase)
-                || line.Contains("\"military.", StringComparison.OrdinalIgnoreCase)
-                || line.Contains("\"cbt.", StringComparison.OrdinalIgnoreCase));
-        }
-
-        const string flatNewsPrefix = "news_templates/";
-        if (!normalized.StartsWith(flatNewsPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var rest = normalized[flatNewsPrefix.Length..];
-        if (rest.Contains('/', StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        var marker = Path.GetFileNameWithoutExtension(rest) switch
-        {
-            "competitive_balance_tax" => "cbt.",
-            "military_service" => "military.",
-            var stem when !string.IsNullOrWhiteSpace(stem) => stem + ".",
-            _ => ""
-        };
-        return marker.Length > 0
-            && meaningfulLines.Any(line => line.Contains(marker, StringComparison.OrdinalIgnoreCase));
     }
 
     internal static void EnsureBundledKboDataFile(

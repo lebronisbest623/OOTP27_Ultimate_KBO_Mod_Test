@@ -13,7 +13,6 @@
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../fa_filing/fa_filing.h"
 #include "../../fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
-#include "../../fa_requalification/fa_requalification.h"
 #include "../../fa_rules/fa_rules.h"
 #include "../../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
@@ -141,22 +140,6 @@ KboFaMarketSqliteApi* kbo_fa_market_get_sqlite_api(void)
 
 
 
-const KboFaRequalificationRecord* kbo_find_fa_market_requalification_record(
-    const KboFaRequalificationRecord* records,
-    int record_count,
-    uint32_t player_id)
-{
-    if (records == NULL || record_count <= 0 || player_id == 0u) {
-        return NULL;
-    }
-    for (int i = 0; i < record_count; i++) {
-        if (records[i].player_id == player_id) {
-            return &records[i];
-        }
-    }
-    return NULL;
-}
-
 
 
 
@@ -184,8 +167,6 @@ const char* kbo_fa_market_display_case_label(const char* case_label)
     if (strcmp(case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0) { return "Eligible FA"; }
     if (strcmp(case_label, "KBO_FA_DEFERRED") == 0) { return "Deferred FA"; }
     if (strcmp(case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0) { return "FA"; }
-    if (strcmp(case_label, "KBO_REQUALIFICATION_LOCKED") == 0) { return "Requal Lock"; }
-    if (strcmp(case_label, "KBO_REQUALIFICATION_ELIGIBLE") == 0) { return "Requal FA"; }
     if (strcmp(case_label, "DOMESTIC_RELEASED_NON_FA") == 0) { return "Released"; }
     if (strcmp(case_label, "DOMESTIC_UNDRAFTED_FREE_AGENT") == 0) { return "Undrafted"; }
     if (strcmp(case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0) { return "Indy FA"; }

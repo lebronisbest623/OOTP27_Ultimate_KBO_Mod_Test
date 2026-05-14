@@ -1,19 +1,19 @@
-#include "../runtime/common/custom_events_common.h"
+#include "../../runtime/common/custom_events_common.h"
 #include "offseason_transition_schedule.h"
 #include <stdio.h>
 #include <string.h>
-#include "../../bootstrap/abi/ootp_offsets.h"
-#include "../../core/logging/core_log.h"
-#include "../../core/logging/rule_audit.h"
-#include "../../core/dates/core_current_date.h"
-#include "../../core/files/save_paths/core_save_paths.h"
-#include "../../core/dates/core_text_date.h"
-#include "../../core/core_flags/api/flags_api.h"
-#include "../../runtime_memory/runtime_memory.h"
-#include "../../allstar/allstar_league_context/allstar_league_context.h"
-#include "../../competitive_balance_tax/finance/cbt_cash_charge.h"
-#include "../../core/core_league_context_parts/api/league_context_lookup.h"
-#include "../../foreign/common/policy/foreign_waiver_policy.h"
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../core/logging/rule_audit.h"
+#include "../../../core/dates/core_current_date.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/dates/core_text_date.h"
+#include "../../../core/core_flags/api/flags_api.h"
+#include "../../../runtime_memory/runtime_memory.h"
+#include "../../../allstar/allstar_league_context/allstar_league_context.h"
+#include "../../../competitive_balance_tax/finance/cbt_cash_charge.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../foreign/common/policy/foreign_waiver_policy.h"
 
 static void kbo_audit_offseason_transition(
     const char* decision,

@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_CUSTOM_EVENTS_INDEPENDENT_TEAM_ACQUISITION_SCHEDULE_H_
+#define KBOFIX_SRC_CUSTOM_EVENTS_INDEPENDENT_TEAM_ACQUISITION_SCHEDULE_H_
+
+int kbo_schedule_independent_team_acquisition_custom_events(const char* source);
+
+#endif

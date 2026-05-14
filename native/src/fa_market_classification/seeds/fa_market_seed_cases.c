@@ -56,8 +56,6 @@ static int kbo_fa_market_seed_case_allowed(const char* case_label)
         || strcmp(case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0
         || strcmp(case_label, "KBO_FA_DEFERRED") == 0
         || strcmp(case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0
-        || strcmp(case_label, "KBO_REQUALIFICATION_LOCKED") == 0
-        || strcmp(case_label, "KBO_REQUALIFICATION_ELIGIBLE") == 0
         || strcmp(case_label, "DOMESTIC_RELEASED_NON_FA") == 0
         || strcmp(case_label, "DOMESTIC_UNDRAFTED_FREE_AGENT") == 0
         || strcmp(case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0

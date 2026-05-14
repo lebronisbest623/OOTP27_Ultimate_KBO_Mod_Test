@@ -276,14 +276,7 @@ int kbo_is_foreign_waiver_negotiation_window_open(void)
     }
 
     uint32_t today_serial = kbo_date_serial(today / 10000u, (today / 100u) % 100u, today % 100u);
-    if (kbo_foreign_waiver_legacy_auto_detector_enabled()) {
-        kbo_advance_foreign_waiver_window(today, today_serial);
-    } else {
-        static LONG logged_legacy_disabled = 0;
-        if (InterlockedCompareExchange(&logged_legacy_disabled, 1, 0) == 0) {
-            kbo_log_runtime_line("foreign waiver legacy auto detector disabled: kbo_flags.json disable_foreign_waiver_legacy_auto_detector is true");
-        }
-    }
+    kbo_advance_foreign_waiver_window(today, today_serial);
 
     uint32_t start = 0;
     uint32_t end = 0;

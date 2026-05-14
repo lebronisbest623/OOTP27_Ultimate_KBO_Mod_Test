@@ -1,4 +1,4 @@
-#include "../internal/foreign_signability_internal.h"
+#include "../../internal/foreign_signability_internal.h"
 
 /* Player offer-eligibility hook wrapper. Included from native/KBOFix.c. */
 

@@ -299,7 +299,6 @@ The FA-adjacent modules are split by responsibility:
 - `fa_market_classification/`: market classification, cache, and CSV output
 - `fa_salary_snapshot/`: opening-day salary snapshot observation
 - `fa_compensation/`: compensation records, protected lists, due tasks, and news
-- `fa_requalification/`: FA requalification tracking
 - `amateur_player_quality/`: amateur reputation assignment and diagnostics
 
 These modules should continue moving toward smaller files where one file owns

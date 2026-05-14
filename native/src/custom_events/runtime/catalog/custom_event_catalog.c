@@ -35,6 +35,8 @@ static const char* kbo_custom_event_catalog_key_for_kind(KboCustomEventKind kind
         return "event.cbt_announcement.title_key";
     case KBO_CUSTOM_EVENT_KIND_FA_DECLARATION:
         return "event.fa_declaration.title_key";
+    case KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN:
+        return "event.independent_team_acquisition_open.title_key";
     default:
         return NULL;
     }
@@ -61,6 +63,8 @@ static const char* kbo_custom_event_default_title_key(KboCustomEventKind kind)
         return "custom_event.cbt.announcement.title";
     case KBO_CUSTOM_EVENT_KIND_FA_DECLARATION:
         return "custom_event.fa.declaration.title";
+    case KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN:
+        return "custom_event.independent_team_acquisition.open.title";
     default:
         return NULL;
     }
@@ -117,6 +121,12 @@ static BOOL CALLBACK kbo_custom_event_schedule_policy_init_once(
         KBO_CUSTOM_EVENT_CATALOG_FILE,
         "schedule.foreign_priority.military_selection_offset_months",
         1,
+        0,
+        24);
+    p->independent_team_acquisition_open_offset_months = kbo_read_clamped_policy_int(
+        KBO_CUSTOM_EVENT_CATALOG_FILE,
+        "schedule.independent_team_acquisition.open_offset_months",
+        2,
         0,
         24);
     return TRUE;

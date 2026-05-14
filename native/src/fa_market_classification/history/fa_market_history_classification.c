@@ -188,10 +188,7 @@ void kbo_classify_fa_market_row(
     KboFaMarketClassification* row,
     const KboFaMarketSeedCase* seeds,
     int seed_count,
-    const KboFaRequalificationRecord* records,
-    int record_count,
     const KboFaMarketHistoryCase* history_case,
-    uint32_t current_year,
     uint32_t today_yyyymmdd)
 {
     if (row == NULL) {
@@ -227,35 +224,6 @@ void kbo_classify_fa_market_row(
         }
         snprintf(row->case_label, sizeof(row->case_label), "FOREIGN_FREE");
         snprintf(row->reason, sizeof(row->reason), "foreign player with no active KBO reserve right");
-        return;
-    }
-
-    const KboFaRequalificationRecord* rec =
-        kbo_find_fa_market_requalification_record(records, record_count, row->player_id);
-    if (rec != NULL) {
-        uint32_t eligible_year = rec->last_fa_year + kbo_fa_requalification_team_control_years();
-        if (row->original_team_id == 0u) {
-            row->original_team_id = rec->original_team_id;
-        }
-        if (current_year != 0u && current_year < eligible_year) {
-            snprintf(row->case_label, sizeof(row->case_label), "KBO_REQUALIFICATION_LOCKED");
-            snprintf(
-                row->reason,
-                sizeof(row->reason),
-                "last_fa=%u eligible=%u count=%u original_team=%u",
-                rec->last_fa_year,
-                eligible_year,
-                rec->fa_count,
-                rec->original_team_id);
-            return;
-        }
-        snprintf(row->case_label, sizeof(row->case_label), "KBO_REQUALIFICATION_ELIGIBLE");
-        snprintf(
-            row->reason,
-            sizeof(row->reason),
-            "timer complete last_fa=%u eligible=%u; approval/declaration still needs manual seed",
-            rec->last_fa_year,
-            eligible_year);
         return;
     }
 
@@ -302,8 +270,6 @@ int kbo_fa_market_case_rank(const char* case_label)
     if (strcmp(case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0) { return 11; }
     if (strcmp(case_label, "KBO_FA_DEFERRED") == 0) { return 12; }
     if (strcmp(case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0) { return 13; }
-    if (strcmp(case_label, "KBO_REQUALIFICATION_LOCKED") == 0) { return 20; }
-    if (strcmp(case_label, "KBO_REQUALIFICATION_ELIGIBLE") == 0) { return 21; }
     if (strcmp(case_label, "DOMESTIC_RELEASED_NON_FA") == 0) { return 30; }
     if (strcmp(case_label, "DOMESTIC_UNDRAFTED_FREE_AGENT") == 0) { return 31; }
     if (strcmp(case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0) { return 32; }

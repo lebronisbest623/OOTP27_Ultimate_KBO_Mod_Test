@@ -38,6 +38,7 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/military_service/calendar/military_service_date.h"
 #include "../src/military_service/seed/parse/military_service_seed_parse.h"
 #include "../src/military_service/players/team_policy/military_service_team_policy_parse.h"
+#include "../src/team/classification/parse/team_classification_seed_parse.h"
 #include "../src/allstar/csv/allstar_csv_parse.h"
 #include "../src/foreign/common/dates/foreign_waiver_date.h"
 #include "../src/core/core_flags/keys/flag_key.h"
@@ -313,6 +314,36 @@ static void test_military_service_team_policy_parse(void)
 
     assert(!kbo_parse_military_service_team_policy_line("BAD,maybe", &row));
     printf("test_military_service_team_policy_parse: PASS\n");
+}
+
+static void test_team_classification_seed_parse(void)
+{
+    KboTeamClassificationSeedRow row;
+
+    assert(!kbo_parse_team_classification_seed_line(NULL, &row));
+    assert(!kbo_parse_team_classification_seed_line("# team_csv_id,enabled,team_type,league_level,display_name", &row));
+    assert(!kbo_parse_team_classification_seed_line("team_csv_id,enabled,team_type,league_level,display_name", &row));
+
+    assert(kbo_parse_team_classification_seed_line("ULS,1,independent,futures,Ulsan Whales", &row));
+    assert(strcmp(row.team_csv_id, "ULS") == 0);
+    assert(row.enabled == 1);
+    assert(strcmp(row.team_type, "independent") == 0);
+    assert(strcmp(row.league_level, "futures") == 0);
+    assert(strcmp(row.display_name, "Ulsan Whales") == 0);
+    assert(kbo_team_classification_seed_row_is_independent_futures(&row));
+
+    assert(kbo_parse_team_classification_seed_line("\"ALT\", enabled, independent, minor, Alt Club", &row));
+    assert(strcmp(row.team_csv_id, "ALT") == 0);
+    assert(kbo_team_classification_seed_row_is_independent_futures(&row));
+
+    assert(kbo_parse_team_classification_seed_line("SANG,1,military,futures,Sangmu", &row));
+    assert(!kbo_team_classification_seed_row_is_independent_futures(&row));
+
+    assert(kbo_parse_team_classification_seed_line("ULS,0,independent,futures,Ulsan Whales", &row));
+    assert(!kbo_team_classification_seed_row_is_independent_futures(&row));
+
+    assert(!kbo_parse_team_classification_seed_line("BAD,maybe,independent,futures,Bad", &row));
+    printf("test_team_classification_seed_parse: PASS\n");
 }
 
 static void test_allstar_csv_parse(void)
@@ -1460,6 +1491,7 @@ int main(void)
     test_military_date_round_trip();
     test_military_seed_line_parse();
     test_military_service_team_policy_parse();
+    test_team_classification_seed_parse();
     test_allstar_csv_parse();
     test_foreign_replacement_seed_parse();
     test_captain_seed_parse();

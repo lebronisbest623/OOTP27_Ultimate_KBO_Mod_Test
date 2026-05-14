@@ -12,7 +12,6 @@
 int kbo_foreign_waiver_ai_enabled(void);
 int kbo_custom_foreign_policy_enabled(void);
 uint32_t kbo_get_foreign_waiver_league_id(void);
-int kbo_foreign_waiver_legacy_auto_detector_enabled(void);
 void kbo_count_team_asian_quota_probe(
     uint32_t team_id,
     uint32_t* out_foreign_count,

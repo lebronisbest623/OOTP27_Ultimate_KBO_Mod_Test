@@ -18,7 +18,6 @@ int kbo_foreign_waiver_ai_enabled(void)
     InterlockedCompareExchange(&cached, value, -1);
     return cached == 1;
 }
-
 int kbo_custom_foreign_policy_enabled(void)
 {
     static LONG cached_disabled = -1;
@@ -46,14 +45,3 @@ uint32_t kbo_get_foreign_waiver_league_id(void)
     return cached_league_id;
 }
 
-int kbo_foreign_waiver_legacy_auto_detector_enabled(void)
-{
-    static LONG cached = -1;
-    LONG value = cached;
-    if (value != -1) {
-        return value == 1;
-    }
-    value = read_kbo_localappdata_flag_file("disable_foreign_waiver_legacy_auto_detector.txt") ? 0 : 1;
-    InterlockedCompareExchange(&cached, value, -1);
-    return cached == 1;
-}

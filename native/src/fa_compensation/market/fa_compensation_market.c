@@ -99,20 +99,16 @@ int kbo_fa_compensation_build_market_row(
 
     KboFaMarketSeedCase* seeds = (KboFaMarketSeedCase*)HeapAlloc(
         GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_MARKET_SEED_MAX * sizeof(KboFaMarketSeedCase));
-    KboFaRequalificationRecord* requal_records = (KboFaRequalificationRecord*)HeapAlloc(
-        GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_REQUALIFICATION_MAX * sizeof(KboFaRequalificationRecord));
     KboFaSalarySnapshotGrade* salary_grades = (KboFaSalarySnapshotGrade*)HeapAlloc(
         GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_SALARY_SNAPSHOT_GRADE_MAX * sizeof(KboFaSalarySnapshotGrade));
-    if (seeds == NULL || requal_records == NULL || salary_grades == NULL) {
+    if (seeds == NULL || salary_grades == NULL) {
         if (seeds != NULL) { HeapFree(GetProcessHeap(), 0, seeds); }
-        if (requal_records != NULL) { HeapFree(GetProcessHeap(), 0, requal_records); }
         if (salary_grades != NULL) { HeapFree(GetProcessHeap(), 0, salary_grades); }
         return 0;
     }
 
     char ignored_path[MAX_PATH] = {0};
     int seed_count = kbo_load_fa_market_seed_cases(seeds, KBO_FA_MARKET_SEED_MAX, ignored_path, sizeof(ignored_path));
-    int requal_count = kbo_load_fa_requalification_records(requal_records, KBO_FA_REQUALIFICATION_MAX);
     int salary_grade_count = kbo_fa_salary_snapshot_load_grade_rows(
         current_year,
         salary_grades,
@@ -130,18 +126,12 @@ int kbo_fa_compensation_build_market_row(
         row,
         seeds,
         seed_count,
-        requal_records,
-        requal_count,
         &history,
-        current_year,
         today);
     kbo_fa_market_apply_salary_snapshot_grade(
         row,
         salary_grades,
         salary_grade_count,
-        requal_records,
-        requal_count,
-        current_year,
         rules);
 
     if (row->original_team_id == 0u && history_row.original_team_id != 0u) {
@@ -151,7 +141,6 @@ int kbo_fa_compensation_build_market_row(
         row->original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
     }
     HeapFree(GetProcessHeap(), 0, seeds);
-    HeapFree(GetProcessHeap(), 0, requal_records);
     HeapFree(GetProcessHeap(), 0, salary_grades);
     return 1;
 }

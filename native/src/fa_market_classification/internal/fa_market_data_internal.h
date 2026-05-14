@@ -15,8 +15,6 @@
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../fa_filing/fa_filing.h"
 #include "../../fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
-#include "../../fa_requalification/fa_requalification.h"
-#include "../../fa_requalification/policy/fa_requalification_policy.h"
 #include "../../fa_rules/fa_rules.h"
 #include "../../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
@@ -82,10 +80,6 @@ extern KboFaMarketFileSignature g_kbo_fa_market_history_cache_shm_sig;
 
 KboFaMarketSqliteApi* kbo_fa_market_get_sqlite_api(void);
 uint32_t kbo_fa_market_get_player_original_team_id(uint8_t* player);
-const KboFaRequalificationRecord* kbo_find_fa_market_requalification_record(
-    const KboFaRequalificationRecord* records,
-    int record_count,
-    uint32_t player_id);
 const KboFaMarketHistoryCase* kbo_find_fa_market_history_case(
     const KboFaMarketHistoryCase* histories,
     int history_count,

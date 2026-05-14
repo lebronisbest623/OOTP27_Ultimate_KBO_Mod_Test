@@ -11,16 +11,6 @@
       }
     },
     {
-      "key": "disable_foreign_waiver_legacy_auto_detector",
-      "defaultValue": null,
-      "lifecycle": "Recovery",
-      "ui": {
-        "label": "Foreign waiver legacy detector",
-        "enabledValue": 0,
-        "defaultEnabled": true
-      }
-    },
-    {
       "key": "disable_intl_established_fa_generation_filter",
       "defaultValue": null,
       "lifecycle": "Recovery",
@@ -198,16 +188,6 @@
       }
     },
     {
-      "key": "enable_fa_requalification",
-      "defaultValue": null,
-      "lifecycle": "Legacy",
-      "ui": {
-        "label": "FA requalification",
-        "enabledValue": 1,
-        "defaultEnabled": false
-      }
-    },
-    {
       "key": "enable_foreign_waiver_ai",
       "defaultValue": true,
       "lifecycle": "User",
@@ -316,16 +296,6 @@
       "key": "enable_kbo_diagnostic_minimal_runtime",
       "defaultValue": null,
       "lifecycle": "Diagnostic"
-    },
-    {
-      "key": "enable_kbo_fa_signability_hooks",
-      "defaultValue": null,
-      "lifecycle": "Legacy",
-      "ui": {
-        "label": "Legacy FA signability hooks",
-        "enabledValue": 1,
-        "defaultEnabled": false
-      }
     },
     {
       "key": "enable_kbo_fix",

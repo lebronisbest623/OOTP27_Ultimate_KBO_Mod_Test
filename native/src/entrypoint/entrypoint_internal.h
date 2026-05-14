@@ -19,7 +19,6 @@
 #include "../custom_events/diagnostics/cbt_service_time_probe.h"
 #include "../custom_events/runtime/monitor/custom_event_monitor.h"
 #include "../competitive_balance_tax/events/cbt_events.h"
-#include "../fa_requalification/fa_requalification.h"
 #include "../fa_market_investigation/api/fa_market_investigation.h"
 #include "../fa_salary_snapshot/threads/salary_snapshot_phase_events.h"
 #include "../fa_salary_snapshot/threads/salary_snapshot_thread.h"
@@ -58,7 +57,6 @@
 typedef struct KboSangmuFaHookInstallRequest {
     int enable_signability;
     int enable_offer;
-    int enable_legacy;
 } KboSangmuFaHookInstallRequest;
 
 extern HANDLE g_kbo_process_instance_mutex;
@@ -69,8 +67,7 @@ extern volatile LONG g_kbo_full_runtime_marker_wait_started;
 DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter);
 void start_kbo_delayed_sangmu_fa_hooks_install_thread(
     int enable_signability,
-    int enable_offer,
-    int enable_legacy);
+    int enable_offer);
 int kbo_current_save_has_required_roster_marker(const char* source, int log_detail);
 void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance);
 DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter);

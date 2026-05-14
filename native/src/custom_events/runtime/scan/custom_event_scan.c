@@ -50,13 +50,7 @@ int scan_kbo_custom_events_once(const char* source)
         if (event[OOTP27_LEAGUE_EVENT_DELETED_OFFSET] != 0) {
             continue;
         }
-        uint32_t configured_league_id = kbo_get_foreign_waiver_league_id();
-        if (configured_league_id == 0u) {
-            configured_league_id = kbo_resolve_kbo_league_id();
-        }
-        if (*(uint32_t*)(event + OOTP27_LEAGUE_EVENT_LEAGUE_ID_OFFSET) != configured_league_id) {
-            continue;
-        }
+        uint32_t event_league_id = *(uint32_t*)(event + OOTP27_LEAGUE_EVENT_LEAGUE_ID_OFFSET);
         if (*(uint16_t*)(event + OOTP27_LEAGUE_EVENT_TYPE_OFFSET) != (uint16_t)OOTP27_EVENT_TYPE_CUSTOM_EVENT) {
             continue;
         }
@@ -70,6 +64,14 @@ int scan_kbo_custom_events_once(const char* source)
         }
         KboCustomEventKind kind = kbo_custom_event_kind_from_name(name);
         if (kind == KBO_CUSTOM_EVENT_KIND_UNKNOWN) {
+            continue;
+        }
+
+        uint32_t configured_league_id = kbo_get_foreign_waiver_league_id();
+        if (configured_league_id == 0u) {
+            configured_league_id = kbo_resolve_kbo_league_id();
+        }
+        if (event_league_id != configured_league_id) {
             continue;
         }
 
@@ -94,7 +96,7 @@ int scan_kbo_custom_events_once(const char* source)
         }
         if (kbo_custom_event_processed_marker_exists(event_yyyymmdd, name)
                 || kbo_custom_event_processed_marker_exists_for_kind(event_yyyymmdd, kind)
-                || kbo_custom_event_ledger_completed(configured_league_id, event_yyyymmdd, kind)) {
+                || kbo_custom_event_ledger_completed(event_league_id, event_yyyymmdd, kind)) {
             kbo_mark_custom_event_processed(event_ptr);
             kbo_persist_custom_event_processed_marker(event_yyyymmdd, name, source);
             kbo_log_runtimef(
@@ -110,7 +112,7 @@ int scan_kbo_custom_events_once(const char* source)
 
         int action_result = kbo_run_custom_event_by_kind(
             event_ptr,
-            configured_league_id,
+            event_league_id,
             event_yyyymmdd,
             kind,
             name,
