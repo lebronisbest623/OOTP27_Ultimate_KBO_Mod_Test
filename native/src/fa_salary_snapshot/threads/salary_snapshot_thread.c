@@ -15,6 +15,7 @@
 #include "../../core/logging/core_log.h"
 #include "../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../runtime_memory/runtime_memory.h"
 #include "../paths/salary_snapshot_paths_dates.h"
 #include "../state/salary_snapshot_state.h"
 #include "../capture/salary_snapshot_write_capture.h"
@@ -72,6 +73,13 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
         if (!kbo_fix_enabled()) {
             if (profile_snapshot_thread_tick_active) {
                 kbo_profiler_end("fa_salary_snapshot.thread.disabled_tick", &profile_snapshot_thread_tick);
+            }
+            continue;
+        }
+
+        if (get_ootp_cached_global_database() == 0u) {
+            if (profile_snapshot_thread_tick_active) {
+                kbo_profiler_end("fa_salary_snapshot.thread.no_global_cached", &profile_snapshot_thread_tick);
             }
             continue;
         }

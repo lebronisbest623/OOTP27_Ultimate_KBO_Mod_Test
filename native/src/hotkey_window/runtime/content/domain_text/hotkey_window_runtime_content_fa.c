@@ -2,16 +2,16 @@
 #include "../../hotkey_window_domain_contract.h"
 #include "../../../../team/lookup/team_lookup.h"
 
-static int kbo_fa_market_text_row_capacity(void)
+#define KBO_FA_MARKET_TEXT_PAGE_SIZE 300
+
+extern int g_kbo_hub_fa_market_page;
+
+static int kbo_fa_market_text_page_count(int total_rows)
 {
-    int row_capacity = KBO_FA_MARKET_CLASSIFICATION_MAX;
-    uintptr_t player_vector = 0u;
-    int32_t player_count = 0;
-    if (find_kbo_global_player_vector(&player_vector, &player_count, NULL)
-            && player_count > row_capacity) {
-        row_capacity = player_count;
+    if (total_rows <= 0) {
+        return 1;
     }
-    return row_capacity;
+    return (total_rows + KBO_FA_MARKET_TEXT_PAGE_SIZE - 1) / KBO_FA_MARKET_TEXT_PAGE_SIZE;
 }
 
 void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
@@ -26,24 +26,53 @@ void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     buffer.capacity = out_size;
     buffer.length = 0;
 
-    int row_capacity = kbo_fa_market_text_row_capacity();
     KboFaMarketClassification* rows = (KboFaMarketClassification*)HeapAlloc(
         GetProcessHeap(),
         HEAP_ZERO_MEMORY,
-        (SIZE_T)row_capacity * sizeof(KboFaMarketClassification));
+        (SIZE_T)KBO_FA_MARKET_TEXT_PAGE_SIZE * sizeof(KboFaMarketClassification));
     if (rows == NULL) {
         kbo_window_text_appendf(&buffer, "FA MARKET\r\n\r\nCould not allocate classification buffer.\r\n");
         return;
     }
 
+    int page = g_kbo_hub_fa_market_page;
+    if (page < 0) {
+        page = 0;
+        g_kbo_hub_fa_market_page = 0;
+    }
+    int row_offset = page * KBO_FA_MARKET_TEXT_PAGE_SIZE;
+
     KboFaMarketScanSummary summary = {0};
-    int count = kbo_collect_fa_market_classifications(
+    int count = kbo_collect_fa_market_classifications_page(
         g_kbo_hub_selected_league_id,
         rows,
-        row_capacity,
+        KBO_FA_MARKET_TEXT_PAGE_SIZE,
+        row_offset,
         &summary,
-        1,
-        "f2_text");
+        0,
+        "f2_text_page");
+    if (summary.candidates > 0 && row_offset >= summary.candidates && page > 0) {
+        page = kbo_fa_market_text_page_count(summary.candidates) - 1;
+        if (page < 0) {
+            page = 0;
+        }
+        g_kbo_hub_fa_market_page = page;
+        row_offset = page * KBO_FA_MARKET_TEXT_PAGE_SIZE;
+        count = kbo_collect_fa_market_classifications_page(
+            g_kbo_hub_selected_league_id,
+            rows,
+            KBO_FA_MARKET_TEXT_PAGE_SIZE,
+            row_offset,
+            &summary,
+            0,
+            "f2_text_page");
+    }
+    int page_count = kbo_fa_market_text_page_count(summary.candidates);
+    int start_row = summary.candidates > 0 ? row_offset + 1 : 0;
+    int end_row = row_offset + count;
+    if (end_row > summary.candidates) {
+        end_row = summary.candidates;
+    }
 
     char league_name[128] = {0};
     kbo_hub_copy_league_display_name(summary.league_id, league_name, sizeof(league_name));
@@ -52,10 +81,14 @@ void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     kbo_window_text_appendf(&buffer, "%s\r\n", league_name[0] != '\0' ? league_name : "Selected league");
     kbo_window_text_appendf(
         &buffer,
-        "Scanned %d players / %d active teamless candidates / %d rows. Seed rows: %d. CSV: %s\r\n\r\n",
+        "Scanned %d players / %d active teamless candidates / showing %d-%d (%d rows), page %d/%d. Seed rows: %d. CSV path: %s\r\n\r\n",
         summary.scanned,
         summary.candidates,
+        start_row,
+        end_row,
         count,
+        page + 1,
+        page_count,
         summary.seed_count,
         summary.csv_path[0] != '\0' ? summary.csv_path : "-");
     kbo_window_text_appendf(&buffer, "PLAYER                   CASE            GRADE    PREV SALARY TEAM AGE RIGHTS\r\n");
@@ -86,8 +119,6 @@ void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     }
     if (count == 0) {
         kbo_window_text_appendf(&buffer, "No active players without a current team found.\r\n");
-    } else if (summary.truncated) {
-        kbo_window_text_appendf(&buffer, "\r\nClassification buffer reached. Some market candidates may be missing.\r\n");
     }
 
     HeapFree(GetProcessHeap(), 0, rows);

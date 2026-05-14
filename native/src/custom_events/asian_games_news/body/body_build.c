@@ -250,6 +250,12 @@ void kbo_build_asian_games_news_body(
     if (used < out_size - 1) {
         KboNewsTemplateVar suffix_vars[] = {
             { "period", include_samples ? "." : "" },
+            { "roster_year", roster_year_text },
+            { "host_city", host_city },
+            { "host_country", host_country },
+            { "host_place", host_place },
+            { "tournament_label", tournament_label },
+            { "tournament_phrase", tournament_phrase },
         };
         char suffix[512] = {0};
         if (kbo_news_template_render_key(

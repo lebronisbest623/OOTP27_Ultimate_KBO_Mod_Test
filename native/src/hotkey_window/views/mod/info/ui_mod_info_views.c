@@ -260,17 +260,7 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
             buffer,
             "</p></section><section class='card modCard'><h2 class='cardTitle'>TESTERS</h2>"
             "<p>");
-        kbo_html_append_escaped(
-            buffer,
-            kbo_hub_text(
-                "\xec\x95\x84\xec\xa7\x81 \xeb\x93\xb1\xeb\xa1\x9d\xeb\x90\x9c \xed\x85\x8c\xec\x8a\xa4\xed\x84\xb0\xea\xb0\x80 \xec\x97\x86\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "No testers are listed yet."));
-        kbo_window_text_appendf(buffer, "</p><p>");
-        kbo_html_append_escaped(
-            buffer,
-            kbo_hub_text(
-                "\xed\x85\x8c\xec\x8a\xa4\xed\x8a\xb8\xec\x97\x90 \xed\x95\xa8\xea\xbb\x98\xed\x95\xa0 \xec\x82\xac\xeb\x9e\x8c\xec\x9d\xb4 \xec\x83\x9d\xea\xb8\xb0\xeb\xa9\xb4 \xec\x9d\xb4\xea\xb3\xb3\xec\x97\x90 \xea\xb8\xb0\xeb\xa1\x9d\xeb\x90\xa9\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Future testers will be recorded here."));
+        kbo_webview_append_mod_tester_credits(buffer);
         kbo_window_text_appendf(
             buffer,
             "</p></section><section class='card modCard'><h2 class='cardTitle'>SPECIAL THANKS</h2>"

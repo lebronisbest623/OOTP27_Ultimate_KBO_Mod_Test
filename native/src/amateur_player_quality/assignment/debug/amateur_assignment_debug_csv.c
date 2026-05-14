@@ -1,4 +1,4 @@
-#include "../../internal/amateur_player_quality_internal.h"
+#include "../../internal/amateur_assignment_internal.h"
 
 void kbo_amateur_assignment_append_debug_csv(
     const char* phase,

@@ -1,7 +1,5 @@
 #include "../internal/foreign_injury_internal.h"
 
-#include "../../../core/news/templates/core_news_templates.h"
-
 int kbo_persist_foreign_injury_replacements_locked(void)
 {
     char path[MAX_PATH] = {0};
@@ -98,6 +96,19 @@ void kbo_ensure_foreign_injury_replacements_loaded(void)
         : "foreign_injury.ensure.cached");
 }
 
+int kbo_foreign_injury_replacements_loaded_for_current_save(void)
+{
+    char path[MAX_PATH] = {0};
+    if (!kbo_get_foreign_injury_replacement_path(path, sizeof(path))) {
+        return 0;
+    }
+
+    kbo_lock_foreign_injury_replacements();
+    int loaded = strcmp(g_kbo_foreign_injury_replacement_loaded_path, path) == 0;
+    kbo_unlock_foreign_injury_replacements();
+    return loaded;
+}
+
 int kbo_find_foreign_injury_replacement_locked(uint32_t injured_player_id, int include_closed)
 {
     if (injured_player_id == 0u) {
@@ -111,6 +122,19 @@ int kbo_find_foreign_injury_replacement_locked(uint32_t injured_player_id, int i
         }
     }
     return -1;
+}
+
+int kbo_foreign_injury_player_excluded_from_foreign_count(uint32_t team_id, uint32_t player_id)
+{
+    int result = 0;
+    if (team_id == 0u || player_id == 0u) {
+        return 0;
+    }
+    kbo_ensure_foreign_injury_replacements_loaded();
+    kbo_lock_foreign_injury_replacements();
+    result = kbo_foreign_injury_player_excluded_from_foreign_count_locked(team_id, player_id);
+    kbo_unlock_foreign_injury_replacements();
+    return result;
 }
 
 int kbo_team_has_foreign_injury_slot_locked(uint32_t team_id, uint8_t slot_type, uint32_t* out_injured_player_id)
@@ -228,129 +252,5 @@ void kbo_count_foreign_injury_replacements_for_team(
         }
     }
     kbo_unlock_foreign_injury_replacements();
-}
-
-void kbo_emit_foreign_injury_replacement_news(
-    const KboForeignInjuryReplacement* rec,
-    int days_left,
-    const char* phase)
-{
-    if (rec == NULL || rec->team_id == 0u || rec->injured_player_id == 0u || rec->league_id == 0u) {
-        return;
-    }
-
-    uint32_t event_date = 0u;
-    if (!kbo_get_current_yyyymmdd(&event_date) || event_date == 0u) {
-        event_date = rec->opened_on_yyyymmdd;
-    }
-    if (event_date == 0u) {
-        return;
-    }
-
-    char player_name[96] = {0};
-    uint8_t* player = kbo_find_player_by_id(rec->injured_player_id, NULL, NULL);
-    if (player != NULL) {
-        kbo_copy_player_display_name(player, player_name, sizeof(player_name));
-    }
-    if (player_name[0] == '\0') {
-        snprintf(player_name, sizeof(player_name), "Player #%u", rec->injured_player_id);
-    }
-
-    char title[180] = {0};
-    char body[2048] = {0};
-    char team_link[96] = {0};
-    char injured_player_link[144] = {0};
-    char replacement_player_link[144] = {0};
-    char replacement_player_name[96] = {0};
-    char days_left_text[16] = {0};
-    snprintf(team_link, sizeof(team_link), "<Team #%u:team#%u>", rec->team_id, rec->team_id);
-    snprintf(injured_player_link, sizeof(injured_player_link), "<%s:player#%u>", player_name, rec->injured_player_id);
-    if (rec->replacement_player_id != 0u) {
-        uint8_t* replacement = kbo_find_player_by_id(rec->replacement_player_id, NULL, NULL);
-        if (replacement != NULL) {
-            kbo_copy_player_display_name(replacement, replacement_player_name, sizeof(replacement_player_name));
-        }
-        if (replacement_player_name[0] == '\0') {
-            snprintf(replacement_player_name, sizeof(replacement_player_name), "Player #%u", rec->replacement_player_id);
-        }
-        snprintf(replacement_player_link, sizeof(replacement_player_link), "<%s:player#%u>", replacement_player_name, rec->replacement_player_id);
-    } else {
-        const char* language_dir = kbo_custom_news_language_dir();
-        const int use_korean = language_dir == NULL || strcmp(language_dir, "en") != 0;
-        snprintf(
-            replacement_player_name,
-            sizeof(replacement_player_name),
-            "%s",
-            use_korean ? "\xeb\x8c\x80\xec\xb2\xb4 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8" : "the temporary replacement");
-        snprintf(
-            replacement_player_link,
-            sizeof(replacement_player_link),
-            "%s",
-            use_korean ? "\xeb\x8c\x80\xec\xb2\xb4 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8" : "the temporary replacement");
-    }
-    snprintf(days_left_text, sizeof(days_left_text), "%d", days_left > 0 ? days_left : 0);
-
-    const char* title_key = "foreign_injury.open.title";
-    const char* body_key = "foreign_injury.open.body";
-    if (phase != NULL && strcmp(phase, "closed") == 0) {
-        if (rec->replacement_player_id != 0u) {
-            title_key = "foreign_injury.closed_with_replacement.title";
-            body_key = "foreign_injury.closed_with_replacement.body";
-        } else {
-            title_key = "foreign_injury.closed_without_replacement.title";
-            body_key = "foreign_injury.closed_without_replacement.body";
-        }
-    } else if (phase != NULL && strcmp(phase, "pending") == 0) {
-        title_key = "foreign_injury.pending.title";
-        body_key = "foreign_injury.pending.body";
-    }
-
-    KboNewsTemplateVar vars[] = {
-        { "team_link", team_link },
-        { "injured_player_name", player_name },
-        { "injured_player_link", injured_player_link },
-        { "replacement_player_name", replacement_player_name },
-        { "replacement_player_link", replacement_player_link },
-        { "days_left", days_left_text },
-        { "slot_label", kbo_foreign_injury_slot_label(rec->slot_type) },
-    };
-    if (!kbo_news_template_render_key(
-            title_key,
-            vars,
-            (int)(sizeof(vars) / sizeof(vars[0])),
-            title,
-            sizeof(title),
-            phase != NULL ? phase : "foreign_injury")
-            || !kbo_news_template_render_key(
-                body_key,
-                vars,
-                (int)(sizeof(vars) / sizeof(vars[0])),
-                body,
-                sizeof(body),
-                phase != NULL ? phase : "foreign_injury")) {
-        append_logf(
-            "foreign injury replacement: news skipped phase=%s team=%u injured=%u league=%u reason=template_unavailable",
-            phase != NULL ? phase : "open",
-            rec->team_id,
-            rec->injured_player_id,
-            rec->league_id);
-        return;
-    }
-
-    int created = create_kbo_native_live_news_with_body(
-        event_date / 10000u,
-        (event_date / 100u) % 100u,
-        event_date % 100u,
-        rec->league_id,
-        OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-        title,
-        body);
-    append_logf(
-        "foreign injury replacement: news phase=%s team=%u injured=%u league=%u created=%d",
-        phase != NULL ? phase : "open",
-        rec->team_id,
-        rec->injured_player_id,
-        rec->league_id,
-        created);
 }
 

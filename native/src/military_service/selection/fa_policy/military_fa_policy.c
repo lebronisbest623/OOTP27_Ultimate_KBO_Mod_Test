@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -10,10 +11,13 @@
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../../runtime_memory/runtime_memory.h"
+#include "../../../team/control/team_human_control.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "military_fa_player_action_context.h"
 #include "military_fa_policy.h"
 #include "../events/policy/military_selection_policy.h"
+#include "../../players/guards/military_team_add_guard.h"
+#include "../../players/state/military_player_state.h"
 #include "../../players/team_policy/military_service_team_policy.h"
 
 static volatile LONG g_kbo_military_fa_block_player_id = 0;
@@ -223,6 +227,28 @@ static int kbo_military_player_assignment_matches_team(uint32_t player_id, uint3
         || loan_team_id == team_id;
 }
 
+static uint32_t kbo_military_human_controlled_service_team_id(const char* source)
+{
+    const char* csv_ids[] = { "SANG", "KPB" };
+    for (size_t i = 0; i < sizeof(csv_ids) / sizeof(csv_ids[0]); i++) {
+        uint8_t* team = find_kbo_team_by_csv_id_any_league(csv_ids[i], 1);
+        if (team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            continue;
+        }
+
+        uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
+        if (kbo_team_id_is_military_service_team(team_id)
+                && kbo_team_is_human_controlled(team_id, source)) {
+            return team_id;
+        }
+    }
+
+    return kbo_team_id_is_military_service_team(21u)
+        && kbo_team_is_human_controlled(21u, source)
+        ? 21u
+        : 0u;
+}
+
 int kbo_military_submit_offer_screen_should_block(
     uintptr_t screen_ptr,
     uint32_t player_id,
@@ -251,10 +277,21 @@ int kbo_military_submit_offer_screen_should_block(
 
     if (team_id == 0u) {
         team_id = kbo_military_fa_context_find_team_id(screen_ptr, &team_offset, &team_ptr);
-        if (team_id != 0u && kbo_military_player_assignment_matches_team(player_id, team_id)) {
+        if (team_id != 0u
+                && kbo_military_player_assignment_matches_team(player_id, team_id)
+                && kbo_military_player_has_active_service_assignment(
+                    (uintptr_t)kbo_find_player_by_id(player_id, NULL, NULL),
+                    team_id)) {
             team_id = 0u;
             team_ptr = 0;
             team_offset = 0xffffffffu;
+        }
+    }
+
+    if (team_id == 0u) {
+        team_id = kbo_military_human_controlled_service_team_id("military_submit_offer_fallback");
+        if (team_id != 0u) {
+            team_source = "human_control";
         }
     }
 
@@ -318,25 +355,32 @@ int kbo_military_player_action_should_block(
     uint32_t team_offset = 0xffffffffu;
     uintptr_t team_ptr = 0;
     uint32_t military_team_id = kbo_military_player_action_context_find_team_id(action_context, &team_offset, &team_ptr);
+    const char* team_source = "context";
     if (player == NULL) {
         return 0;
     }
     if (military_team_id == 0u) {
+        military_team_id = kbo_military_human_controlled_service_team_id("military_player_action_fallback");
+        if (military_team_id != 0u) {
+            team_source = "human_control";
+        }
+    }
+    if (military_team_id == 0u) {
         uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
         uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
-        if (current_team_id == 0u
-                && military_active == 0u
+        if (military_active == 0u
                 && action_id >= kbo_military_selection_policy()->fa_action_id_min
                 && action_id <= kbo_military_selection_policy()->fa_action_id_max) {
             static LONG military_action_miss_log_count = 0;
             LONG miss_slot = InterlockedIncrement(&military_action_miss_log_count);
             if (miss_slot <= 80) {
                 append_logf(
-                    "military service team player action probe missed team: context=%p action=0x%x strict=%u player=%u player_off=0x%x scan=0x%x",
+                    "military service team player action probe missed team: context=%p action=0x%x strict=%u player=%u current_team=%u player_off=0x%x scan=0x%x",
                     (void*)action_context,
                     action_id,
                     (unsigned)strict_check,
                     player_id,
+                    current_team_id,
                     player_offset,
                     (unsigned)kbo_military_selection_policy()->fa_player_action_context_scan_bytes);
             }
@@ -345,9 +389,12 @@ int kbo_military_player_action_should_block(
     }
 
     uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    uint32_t loan_team_id = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+    uint32_t current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+    int32_t days_left = kbo_military_days_left(player);
     uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
-    if (current_team_id != 0u
-            || military_active != 0u
+    if (kbo_military_player_has_active_service_assignment((uintptr_t)player, military_team_id)
             || action_id < kbo_military_selection_policy()->fa_action_id_min
             || action_id > kbo_military_selection_policy()->fa_action_id_max) {
         return 0;
@@ -358,12 +405,19 @@ int kbo_military_player_action_should_block(
     const KboMilitarySelectionPolicy* policy = kbo_military_selection_policy();
     if (slot <= policy->fa_player_action_log_max) {
         append_logf(
-            "military service team player action blocked: context=%p action=0x%x strict=%u player=%u team=%u player_off=0x%x team_off=0x%x team_ptr=%p",
+            "military service team player action blocked: context=%p action=0x%x strict=%u player=%u team=%u team_source=%s player_current=%u player_active=%u player_league=%u loan_team=%u days_left=%d military_active=%u player_off=0x%x team_off=0x%x team_ptr=%p",
             (void*)action_context,
             action_id,
             (unsigned)strict_check,
             player_id,
             military_team_id,
+            team_source,
+            current_team_id,
+            active_team_id,
+            current_league_id,
+            loan_team_id,
+            days_left,
+            (unsigned)military_active,
             player_offset,
             team_offset,
             (void*)team_ptr);

@@ -3,6 +3,7 @@
 
 void kbo_webview_append_asian_quota_view(KboWindowTextBuffer* buffer)
 {
+    kbo_foreign_injury_replacement_scan_once("foreign_policy_webview");
     int configured_nations = kbo_load_asian_quota_nation_ids_once();
     uint32_t team_foreign = 0u;
     uint32_t team_asian = 0u;

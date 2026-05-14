@@ -28,7 +28,7 @@ void kbo_count_team_asian_quota_probe(
 
     enum {
         KBO_FOREIGN_ORG_COUNT_CACHE_SIZE = 64,
-        KBO_FOREIGN_ORG_COUNT_CACHE_TTL_MS = 60000u
+        KBO_FOREIGN_ORG_COUNT_CACHE_TTL_MS = 1000u
     };
     typedef struct KboForeignOrgCountCacheEntry {
         uint32_t team_id;
@@ -70,6 +70,7 @@ void kbo_count_team_asian_quota_probe(
             continue;
         }
         uint8_t* player = (uint8_t*)player_ptr;
+        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
         uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
         if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
             continue;
@@ -91,6 +92,9 @@ void kbo_count_team_asian_quota_probe(
             } else if (slot == 21) {
                 append_log_line("foreign replacement player seed org-count exclusion log suppressed after 20 entries");
             }
+            continue;
+        }
+        if (kbo_foreign_injury_player_excluded_from_foreign_count(team_id, player_id)) {
             continue;
         }
         foreign_count++;
@@ -141,6 +145,7 @@ void kbo_count_team_asian_quota_probe_fresh(
             continue;
         }
         uint8_t* player = (uint8_t*)player_ptr;
+        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
         uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
         if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
             continue;
@@ -150,6 +155,9 @@ void kbo_count_team_asian_quota_probe_fresh(
         }
         uint8_t replacement_slot_type = 0u;
         if (kbo_foreign_replacement_player_seed_matches_loaded(player, &replacement_slot_type)) {
+            continue;
+        }
+        if (kbo_foreign_injury_player_excluded_from_foreign_count(team_id, player_id)) {
             continue;
         }
         foreign_count++;
@@ -183,6 +191,7 @@ void kbo_count_active_asian_quota_by_position(
 
     uint32_t asian_hitters = 0u;
     uint32_t asian_pitchers = 0u;
+    uint32_t team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
     uint32_t* active_ids = (uint32_t*)(team_ptr + OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET);
     for (uint32_t i = 0; i < OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT; i++) {
         uint32_t player_id = active_ids[i];
@@ -195,6 +204,9 @@ void kbo_count_active_asian_quota_by_position(
             continue;
         }
         if (!kbo_player_is_asian_quota_candidate(player)) {
+            continue;
+        }
+        if (kbo_foreign_injury_player_excluded_from_foreign_count(team_id, player_id)) {
             continue;
         }
 
@@ -228,6 +240,7 @@ void kbo_count_active_foreign_for_asian_quota(
     uint32_t asian_pitchers = 0u;
     uint32_t non_asian_hitters = 0u;
     uint32_t non_asian_pitchers = 0u;
+    uint32_t team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
     uint32_t* active_ids = (uint32_t*)(team_ptr + OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET);
     for (uint32_t i = 0; i < OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT; i++) {
         uint32_t player_id = active_ids[i];
@@ -240,6 +253,9 @@ void kbo_count_active_foreign_for_asian_quota(
         }
         uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
         if (nation_id == 0u || nation_id == OOTP27_KBO_KOREA_NATION_ID) {
+            continue;
+        }
+        if (kbo_foreign_injury_player_excluded_from_foreign_count(team_id, player_id)) {
             continue;
         }
         int pitcher = (*(uint8_t*)(player + OOTP27_PLAYER_POSITION_GROUP_OFFSET) == 1u);

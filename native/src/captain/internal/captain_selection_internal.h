@@ -66,7 +66,7 @@ extern KboCaptainSeed g_kbo_captain_seeds[KBO_CAPTAIN_SEED_MAX];
 extern int g_kbo_captain_seed_count;
 extern volatile LONG g_kbo_captain_seed_lock;
 extern volatile LONG g_kbo_captain_seed_loaded;
-extern char g_kbo_captain_seed_loaded_key[MAX_PATH * 5];
+extern char g_kbo_captain_seed_loaded_key[MAX_PATH * 6];
 
 int kbo_captain_selection_csv_path(uint32_t season, char* out, size_t out_size);
 int kbo_captain_selection_csv_exists(uint32_t season);

@@ -73,6 +73,7 @@ int kbo_hub_collect_visible_league_ids(uint32_t* league_ids, int max_leagues);
 int kbo_hub_count_cached_league_ids(const uint32_t* league_ids, int league_count);
 int kbo_scan_named_league_ptrs_for_ids(const uint32_t* league_ids, int league_count, SIZE_T max_region_size);
 void kbo_hub_prewarm_league_display_cache(void);
+void kbo_hub_queue_league_display_cache_prewarm(void);
 uintptr_t kbo_find_league_ptr(uint32_t league_id);
 void kbo_hub_read_league_name(uintptr_t league_ptr, char* out, size_t out_size);
 void kbo_hub_copy_league_display_name_fast(uint32_t league_id, char* out, size_t out_size);

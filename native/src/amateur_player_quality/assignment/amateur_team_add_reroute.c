@@ -1,4 +1,4 @@
-#include "../internal/amateur_player_quality_internal.h"
+#include "../internal/amateur_assignment_internal.h"
 #include "../../bootstrap/profiling/profiler.h"
 static volatile LONG g_kbo_amateur_reroute_disable_cached = -1;
 static volatile LONG g_kbo_amateur_reroute_disable_tick = 0;

@@ -20,6 +20,24 @@ int kbo_webview_handle_event_and_fa_command(const char* cmd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "fa-market/page/", 15) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
+        int page = atoi(cmd + 15);
+        if (page < 0) {
+            page = 0;
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
+        g_kbo_hub_fa_market_page = page;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "fa/", 3) == 0) {
         if (!kbo_hub_selected_league_is_kbo()) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
@@ -31,6 +49,9 @@ int kbo_webview_handle_event_and_fa_command(const char* cmd)
         if (subview >= 0 && subview < KBO_HUB_FA_SUBVIEW_COUNT) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
             g_kbo_hub_selected_fa_subview = subview;
+            if (subview == KBO_HUB_FA_SUBVIEW_MARKET) {
+                g_kbo_hub_fa_market_page = 0;
+            }
             g_kbo_hub_open_dropdown = 0;
         }
         kbo_webview_navigate_current();

@@ -130,6 +130,7 @@ extern int g_kbo_hub_selected_agames_subview;
 extern int g_kbo_hub_selected_military_subview;
 extern int g_kbo_hub_selected_fa_subview;
 extern int g_kbo_hub_selected_cbt_subview;
+extern int g_kbo_hub_fa_market_page;
 extern uint32_t g_kbo_hub_selected_fa_compensation_player_id;
 extern uint32_t g_kbo_hub_selected_military_results_year;
 extern RECT g_kbo_hub_refresh_rect;

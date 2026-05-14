@@ -61,5 +61,13 @@ int kbo_collect_fa_market_classifications(
     KboFaMarketScanSummary* summary,
     int write_csv,
     const char* source);
+int kbo_collect_fa_market_classifications_page(
+    uint32_t requested_league_id,
+    KboFaMarketClassification* rows,
+    int max_rows,
+    int row_offset,
+    KboFaMarketScanSummary* summary,
+    int write_csv,
+    const char* source);
 
 #endif

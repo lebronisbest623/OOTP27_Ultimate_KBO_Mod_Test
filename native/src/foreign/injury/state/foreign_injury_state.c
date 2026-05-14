@@ -73,6 +73,23 @@ const char* kbo_foreign_injury_status_label(uint8_t status)
     }
 }
 
+int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id)
+{
+    if (team_id == 0u || player_id == 0u) {
+        return 0;
+    }
+    for (int i = 0; i < g_kbo_foreign_injury_replacement_count; i++) {
+        const KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[i];
+        if (rec->team_id == team_id
+                && rec->injured_player_id == player_id
+                && (rec->status == KBO_FOREIGN_INJURY_STATUS_OPEN
+                    || rec->status == KBO_FOREIGN_INJURY_STATUS_ACTIVE)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* Foreign injury replacement CSV loading. Included from native/KBOFix.c. */
 
 /* Foreign injury replacement seed import. Included from native/KBOFix.c. */

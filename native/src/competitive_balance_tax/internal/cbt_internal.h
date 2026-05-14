@@ -12,6 +12,7 @@
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/dates/core_text_date.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/logging/rule_audit.h"
 #include "../../core/news/live/core_live_news.h"
 #include "../../core/sql/escape/core_sql_escape.h"
 #include "../../core/sql/league_news/core_sql_league_news.h"
@@ -61,5 +62,7 @@ int kbo_cbt_insert_opening_day_summary_news(
     int record_count,
     int team_count,
     const KboCbtRules* rules);
+int kbo_cbt_news_marker_exists(const char* key);
+void kbo_cbt_news_persist_marker(const char* key, const char* source);
 
 #endif

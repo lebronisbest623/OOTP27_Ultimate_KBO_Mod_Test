@@ -4,181 +4,16 @@
 static LONG g_kbo_foreign_injury_return_wait_log_count = 0;
 static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
 
-static int kbo_foreign_injury_player_has_baseball_position(uint8_t* player)
-{
-    if (player == NULL || !memory_range_readable(player + OOTP27_PLAYER_POSITION_ROLE_OFFSET, sizeof(uint8_t))) {
-        return 0;
-    }
-
-    uint8_t position = player[OOTP27_PLAYER_POSITION_GROUP_OFFSET];
-    uint8_t role = player[OOTP27_PLAYER_POSITION_ROLE_OFFSET];
-    return (position >= 1u && position <= 10u) || (role >= 1u && role <= 13u);
-}
-
-int kbo_foreign_injury_player_matches_team(uint8_t* player, uint32_t team_id)
-{
-    if (player == NULL || team_id == 0u || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
-        return 0;
-    }
-    return *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) == team_id
-        || *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) == team_id;
-}
-
-int kbo_foreign_injury_candidate_matches_slot(uint8_t* player, uint8_t slot_type)
-{
-    if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
-        return 0;
-    }
-    uint8_t player_slot = kbo_foreign_injury_slot_type_for_player(player);
-    return player_slot == slot_type;
-}
-
-int kbo_foreign_injury_team_active_roster_contains_player(uint8_t* team, uint32_t player_id)
-{
-    if (team == NULL
-            || player_id == 0u
-            || !memory_range_readable(team + OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET, OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT * sizeof(uint32_t))) {
-        return 0;
-    }
-
-    uint32_t* active_ids = (uint32_t*)(team + OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET);
-    for (uint32_t i = 0; i < OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT; i++) {
-        if (active_ids[i] == player_id) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static int kbo_foreign_injury_team_roster_array_contains_player(
-    uint8_t* team,
-    uint32_t array_offset,
-    uint32_t player_id)
-{
-    if (team == NULL
-            || player_id == 0u
-            || !memory_range_readable(team + array_offset, OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT * sizeof(uint32_t))) {
-        return 0;
-    }
-
-    uint32_t* ids = (uint32_t*)(team + array_offset);
-    for (uint32_t i = 0; i < OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT; i++) {
-        if (ids[i] == player_id) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-int kbo_foreign_injury_team_known_roster_contains_player(uint8_t* team, uint32_t player_id)
-{
-    return kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_2760_OFFSET, player_id)
-        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET, player_id)
-        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_2DA0_OFFSET, player_id)
-        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET, player_id)
-        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_33E0_OFFSET, player_id)
-        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_3700_OFFSET, player_id);
-}
-
-int kbo_foreign_injury_injured_player_returned_to_top_team(
-    const KboForeignInjuryReplacement* rec,
-    uint8_t* injured)
-{
-    if (rec == NULL || injured == NULL || rec->team_id == 0u
-            || !memory_range_readable(injured, OOTP27_PLAYER_SCAN_BYTES)) {
-        return 0;
-    }
-
-    if (injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] != 0u) {
-        return 0;
-    }
-    int16_t days_left = *(int16_t*)(injured + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
-    if (days_left > 0) {
-        return 0;
-    }
-    if (injured[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET] != 0u) {
-        return 0;
-    }
-
-    uint32_t injured_player_id = *(uint32_t*)(injured + OOTP27_PLAYER_ID_OFFSET);
-    uint32_t current_team_id = *(uint32_t*)(injured + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-    uint32_t active_team_id = *(uint32_t*)(injured + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-    uint32_t current_league_id = *(uint32_t*)(injured + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
-    if (current_team_id != rec->team_id) {
-        return 0;
-    }
-    if (active_team_id != 0u && active_team_id != rec->team_id) {
-        return 0;
-    }
-    if (rec->league_id != 0u && current_league_id != 0u && current_league_id != rec->league_id) {
-        return 0;
-    }
-
-    uint8_t* team = find_kbo_team_by_numeric_id_any_league(rec->team_id, 1);
-    if (team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
-        return 0;
-    }
-    uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
-    if (rec->league_id != 0u && team_league_id != 0u && team_league_id != rec->league_id) {
-        return 0;
-    }
-    if (!kbo_foreign_injury_team_active_roster_contains_player(team, injured_player_id)) {
-        return 0;
-    }
-
-    return 1;
-}
-
-uint32_t kbo_foreign_injury_resolve_replacement_for_record(const KboForeignInjuryReplacement* rec)
-{
-    if (rec == NULL || rec->team_id == 0u || rec->injured_player_id == 0u) {
-        return 0u;
-    }
-    if (rec->replacement_player_id != 0u) {
-        return rec->replacement_player_id;
-    }
-
-    uintptr_t player_vector = 0;
-    int32_t player_count = 0;
-    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        return 0u;
-    }
-
-    for (int32_t i = 0; i < player_count; i++) {
-        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
-        if (!kbo_player_pointer_plausible(player_ptr)) {
-            continue;
-        }
-
-        uint8_t* player = (uint8_t*)player_ptr;
-        uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
-        if (player_id == 0u
-                || player_id == rec->injured_player_id
-                || !kbo_player_is_foreign_for_kbo_rights(player)
-                || !kbo_foreign_replacement_player_seed_matches_loaded(player, NULL)
-                || !kbo_foreign_injury_player_matches_team(player, rec->team_id)
-                || !kbo_foreign_injury_candidate_matches_slot(player, rec->slot_type)) {
-            continue;
-        }
-
-        uint8_t injury_active = player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
-        if (injury_active) {
-            continue;
-        }
-        return player_id;
-    }
-
-    return 0u;
-}
-
 void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
     if (!kbo_foreign_injury_replacement_enabled()) {
+        kbo_rule_audit_emit("foreign_injury.replacement.scan", "skip", "disabled", source, NULL);
         return;
     }
 
     uint32_t today = 0u;
     if (!kbo_get_current_yyyymmdd(&today)) {
+        kbo_rule_audit_emit("foreign_injury.replacement.scan", "skip", "date_unavailable", source, NULL);
         return;
     }
 
@@ -187,6 +22,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        kbo_rule_audit_emitf("foreign_injury.replacement.scan", "skip", "player_vector_unavailable", source, "\"date\":%u", today);
         return;
     }
 
@@ -216,40 +52,34 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             continue;
         }
 
-        uint32_t team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-        if (team_id == 0u) {
-            continue;
-        }
-
-        uint32_t league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
-        uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
-        if (team != NULL && memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
-            uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
-            if (league_id == 0u) {
-                league_id = team_league_id;
-            }
-        }
-        if (!kbo_foreign_injury_player_has_baseball_position(player)
-                || (team != NULL
-                    && memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)
-                    && !kbo_foreign_injury_team_known_roster_contains_player(team, player_id))) {
+        uint32_t team_id = 0u;
+        uint32_t league_id = 0u;
+        int has_assignment = kbo_foreign_injury_resolve_player_team_assignment(
+            player,
+            player_id,
+            configured_league_id,
+            &team_id,
+            &league_id);
+        if (!has_assignment || !kbo_foreign_injury_player_has_baseball_position(player)) {
             LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_non_roster_log_count);
             if (log_slot <= 60 || (log_slot % 100) == 0) {
                 append_logf(
-                    "foreign injury replacement: skipped non-roster injury candidate source=%s team=%u player=%u league=%u position=%u role=%u rostered=%d",
+                    "foreign injury replacement: skipped non-roster injury candidate source=%s player=%u current=%u active=%u loan=%u original=%u default=%u resolved_team=%u league=%u position=%u role=%u assignment=%d",
                     source != NULL ? source : "",
-                    team_id,
                     player_id,
+                    *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET),
+                    *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET),
+                    *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET),
+                    *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET),
+                    memory_range_readable(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET, sizeof(uint32_t))
+                        ? *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET)
+                        : 0u,
+                    team_id,
                     league_id,
                     (uint32_t)player[OOTP27_PLAYER_POSITION_GROUP_OFFSET],
                     (uint32_t)player[OOTP27_PLAYER_POSITION_ROLE_OFFSET],
-                    team != NULL && memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)
-                        ? kbo_foreign_injury_team_known_roster_contains_player(team, player_id)
-                        : -1);
+                    has_assignment);
             }
-            continue;
-        }
-        if (configured_league_id != 0u && league_id != 0u && league_id != configured_league_id) {
             continue;
         }
 
@@ -277,6 +107,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         if (created) {
             opened++;
             kbo_emit_foreign_injury_replacement_news(&created_rec, (int)days_left, "open");
+            kbo_rule_audit_emitf("foreign_injury.replacement.lifecycle", "open_slot", "injury_min_days_met", source, "\"date\":%u,\"team_id\":%u,\"league_id\":%u,\"injured_player_id\":%u,\"days_left\":%d,\"slot_type\":%u", today, created_rec.team_id, created_rec.league_id, created_rec.injured_player_id, (int)days_left, (uint32_t)created_rec.slot_type);
             append_logf(
                 "foreign injury replacement: opened source=%s team=%u player=%u league=%u days_left=%d slot=%s",
                 source != NULL ? source : "",
@@ -374,6 +205,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     kbo_unlock_foreign_injury_replacements();
 
     for (int i = 0; i < active_count; i++) {
+        kbo_rule_audit_emitf("foreign_injury.replacement.lifecycle", "activate_slot", "replacement_resolved", source, "\"date\":%u,\"team_id\":%u,\"league_id\":%u,\"injured_player_id\":%u,\"replacement_player_id\":%u", today, active_news[i].team_id, active_news[i].league_id, active_news[i].injured_player_id, active_news[i].replacement_player_id);
         append_logf(
             "foreign injury replacement: activated source=%s team=%u injured=%u replacement=%u league=%u",
             source != NULL ? source : "",
@@ -385,6 +217,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
 
     for (int i = 0; i < closed_count; i++) {
         kbo_emit_foreign_injury_replacement_news(&closed_news[i], 0, "closed");
+        kbo_rule_audit_emitf("foreign_injury.replacement.lifecycle", "close_slot", "injured_player_returned", source, "\"date\":%u,\"team_id\":%u,\"league_id\":%u,\"injured_player_id\":%u,\"replacement_player_id\":%u", today, closed_news[i].team_id, closed_news[i].league_id, closed_news[i].injured_player_id, closed_news[i].replacement_player_id);
         append_logf(
             "foreign injury replacement: closed source=%s team=%u injured=%u replacement=%u league=%u",
             source != NULL ? source : "",
@@ -395,6 +228,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     }
 
     if (opened > 0 || active_count > 0 || closed_count > 0) {
+        kbo_rule_audit_emitf("foreign_injury.replacement.scan", "process", "lifecycle_changes", source, "\"date\":%u,\"scanned_foreign\":%d,\"opened\":%d,\"activated\":%d,\"closed\":%d", today, scanned, opened, active_count, closed_count);
         append_logf(
             "foreign injury replacement: scan source=%s scanned_foreign=%d opened=%d active=%d pending=%d closed=%d",
             source != NULL ? source : "",

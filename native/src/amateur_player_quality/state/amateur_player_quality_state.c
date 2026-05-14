@@ -14,7 +14,7 @@
 #include "../../runtime_memory/runtime_memory.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_string.h"
-#include "../internal/amateur_player_quality_internal.h"
+#include "../internal/amateur_assignment_internal.h"
 
 KboAmateurReputationSeed g_kbo_amateur_reputation_seeds[KBO_AMATEUR_REPUTATION_SEED_MAX];
 int g_kbo_amateur_reputation_seed_count = 0;

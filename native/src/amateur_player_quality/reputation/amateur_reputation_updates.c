@@ -1,4 +1,4 @@
-#include "../internal/amateur_player_quality_internal.h"
+#include "../internal/amateur_assignment_internal.h"
 
 int kbo_find_amateur_team_reputation_by_memory_team(uint32_t league_id, uint8_t* team, uint8_t* out_reputation)
 {

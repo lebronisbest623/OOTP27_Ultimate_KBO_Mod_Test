@@ -42,10 +42,6 @@ int kbo_player_current_assignment_matches_team_or_affiliate(uint8_t* player, uin
         return 1;
     }
 
-    if (current_team_id == 0u) {
-        return 0;
-    }
-
     uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
     if (active_team_id != 0u && kbo_team_id_matches_org_or_affiliate(active_team_id, team_id)) {
         return 1;

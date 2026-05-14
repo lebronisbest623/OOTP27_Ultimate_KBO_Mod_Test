@@ -1,159 +1,68 @@
 #include "../internal/fa_market_policy_internal.h"
+#include "../../core/logging/rule_audit.h"
 
-void kbo_fa_market_write_csv_text(HANDLE file, const char* text)
+static int kbo_fa_market_source_is_interactive_ui(const char* source)
 {
-    if (file == INVALID_HANDLE_VALUE) {
-        return;
+    if (source == NULL) {
+        return 0;
     }
-    kbo_fa_market_write_raw(file, "\"");
-    if (text != NULL) {
-        for (const char* p = text; *p != '\0'; p++) {
-            char ch = *p;
-            if (ch == '"') {
-                kbo_fa_market_write_raw(file, "\"\"");
-            } else {
-                char one[2] = { ch, '\0' };
-                kbo_fa_market_write_raw(file, one);
-            }
-        }
-    }
-    kbo_fa_market_write_raw(file, "\"");
+    return strncmp(source, "f2_webview", 10) == 0
+        || strncmp(source, "f2_text", 7) == 0;
 }
 
-void kbo_write_fa_market_classification_csv(
+static void kbo_fa_market_init_empty_histories(
     const KboFaMarketClassification* rows,
     int row_count,
-    const KboFaMarketScanSummary* summary,
-    const char* source)
+    KboFaMarketHistoryCase* histories,
+    int max_histories)
 {
-    if (rows == NULL || row_count < 0 || summary == NULL) {
+    if (rows == NULL || row_count <= 0 || histories == NULL || max_histories < row_count) {
         return;
     }
-
-    char path[MAX_PATH] = {0};
-    if (!kbo_get_fa_market_classification_csv_path(path, sizeof(path))) {
-        append_log_line("FA market classification: unable to resolve CSV path");
-        return;
-    }
-
-    char dir[MAX_PATH] = {0};
-    snprintf(dir, sizeof(dir), "%s", path);
-    char* slash = strrchr(dir, '\\');
-    if (slash != NULL) {
-        *slash = '\0';
-        CreateDirectoryA(dir, NULL);
-    }
-
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        append_logf("FA market classification: failed to open CSV path=%s gle=%lu", path, GetLastError());
-        return;
-    }
-
-    kbo_fa_market_write_raw(
-        file,
-        "date,source,selected_league_id,player_id,name,nation_id,current_team_id,active_team_id,original_team_id,current_league_id,draft_league_id,age,retired_flag,contract_level,fa_demand,dfa_flag,foreign_flag,draft_class,draft_subtype,draft_eligible,draft_extra,generation_flags,generation_context,generation_grade,generation_special,rights_team_id,kbo_case,kbo_grade,fa_grade_salary,fa_grade_overall_rank,fa_grade_team_rank,fa_grade_snapshot_team_id,fa_grade_snapshot_date,fa_grade_opening_day,fa_grade_auto,fa_grade_team_changed_review,fa_grade_flag,reason\r\n");
-
-    char date[16] = {0};
-    if (summary->today_yyyymmdd != 0u) {
-        snprintf(date, sizeof(date), "%08u", summary->today_yyyymmdd);
-    } else if (!kbo_current_history_date(date, sizeof(date), 2000, source)) {
-        snprintf(date, sizeof(date), "00000000");
-    }
-
+    memset(histories, 0, (SIZE_T)max_histories * sizeof(histories[0]));
     for (int i = 0; i < row_count; i++) {
-        const KboFaMarketClassification* row = &rows[i];
-        char prefix[256] = {0};
-        int len = snprintf(
-            prefix,
-            sizeof(prefix),
-            "%s,%s,%u,%u,",
-            date,
-            source != NULL ? source : "",
-            summary->league_id,
-            row->player_id);
-        if (len <= 0 || len >= (int)sizeof(prefix)) {
-            continue;
-        }
-        kbo_fa_market_write_raw(file, prefix);
-        kbo_fa_market_write_csv_text(file, row->player_name);
-        char middle[320] = {0};
-        len = snprintf(
-            middle,
-            sizeof(middle),
-            ",%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,",
-            row->nation_id,
-            row->current_team_id,
-            row->active_team_id,
-            row->original_team_id,
-            row->current_league_id,
-            row->draft_league_id,
-            (uint32_t)row->age,
-            (uint32_t)row->retired_flag,
-            (uint32_t)row->contract_level,
-            row->fa_demand,
-            (uint32_t)row->dfa,
-            (uint32_t)row->foreign_player,
-            (uint32_t)row->draft_class,
-            (uint32_t)row->draft_subtype,
-            (uint32_t)row->draft_eligible,
-            (uint32_t)row->draft_extra,
-            (uint32_t)row->generation_flags,
-            (uint32_t)row->generation_context,
-            (uint32_t)row->generation_grade,
-            (uint32_t)row->generation_special,
-            row->rights_team_id);
-        if (len <= 0 || len >= (int)sizeof(middle)) {
-            continue;
-        }
-        kbo_fa_market_write_raw(file, middle);
-        kbo_fa_market_write_csv_text(file, row->case_label);
-        kbo_fa_market_write_raw(file, ",");
-        kbo_fa_market_write_csv_text(file, row->grade);
-        char grade_middle[192] = {0};
-        len = snprintf(
-            grade_middle,
-            sizeof(grade_middle),
-            ",%d,%u,%u,%u,%u,%u,%u,%u,",
-            row->fa_grade_salary,
-            row->fa_grade_overall_rank,
-            row->fa_grade_team_rank,
-            row->fa_grade_snapshot_team_id,
-            row->fa_grade_snapshot_date,
-            row->fa_grade_opening_day,
-            (uint32_t)row->fa_grade_auto,
-            (uint32_t)row->fa_grade_team_changed_review);
-        if (len <= 0 || len >= (int)sizeof(grade_middle)) {
-            continue;
-        }
-        kbo_fa_market_write_raw(file, grade_middle);
-        kbo_fa_market_write_csv_text(file, row->fa_grade_flag);
-        kbo_fa_market_write_raw(file, ",");
-        kbo_fa_market_write_csv_text(file, row->reason);
-        kbo_fa_market_write_raw(file, "\r\n");
+        histories[i].player_id = rows[i].player_id;
     }
-
-    CloseHandle(file);
-    append_logf(
-        "FA market classification: rows=%d candidates=%d scanned=%d league=%u salary_snapshot=%d csv=%s",
-        row_count,
-        summary->candidates,
-        summary->scanned,
-        summary->league_id,
-        summary->salary_snapshot_count,
-        path);
 }
 
-int kbo_collect_fa_market_classifications(
+static int kbo_fa_market_try_load_cached_histories_for_ui(
+    KboFaMarketClassification* rows,
+    int row_count,
+    KboFaMarketHistoryCase* histories,
+    int max_histories)
+{
+    if (rows == NULL || row_count <= 0 || histories == NULL || max_histories < row_count) {
+        return 0;
+    }
+
+    char save_path[MAX_PATH] = {0};
+    KboFaMarketFileSignature db_sig = {0};
+    KboFaMarketFileSignature wal_sig = {0};
+    KboFaMarketFileSignature shm_sig = {0};
+    if (kbo_get_current_save_path(save_path, sizeof(save_path))
+            && kbo_fa_market_get_text_data_signatures(save_path, &db_sig, &wal_sig, &shm_sig)
+            && kbo_fa_market_history_cache_matches(save_path, &db_sig, &wal_sig, &shm_sig)) {
+        return kbo_fa_market_copy_history_cache_for_rows(rows, row_count, histories, max_histories);
+    }
+
+    kbo_fa_market_init_empty_histories(rows, row_count, histories, max_histories);
+    return 0;
+}
+
+static int kbo_collect_fa_market_classifications_internal(
     uint32_t requested_league_id,
     KboFaMarketClassification* rows,
     int max_rows,
+    int row_offset,
     KboFaMarketScanSummary* summary,
     int write_csv,
     const char* source)
 {
     if (rows == NULL || max_rows <= 0) {
         return 0;
+    }
+    if (row_offset < 0) {
+        row_offset = 0;
     }
     memset(rows, 0, (SIZE_T)max_rows * sizeof(rows[0]));
     if (summary != NULL) {
@@ -173,13 +82,17 @@ int kbo_collect_fa_market_classifications(
         kbo_get_fa_market_classification_csv_path(summary->csv_path, sizeof(summary->csv_path));
     }
 
+    ULONGLONG started_ms = GetTickCount64();
+
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+        kbo_rule_audit_emitf("fa_market.classification.scan", "skip", "player_vector_unavailable", source, "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u", requested_league_id, league_id, today);
         append_log_line("FA market classification: no player vector");
         return 0;
     }
 
+    ULONGLONG load_started_ms = GetTickCount64();
     KboFaMarketSeedCase* seeds = (KboFaMarketSeedCase*)HeapAlloc(
         GetProcessHeap(),
         HEAP_ZERO_MEMORY,
@@ -202,6 +115,7 @@ int kbo_collect_fa_market_classifications(
         if (salary_grades != NULL) {
             HeapFree(GetProcessHeap(), 0, salary_grades);
         }
+        kbo_rule_audit_emitf("fa_market.classification.scan", "fail", "allocation_failed", source, "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u", requested_league_id, league_id, today);
         append_log_line("FA market classification: allocation failed");
         return 0;
     }
@@ -225,7 +139,9 @@ int kbo_collect_fa_market_classifications(
         snprintf(summary->seed_path, sizeof(summary->seed_path), "%s", seed_path);
         snprintf(summary->salary_snapshot_path, sizeof(summary->salary_snapshot_path), "%s", salary_snapshot_path);
     }
+    ULONGLONG load_ms = GetTickCount64() - load_started_ms;
 
+    ULONGLONG scan_started_ms = GetTickCount64();
     int row_count = 0;
     int candidate_count = 0;
     int scanned = 0;
@@ -241,6 +157,9 @@ int kbo_collect_fa_market_classifications(
             continue;
         }
         candidate_count++;
+        if (candidate_count <= row_offset) {
+            continue;
+        }
         if (row_count >= max_rows) {
             truncated = 1;
             continue;
@@ -274,23 +193,32 @@ int kbo_collect_fa_market_classifications(
         }
         row_count++;
     }
+    ULONGLONG scan_ms = GetTickCount64() - scan_started_ms;
 
     KboFaMarketHistoryCase* histories = NULL;
     int history_count = 0;
+    int interactive_ui = kbo_fa_market_source_is_interactive_ui(source);
+    ULONGLONG history_started_ms = GetTickCount64();
     if (row_count > 0) {
         histories = (KboFaMarketHistoryCase*)HeapAlloc(
             GetProcessHeap(),
             HEAP_ZERO_MEMORY,
             (SIZE_T)row_count * sizeof(KboFaMarketHistoryCase));
         if (histories != NULL) {
-            kbo_load_fa_market_history_cases(rows, row_count, histories, row_count);
+            if (interactive_ui) {
+                kbo_fa_market_try_load_cached_histories_for_ui(rows, row_count, histories, row_count);
+            } else {
+                kbo_load_fa_market_history_cases(rows, row_count, histories, row_count);
+            }
             kbo_fa_market_overlay_filing_history_cases(rows, row_count, histories, row_count);
             history_count = row_count;
         } else {
             append_log_line("FA market classification: history allocation failed");
         }
     }
+    ULONGLONG history_ms = GetTickCount64() - history_started_ms;
 
+    ULONGLONG classify_started_ms = GetTickCount64();
     for (int i = 0; i < row_count; i++) {
         const KboFaMarketHistoryCase* history_case =
             kbo_find_fa_market_history_case(histories, history_count, rows[i].player_id);
@@ -312,6 +240,7 @@ int kbo_collect_fa_market_classifications(
             current_year,
             &fa_rules);
     }
+    ULONGLONG classify_ms = GetTickCount64() - classify_started_ms;
 
     if (row_count > 1) {
         qsort(rows, (size_t)row_count, sizeof(rows[0]), kbo_compare_fa_market_classification_rows);
@@ -331,6 +260,46 @@ int kbo_collect_fa_market_classifications(
         }
     }
 
+    ULONGLONG total_ms = GetTickCount64() - started_ms;
+    if (total_ms >= 100u) {
+        append_logf(
+            "FA market classification timing source=%s rows=%d candidates=%d scanned=%d offset=%d interactive=%d load_ms=%llu scan_ms=%llu history_ms=%llu classify_ms=%llu total_ms=%llu",
+            source != NULL ? source : "",
+            row_count,
+            candidate_count,
+            scanned,
+            row_offset,
+            interactive_ui,
+            (unsigned long long)load_ms,
+            (unsigned long long)scan_ms,
+            (unsigned long long)history_ms,
+            (unsigned long long)classify_ms,
+            (unsigned long long)total_ms);
+    }
+    kbo_rule_audit_emitf(
+        "fa_market.classification.scan",
+        row_count > 0 ? "classify" : "scan_empty",
+        row_count > 0 ? "candidates_classified" : "no_candidates",
+        source,
+        "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u,\"current_year\":%u,"
+        "\"rows\":%d,\"candidates\":%d,\"scanned\":%d,\"truncated\":%d,"
+        "\"seed_count\":%d,\"requalification_count\":%d,\"salary_snapshot\":%d,"
+        "\"write_csv\":%d,\"csv_written\":%d,\"total_ms\":%llu",
+        requested_league_id,
+        league_id,
+        today,
+        current_year,
+        row_count,
+        candidate_count,
+        scanned,
+        truncated,
+        seed_count,
+        requalification_count,
+        salary_grade_count,
+        write_csv,
+        summary != NULL ? summary->csv_written : 0,
+        (unsigned long long)total_ms);
+
     HeapFree(GetProcessHeap(), 0, seeds);
     HeapFree(GetProcessHeap(), 0, records);
     HeapFree(GetProcessHeap(), 0, salary_grades);
@@ -338,5 +307,42 @@ int kbo_collect_fa_market_classifications(
         HeapFree(GetProcessHeap(), 0, histories);
     }
     return row_count;
+}
+
+int kbo_collect_fa_market_classifications(
+    uint32_t requested_league_id,
+    KboFaMarketClassification* rows,
+    int max_rows,
+    KboFaMarketScanSummary* summary,
+    int write_csv,
+    const char* source)
+{
+    return kbo_collect_fa_market_classifications_internal(
+        requested_league_id,
+        rows,
+        max_rows,
+        0,
+        summary,
+        write_csv,
+        source);
+}
+
+int kbo_collect_fa_market_classifications_page(
+    uint32_t requested_league_id,
+    KboFaMarketClassification* rows,
+    int max_rows,
+    int row_offset,
+    KboFaMarketScanSummary* summary,
+    int write_csv,
+    const char* source)
+{
+    return kbo_collect_fa_market_classifications_internal(
+        requested_league_id,
+        rows,
+        max_rows,
+        row_offset,
+        summary,
+        write_csv,
+        source);
 }
 

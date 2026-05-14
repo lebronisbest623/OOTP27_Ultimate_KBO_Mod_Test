@@ -1,5 +1,6 @@
 #include "..\amateur_assignment_ortools_internal.h"
 #include "../../policy/amateur_assignment_policy_values.h"
+#include "../../../../core/logging/rule_audit.h"
 
 void kbo_amateur_apply_deferred_original_fallback(
     KboAmateurDeferredTeamAdd* deferred_team_adds,
@@ -36,6 +37,7 @@ void kbo_amateur_apply_deferred_original_fallback(
         }
     }
     if (deferred_count > 0) {
+        kbo_rule_audit_emitf("amateur.assignment.deferred_fallback", "apply_original", reason, "amateur_assignment", "\"league_id\":%u,\"applied\":%d,\"deferred\":%d,\"skipped_cross_league\":%d", league_id, applied, deferred_count, skipped_cross_league);
         append_logf(
             "amateur deferred team-add fallback applied league=%u applied=%d/%d skipped_cross_league=%d reason=%s",
             league_id,
@@ -71,6 +73,9 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
             || accumulated_players <= 1
             || accumulated_teams <= 0
             || (!force && GetTickCount() - g_kbo_amateur_league_batch_last_tick < idle_ms)) {
+        if (force) {
+            kbo_rule_audit_emitf("amateur.assignment.ortools_batch", "skip", "batch_not_ready", reason, "\"league_id\":%u,\"players\":%d,\"teams\":%d,\"force\":%d,\"idle_ms\":%lu", league_id, accumulated_players, accumulated_teams, force ? 1 : 0, (unsigned long)idle_ms);
+        }
         kbo_amateur_batch_unlock();
         return 0;
     }
@@ -99,6 +104,7 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
         }
     }
     if (optimizer_player_count <= 1) {
+        kbo_rule_audit_emitf("amateur.assignment.ortools_batch", "fallback", "no_optimizer_players", reason, "\"league_id\":%u,\"players\":%d,\"teams\":%d,\"deferred\":%d", league_id, optimizer_player_count, accumulated_teams, deferred_count);
         kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "no_optimizer_players");
         return 0;
     }
@@ -106,6 +112,7 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
     KboAmateurAssignmentCandidate* candidates = NULL;
     int count = kbo_amateur_assignment_get_cached_candidates(league_id, &candidates);
     if (count <= 1 || candidates == NULL) {
+        kbo_rule_audit_emitf("amateur.assignment.ortools_batch", "fallback", "no_candidates", reason, "\"league_id\":%u,\"players\":%d,\"teams\":%d,\"candidates\":%d,\"deferred\":%d", league_id, optimizer_player_count, accumulated_teams, count, deferred_count);
         kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "no_candidates");
         return 0;
     }
@@ -117,6 +124,7 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
     if (!kbo_amateur_ortools_get_tool_path(tool_path, sizeof(tool_path), &is_python_script)
             || !kbo_get_save_scoped_data_file("amateur_assignment_ortools_batch_request.csv", request_path, sizeof(request_path))
             || !kbo_get_save_scoped_data_file("amateur_assignment_ortools_batch_result.csv", result_path, sizeof(result_path))) {
+        kbo_rule_audit_emitf("amateur.assignment.ortools_batch", "fallback", "path_unavailable", reason, "\"league_id\":%u,\"players\":%d,\"teams\":%d,\"candidates\":%d,\"deferred\":%d", league_id, optimizer_player_count, accumulated_teams, count, deferred_count);
         kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "path_unavailable");
         return 0;
     }
@@ -130,14 +138,17 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
             candidates,
             count,
             deferred_count > 0)) {
+        kbo_rule_audit_emitf("amateur.assignment.ortools_batch", "fallback", "write_failed", reason, "\"league_id\":%u,\"players\":%d,\"teams\":%d,\"candidates\":%d,\"deferred\":%d", league_id, optimizer_player_count, accumulated_teams, count, deferred_count);
         kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "write_failed");
         return 0;
     }
     if (!kbo_amateur_ortools_run(tool_path, is_python_script, request_path, result_path)) {
+        kbo_rule_audit_emitf("amateur.assignment.ortools_batch", "fallback", "ortools_failed", reason, "\"league_id\":%u,\"players\":%d,\"teams\":%d,\"candidates\":%d,\"deferred\":%d", league_id, optimizer_player_count, accumulated_teams, count, deferred_count);
         kbo_amateur_apply_deferred_original_fallback(deferred_team_adds, deferred_count, league_id, "ortools_failed");
         return 0;
     }
     int assigned = kbo_amateur_ortools_read_batch_result(result_path, league_id);
+    kbo_rule_audit_emitf("amateur.assignment.ortools_batch", "optimize", "result_loaded", reason, "\"league_id\":%u,\"players\":%d,\"teams\":%d,\"candidates\":%d,\"assignments\":%d,\"deferred\":%d", league_id, optimizer_player_count, accumulated_teams, count, assigned, deferred_count);
     append_logf(
         "amateur OR-Tools league batch prepared league=%u teams=%d/%d players=%d assignments=%d deferred=%d reason=%s",
         league_id,
@@ -251,6 +262,7 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
         }
     }
     if (deferred_count > 0) {
+        kbo_rule_audit_emitf("amateur.assignment.deferred_apply", "apply_batch", reason, "amateur_assignment", "\"league_id\":%u,\"applied\":%d,\"deferred\":%d,\"fallback_original\":%d,\"target_not_found\":%d,\"target_add_failed\":%d,\"source_retry\":%d,\"still_failed\":%d", league_id, applied, deferred_count, fallback_applied, target_not_found, target_add_failed, source_retry_applied, still_failed);
         append_logf(
             "amateur deferred team-add batch applied league=%u applied=%d/%d fallback_original=%d target_not_found=%d target_add_failed=%d source_retry_applied=%d still_failed=%d",
             league_id,

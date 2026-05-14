@@ -1,7 +1,7 @@
 # Historical KBO FA seed.
 # Generated from the NamuWiki historical KBO FA page via namu.moe on 2026-05-14.
 # This file intentionally follows the compact bundled-seed style: no save-scoped numeric OOTP ids, only stable player_key/team_code fields.
-# player_key is an OOTP export key resolved from cbt_player_team_seasons_seed.csv using romanized player name plus team context and manual review for same-name rows.
+# player_key is an OOTP export key resolved from player_team_seasons_seed.csv using romanized player name plus team context and manual review for same-name rows.
 # compensation_player_key uses the signing team context because compensation players come from the acquiring club.
 # Rows whose FA player_key could not be resolved remain excluded and are listed in obj/reports/historical_fa_seed_unmapped.csv.
 # team_code uses existing seed codes: LG, HH, SSG, SAM, NC, kt, LOT, KIA, DOO, KIW. Defunct Hyundai/Heroes-era rows are folded into KIW.

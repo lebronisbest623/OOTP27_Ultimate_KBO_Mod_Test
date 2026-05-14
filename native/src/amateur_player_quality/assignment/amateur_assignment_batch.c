@@ -1,4 +1,4 @@
-#include "../internal/amateur_player_quality_internal.h"
+#include "../internal/amateur_assignment_internal.h"
 
 __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
     uintptr_t player_list_ptr,

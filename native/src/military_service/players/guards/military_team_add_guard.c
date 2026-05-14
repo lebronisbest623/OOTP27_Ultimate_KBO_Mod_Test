@@ -14,6 +14,28 @@
 #include "../team_policy/military_service_team_policy.h"
 #include "military_team_add_guard.h"
 
+int kbo_military_player_has_active_service_assignment(uintptr_t player_ptr, uint32_t service_team_id)
+{
+    if (!kbo_player_pointer_plausible(player_ptr)
+            || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    uint8_t* player = (uint8_t*)player_ptr;
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    if (player_id == 0u) {
+        return 0;
+    }
+
+    int active_index = find_active_kbo_military_loan_index(player_id);
+    int32_t days_left = kbo_military_days_left(player);
+    uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
+    uint32_t loan_team_id = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+    return active_index >= 0
+        || (military_active != 0u && days_left > 0)
+        || (service_team_id != 0u && loan_team_id == service_team_id && days_left > 0);
+}
+
 int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t player_ptr)
 {
     KBO_PROFILE_BEGIN(profile_military_team_add_should_block);

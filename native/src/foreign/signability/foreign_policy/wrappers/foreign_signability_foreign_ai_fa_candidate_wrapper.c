@@ -55,7 +55,9 @@ static void kbo_ai_fa_status_ensure_injury_records_throttled(void)
     if (InterlockedCompareExchange(&ensure_guard, 1, 0) != 0) {
         return;
     }
-    kbo_ensure_foreign_injury_replacements_loaded();
+    if (kbo_foreign_injury_replacements_loaded_for_current_save()) {
+        kbo_ensure_foreign_injury_replacements_loaded();
+    }
     InterlockedExchange(&last_ensure_tick, (LONG)GetTickCount());
     InterlockedExchange(&ensure_guard, 0);
 }

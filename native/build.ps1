@@ -352,13 +352,17 @@ else {
         Write-Host "Compiling $(Get-PathRelativeToRoot -Path $Source)"
         $PreviousErrorActionPreference = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
-        $GccOutput = & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
-            -isystem $WebView2Include `
-            -MMD -MP -MF $DepPath `
-            -c $Source `
-            -o $ObjectPath 2>&1
-        $GccExitCode = $LASTEXITCODE
-        $ErrorActionPreference = $PreviousErrorActionPreference
+        try {
+            $GccOutput = & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
+                -isystem $WebView2Include `
+                -MMD -MP -MF $DepPath `
+                -c $Source `
+                -o $ObjectPath 2>&1
+            $GccExitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $PreviousErrorActionPreference
+        }
         $GccOutput | ForEach-Object { Write-Host $_ }
         if ($GccExitCode -ne 0) {
             throw "Failed to compile $Source"

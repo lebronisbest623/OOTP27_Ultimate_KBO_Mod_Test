@@ -374,10 +374,10 @@ The F2 hub uses the following internal grouping:
 - `ui_html_helpers/`: small HTML helper routines that are shared by multiple
   views
 
-Current debt: the top-level file explosion is gone, but
-`hotkey_window_runtime_internal.h` is still a broad private contract. Future
-cleanup should replace that broad internal header with smaller runtime, command,
-content, and WebView contracts.
+The top-level file explosion is gone and the broad `hotkey_window_runtime_internal.h`
+has been replaced by narrower contracts: `hotkey_window_domain_contract.h`,
+`hotkey_window_runtime_shared.h`, and per-area internals under `content/`,
+`webview/`, and `window/`.
 
 ## Thread Lifecycle
 
@@ -398,26 +398,19 @@ avoid introducing loops that cannot observe the runtime stop flag.
 These are the current high-cost areas. They are not new precedent; they are the
 next cleanup targets.
 
-1. `native/src/hotkey_window/runtime/hotkey_window_runtime_internal.h` is a
-   broad private contract. It should be narrowed into smaller runtime,
-   command, content, and WebView contracts.
-2. `native/src/military_service/runtime/internal/military_service_internal.h`
-   still collects multiple runtime responsibilities behind a broad internal
-   contract.
-3. Runtime flag booleans are manifest-generated, but broader F2 command routes
+1. Runtime flag booleans are manifest-generated, but broader F2 command routes
    and numeric settings remain hand-maintained.
-4. Supported-build rows are generated, but build-specific RVA maps are still
+2. Supported-build rows are generated, but build-specific RVA maps are still
    hand-maintained.
-5. Several mechanically migrated domain areas still carry temporary internal
-   headers and broad responsibility names. The worst cleanup targets are
-   `foreign/signability/`, `patch_installers/foreign/`,
-   `amateur_player_quality/`, and
-   `fa_market_classification/`. Custom events, patch installers, military
-   service, and foreign-player policy now have folder-level ownership, but broad
-   private contracts remain in
-   `native/src/military_service/runtime/internal/military_service_internal.h`
-   and
-   `native/src/foreign/waiver_window/foreign_waiver_window_internal.h`.
+3. `foreign/signability/` still carries internal headers across its subfolders
+   (`foreign_policy/internal/`, `submit_offer_probe/internal/`). Folder-level
+   ownership exists but the broad private contracts have not been narrowed.
+4. `amateur_player_quality/` internal headers have been split into
+   `amateur_assignment_internal.h` and `amateur_reputation_internal.h`, but
+   both remain broad relative to the assignment and reputation lifecycles.
+5. `fa_market_classification/` internal headers have been split into
+   `fa_market_data_internal.h` and `fa_market_policy_internal.h`. Further
+   narrowing can follow the same pattern as other resolved areas.
 6. Source-fragment include files have been removed from native source. New
    native work should stay in owned `.c/.h` modules, including generated tables.
 
@@ -426,14 +419,12 @@ next cleanup targets.
 Do not resume broad mechanical migration just to move lines around. The next
 steps should close one responsibility boundary at a time:
 
-1. Narrow the F2 hub private contracts now that the files are grouped into
-   runtime, views, support, and state folders.
-2. Split remaining broad domain `_internal.h` contracts into state, lifecycle,
-   command, scanner, or IO-owned headers.
-3. Move build-specific RVA data into generated sources.
-4. Continue splitting or regrouping domain modules only when the new file owns a clear
+1. Split remaining broad domain `_internal.h` contracts into state, lifecycle,
+   command, scanner, or IO-owned headers. Current targets: `foreign/signability/`.
+2. Move build-specific RVA data into generated sources.
+3. Continue splitting or regrouping domain modules only when the new file owns a clear
    lifecycle, table, scanner, policy, or parser.
-5. Remove temporary `_internal.h` headers when their declarations can move to
+4. Remove temporary `_internal.h` headers when their declarations can move to
    narrow owned headers without creating cycles.
 
 Each code-change commit should close one subsystem or one responsibility unit.

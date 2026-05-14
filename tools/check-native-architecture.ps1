@@ -297,11 +297,7 @@ foreach ($GeneratedFile in $GeneratedFiles) {
 }
 
 if ($IncludeDebt) {
-    $DebtFiles = @(
-        "hotkey_window/runtime/hotkey_window_runtime_internal.h",
-        "military_service/runtime/internal/military_service_internal.h",
-        "foreign/waiver_window/foreign_waiver_window_internal.h"
-    )
+    $DebtFiles = @()
 
     foreach ($DebtFile in $DebtFiles) {
         $FullPath = Join-Path $NativeSrc ($DebtFile -replace '/', '\')

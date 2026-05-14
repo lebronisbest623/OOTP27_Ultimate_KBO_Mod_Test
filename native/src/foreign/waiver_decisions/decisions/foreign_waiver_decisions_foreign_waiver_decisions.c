@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../../../core/logging/rule_audit.h"
 #include "../../../core/csv/core_csv.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/paths/foreign_waiver_paths.h"
@@ -27,6 +28,7 @@ int kbo_append_foreign_waiver_decision_record(
 
     char path[MAX_PATH] = {0};
     if (!get_kbo_foreign_waiver_decisions_path(path, sizeof(path))) {
+        kbo_rule_audit_emitf("foreign_waiver.decision_record", "fail", "path_unavailable", source, "\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u", action, team_id, player_id);
         return 0;
     }
 
@@ -54,6 +56,7 @@ int kbo_append_foreign_waiver_decision_record(
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
+        kbo_rule_audit_emitf("foreign_waiver.decision_record", "fail", "open_failed", source, "\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u,\"date\":%u", action, team_id, player_id, today);
         return 0;
     }
 
@@ -86,6 +89,22 @@ int kbo_append_foreign_waiver_decision_record(
 
     CloseHandle(file);
     InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
+    kbo_rule_audit_emitf(
+        "foreign_waiver.decision_record",
+        ok ? "write_record" : "fail",
+        ok ? "decision_recorded" : "write_failed",
+        source,
+        "\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u,\"score\":%d,"
+        "\"forced\":%d,\"executed\":%d,\"date\":%u,\"window_start\":%u,\"window_end\":%u",
+        action,
+        team_id,
+        player_id,
+        score,
+        forced ? 1 : 0,
+        executed ? 1 : 0,
+        today,
+        window_start,
+        window_end);
     return ok;
 }
 

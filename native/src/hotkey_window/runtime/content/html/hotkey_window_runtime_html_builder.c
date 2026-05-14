@@ -4,11 +4,12 @@
 
 WCHAR* kbo_build_webview_hub_html(void)
 {
-    const size_t html_cap = 1572864;
+    const size_t html_cap = 8388608;
     char* html = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, html_cap);
     if (html == NULL) {
         return NULL;
     }
+    KBO_PROFILE_BEGIN(profile_webview_build_html);
     KboWindowTextBuffer buffer;
     buffer.data = html;
     buffer.capacity = html_cap;
@@ -191,11 +192,14 @@ WCHAR* kbo_build_webview_hub_html(void)
     kbo_html_append_escaped(&buffer, kbo_hub_current_view_subtitle());
     kbo_window_text_appendf(&buffer, "</p></div><section class='content'>");
 
+    KBO_PROFILE_BEGIN(profile_webview_selected_view);
     kbo_webview_append_selected_view(&buffer, current_year, window_status);
+    KBO_PROFILE_END(profile_webview_selected_view, "webview.build_html.selected_view");
     kbo_window_text_appendf(&buffer, "</section></main></div>");
     kbo_webview_append_roster_sort_script(&buffer);
     kbo_window_text_appendf(&buffer, "</body></html>");
 
+    KBO_PROFILE_BEGIN(profile_webview_wide);
     int wide_len = MultiByteToWideChar(CP_UTF8, 0, html, -1, NULL, 0);
     WCHAR* wide = NULL;
     if (wide_len > 0) {
@@ -204,7 +208,9 @@ WCHAR* kbo_build_webview_hub_html(void)
             MultiByteToWideChar(CP_UTF8, 0, html, -1, wide, wide_len);
         }
     }
+    KBO_PROFILE_END(profile_webview_wide, "webview.build_html.utf8_to_wide");
     HeapFree(GetProcessHeap(), 0, html);
+    KBO_PROFILE_END(profile_webview_build_html, "webview.build_html.total");
     return wide;
 }
 
@@ -213,10 +219,12 @@ void kbo_webview_navigate_current(void)
     if (g_kbo_webview == NULL) {
         return;
     }
+    KBO_PROFILE_BEGIN(profile_webview_navigate);
     WCHAR* html = kbo_build_webview_hub_html();
     if (html != NULL) {
         ICoreWebView2_NavigateToString(g_kbo_webview, html);
         HeapFree(GetProcessHeap(), 0, html);
     }
+    KBO_PROFILE_END(profile_webview_navigate, "webview.navigate_current");
 }
 

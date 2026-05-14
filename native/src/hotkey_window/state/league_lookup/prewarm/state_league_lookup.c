@@ -1,4 +1,7 @@
 #include "../internal/state_league_lookup_internal.h"
+#include "../../../../core/core_flags/api/flags_api.h"
+
+static volatile LONG g_kbo_league_display_cache_prewarm_running = 0;
 
 void kbo_hub_prewarm_league_display_cache(void)
 {
@@ -25,6 +28,35 @@ void kbo_hub_prewarm_league_display_cache(void)
         league_count,
         found,
         (unsigned long long)(GetTickCount64() - started_ms));
+}
+
+static DWORD WINAPI kbo_hub_league_display_cache_prewarm_thread(LPVOID parameter)
+{
+    (void)parameter;
+    kbo_hub_prewarm_league_display_cache();
+    InterlockedExchange(&g_kbo_league_display_cache_prewarm_running, 0);
+    return 0;
+}
+
+void kbo_hub_queue_league_display_cache_prewarm(void)
+{
+    kbo_hub_refresh_league_cache_context();
+    uintptr_t global = g_kbo_league_display_cache_global;
+    if (global == 0 || g_kbo_league_display_cache_prewarmed_global == global) {
+        return;
+    }
+
+    if (InterlockedCompareExchange(&g_kbo_league_display_cache_prewarm_running, 1, 0) != 0) {
+        return;
+    }
+
+    if (!kbo_start_runtime_thread(
+            kbo_hub_league_display_cache_prewarm_thread,
+            NULL,
+            "F2 league display cache prewarm")) {
+        InterlockedExchange(&g_kbo_league_display_cache_prewarm_running, 0);
+        append_log_line("KBO: F2 league cache prewarm queue failed");
+    }
 }
 
 uintptr_t kbo_find_league_ptr(uint32_t league_id)

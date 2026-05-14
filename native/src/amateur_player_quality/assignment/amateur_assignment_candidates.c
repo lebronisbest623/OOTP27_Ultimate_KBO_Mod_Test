@@ -1,4 +1,4 @@
-#include "../internal/amateur_player_quality_internal.h"
+#include "../internal/amateur_assignment_internal.h"
 
 uint32_t kbo_amateur_assignment_candidate_weight(
     uint32_t league_id,

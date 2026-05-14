@@ -139,6 +139,7 @@ void kbo_build_foreign_policy_hub_text(char* out, size_t out_size)
         return;
     }
     out[0] = '\0';
+    kbo_foreign_injury_replacement_scan_once("foreign_policy_text");
 
     KboWindowTextBuffer buffer;
     buffer.data     = out;

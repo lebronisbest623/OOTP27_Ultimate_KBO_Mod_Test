@@ -1,7 +1,7 @@
 #ifndef KBOFIX_AMATEUR_ASSIGNMENT_ORTOOLS_INTERNAL_H_
 #define KBOFIX_AMATEUR_ASSIGNMENT_ORTOOLS_INTERNAL_H_
 
-#include "../../internal/amateur_player_quality_internal.h"
+#include "../../internal/amateur_assignment_internal.h"
 
 typedef struct KboAmateurBatchAssignment {
     uint32_t player_id;

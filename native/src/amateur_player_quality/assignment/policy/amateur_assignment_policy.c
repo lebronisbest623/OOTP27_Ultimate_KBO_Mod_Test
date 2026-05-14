@@ -1,4 +1,4 @@
-#include "../../internal/amateur_player_quality_internal.h"
+#include "../../internal/amateur_assignment_internal.h"
 
 int kbo_amateur_assignment_already_processed(uint32_t player_id, uint32_t team_id)
 {

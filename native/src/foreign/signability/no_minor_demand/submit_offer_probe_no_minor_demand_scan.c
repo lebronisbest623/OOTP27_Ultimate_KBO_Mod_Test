@@ -1,5 +1,14 @@
 #include "submit_offer_probe_no_minor_demand_internal.h"
 
+static volatile LONG g_kbo_no_minor_background_scan_date = 0;
+static volatile LONG g_kbo_no_minor_background_scan_player_count = 0;
+static volatile LONG g_kbo_no_minor_background_scan_changed = 1;
+
+static int kbo_no_minor_is_background_prescan(const char* source)
+{
+    return source != NULL && strcmp(source, "background_prescan") == 0;
+}
+
 int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
 {
     KBO_PROFILE_BEGIN(profile_no_minor_scan);
@@ -70,6 +79,15 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         return 0;
     }
     KBO_PROFILE_END(profile_no_minor_scan_find_vector, "no_minor.scan.find_player_vector");
+
+    int background_prescan = kbo_no_minor_is_background_prescan(source);
+    if (background_prescan
+            && (uint32_t)InterlockedCompareExchange(&g_kbo_no_minor_background_scan_date, 0, 0) == today
+            && InterlockedCompareExchange(&g_kbo_no_minor_background_scan_player_count, 0, 0) == player_count
+            && InterlockedCompareExchange(&g_kbo_no_minor_background_scan_changed, 0, 0) == 0) {
+        KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.cached_unchanged");
+        return 0;
+    }
 
     const char* snapshot_failure_reason = NULL;
     KBO_PROFILE_BEGIN(profile_no_minor_scan_snapshot);
@@ -219,6 +237,11 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             level_observed_nonmajor,
             salary_floor,
             summary_slot);
+    }
+    if (background_prescan) {
+        InterlockedExchange(&g_kbo_no_minor_background_scan_date, (LONG)today);
+        InterlockedExchange(&g_kbo_no_minor_background_scan_player_count, (LONG)player_count);
+        InterlockedExchange(&g_kbo_no_minor_background_scan_changed, changed > 0 ? 1 : 0);
     }
     KBO_PROFILE_END(profile_no_minor_scan, changed > 0
         ? "no_minor.scan.total_changed"

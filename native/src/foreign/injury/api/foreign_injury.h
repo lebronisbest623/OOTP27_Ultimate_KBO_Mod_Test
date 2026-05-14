@@ -34,11 +34,14 @@ const char* kbo_foreign_injury_slot_label(uint8_t slot_type);
 const char* kbo_foreign_injury_status_label(uint8_t status);
 int kbo_foreign_injury_status_uses_slot(uint8_t status);
 uint8_t kbo_foreign_injury_slot_type_for_player(uint8_t* player);
+int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id);
+int kbo_foreign_injury_player_excluded_from_foreign_count(uint32_t team_id, uint32_t player_id);
 void kbo_lock_foreign_injury_replacements(void);
 void kbo_unlock_foreign_injury_replacements(void);
 
 int kbo_foreign_injury_replacement_enabled(void);
 void kbo_ensure_foreign_injury_replacements_loaded(void);
+int kbo_foreign_injury_replacements_loaded_for_current_save(void);
 int kbo_team_has_foreign_injury_slot_for_candidate(
     uint32_t team_id,
     uint8_t slot_type,

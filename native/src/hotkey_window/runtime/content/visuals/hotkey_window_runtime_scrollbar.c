@@ -235,7 +235,7 @@ void kbo_show_or_hide_hotkey_window(void)
         SetWindowLongPtrA(hwnd, GWLP_HWNDPARENT, (LONG_PTR)owner);
     }
 
-    kbo_hub_prewarm_league_display_cache();
+    kbo_hub_queue_league_display_cache_prewarm();
     kbo_refresh_hotkey_window();
     kbo_hub_apply_fixed_window_placement(hwnd, 0);
     ShowWindow(hwnd, SW_SHOWNORMAL);

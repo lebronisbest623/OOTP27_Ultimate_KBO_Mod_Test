@@ -16,6 +16,7 @@
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/news/live/core_live_news.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/logging/rule_audit.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../../team/lookup/team_lookup.h"
@@ -57,6 +58,8 @@ extern LONG g_kbo_foreign_injury_replacement_thread_started;
 int kbo_foreign_injury_replacement_enabled(void);
 int kbo_foreign_injury_status_uses_slot(uint8_t status);
 uint8_t kbo_foreign_injury_slot_type_for_player(uint8_t* player);
+int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id);
+int kbo_foreign_injury_player_excluded_from_foreign_count(uint32_t team_id, uint32_t player_id);
 const char* kbo_foreign_injury_slot_label(uint8_t slot_type);
 const char* kbo_foreign_injury_status_label(uint8_t status);
 void kbo_lock_foreign_injury_replacements(void);
@@ -81,6 +84,7 @@ int kbo_import_foreign_injury_replacement_seed_file_locked(
     const char* source);
 int kbo_persist_foreign_injury_replacements_locked(void);
 void kbo_ensure_foreign_injury_replacements_loaded(void);
+int kbo_foreign_injury_replacements_loaded_for_current_save(void);
 int kbo_find_foreign_injury_replacement_locked(uint32_t injured_player_id, int include_closed);
 int kbo_team_has_foreign_injury_slot_locked(uint32_t team_id, uint8_t slot_type, uint32_t* out_injured_player_id);
 int kbo_team_has_foreign_injury_slot(uint32_t team_id, uint8_t slot_type, uint32_t* out_injured_player_id);

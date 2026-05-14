@@ -50,6 +50,13 @@
       ]
     },
     {
+      "id": "credits",
+      "label": "Credits",
+      "files": [
+        { "path": "mod_credits.json", "source": "credits/mod_credits.json", "label": "Mod credits", "kind": "credits" }
+      ]
+    },
+    {
       "id": "economy_and_fa",
       "label": "Economy and FA",
       "files": [

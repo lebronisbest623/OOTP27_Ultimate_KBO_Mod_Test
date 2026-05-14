@@ -36,6 +36,7 @@ int g_kbo_hub_selected_agames_subview = 0;
 int g_kbo_hub_selected_military_subview = 0;
 int g_kbo_hub_selected_fa_subview = 0;
 int g_kbo_hub_selected_cbt_subview = 0;
+int g_kbo_hub_fa_market_page = 0;
 uint32_t g_kbo_hub_selected_fa_compensation_player_id = 0u;
 uint32_t g_kbo_hub_selected_military_results_year = 0;
 RECT g_kbo_hub_refresh_rect = {0, 0, 0, 0};

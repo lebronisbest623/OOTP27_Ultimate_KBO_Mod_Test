@@ -1,6 +1,7 @@
 #include "cbt_events.h"
 
 #include <stdio.h>
+#include <windows.h>
 
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
@@ -12,11 +13,24 @@
 #include "../../custom_events/runtime/state/custom_event_state.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../hotkey_window/api/hotkey_window_refresh.h"
+#include "../../runtime_memory/runtime_memory.h"
 #include "../api/competitive_balance_tax.h"
+#include "../audit/cbt_rule_audit.h"
 #include "../exceptions/cbt_exceptions.h"
 #include "../rules/cbt_rules.h"
 
 static volatile LONG g_kbo_cbt_event_scheduler_started = 0;
+static volatile LONG64 g_kbo_cbt_last_no_date_log_ms = 0;
+
+static int kbo_cbt_should_log_no_date(void)
+{
+    ULONGLONG now = GetTickCount64();
+    LONG64 last = InterlockedCompareExchange64(&g_kbo_cbt_last_no_date_log_ms, 0, 0);
+    if (last > 0 && now >= (ULONGLONG)last && now - (ULONGLONG)last < 30000ull) {
+        return 0;
+    }
+    return InterlockedCompareExchange64(&g_kbo_cbt_last_no_date_log_ms, (LONG64)now, last) == last;
+}
 
 int kbo_schedule_cbt_custom_events(const char* source)
 {
@@ -24,7 +38,10 @@ int kbo_schedule_cbt_custom_events(const char* source)
     uint32_t month = 0u;
     uint32_t day = 0u;
     if (!kbo_current_date_is_valid(&year, &month, &day)) {
-        append_logf("KBO CBT event schedule skipped source=%s reason=current_date_unavailable", source != NULL ? source : "");
+        if (kbo_cbt_should_log_no_date()) {
+            kbo_cbt_audit_event_schedule("skip", "current_date_unavailable", source, 0u, 0u, 0u, 0u, 0u, 0u, 0, 0, 0, 0, 0);
+            append_logf("KBO CBT event schedule skipped source=%s reason=current_date_unavailable", source != NULL ? source : "");
+        }
         return -1;
     }
 
@@ -39,6 +56,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
                 source != NULL ? source : "",
                 year,
                 today);
+            kbo_cbt_audit_event_schedule("skip", "opening_day_unavailable", source, year, today, 0u, 0u, 0u, 0u, 0, 0, 0, 0, 0);
         }
         return -1;
     }
@@ -48,11 +66,13 @@ int kbo_schedule_cbt_custom_events(const char* source)
     uint32_t deadline = kbo_add_days_yyyymmdd(opening_day, rules.exception_deadline_days_after_opening);
     uint32_t announcement = kbo_add_days_yyyymmdd(opening_day, rules.announcement_days_after_opening);
     if (deadline == 0u || announcement == 0u || today > announcement) {
+        kbo_cbt_audit_event_schedule("skip", "date_window", source, year, today, 0u, opening_day, deadline, announcement, 0, 0, 0, 0, 0);
         return 0;
     }
 
     uint32_t league_id = kbo_resolve_kbo_league_id();
     if (league_id == 0u) {
+        kbo_cbt_audit_event_schedule("skip", "league_id_unavailable", source, year, today, 0u, opening_day, deadline, announcement, 0, 0, 0, 0, 0);
         append_logf("KBO CBT event schedule skipped source=%s reason=league_id_unavailable season=%u", source != NULL ? source : "", year);
         return -1;
     }
@@ -67,6 +87,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
             "KBO CBT event schedule skipped source=%s reason=title_unavailable season=%u",
             source != NULL ? source : "",
             year);
+        kbo_cbt_audit_event_schedule("fail", "title_unavailable", source, year, today, league_id, opening_day, deadline, announcement, 0, 0, 0, 0, 0);
         return -1;
     }
 
@@ -137,6 +158,21 @@ int kbo_schedule_cbt_custom_events(const char* source)
         pruned_deadline,
         pruned_announcement,
         deadline_exists && announcement_exists);
+    kbo_cbt_audit_event_schedule(
+        (deadline_exists && announcement_exists) ? "ready" : "fail",
+        (created_deadline || created_announcement) ? "created_or_existing_events" : "existing_or_past_events",
+        source,
+        year,
+        today,
+        league_id,
+        opening_day,
+        deadline,
+        announcement,
+        created_deadline,
+        created_announcement,
+        pruned_deadline,
+        pruned_announcement,
+        deadline_exists && announcement_exists);
     return (deadline_exists && announcement_exists) ? (created_deadline || created_announcement) : -1;
 }
 
@@ -149,8 +185,11 @@ static DWORD WINAPI kbo_cbt_event_scheduler_thread(LPVOID parameter)
     kbo_cbt_rules_load(&rules);
     for (uint32_t attempt = 1u; attempt <= rules.event_scheduler_max_attempts && kbo_runtime_threads_should_continue(); attempt++) {
         uint32_t today = 0u;
-        kbo_get_current_yyyymmdd(&today);
-        int result = kbo_schedule_cbt_custom_events("cbt_early_event_scheduler");
+        int result = -1;
+        if (get_ootp_cached_global_database() != 0u) {
+            kbo_get_current_yyyymmdd(&today);
+            result = kbo_schedule_cbt_custom_events("cbt_early_event_scheduler");
+        }
         if (result >= 0) {
             append_logf(
                 "KBO CBT event scheduler ready attempt=%d today=%u result=%d",
@@ -200,6 +239,7 @@ int kbo_handle_cbt_deadline_event(uint32_t event_yyyymmdd, const char* source)
 {
     uint32_t season = event_yyyymmdd / 10000u;
     kbo_cbt_exception_auto_designate_missing(season, "cbt_deadline_event");
+    kbo_cbt_audit_event_handler("apply_exception_designations", "deadline_event", source, event_yyyymmdd, season);
     append_logf(
         "KBO CBT exception designation deadline reached source=%s date=%u",
         source != NULL ? source : "",
@@ -212,6 +252,7 @@ int kbo_handle_cbt_announcement_event(uint32_t event_yyyymmdd, const char* sourc
 {
     uint32_t season = event_yyyymmdd / 10000u;
     kbo_cbt_exception_auto_designate_missing(season, "cbt_announcement_event");
+    kbo_cbt_audit_event_handler("process_tax", "announcement_event", source, event_yyyymmdd, season);
     append_logf(
         "KBO CBT announcement event reached source=%s date=%u season=%u",
         source != NULL ? source : "",
