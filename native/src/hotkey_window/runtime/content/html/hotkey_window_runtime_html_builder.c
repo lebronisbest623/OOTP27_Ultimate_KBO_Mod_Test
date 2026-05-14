@@ -62,6 +62,7 @@ WCHAR* kbo_build_webview_hub_html(void)
          (g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_TOURNAMENTS ||
           g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_SCHEDULE ||
           g_kbo_hub_selected_agames_subview == KBO_HUB_AGAMES_SUBVIEW_ROSTER)) ||
+        g_kbo_hub_selected_view == KBO_HUB_VIEW_FUTURES_LEAGUE ||
         g_kbo_hub_selected_view == KBO_HUB_VIEW_UPCOMING_FA ||
         g_kbo_hub_selected_view == KBO_HUB_VIEW_FA_CASES ||
         g_kbo_hub_selected_view == KBO_HUB_VIEW_REPUTATION ||

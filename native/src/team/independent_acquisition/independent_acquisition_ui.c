@@ -298,6 +298,23 @@ int kbo_independent_acquisition_ui_collect_offer_rows(
     if (seller_count <= 0) {
         return 0;
     }
+    int32_t seller_transfer_limit =
+        kbo_foreign_player_policy()->independent_acquisition_seller_transfer_limit;
+    int available_seller_count = 0;
+    for (int i = 0; i < seller_count; i++) {
+        int transfers = kbo_independent_acquisition_transferred_count(context.season, sellers[i].team_id);
+        if (transfers >= seller_transfer_limit) {
+            continue;
+        }
+        if (available_seller_count != i) {
+            sellers[available_seller_count] = sellers[i];
+        }
+        available_seller_count++;
+    }
+    seller_count = available_seller_count;
+    if (seller_count <= 0) {
+        return 0;
+    }
 
     uint8_t* buyer_team = find_kbo_team_by_numeric_id_any_league(buyer_team_id, 1);
     if (buyer_team == NULL || !memory_range_readable(buyer_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
@@ -920,6 +937,10 @@ int kbo_independent_acquisition_ui_submit_offer(
 
     if (kbo_independent_acquisition_decision_exists(context.season, seller_team_id, player_id)) {
         return KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_DECIDED;
+    }
+    if (kbo_independent_acquisition_transferred_count(context.season, seller_team_id)
+            >= kbo_foreign_player_policy()->independent_acquisition_seller_transfer_limit) {
+        return KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_BLOCKED;
     }
     if (kbo_independent_acquisition_request_exists(
             context.season,

@@ -100,6 +100,11 @@ int kbo_independent_acquisition_load_requests(
     uint32_t season,
     KboIndependentAcquisitionQueuedRequest* out,
     int max_count);
+int kbo_run_independent_team_acquisition_seller_ai(
+    uint32_t today,
+    const uintptr_t* player_snapshot,
+    int32_t player_count,
+    const char* source);
 int kbo_independent_acquisition_decision_exists(
     uint32_t season,
     uint32_t seller_team_id,
@@ -113,6 +118,16 @@ int kbo_independent_acquisition_append_decision(
     int transferred,
     int32_t old_cash,
     int32_t new_cash,
+    const char* source);
+int kbo_emit_independent_acquisition_transfer_news(
+    uint32_t today,
+    uint8_t* player,
+    uint8_t* buyer_team,
+    uint8_t* seller_team,
+    uint32_t player_id,
+    uint32_t buyer_team_id,
+    uint32_t seller_team_id,
+    int32_t cash_cost,
     const char* source);
 
 #endif

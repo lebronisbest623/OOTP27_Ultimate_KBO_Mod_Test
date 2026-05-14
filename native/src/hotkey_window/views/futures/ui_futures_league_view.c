@@ -76,6 +76,55 @@ static void kbo_futures_ui_copy_team_name(uint32_t team_id, char* out, size_t ou
     }
 }
 
+static uint32_t kbo_futures_ui_read_team_league_id(uint8_t* team)
+{
+    if (team == NULL || !memory_range_readable(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET, sizeof(uint32_t))) {
+        return 0u;
+    }
+    return *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+}
+
+static uint32_t kbo_futures_ui_resolve_buyer_team_id(uint32_t selected_team_id)
+{
+    if (selected_team_id == 0u) {
+        return 0u;
+    }
+
+    uint8_t* selected_team = find_kbo_team_by_numeric_id_any_league(selected_team_id, 1);
+    if (selected_team == NULL || !memory_range_readable(selected_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0u;
+    }
+
+    uint32_t kbo_league_id = kbo_resolve_kbo_league_id();
+    if (kbo_league_id == 0u) {
+        kbo_league_id = OOTP27_KBO_MAIN_LEAGUE_ID;
+    }
+
+    if (kbo_futures_ui_read_team_league_id(selected_team) == kbo_league_id) {
+        return selected_team_id;
+    }
+
+    if (!memory_range_readable(selected_team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+        return 0u;
+    }
+
+    uint32_t parent_team_id = *(uint32_t*)(selected_team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET);
+    if (parent_team_id == 0u || parent_team_id == selected_team_id) {
+        return 0u;
+    }
+
+    uint8_t* parent_team = find_kbo_team_by_numeric_id_any_league(parent_team_id, 1);
+    if (parent_team == NULL || !memory_range_readable(parent_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0u;
+    }
+
+    if (kbo_futures_ui_read_team_league_id(parent_team) != kbo_league_id) {
+        return 0u;
+    }
+
+    return parent_team_id;
+}
+
 static void kbo_futures_ui_append_context_bar(
     KboWindowTextBuffer* buffer,
     const KboIndependentAcquisitionUiContext* context,
@@ -85,16 +134,21 @@ static void kbo_futures_ui_append_context_bar(
     char open_text[16] = "-";
     char close_text[16] = "-";
     char cash_text[32] = "$0";
+    char buyer_name[96] = "-";
     char summary[384] = {0};
     if (context != NULL) {
         kbo_futures_ui_format_yyyymmdd(context->open_date, open_text, sizeof(open_text));
         kbo_futures_ui_format_yyyymmdd(context->close_date, close_text, sizeof(close_text));
         kbo_futures_ui_format_cash(context->buyer_cash, cash_text, sizeof(cash_text));
+        if (context->buyer_team_id != 0u) {
+            kbo_futures_ui_copy_team_name(context->buyer_team_id, buyer_name, sizeof(buyer_name));
+        }
         snprintf(
             summary,
             sizeof(summary),
-            "View: %s - Window: %s - Period: %s to %s - Cash: %s - Sellers: %d - Rows: %d",
+            "View: %s - Buyer: %s - Window: %s - Period: %s to %s - Cash: %s - Sellers: %d - Rows: %d",
             mode != NULL ? mode : "-",
+            buyer_name,
             context->window_open ? "Open" : "Closed",
             open_text,
             close_text,
@@ -116,10 +170,11 @@ static void kbo_futures_ui_append_empty_row(KboWindowTextBuffer* buffer, int col
 
 static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32_t selected_team_id)
 {
+    uint32_t buyer_team_id = kbo_futures_ui_resolve_buyer_team_id(selected_team_id);
     KboIndependentAcquisitionUiOfferRow rows[KBO_INDEPENDENT_ACQUISITION_UI_MAX_OFFERS];
     KboIndependentAcquisitionUiContext context;
     int count = kbo_independent_acquisition_ui_collect_offer_rows(
-        selected_team_id,
+        buyer_team_id,
         rows,
         KBO_INDEPENDENT_ACQUISITION_UI_MAX_OFFERS,
         &context);
@@ -141,7 +196,7 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
     } else if (!context.window_open) {
         kbo_futures_ui_append_empty_row(buffer, 10, "The independent club acquisition window is not open.");
     } else if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "Select a KBO club first.");
+        kbo_futures_ui_append_empty_row(buffer, 10, "Select an affiliated Futures League club first.");
     } else if (context.seller_count <= 0) {
         kbo_futures_ui_append_empty_row(buffer, 10, "No independent Futures League club is resolved from the seed file.");
     } else if (count <= 0) {
@@ -168,7 +223,7 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
             kbo_window_text_appendf(
                 buffer,
                 "<a class='rightsTextAction' href='kbo://futures-offer/submit/%u/%u/%u'>Offer</a>",
-                selected_team_id,
+                buyer_team_id,
                 row->seller_team_id,
                 row->player_id);
         } else {
@@ -203,11 +258,12 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
 
 static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint32_t selected_team_id)
 {
+    uint32_t buyer_team_id = kbo_futures_ui_resolve_buyer_team_id(selected_team_id);
     KboIndependentAcquisitionUiRequestRow rows[KBO_INDEPENDENT_ACQUISITION_UI_MAX_ROWS];
     KboIndependentAcquisitionUiContext context;
-    kbo_independent_acquisition_ui_context(selected_team_id, &context);
+    kbo_independent_acquisition_ui_context(buyer_team_id, &context);
     int count = kbo_independent_acquisition_ui_load_pending_rows(
-        selected_team_id,
+        buyer_team_id,
         rows,
         KBO_INDEPENDENT_ACQUISITION_UI_MAX_ROWS);
 
@@ -223,7 +279,9 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
         "<th class='roStatus' data-sort-type='text'>Status</th>"
         "</tr></thead><tbody>");
 
-    if (count <= 0) {
+    if (!context.buyer_valid) {
+        kbo_futures_ui_append_empty_row(buffer, 9, "Select an affiliated Futures League club first.");
+    } else if (count <= 0) {
         kbo_futures_ui_append_empty_row(buffer, 9, "No pending independent club offer.");
     }
     for (int i = 0; i < count; i++) {
@@ -277,11 +335,12 @@ static const char* kbo_futures_ui_result_label(const KboIndependentAcquisitionUi
 
 static void kbo_futures_ui_append_result_view(KboWindowTextBuffer* buffer, uint32_t selected_team_id)
 {
+    uint32_t buyer_team_id = kbo_futures_ui_resolve_buyer_team_id(selected_team_id);
     KboIndependentAcquisitionUiResultRow rows[KBO_INDEPENDENT_ACQUISITION_UI_MAX_ROWS];
     KboIndependentAcquisitionUiContext context;
-    kbo_independent_acquisition_ui_context(selected_team_id, &context);
+    kbo_independent_acquisition_ui_context(buyer_team_id, &context);
     int count = kbo_independent_acquisition_ui_load_result_rows(
-        selected_team_id,
+        buyer_team_id,
         rows,
         KBO_INDEPENDENT_ACQUISITION_UI_MAX_ROWS);
 
@@ -296,7 +355,9 @@ static void kbo_futures_ui_append_result_view(KboWindowTextBuffer* buffer, uint3
         "<th class='roCash' data-sort-type='number'>Cash</th><th class='roScore' data-sort-type='number'>Score</th>"
         "</tr></thead><tbody>");
 
-    if (count <= 0) {
+    if (!context.buyer_valid) {
+        kbo_futures_ui_append_empty_row(buffer, 8, "Select an affiliated Futures League club first.");
+    } else if (count <= 0) {
         kbo_futures_ui_append_empty_row(buffer, 8, "No independent club offer result.");
     }
     for (int i = 0; i < count; i++) {

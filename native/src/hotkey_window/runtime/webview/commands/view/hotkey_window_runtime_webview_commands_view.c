@@ -111,10 +111,56 @@ static int kbo_webview_handle_cbt_exception_command(const char* cmd)
     return 0;
 }
 
+static int kbo_webview_handle_futures_offer_command(const char* cmd)
+{
+    if (strncmp(cmd, "futures-offer/submit/", 21) != 0) {
+        return 0;
+    }
+
+    const char* text = cmd + 21;
+    uint32_t buyer_team_id = (uint32_t)strtoul(text, NULL, 10);
+    const char* slash = strchr(text, '/');
+    uint32_t seller_team_id = slash != NULL ? (uint32_t)strtoul(slash + 1, NULL, 10) : 0u;
+    const char* second_slash = slash != NULL ? strchr(slash + 1, '/') : NULL;
+    uint32_t player_id = second_slash != NULL ? (uint32_t)strtoul(second_slash + 1, NULL, 10) : 0u;
+
+    int submit_result = KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_INVALID;
+    if (buyer_team_id != 0u && seller_team_id != 0u && player_id != 0u) {
+        if (kbo_webview_team_action_allowed(buyer_team_id, "hub_independent_acquisition_offer")) {
+            submit_result = kbo_independent_acquisition_ui_submit_offer(
+                buyer_team_id,
+                seller_team_id,
+                player_id,
+                "hub_independent_acquisition_offer");
+        } else {
+            submit_result = KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_BLOCKED;
+        }
+    }
+
+    kbo_log_runtimef(
+        "independent acquisition UI command buyer=%u seller=%u player=%u result=%d",
+        buyer_team_id,
+        seller_team_id,
+        player_id,
+        submit_result);
+    g_kbo_hub_selected_view = KBO_HUB_VIEW_FUTURES_LEAGUE;
+    g_kbo_hub_selected_futures_subview =
+        submit_result == KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_OK
+        || submit_result == KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_DUPLICATE
+            ? KBO_HUB_FUTURES_SUBVIEW_PENDING
+            : KBO_HUB_FUTURES_SUBVIEW_OFFER;
+    g_kbo_hub_open_dropdown = 0;
+    kbo_webview_navigate_current();
+    return 1;
+}
+
 int kbo_webview_handle_view_navigation_command(const char* cmd)
 {
 
     if (kbo_webview_handle_cbt_exception_command(cmd)) {
+        return 1;
+    }
+    if (kbo_webview_handle_futures_offer_command(cmd)) {
         return 1;
     }
 
@@ -164,6 +210,11 @@ int kbo_webview_handle_view_navigation_command(const char* cmd)
                     && (g_kbo_hub_selected_cbt_subview < 0
                         || g_kbo_hub_selected_cbt_subview >= KBO_HUB_CBT_SUBVIEW_COUNT)) {
                 g_kbo_hub_selected_cbt_subview = KBO_HUB_CBT_SUBVIEW_OVERVIEW;
+            }
+            if (g_kbo_hub_selected_view == KBO_HUB_VIEW_FUTURES_LEAGUE
+                    && (g_kbo_hub_selected_futures_subview < 0
+                        || g_kbo_hub_selected_futures_subview >= KBO_HUB_FUTURES_SUBVIEW_COUNT)) {
+                g_kbo_hub_selected_futures_subview = KBO_HUB_FUTURES_SUBVIEW_OFFER;
             }
         }
         kbo_webview_navigate_current();
@@ -229,6 +280,22 @@ int kbo_webview_handle_view_navigation_command(const char* cmd)
         if (subview >= 0 && subview < KBO_HUB_CBT_SUBVIEW_COUNT) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_CBT;
             g_kbo_hub_selected_cbt_subview = subview;
+            g_kbo_hub_open_dropdown = 0;
+        }
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strncmp(cmd, "futures/", 8) == 0) {
+        if (!kbo_hub_selected_league_is_independent_futures()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
+        int subview = atoi(cmd + 8);
+        if (subview >= 0 && subview < KBO_HUB_FUTURES_SUBVIEW_COUNT) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_FUTURES_LEAGUE;
+            g_kbo_hub_selected_futures_subview = subview;
             g_kbo_hub_open_dropdown = 0;
         }
         kbo_webview_navigate_current();

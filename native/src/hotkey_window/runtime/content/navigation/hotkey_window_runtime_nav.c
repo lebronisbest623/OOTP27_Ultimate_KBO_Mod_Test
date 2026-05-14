@@ -13,7 +13,7 @@ const char* kbo_hub_nav_label(int index)
     case KBO_HUB_VIEW_SETTINGS:       return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",    "SETTINGS");
     case KBO_HUB_VIEW_REPUTATION:     return kbo_hub_text("\xed\x8f\x89\xed\x8c\x90", "REPUTATION");
     case KBO_HUB_VIEW_CBT:            return kbo_hub_text("\xea\xb2\xbd\xec\x9f\x81\xea\xb7\xa0\xed\x98\x95\xec\x84\xb8", "CBT");
-    case KBO_HUB_VIEW_FUTURES_LEAGUE: return kbo_hub_text("2\xea\xb5\xb0 \xeb\xa6\xac\xea\xb7\xb8", "FUTURES");
+    case KBO_HUB_VIEW_FUTURES_LEAGUE: return kbo_hub_text("\xea\xb5\xac\xeb\xa7\xa4", "PURCHASE");
     default:                          return "";
     }
 }
