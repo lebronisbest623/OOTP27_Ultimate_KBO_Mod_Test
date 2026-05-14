@@ -84,6 +84,68 @@ public sealed class KboSeedFilesTests : IDisposable
     }
 
     [Fact]
+    public void EnsureBundledKboDataFile_CopiesNestedRelativePath()
+    {
+        var localDir = Path.Combine(tempDir, "local");
+        var candidate = Path.Combine(tempDir, "candidate", "news_templates", "ko", "captain.json");
+        var localPath = Path.Combine(localDir, "news_templates", "ko", "captain.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(candidate)!);
+        File.WriteAllText(candidate, "{\"captain.summary.title\":\"A\"}");
+
+        global::KboSeedFiles.EnsureBundledKboDataFile(
+            localDir,
+            Path.Combine("news_templates", "ko", "captain.json"),
+            "Captain news template",
+            [candidate]);
+
+        Assert.Equal("{\"captain.summary.title\":\"A\"}", File.ReadAllText(localPath));
+    }
+
+    [Fact]
+    public void EnsureBundledKboDataManifest_CopiesGroupedSeedsAndRetiresOldSeed()
+    {
+        var localDir = Path.Combine(tempDir, "local");
+        var dataRoot = Path.Combine(tempDir, "data", "seeds");
+        var manifestPath = Path.Combine(dataRoot, "seed_manifest.json");
+        var captainSeed = Path.Combine(dataRoot, "captain", "captain_seed.csv");
+        var uiText = Path.Combine(dataRoot, "ui_text", "en", "hotkey_window.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(uiText)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(captainSeed)!);
+        File.WriteAllText(captainSeed, "team_code,player_name\nLG,Park");
+        File.WriteAllText(uiText, "{}");
+        File.WriteAllText(manifestPath, """
+        {
+          "version": 1,
+          "groups": [
+            {
+              "id": "captain",
+              "label": "Captain",
+              "files": [
+                { "path": "captain_seed.csv", "source": "captain/captain_seed.csv", "label": "Captain seed", "kind": "seed" },
+                { "path": "ui_text/en/hotkey_window.json", "label": "UI text", "kind": "ui_text" }
+              ]
+            }
+          ],
+          "retiredFiles": [
+            { "path": "foreign_replacement_players_seed.csv", "label": "Foreign replacement player seed" }
+          ]
+        }
+        """);
+
+        Directory.CreateDirectory(localDir);
+        File.WriteAllText(Path.Combine(localDir, "foreign_replacement_players_seed.csv"), """
+        verhadr01,regular,Drew VerHagen
+        olougja01,regular,Jack O'Loughlin
+        """);
+
+        global::KboSeedFiles.EnsureBundledKboDataManifest(localDir, manifestPath, dataRoot);
+
+        Assert.Equal("team_code,player_name\nLG,Park", File.ReadAllText(Path.Combine(localDir, "captain_seed.csv")));
+        Assert.Equal("{}", File.ReadAllText(Path.Combine(localDir, "ui_text", "en", "hotkey_window.json")));
+        Assert.False(File.Exists(Path.Combine(localDir, "foreign_replacement_players_seed.csv")));
+    }
+
+    [Fact]
     public void EnsureBundledKboDataDirectory_CopiesNestedFilesWhenMissingOrChanged()
     {
         var localDir = Path.Combine(tempDir, "local");

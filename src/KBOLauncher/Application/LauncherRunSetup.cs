@@ -15,33 +15,7 @@ internal static partial class LauncherApp
     private static void EnsureLauncherRuntimeData(string exePath)
     {
         EnsureKboLeagueIdConfig();
-        EnsureBundledKboDataFile("asian_games_schedule_seed.csv", "Asian Games schedule seed");
-        EnsureBundledKboDataFile("asian_games_projected_hosts.csv", "Asian Games projected host seed");
-        EnsureBundledKboDataFile("asian_games_projected_policy.json", "Asian Games projected policy");
-        EnsureBundledKboDataFile("asian_games_roster_policy.json", "Asian Games roster policy");
-        EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
-        EnsureBundledKboDataFile("amateur_player_quality_policy.json", "Amateur player quality policy");
-        EnsureBundledKboDataFile("captain_selection_policy.json", "Captain selection policy");
-        EnsureBundledKboDataFile("captain_seed.csv", "Captain seed");
-        EnsureBundledKboDataFile("cbt_player_team_seasons_seed.csv", "CBT player team seasons seed");
-        EnsureBundledKboDataFile("cbt_rules.json", "CBT rules");
-        EnsureBundledKboDataFile("economic_defaults.json", "Economic defaults");
-        EnsureBundledKboDataFile("fa_compensation_policy.json", "FA compensation policy");
-        EnsureBundledKboDataFile("fa_requalification_policy.json", "FA requalification policy");
-        EnsureBundledKboDataFile("fa_market_policy.json", "FA market policy");
-        EnsureBundledKboDataFile("fa_rules.json", "FA rules");
-        EnsureBundledKboDataFile("foreign_injury_replacements_seed.csv", "Foreign injury replacement seed");
-        EnsureBundledKboDataFile("foreign_player_policy.json", "Foreign player policy");
-        EnsureBundledKboDataFile("kbo_team_policy.json", "KBO team policy");
-        EnsureBundledKboDataFile("intl_established_fa_policy.json", "International established FA policy");
-        RemoveRetiredBundledKboDataFileIfUnchanged("foreign_replacement_players_seed.csv", "Foreign replacement player seed");
-        EnsureBundledKboDataFile("college_reputation_seed.csv", "College reputation seed");
-        EnsureBundledKboDataFile("high_school_reputation_seed.csv", "High-school reputation seed");
-        EnsureBundledKboDataFile("military_service_policy.json", "Military service policy");
-        EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
-        EnsureBundledKboDataFile("runtime_tuning_policy.json", "Runtime tuning policy");
-        EnsureBundledKboDataDirectory("news_templates", "News templates");
-        EnsureBundledKboDataDirectory("ui_text", "UI text");
+        EnsureBundledKboDataManifest();
         EnsureKboScheduleAllstarGameLines(exePath);
         ImportLegacyKboFlagFilesIfMissing();
         EnsureDefaultKboRuntimeFlags();

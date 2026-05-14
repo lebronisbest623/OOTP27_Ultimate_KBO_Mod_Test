@@ -13,6 +13,33 @@ if ([string]::IsNullOrWhiteSpace($Dist)) {
     $Dist = Join-Path $RepoRoot "dist"
 }
 
+function Get-SeedManifestPayloadFiles {
+    param([Parameter(Mandatory = $true)][string]$RepoRoot)
+
+    $manifestPath = Join-Path $RepoRoot "data\seeds\seed_manifest.json"
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "Seed manifest missing: $manifestPath"
+    }
+
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $files = New-Object System.Collections.Generic.List[string]
+    foreach ($group in @($manifest.groups)) {
+        foreach ($file in @($group.files)) {
+            if ($null -eq $file.path -or [string]::IsNullOrWhiteSpace([string]$file.path)) {
+                continue
+            }
+            $relativeValue = $file.source
+            if ($null -eq $relativeValue -or [string]::IsNullOrWhiteSpace([string]$relativeValue)) {
+                $relativeValue = $file.path
+            }
+            $relative = ([string]$relativeValue).Replace("/", "\")
+            $files.Add((Join-Path "data\seeds" $relative))
+        }
+    }
+
+    return $files | Sort-Object -Unique
+}
+
 if (-not (Test-Path -LiteralPath $Dist -PathType Container)) {
     throw "Release artifact directory does not exist: $Dist"
 }
@@ -25,51 +52,10 @@ $requiredFiles = @(
     "assets\fonts\JejuGothic-Regular.ttf",
     "assets\fonts\JejuGothic-OFL.txt",
     "assets\icons\github-mark.png",
-    "data\seeds\allstar_teams.csv",
-    "data\seeds\amateur_player_quality_policy.json",
-    "data\seeds\asian_games_projected_hosts.csv",
-    "data\seeds\asian_games_projected_policy.json",
-    "data\seeds\asian_games_roster_policy.json",
-    "data\seeds\asian_games_schedule_seed.csv",
-    "data\seeds\captain_selection_policy.json",
-    "data\seeds\captain_seed.csv",
-    "data\seeds\cbt_player_team_seasons_seed.csv",
-    "data\seeds\cbt_rules.json",
-    "data\seeds\college_reputation_seed.csv",
-    "data\seeds\economic_defaults.json",
-    "data\seeds\fa_compensation_policy.json",
-    "data\seeds\fa_requalification_policy.json",
-    "data\seeds\fa_market_policy.json",
-    "data\seeds\fa_rules.json",
-    "data\seeds\foreign_injury_replacements_seed.csv",
-    "data\seeds\foreign_player_policy.json",
-    "data\seeds\high_school_reputation_seed.csv",
-    "data\seeds\intl_established_fa_policy.json",
-    "data\seeds\kbo_team_policy.json",
-    "data\seeds\military_service_policy.json",
-    "data\seeds\military_service_seed.csv",
-    "data\seeds\runtime_tuning_policy.json",
-    "data\seeds\news_templates\en\asian_games.json",
-    "data\seeds\news_templates\en\captain.json",
-    "data\seeds\news_templates\en\competitive_balance_tax.json",
-    "data\seeds\news_templates\en\custom_events.json",
-    "data\seeds\news_templates\en\fa_compensation.json",
-    "data\seeds\news_templates\en\foreign_injury.json",
-    "data\seeds\news_templates\en\foreign_waiver.json",
-    "data\seeds\news_templates\en\military_service.json",
-    "data\seeds\news_templates\ko\asian_games.json",
-    "data\seeds\news_templates\ko\captain.json",
-    "data\seeds\news_templates\ko\competitive_balance_tax.json",
-    "data\seeds\news_templates\ko\custom_events.json",
-    "data\seeds\news_templates\ko\fa_compensation.json",
-    "data\seeds\news_templates\ko\foreign_injury.json",
-    "data\seeds\news_templates\ko\foreign_waiver.json",
-    "data\seeds\news_templates\ko\military_service.json",
-    "data\seeds\ui_text\en\hotkey_window.json",
-    "data\seeds\ui_text\ko\hotkey_window.json",
     "tools\kbo_optimizer.exe",
     "tools\kbo_optimizer.py"
 )
+$requiredFiles += Get-SeedManifestPayloadFiles -RepoRoot $RepoRoot
 
 foreach ($requiredFile in $requiredFiles) {
     $path = Join-Path $Dist $requiredFile

@@ -12,10 +12,8 @@
     <FileVersion>0.2.3.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="..\..\data\seeds\*.csv" Link="data\seeds\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\data\seeds\*.json" Link="data\seeds\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\data\seeds\news_templates\**\*.json" Link="data\seeds\news_templates\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\data\seeds\ui_text\**\*.json" Link="data\seeds\ui_text\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\seeds\**\*.csv" Link="data\seeds\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\seeds\**\*.json" Link="data\seeds\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\assets\**\*.*" Link="assets\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\native\bin\KBOFix.dll" Link="KBOFix.dll" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\native\bin\WebView2Loader.dll" Link="WebView2Loader.dll" CopyToOutputDirectory="PreserveNewest" />

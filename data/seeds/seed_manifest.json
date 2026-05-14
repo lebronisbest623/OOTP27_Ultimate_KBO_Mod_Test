@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "allstar",
+      "label": "All-Star",
+      "files": [
+        { "path": "allstar_teams.csv", "source": "allstar/allstar_teams.csv", "label": "All-Star team affiliation seed", "kind": "seed" }
+      ]
+    },
+    {
+      "id": "amateur",
+      "label": "Amateur player quality",
+      "files": [
+        { "path": "amateur_player_quality_policy.json", "source": "amateur/amateur_player_quality_policy.json", "label": "Amateur player quality policy", "kind": "policy" },
+        { "path": "college_reputation_seed.csv", "source": "amateur/college_reputation_seed.csv", "label": "College reputation seed", "kind": "seed" },
+        { "path": "high_school_reputation_seed.csv", "source": "amateur/high_school_reputation_seed.csv", "label": "High-school reputation seed", "kind": "seed" }
+      ]
+    },
+    {
+      "id": "asian_games",
+      "label": "Asian Games",
+      "files": [
+        { "path": "asian_games_projected_hosts.csv", "source": "asian_games/asian_games_projected_hosts.csv", "label": "Asian Games projected host seed", "kind": "seed" },
+        { "path": "asian_games_projected_policy.json", "source": "asian_games/asian_games_projected_policy.json", "label": "Asian Games projected policy", "kind": "policy" },
+        { "path": "asian_games_roster_policy.json", "source": "asian_games/asian_games_roster_policy.json", "label": "Asian Games roster policy", "kind": "policy" },
+        { "path": "asian_games_schedule_seed.csv", "source": "asian_games/asian_games_schedule_seed.csv", "label": "Asian Games schedule seed", "kind": "seed" }
+      ]
+    },
+    {
+      "id": "captain",
+      "label": "Captain",
+      "files": [
+        { "path": "captain_selection_policy.json", "source": "captain/captain_selection_policy.json", "label": "Captain selection policy", "kind": "policy" },
+        { "path": "captain_seed.csv", "source": "captain/captain_seed.csv", "label": "Captain seed", "kind": "seed" }
+      ]
+    },
+    {
+      "id": "competitive_balance_tax",
+      "label": "Competitive balance tax",
+      "files": [
+        { "path": "cbt_player_team_seasons_seed.csv", "source": "competitive_balance_tax/cbt_player_team_seasons_seed.csv", "label": "CBT player team seasons seed", "kind": "seed" },
+        { "path": "cbt_rules.json", "source": "competitive_balance_tax/cbt_rules.json", "label": "CBT rules", "kind": "rules" }
+      ]
+    },
+    {
+      "id": "economy_and_fa",
+      "label": "Economy and FA",
+      "files": [
+        { "path": "economic_defaults.json", "source": "economy_and_fa/economic_defaults.json", "label": "Economic defaults", "kind": "policy" },
+        { "path": "fa_compensation_policy.json", "source": "economy_and_fa/fa_compensation_policy.json", "label": "FA compensation policy", "kind": "policy" },
+        { "path": "fa_market_policy.json", "source": "economy_and_fa/fa_market_policy.json", "label": "FA market policy", "kind": "policy" },
+        { "path": "fa_requalification_policy.json", "source": "economy_and_fa/fa_requalification_policy.json", "label": "FA requalification policy", "kind": "policy" },
+        { "path": "fa_rules.json", "source": "economy_and_fa/fa_rules.json", "label": "FA rules", "kind": "rules" }
+      ]
+    },
+    {
+      "id": "foreign_players",
+      "label": "Foreign players",
+      "files": [
+        { "path": "foreign_injury_replacements_seed.csv", "source": "foreign_players/foreign_injury_replacements_seed.csv", "label": "Foreign injury replacement seed", "kind": "seed" },
+        { "path": "foreign_player_policy.json", "source": "foreign_players/foreign_player_policy.json", "label": "Foreign player policy", "kind": "policy" },
+        { "path": "intl_established_fa_policy.json", "source": "foreign_players/intl_established_fa_policy.json", "label": "International established FA policy", "kind": "policy" }
+      ]
+    },
+    {
+      "id": "military_service",
+      "label": "Military service",
+      "files": [
+        { "path": "military_service_policy.json", "source": "military_service/military_service_policy.json", "label": "Military service policy", "kind": "policy" },
+        { "path": "military_service_seed.csv", "source": "military_service/military_service_seed.csv", "label": "Military service seed", "kind": "seed" }
+      ]
+    },
+    {
+      "id": "runtime",
+      "label": "Runtime",
+      "files": [
+        { "path": "kbo_team_policy.json", "source": "runtime/kbo_team_policy.json", "label": "KBO team policy", "kind": "policy" },
+        { "path": "runtime_tuning_policy.json", "source": "runtime/runtime_tuning_policy.json", "label": "Runtime tuning policy", "kind": "policy" }
+      ]
+    },
+    {
+      "id": "news_templates",
+      "label": "News templates",
+      "files": [
+        { "path": "news_templates/en/asian_games.json", "label": "News templates: Asian Games (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/captain.json", "label": "News templates: Captain (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/competitive_balance_tax.json", "label": "News templates: CBT (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/custom_events.json", "label": "News templates: Custom events (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/fa_compensation.json", "label": "News templates: FA compensation (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/foreign_injury.json", "label": "News templates: Foreign injury (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/foreign_waiver.json", "label": "News templates: Foreign waiver (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/military_service.json", "label": "News templates: Military service (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/ko/asian_games.json", "label": "News templates: Asian Games (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/captain.json", "label": "News templates: Captain (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/competitive_balance_tax.json", "label": "News templates: CBT (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/custom_events.json", "label": "News templates: Custom events (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/fa_compensation.json", "label": "News templates: FA compensation (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/foreign_injury.json", "label": "News templates: Foreign injury (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/foreign_waiver.json", "label": "News templates: Foreign waiver (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/military_service.json", "label": "News templates: Military service (Korean)", "kind": "news_template", "language": "ko" }
+      ]
+    },
+    {
+      "id": "ui_text",
+      "label": "UI text",
+      "files": [
+        { "path": "ui_text/en/hotkey_window.json", "label": "UI text: Hotkey window (English)", "kind": "ui_text", "language": "en" },
+        { "path": "ui_text/ko/hotkey_window.json", "label": "UI text: Hotkey window (Korean)", "kind": "ui_text", "language": "ko" }
+      ]
+    },
+    {
+      "id": "manifest",
+      "label": "Seed manifest",
+      "files": [
+        { "path": "seed_manifest.json", "label": "Seed manifest", "kind": "manifest" }
+      ]
+    }
+  ],
+  "retiredFiles": [
+    { "path": "foreign_replacement_players_seed.csv", "label": "Foreign replacement player seed", "kind": "retired_seed" }
+  ]
+}

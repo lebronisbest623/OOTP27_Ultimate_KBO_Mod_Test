@@ -1,9 +1,19 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 using static LauncherPaths;
 
 internal static class KboSeedFiles
 {
+    private const string SeedManifestFileName = "seed_manifest.json";
+
+    private static readonly JsonSerializerOptions SeedManifestJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
     public static void EnsureKboLeagueIdConfig()
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -51,18 +61,116 @@ internal static class KboSeedFiles
         Console.WriteLine(localPath);
     }
     
+    public static void EnsureBundledKboDataManifest()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localDir = Path.Combine(local, "OOTP-KBO");
+        var manifestPath = ResolveBundledKboDataFileCandidates(SeedManifestFileName).FirstOrDefault(File.Exists);
+        if (manifestPath is null)
+        {
+            Console.WriteLine($"{SeedManifestFileName}: bundled seed manifest not found");
+            return;
+        }
+
+        EnsureBundledKboDataManifest(localDir, manifestPath, Path.GetDirectoryName(manifestPath)!);
+    }
+
+    internal static void EnsureBundledKboDataManifest(string localDir, string manifestPath, string dataRoot)
+    {
+        Directory.CreateDirectory(localDir);
+
+        KboSeedManifest? manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<KboSeedManifest>(
+                File.ReadAllText(manifestPath),
+                SeedManifestJsonOptions);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to read {SeedManifestFileName}: {ex.Message}");
+            return;
+        }
+
+        if (manifest?.Groups is null)
+        {
+            Console.WriteLine($"{SeedManifestFileName}: no seed groups found");
+            return;
+        }
+
+        var seeded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in manifest.Groups.SelectMany(group => group.Files ?? []))
+        {
+            if (string.IsNullOrWhiteSpace(file.Path))
+            {
+                continue;
+            }
+
+            string targetRelativePath;
+            try
+            {
+                targetRelativePath = NormalizeSeedManifestRelativePath(file.Path);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{SeedManifestFileName}: ignored invalid seed path '{file.Path}': {ex.Message}");
+                continue;
+            }
+
+            var source = string.IsNullOrWhiteSpace(file.Source) ? file.Path : file.Source;
+            string sourceRelativePath;
+            try
+            {
+                sourceRelativePath = NormalizeSeedManifestRelativePath(source);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{SeedManifestFileName}: ignored invalid seed source '{source}': {ex.Message}");
+                continue;
+            }
+
+            if (!seeded.Add(targetRelativePath))
+            {
+                continue;
+            }
+
+            var candidates = new List<string> { Path.Combine(dataRoot, sourceRelativePath) };
+            candidates.AddRange(ResolveBundledKboDataFileCandidates(sourceRelativePath));
+            if (!string.Equals(sourceRelativePath, targetRelativePath, StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add(Path.Combine(dataRoot, targetRelativePath));
+                candidates.AddRange(ResolveBundledKboDataFileCandidates(targetRelativePath));
+            }
+
+            EnsureBundledKboDataFile(localDir, targetRelativePath, ManifestLabel(file), candidates);
+        }
+
+        foreach (var retiredFile in manifest.RetiredFiles ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(retiredFile.Path))
+            {
+                continue;
+            }
+
+            string relativePath;
+            try
+            {
+                relativePath = NormalizeSeedManifestRelativePath(retiredFile.Path);
+            }
+            catch
+            {
+                continue;
+            }
+
+            RemoveRetiredBundledKboDataFileIfUnchanged(localDir, relativePath, ManifestLabel(retiredFile));
+        }
+    }
+
     public static void EnsureBundledKboDataFile(string fileName, string label)
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var localDir = Path.Combine(local, "OOTP-KBO");
-        EnsureBundledKboDataFile(localDir, fileName, label,
-        [
-            Path.Combine(AppContext.BaseDirectory, "data", "seeds", fileName),
-            Path.Combine(Environment.CurrentDirectory, "data", "seeds", fileName),
-            Path.Combine(AppContext.BaseDirectory, fileName),
-            Path.Combine(Environment.CurrentDirectory, fileName),
-            Path.Combine(AppContext.BaseDirectory, "native", fileName)
-        ]);
+        EnsureBundledKboDataFile(localDir, fileName, label, ResolveBundledKboDataFileCandidates(fileName));
     }
 
     public static void EnsureBundledKboDataDirectory(string directoryName, string label)
@@ -127,7 +235,7 @@ internal static class KboSeedFiles
     {
         var localPath = Path.Combine(localDir, fileName);
 
-        Directory.CreateDirectory(localDir);
+        Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
 
         foreach (var candidate in candidates)
         {
@@ -156,6 +264,64 @@ internal static class KboSeedFiles
         }
 
         Console.WriteLine($"{label}: bundled seed not found for {fileName}");
+    }
+
+    private static IReadOnlyList<string> ResolveBundledKboDataFileCandidates(string relativePath)
+    {
+        return
+        [
+            Path.Combine(AppContext.BaseDirectory, "data", "seeds", relativePath),
+            Path.Combine(Environment.CurrentDirectory, "data", "seeds", relativePath),
+            Path.Combine(AppContext.BaseDirectory, relativePath),
+            Path.Combine(Environment.CurrentDirectory, relativePath),
+            Path.Combine(AppContext.BaseDirectory, "native", relativePath)
+        ];
+    }
+
+    private static string NormalizeSeedManifestRelativePath(string path)
+    {
+        var normalized = path.Trim()
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar);
+
+        if (Path.IsPathFullyQualified(normalized))
+        {
+            throw new InvalidOperationException("absolute paths are not allowed");
+        }
+
+        var segments = normalized.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0 || segments.Any(segment => segment == ".."))
+        {
+            throw new InvalidOperationException("empty paths and parent traversal are not allowed");
+        }
+
+        return Path.Combine(segments);
+    }
+
+    private static string ManifestLabel(KboSeedManifestFile file)
+    {
+        return string.IsNullOrWhiteSpace(file.Label) ? file.Path : file.Label;
+    }
+
+    private sealed class KboSeedManifest
+    {
+        public List<KboSeedManifestGroup>? Groups { get; set; }
+
+        public List<KboSeedManifestFile>? RetiredFiles { get; set; }
+    }
+
+    private sealed class KboSeedManifestGroup
+    {
+        public List<KboSeedManifestFile>? Files { get; set; }
+    }
+
+    private sealed class KboSeedManifestFile
+    {
+        public string Path { get; set; } = "";
+
+        public string Source { get; set; } = "";
+
+        public string Label { get; set; } = "";
     }
 
     internal static void EnsureBundledKboDataDirectory(
