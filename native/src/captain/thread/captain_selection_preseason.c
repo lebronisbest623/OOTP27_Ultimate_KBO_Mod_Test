@@ -43,7 +43,7 @@ void kbo_captain_log_phase_observed(
             && calendar_preseason == last_calendar_preseason) {
         return;
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO captain phase observed source=%s date=%u league_id=%u league=%p league_season=%u effective_season=%u phase=%u label=%s csv_exists=%d calendar_recovery=%d calendar_preseason=%d",
         source != NULL ? source : "",
         date,
@@ -251,7 +251,7 @@ int kbo_captain_write_initial_selection(
     if (row_count <= 0 || selected_count <= 0) {
         kbo_captain_audit_preseason_selection(
             "skip", "no_selection", source, date, season, league_id, row_count, selected_count);
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain selection skipped source=%s date=%u season=%u league_id=%u reason=no_selection rows=%d selected=%d",
             source != NULL ? source : "",
             date,
@@ -270,7 +270,7 @@ int kbo_captain_write_initial_selection(
         csv_path,
         sizeof(csv_path));
     if (wrote) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain selection written source=%s date=%u season=%u league_id=%u rows=%d selected=%d csv=%s",
             source != NULL ? source : "",
             date,
@@ -313,7 +313,7 @@ int kbo_captain_write_missing_selection_csv(
     }
     InterlockedExchange(&g_kbo_captain_last_attempted_season, (LONG)season);
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO captain selection bootstrap source=%s date=%u season=%u league_id=%u phase=%u reason=missing_csv",
         source != NULL ? source : "",
         date,
@@ -352,7 +352,7 @@ int kbo_captain_run_seed_startup_without_league_ptr(
             || season != last_logged_season
             || league_id != last_logged_league_id
             || csv_exists != last_logged_csv_exists) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain seed startup fallback source=%s date=%u season=%u league_id=%u csv_exists=%d reason=league_ptr_unavailable",
             source != NULL ? source : "",
             date,

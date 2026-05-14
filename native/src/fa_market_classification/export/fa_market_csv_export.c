@@ -100,7 +100,7 @@ static int kbo_collect_fa_market_classifications_internal(
                 source,
                 &audit_fields);
         } while (0);
-        append_log_line("FA market classification: no player vector");
+        kbo_log_runtime_line("FA market classification: no player vector");
         return 0;
     }
 
@@ -140,7 +140,7 @@ static int kbo_collect_fa_market_classifications_internal(
                 source,
                 &audit_fields);
         } while (0);
-        append_log_line("FA market classification: allocation failed");
+        kbo_log_runtime_line("FA market classification: allocation failed");
         return 0;
     }
 
@@ -237,7 +237,7 @@ static int kbo_collect_fa_market_classifications_internal(
             kbo_fa_market_overlay_filing_history_cases(rows, row_count, histories, row_count);
             history_count = row_count;
         } else {
-            append_log_line("FA market classification: history allocation failed");
+            kbo_log_runtime_line("FA market classification: history allocation failed");
         }
     }
     ULONGLONG history_ms = GetTickCount64() - history_started_ms;
@@ -286,7 +286,7 @@ static int kbo_collect_fa_market_classifications_internal(
 
     ULONGLONG total_ms = GetTickCount64() - started_ms;
     if (total_ms >= 100u) {
-        append_logf(
+        kbo_log_runtimef(
             "FA market classification timing source=%s rows=%d candidates=%d scanned=%d offset=%d interactive=%d load_ms=%llu scan_ms=%llu history_ms=%llu classify_ms=%llu total_ms=%llu",
             source != NULL ? source : "",
             row_count,

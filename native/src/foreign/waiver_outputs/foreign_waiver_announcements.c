@@ -107,7 +107,7 @@ void kbo_record_foreign_waiver_announcement_body(uint32_t event_yyyymmdd, const 
 
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign reserve rights: announcement body record failed path=%s err=%lu", path, GetLastError());
+        kbo_log_runtimef("foreign reserve rights: announcement body record failed path=%s err=%lu", path, GetLastError());
         return;
     }
 

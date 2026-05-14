@@ -102,7 +102,7 @@ int32_t kbo_ai_fa_status_force_retained_market_candidates(
     static volatile LONG retention_team_log_count = 0;
     LONG team_slot = InterlockedIncrement(&retention_team_log_count);
     if (team_slot <= 400) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign retention priority: team_probe team=%u today=%u rights=%d considered=%d protectable=%d rejected=%d index=%d candidate_array=%p top_player=%u top_score=%d",
             requester_team_id,
             today,
@@ -133,7 +133,7 @@ int32_t kbo_ai_fa_status_force_retained_market_candidates(
             static volatile LONG retention_force_log_count = 0;
             LONG slot = InterlockedIncrement(&retention_force_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign retention priority: force_retained_candidate team=%u player=%u score=%d threshold=%d pos=%u/%u asian=%u in_org=%d market=%d holder_org=%d current=%u active=%u original=%u default=%u loan=%u draft=%u level=%u index=%d next=%d today=%u",
                     requester_team_id,
                     candidate->player_id,
@@ -160,7 +160,7 @@ int32_t kbo_ai_fa_status_force_retained_market_candidates(
             static volatile LONG retention_failed_log_count = 0;
             LONG slot = InterlockedIncrement(&retention_failed_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign retention priority: insert_failed team=%u player=%u score=%d index=%d slot_accessible=%d candidate_array=%p today=%u",
                     requester_team_id,
                     candidate->player_id,
@@ -177,7 +177,7 @@ int32_t kbo_ai_fa_status_force_retained_market_candidates(
         static volatile LONG retention_no_force_log_count = 0;
         LONG slot = InterlockedIncrement(&retention_no_force_log_count);
         if (slot <= 80) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign retention priority: no_force team=%u today=%u rights=%d considered=%d protectable=%d rejected=%d already_present=%d index=%d",
                 requester_team_id,
                 today,

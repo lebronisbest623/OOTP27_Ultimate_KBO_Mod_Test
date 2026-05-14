@@ -51,21 +51,21 @@ static int kbo_webview_handle_cbt_exception_command(const char* cmd)
             char player_name[96];
             kbo_webview_cbt_exception_player_name(season, team_id, player_key, player_name, sizeof(player_name));
             if (kbo_cbt_exception_save_designation(season, team_id, player_key, player_name)) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO CBT exception UI set season=%u team=%u player_key=%s player_name=%s",
                     season,
                     team_id,
                     player_key,
                     player_name);
             } else {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO CBT exception UI set failed season=%u team=%u player_key=%s reason=save_rejected",
                     season,
                     team_id,
                     player_key);
             }
         } else {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT exception UI set ignored parsed=%d season=%u team=%u player_key=%s window_open=%d",
                 parsed,
                 season,
@@ -88,12 +88,12 @@ static int kbo_webview_handle_cbt_exception_command(const char* cmd)
         int window_open = parsed == 2 ? kbo_webview_cbt_exception_window_open(season) : 0;
         if (parsed == 2 && window_open) {
             if (kbo_cbt_exception_clear_designation(season, team_id)) {
-                append_logf("KBO CBT exception UI clear season=%u team=%u", season, team_id);
+                kbo_log_runtimef("KBO CBT exception UI clear season=%u team=%u", season, team_id);
             } else {
-                append_logf("KBO CBT exception UI clear failed season=%u team=%u", season, team_id);
+                kbo_log_runtimef("KBO CBT exception UI clear failed season=%u team=%u", season, team_id);
             }
         } else {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT exception UI clear ignored parsed=%d season=%u team=%u window_open=%d",
                 parsed,
                 season,

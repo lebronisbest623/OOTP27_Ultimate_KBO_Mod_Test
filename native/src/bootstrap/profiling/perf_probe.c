@@ -56,7 +56,7 @@ void kbo_perf_probe_record(
     LONG delta_ms = InterlockedExchange(total_ms, 0);
     LONG window_max_ms = InterlockedExchange(max_ms, 0);
     if (delta_calls >= 50 || delta_ms >= 20 || window_max_ms >= 10) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO perf hook=%s total=%ld delta=%ld elapsed_ms=%ld max_ms=%ld window_ms=%lu",
             name != NULL ? name : "",
             total,

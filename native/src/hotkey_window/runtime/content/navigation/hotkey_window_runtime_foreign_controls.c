@@ -68,7 +68,7 @@ int kbo_select_foreign_candidate_from_edit_click(HWND edit, LPARAM lparam)
     }
 
     g_kbo_hub_selected_foreign_player_id = player_id;
-    append_logf("foreign rights ui: selected player=%u from row=%d", player_id, line_index);
+    kbo_log_runtimef("foreign rights ui: selected player=%u from row=%d", player_id, line_index);
     kbo_refresh_hotkey_window();
     if (g_kbo_hotkey_window != NULL) {
         InvalidateRect(g_kbo_hotkey_window, NULL, TRUE);
@@ -164,7 +164,7 @@ void kbo_refresh_foreign_rights_controls(void)
 void kbo_apply_foreign_rights_button(int retain)
 {
     if (!kbo_is_foreign_waiver_negotiation_window_open()) {
-        append_logf("foreign rights ui: %s blocked by window closed", retain ? "RETAIN" : "SKIP");
+        kbo_log_runtimef("foreign rights ui: %s blocked by window closed", retain ? "RETAIN" : "SKIP");
         return;
     }
 
@@ -181,7 +181,7 @@ void kbo_apply_foreign_rights_button(int retain)
     }
 
     if (player_id != 0u && kbo_append_foreign_waiver_user_decision(g_kbo_hub_selected_team_id, player_id, retain)) {
-        append_logf("foreign rights ui: queued %s team=%u player=%u", retain ? "RETAIN" : "SKIP", g_kbo_hub_selected_team_id, player_id);
+        kbo_log_runtimef("foreign rights ui: queued %s team=%u player=%u", retain ? "RETAIN" : "SKIP", g_kbo_hub_selected_team_id, player_id);
         process_foreign_waiver_commands();
         kbo_refresh_foreign_rights_controls();
         kbo_refresh_hotkey_window();

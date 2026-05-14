@@ -40,7 +40,7 @@ int kbo_military_daily_roster_mutation_window_ready(
 
     LONG slot = InterlockedIncrement(&g_military_daily_mutation_ready_log_count);
     if (slot <= 20 || (slot % 100) == 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military daily roster mutation window immediate date_serial=%u player_count=%d save=%s slot=%ld",
             today_serial,
             player_count,
@@ -94,7 +94,7 @@ int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* kpb, con
                 && loan_team_id != service_team_id) {
             LONG skip_log = InterlockedIncrement(&g_military_seed_expired_skip_log_count);
             if (skip_log <= 40) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO military service seed skipped expired key=%s player=%u return=%u today_serial=%u current_team=%u service_team=%u",
                     seed->key,
                     seed->player_id,
@@ -161,7 +161,7 @@ int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* kpb, con
             if (original_league_id != 0u) {
                 *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET) = original_league_id;
             }
-            append_logf(
+            kbo_log_runtimef(
                 "KBO military service seed assigned to service key=%s player=%u old_team=%u service_team=%u original_team=%u pre=%d register=%d attach=%d",
                 seed->key,
                 seed->player_id,
@@ -213,7 +213,7 @@ int kbo_apply_military_service_seed_assignments(uint8_t* sang, uint8_t* kpb, con
     }
 
     if (applied > 0) {
-        append_logf("KBO military service seed applied source=%s assignments=%d", source != NULL ? source : "", applied);
+        kbo_log_runtimef("KBO military service seed applied source=%s assignments=%d", source != NULL ? source : "", applied);
     }
     return applied;
 }
@@ -281,7 +281,7 @@ int kbo_release_invalid_military_service_team_assignment(
     static volatile LONG invalid_release_log_count = 0;
     LONG slot = InterlockedIncrement(&invalid_release_log_count);
     if (slot <= 160) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military invalid FA assignment released source=%s player=%u service_team=%u old_current_team=%u old_current_league=%u new_league=%u old_active_team=%u old_original_slot=%u removed=%d old_contract_level=%u old_contract_status=%d old_salary_y1=%d old_days_left=%d old_military_active=%u vector_off=0x%x",
             source != NULL ? source : "",
             player_id,

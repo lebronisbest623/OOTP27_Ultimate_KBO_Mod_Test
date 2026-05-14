@@ -22,7 +22,7 @@
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_string.h"
 #include "../api/competitive_balance_tax.h"
-#include "../draft/cbt_draft_probe.h"
+#include "../draft/probe/cbt_draft_probe.h"
 #include "../exceptions/cbt_exceptions.h"
 #include "../records/cbt_records.h"
 #include "../rules/cbt_rules.h"

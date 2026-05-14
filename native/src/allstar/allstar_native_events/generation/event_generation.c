@@ -27,7 +27,7 @@ int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* so
         KboAllstarLayout layout = kbo_get_allstar_layout();
         uint8_t* league = (uint8_t*)league_ptr;
         if (!memory_range_readable(league, layout.league_id_fallback_offset + sizeof(uint32_t))) {
-            append_logf("KBO all-star native events skipped source=%s league=%p reason=league_unreadable", source != NULL ? source : "", league);
+            kbo_log_runtimef("KBO all-star native events skipped source=%s league=%p reason=league_unreadable", source != NULL ? source : "", league);
             break;
         }
 
@@ -50,7 +50,7 @@ int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* so
             NULL,
             NULL);
         if (imported_league_ptr != league_ptr) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star native events skipped source=%s league=%p imported=%p reason=not_schedule_import_league",
                 source != NULL ? source : "",
                 league,
@@ -58,7 +58,7 @@ int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* so
             break;
         }
         if (!scoped_context && !id_context) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star native events skipped source=%s league=%p reason=context_not_enabled ids=%u/%u/%u configured=%u",
                 source != NULL ? source : "",
                 league,
@@ -111,15 +111,15 @@ int run_kbo_allstar_native_event_generation(uintptr_t league_ptr, const char* so
             }
         }
         if (make_events == NULL) {
-            append_logf("KBO all-star native events skipped source=%s reason=target_unresolved", source != NULL ? source : "");
+            kbo_log_runtimef("KBO all-star native events skipped source=%s reason=target_unresolved", source != NULL ? source : "");
             break;
         }
         if (!memory_range_readable((void*)make_events, 32u)) {
-            append_logf("KBO all-star native events skipped source=%s target=%p reason=target_unreadable", source != NULL ? source : "", (void*)make_events);
+            kbo_log_runtimef("KBO all-star native events skipped source=%s target=%p reason=target_unreadable", source != NULL ? source : "", (void*)make_events);
             break;
         }
         if (!kbo_allstar_league_vtable_plausible(league_ptr)) {
-            append_logf("KBO all-star native events skipped source=%s league=%p reason=league_vtable_invalid", source != NULL ? source : "", league);
+            kbo_log_runtimef("KBO all-star native events skipped source=%s league=%p reason=league_vtable_invalid", source != NULL ? source : "", league);
             break;
         }
 

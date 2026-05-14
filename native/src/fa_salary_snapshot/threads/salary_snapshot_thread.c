@@ -45,7 +45,7 @@ static int kbo_fa_salary_snapshot_cbt_records_exist_for_season(uint32_t season)
 static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("KBO FA salary opening-day snapshot thread started");
+    kbo_log_runtime_line("KBO FA salary opening-day snapshot thread started");
 
     uint32_t last_log_date = 0u;
     uint32_t last_log_opening_day = 0u;
@@ -120,7 +120,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
                 cached_schedule_year = year;
                 cached_schedule_opening_day = opening_day;
                 if (date != last_log_date || opening_day != last_log_opening_day) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "KBO FA salary snapshot opening day fallback date=%u opening_day=%u league=%u source=schedule",
                         date,
                         opening_day,
@@ -141,7 +141,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
 
             if (!cached_message_found) {
                 if (quiet_opening_unavailable_year != year && date != last_log_date) {
-                    append_logf("KBO FA salary snapshot waiting date=%u league=%u reason=opening_day_memory_unavailable", date, league_id);
+                    kbo_log_runtimef("KBO FA salary snapshot waiting date=%u league=%u reason=opening_day_memory_unavailable", date, league_id);
                     last_log_date = date;
                     if (month >= 5u) {
                         quiet_opening_unavailable_year = year;
@@ -173,7 +173,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             }
             if (cbt_announcement_day != 0u && date < cbt_announcement_day) {
                 if (date != last_log_date || opening_day != last_log_opening_day) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "KBO CBT waiting for exception designation window date=%u season=%u opening_day=%u announce=%u",
                         date,
                         year,
@@ -189,7 +189,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             }
             if (cbt_event_schedule_done_season != year) {
                 cbt_event_schedule_done_season = year;
-                append_logf(
+                kbo_log_runtimef(
                     "KBO FA salary snapshot CBT event schedule date=%u season=%u opening_day=%u announce=%u reason=snapshot_exists",
                     date,
                     year,
@@ -202,7 +202,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
                     && cbt_due_process_done_season != year
                     && !kbo_fa_salary_snapshot_cbt_records_exist_for_season(year)) {
                 cbt_due_process_done_season = year;
-                append_logf(
+                kbo_log_runtimef(
                     "KBO CBT due fallback processing date=%u season=%u opening_day=%u announce=%u reason=no_records_after_announcement",
                     date,
                     year,
@@ -227,7 +227,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             && !snapshot_exists;
         if (!in_opening_window && !late_missing_snapshot_backfill) {
             if (date != last_log_date || opening_day != last_log_opening_day) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO FA salary snapshot waiting date=%u opening_day=%u league=%u",
                     date,
                     opening_day,
@@ -241,7 +241,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
             continue;
         }
         if (late_missing_snapshot_backfill) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA salary snapshot late backfill date=%u opening_day=%u league=%u reason=missing_opening_day_snapshot",
                 date,
                 opening_day,
@@ -261,7 +261,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
         }
     }
     InterlockedExchange(&g_kbo_fa_salary_snapshot_thread_started, 0);
-    append_log_line("KBO FA salary opening-day snapshot thread stopped");
+    kbo_log_runtime_line("KBO FA salary opening-day snapshot thread stopped");
 
     return 0;
 }

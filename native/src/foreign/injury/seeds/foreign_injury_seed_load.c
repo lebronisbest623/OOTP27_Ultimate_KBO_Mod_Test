@@ -96,7 +96,7 @@ int kbo_load_foreign_injury_replacements_locked(const char* path)
             if (!kbo_foreign_injury_persisted_date_span_plausible(opened_on, expected_end)) {
                 invalid_date_span++;
                 if (invalid_date_span <= 20) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign injury replacement: discarded persisted record with invalid date span team=%u injured=%u opened=%u expected_end=%u status=%u path=%s",
                         team_id,
                         injured_player_id,
@@ -122,7 +122,7 @@ int kbo_load_foreign_injury_replacements_locked(const char* path)
     }
 
     kbo_csv_reader_close(reader);
-    append_logf(
+    kbo_log_runtimef(
         "foreign injury replacement: loaded=%d invalid_date_span=%d path=%s",
         loaded,
         invalid_date_span,
@@ -305,7 +305,7 @@ int kbo_import_foreign_injury_replacement_seed_file_locked(
 
     kbo_csv_reader_close(reader);
     if (imported > 0 || skipped > 0 || parse_failed > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign injury replacement: seed import source=%s imported=%d skipped=%d parse_failed=%d path=%s",
             source != NULL ? source : "",
             imported,

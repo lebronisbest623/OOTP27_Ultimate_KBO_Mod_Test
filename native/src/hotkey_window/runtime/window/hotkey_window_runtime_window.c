@@ -264,7 +264,7 @@ LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM wparam, 
 
     case KBO_WM_REFRESH_HUB:
         kbo_refresh_hotkey_window_layout(hwnd);
-        append_logf("KBO F2 hub refreshed by request hwnd=%p", (void*)hwnd);
+        kbo_log_runtimef("KBO F2 hub refreshed by request hwnd=%p", (void*)hwnd);
         return 0;
 
     case WM_CLOSE:
@@ -308,7 +308,7 @@ DWORD WINAPI kbo_hotkey_window_thread(LPVOID parameter)
 
     ATOM klass = RegisterClassExA(&wc);
     if (klass == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
-        append_logf("KBO F2 hub class registration failed error=%lu", GetLastError());
+        kbo_log_runtimef("KBO F2 hub class registration failed error=%lu", GetLastError());
         return 0;
     }
 
@@ -327,7 +327,7 @@ DWORD WINAPI kbo_hotkey_window_thread(LPVOID parameter)
         owner, NULL, g_kbo_hotkey_instance, NULL);
 
     if (hwnd == NULL) {
-        append_logf("KBO F2 hub window creation failed error=%lu", GetLastError());
+        kbo_log_runtimef("KBO F2 hub window creation failed error=%lu", GetLastError());
         return 0;
     }
 
@@ -335,11 +335,11 @@ DWORD WINAPI kbo_hotkey_window_thread(LPVOID parameter)
     g_kbo_hotkey_keyboard_hook = SetWindowsHookExA(
         WH_KEYBOARD_LL, kbo_hotkey_keyboard_proc, g_kbo_hotkey_instance, 0);
     if (g_kbo_hotkey_keyboard_hook == NULL) {
-        append_logf("KBO F2 hub keyboard hook failed error=%lu; falling back to polling", GetLastError());
+        kbo_log_runtimef("KBO F2 hub keyboard hook failed error=%lu; falling back to polling", GetLastError());
     } else {
-        append_logf("KBO F2 hub keyboard hook installed hook=%p", (void*)g_kbo_hotkey_keyboard_hook);
+        kbo_log_runtimef("KBO F2 hub keyboard hook installed hook=%p", (void*)g_kbo_hotkey_keyboard_hook);
     }
-    append_logf("KBO F2 hub ready hwnd=%p owner=%p", (void*)hwnd, (void*)owner);
+    kbo_log_runtimef("KBO F2 hub ready hwnd=%p owner=%p", (void*)hwnd, (void*)owner);
 
     MSG message;
     while (GetMessageA(&message, NULL, 0, 0) > 0) {
@@ -364,7 +364,7 @@ void start_kbo_hotkey_window_thread(HINSTANCE instance)
     HANDLE thread = CreateThread(NULL, 0, kbo_hotkey_window_thread, instance, 0, &g_kbo_hotkey_thread_id);
     if (thread == NULL) {
         InterlockedExchange(&g_kbo_hotkey_window_started, 0);
-        append_logf("KBO F2 hub thread failed error=%lu", GetLastError());
+        kbo_log_runtimef("KBO F2 hub thread failed error=%lu", GetLastError());
         return;
     }
 

@@ -97,7 +97,7 @@ int kbo_emit_military_return_preview_news_if_due(uint32_t today_serial, const ch
             sizeof(title),
             source)
             || !kbo_military_return_preview_render_body(entries, entry_count, body, sizeof(body), source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military return preview news skipped source=%s date=%u reason=template_unavailable count=%d lead=%u",
             source != NULL ? source : "",
             today,
@@ -118,7 +118,7 @@ int kbo_emit_military_return_preview_news_if_due(uint32_t today_serial, const ch
         kbo_military_return_preview_persist_marker(marker, source);
         InterlockedExchange(&g_kbo_military_return_preview_last_checked_date, (LONG)today);
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO military return preview news source=%s date=%u league_id=%u return_year=%u count=%d lead=%u lead_return=%u days_left=%d created=%d",
         source != NULL ? source : "",
         today,

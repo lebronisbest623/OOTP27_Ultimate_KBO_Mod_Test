@@ -53,7 +53,7 @@ static int kbo_create_parent_directory_w(const WCHAR* path)
     return CreateDirectoryW(dir, NULL) || GetLastError() == ERROR_ALREADY_EXISTS;
 }
 
-int kbo_read_localappdata_named_json_flag_value(const char* file_name, const char* key, const char* legacy_key, int* out_value)
+int kbo_read_localappdata_named_json_flag_value(const char* file_name, const char* key, int* out_value)
 {
     if (key == NULL || key[0] == '\0' || out_value == NULL) {
         return 0;
@@ -85,16 +85,16 @@ int kbo_read_localappdata_named_json_flag_value(const char* file_name, const cha
     DWORD read = 0;
     int found = 0;
     if (ReadFile(file, buffer, size, &read, NULL)) {
-        found = kbo_find_flag_value_in_json(buffer, read, key, legacy_key, out_value);
+        found = kbo_find_flag_value_in_json(buffer, read, key, out_value);
     }
     CloseHandle(file);
     HeapFree(GetProcessHeap(), 0, buffer);
     return found;
 }
 
-int kbo_read_localappdata_json_flag_value(const char* key, const char* legacy_key, int* out_value)
+int kbo_read_localappdata_json_flag_value(const char* key, int* out_value)
 {
-    return kbo_read_localappdata_named_json_flag_value("kbo_flags.json", key, legacy_key, out_value);
+    return kbo_read_localappdata_named_json_flag_value("kbo_flags.json", key, out_value);
 }
 
 static int kbo_get_localappdata_flags_json_path(WCHAR* out, DWORD out_count)

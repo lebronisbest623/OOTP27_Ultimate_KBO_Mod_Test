@@ -103,7 +103,7 @@ static void kbo_offer_candidate_priority_log(
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign ai offer candidate priority: reason=%s team=%u original=%u retained=%u original_score=%d retained_score=%d margin=%d today=%u",
         reason != NULL ? reason : "unknown",
         team_id,

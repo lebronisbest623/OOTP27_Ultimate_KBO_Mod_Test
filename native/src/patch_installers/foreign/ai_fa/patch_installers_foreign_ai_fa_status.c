@@ -28,11 +28,11 @@ static uint8_t* kbo_ai_fa_status_resolve_insert_site(
 {
     uint8_t* target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, rva);
     if (memory_range_readable(target, 12) && is_rax_absolute_jump_patch(target)) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return target;
     }
     if (memory_range_readable(target, expected_size) && memcmp(target, expected, expected_size) == 0) {
-        append_logf("%s resolved by rva target=%p rva=0x%08X", label, target, rva);
+        kbo_log_runtimef("%s resolved by rva target=%p rva=0x%08X", label, target, rva);
         return target;
     }
     if (context != NULL && context_size != 0) {
@@ -76,7 +76,7 @@ static int kbo_install_ai_fa_status_candidate_insert_site(
 
     uint8_t* stub = build_stub(target + expected_size);
     if (stub == NULL) {
-        append_logf("failed to allocate %s stub", label);
+        kbo_log_runtimef("failed to allocate %s stub", label);
         return 0;
     }
 
@@ -90,7 +90,7 @@ static int kbo_install_ai_fa_status_candidate_insert_site(
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, expected_size, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for %s error=%lu", label, GetLastError());
         return 0;
     }
 
@@ -100,7 +100,7 @@ static int kbo_install_ai_fa_status_candidate_insert_site(
     DWORD ignored = 0;
     VirtualProtect(target, expected_size, old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed %s target=%p rva=0x%llx stub=%p wrapper=%p",
         label,
         target,
@@ -114,14 +114,14 @@ int install_kbo_ai_fa_status_candidate_insert_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO AI FA status candidate insert patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO AI FA status candidate insert patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO AI FA status candidate insert patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO AI FA status candidate insert patch host=%s", host);
         return 0;
     }
 
@@ -206,13 +206,13 @@ static int kbo_install_foreign_ai_offer_build_probe_patch(HMODULE exe)
         "KBO foreign AI offer build probe patch");
     if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO foreign AI offer build probe patch already installed target=%p", target);
+        kbo_log_runtimef("KBO foreign AI offer build probe patch already installed target=%p", target);
         return 1;
     }
 
     uint8_t* stub = build_kbo_foreign_ai_offer_build_probe_stub(target + patch_len);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO foreign AI offer build probe stub");
+        kbo_log_runtime_line("failed to allocate KBO foreign AI offer build probe stub");
         return 0;
     }
 
@@ -227,7 +227,7 @@ static int kbo_install_foreign_ai_offer_build_probe_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO foreign AI offer build probe patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO foreign AI offer build probe patch error=%lu", GetLastError());
         return 0;
     }
     memcpy(target, patch, sizeof(patch));
@@ -235,7 +235,7 @@ static int kbo_install_foreign_ai_offer_build_probe_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO foreign AI offer build probe patch target=%p rva=0x%llx stub=%p wrapper=%p",
         target,
         (unsigned long long)((uintptr_t)target - (uintptr_t)exe),
@@ -263,7 +263,7 @@ static int kbo_install_foreign_ai_offer_final_gate_probe_patch(HMODULE exe)
         "KBO foreign AI offer final gate probe patch");
     if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO foreign AI offer final gate probe patch already installed target=%p", target);
+        kbo_log_runtimef("KBO foreign AI offer final gate probe patch already installed target=%p", target);
         return 1;
     }
 
@@ -273,7 +273,7 @@ static int kbo_install_foreign_ai_offer_final_gate_probe_patch(HMODULE exe)
     uint8_t* failure = target - failure_delta;
     uint8_t* stub = build_kbo_foreign_ai_offer_final_gate_probe_stub(target + patch_len, failure);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO foreign AI offer final gate probe stub");
+        kbo_log_runtime_line("failed to allocate KBO foreign AI offer final gate probe stub");
         return 0;
     }
 
@@ -288,7 +288,7 @@ static int kbo_install_foreign_ai_offer_final_gate_probe_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO foreign AI offer final gate probe patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO foreign AI offer final gate probe patch error=%lu", GetLastError());
         return 0;
     }
     memcpy(target, patch, sizeof(patch));
@@ -296,7 +296,7 @@ static int kbo_install_foreign_ai_offer_final_gate_probe_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO foreign AI offer final gate probe patch target=%p rva=0x%llx stub=%p wrapper=%p",
         target,
         (unsigned long long)((uintptr_t)target - (uintptr_t)exe),
@@ -309,14 +309,14 @@ int install_kbo_foreign_ai_offer_attach_probe_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO foreign AI offer attach probe patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO foreign AI offer attach probe patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO foreign AI offer attach probe patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO foreign AI offer attach probe patch host=%s", host);
         return 0;
     }
 
@@ -342,19 +342,19 @@ int install_kbo_foreign_ai_offer_attach_probe_patch(void)
     if (target == NULL) { return 0; }
 
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO foreign AI offer attach probe patch already installed target=%p", target);
+        kbo_log_runtimef("KBO foreign AI offer attach probe patch already installed target=%p", target);
         attach_ok = 1;
     } else {
 
         uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
         if (trampoline == NULL) {
-            append_log_line("failed to allocate KBO foreign AI offer attach probe trampoline");
+            kbo_log_runtime_line("failed to allocate KBO foreign AI offer attach probe trampoline");
             return 0;
         }
 
         uint8_t* stub = build_kbo_foreign_ai_offer_attach_probe_detour_stub(trampoline);
         if (stub == NULL) {
-            append_log_line("failed to allocate KBO foreign AI offer attach probe detour stub");
+            kbo_log_runtime_line("failed to allocate KBO foreign AI offer attach probe detour stub");
             return 0;
         }
 
@@ -368,7 +368,7 @@ int install_kbo_foreign_ai_offer_attach_probe_patch(void)
 
         DWORD old_protect = 0;
         if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-            append_logf("VirtualProtect failed for KBO foreign AI offer attach probe patch error=%lu", GetLastError());
+            kbo_log_runtimef("VirtualProtect failed for KBO foreign AI offer attach probe patch error=%lu", GetLastError());
             return 0;
         }
 
@@ -378,7 +378,7 @@ int install_kbo_foreign_ai_offer_attach_probe_patch(void)
         DWORD ignored = 0;
         VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-        append_logf(
+        kbo_log_runtimef(
             "installed KBO foreign AI offer attach probe patch target=%p rva=0x%llx stub=%p trampoline=%p wrapper=%p",
             target,
             (unsigned long long)((uintptr_t)target - (uintptr_t)exe),

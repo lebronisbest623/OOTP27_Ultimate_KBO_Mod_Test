@@ -45,7 +45,7 @@ void kbo_custom_event_monitor_tick(
                 *last_scanned_yyyymmdd = 0u;
             }
         } else {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d cbt=%d",
                 today_yyyymmdd,
                 foreign_schedule,
@@ -59,7 +59,7 @@ void kbo_custom_event_monitor_tick(
         if (triggered == 0) {
             *last_scanned_yyyymmdd = today_yyyymmdd;
         } else if (triggered < 0) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event monitor scan deferred reason=state_not_ready today=%u",
                 today_yyyymmdd);
         }
@@ -69,7 +69,7 @@ void kbo_custom_event_monitor_tick(
 DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("KBO custom event monitor started");
+    kbo_log_runtime_line("KBO custom event monitor started");
 
     uint32_t last_scheduled_yyyymmdd = 0u;
     uint32_t last_scanned_yyyymmdd = 0u;
@@ -83,7 +83,7 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
             g_kbo_default_event_source);
     }
     InterlockedExchange(&g_kbo_custom_event_monitor_started, 0);
-    append_log_line("KBO custom event monitor stopped");
+    kbo_log_runtime_line("KBO custom event monitor stopped");
 
     return 0;
 }
@@ -91,7 +91,7 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
 int start_kbo_custom_event_monitor(void)
 {
     if (!kbo_fix_enabled()) {
-        append_log_line("KBO custom event monitor skipped reason=fix_disabled");
+        kbo_log_runtime_line("KBO custom event monitor skipped reason=fix_disabled");
         return 0;
     }
     if (InterlockedCompareExchange(&g_kbo_custom_event_monitor_started, 1, 0) != 0) {

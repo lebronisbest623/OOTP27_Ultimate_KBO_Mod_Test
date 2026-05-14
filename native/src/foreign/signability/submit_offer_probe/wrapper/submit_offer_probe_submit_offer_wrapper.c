@@ -23,7 +23,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
         static LONG entry_log_count = 0;
         LONG entry_slot = InterlockedIncrement(&entry_log_count);
         if (entry_slot <= 80) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign reserve submit-offer entry: screen=%p player=%u offset=0x%x today=%u cached_player=%ld cached_team=%ld cached_holder=%ld custom_cached_player=%ld custom_cached_team=%ld",
                 (void*)screen_ptr,
                 player_id,
@@ -40,7 +40,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
             static LONG custom_submit_block_log_count = 0;
             LONG block_slot = InterlockedIncrement(&custom_submit_block_log_count);
             if (block_slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "custom foreign policy submit-offer blocked: screen=%p player=%u requester_team=%u today=%u",
                     (void*)screen_ptr,
                     player_id,
@@ -75,7 +75,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                     static LONG custom_submit_slot_block_log_count = 0;
                     LONG block_slot = InterlockedIncrement(&custom_submit_slot_block_log_count);
                     if (block_slot <= 200) {
-                        append_logf(
+                        kbo_log_runtimef(
                             "custom foreign policy submit-offer blocked by pending count: screen=%p player=%u requester_team=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u",
                             (void*)screen_ptr,
                             player_id,
@@ -101,7 +101,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                 static LONG custom_submit_missing_allow_log_count = 0;
                 LONG missing_slot = InterlockedIncrement(&custom_submit_missing_allow_log_count);
                 if (missing_slot <= 120) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "custom foreign policy submit-offer missing recent allow: screen=%p player=%u today=%u",
                         (void*)screen_ptr,
                         player_id,
@@ -114,7 +114,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
             static LONG probe_log_count = 0;
             LONG slot = InterlockedIncrement(&probe_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign reserve submit-offer probe: screen=%p player=%u holder_team=%u today=%u",
                     (void*)screen_ptr,
                     player_id,
@@ -128,7 +128,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                 static LONG submit_block_log_count = 0;
                 LONG block_slot = InterlockedIncrement(&submit_block_log_count);
                 if (block_slot <= 200) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign reserve submit-offer blocked: screen=%p player=%u requester_team=%u holder_team=%u today=%u reason=%s",
                         (void*)screen_ptr,
                         player_id,
@@ -163,7 +163,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                         static LONG holder_submit_slot_block_log_count = 0;
                         LONG block_slot = InterlockedIncrement(&holder_submit_slot_block_log_count);
                         if (block_slot <= 200) {
-                            append_logf(
+                            kbo_log_runtimef(
                                 "custom foreign policy holder submit-offer blocked by pending count: screen=%p player=%u requester_team=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u",
                                 (void*)screen_ptr,
                                 player_id,

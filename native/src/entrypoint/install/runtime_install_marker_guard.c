@@ -6,7 +6,7 @@ static int kbo_current_save_has_completed_flag(const char* save_path, const char
     int path_written = snprintf(completed_path, sizeof(completed_path), "%s\\flag_save_completed.dat", save_path);
     if (path_written <= 0 || (size_t)path_written >= sizeof(completed_path)) {
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=save_completed_path_overflow save=%s",
                 source != NULL ? source : "",
                 save_path != NULL ? save_path : "");
@@ -24,7 +24,7 @@ static int kbo_current_save_has_completed_flag(const char* save_path, const char
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=save_not_completed gle=%lu path=%s",
                 source != NULL ? source : "",
                 GetLastError(),
@@ -36,7 +36,7 @@ static int kbo_current_save_has_completed_flag(const char* save_path, const char
     LARGE_INTEGER size = {0};
     if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > 1024 * 1024) {
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=save_completed_size_invalid path=%s",
                 source != NULL ? source : "",
                 completed_path);
@@ -57,7 +57,7 @@ static int kbo_current_save_has_completed_flag(const char* save_path, const char
     if (!read_ok || read != (DWORD)size.QuadPart) {
         HeapFree(GetProcessHeap(), 0, text);
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=save_completed_read_failed path=%s",
                 source != NULL ? source : "",
                 completed_path);
@@ -70,7 +70,7 @@ static int kbo_current_save_has_completed_flag(const char* save_path, const char
     HeapFree(GetProcessHeap(), 0, text);
     if (!completed) {
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=save_not_completed path=%s",
                 source != NULL ? source : "",
                 completed_path);
@@ -86,7 +86,7 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
     char save_path[MAX_PATH] = {0};
     if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
         if (log_detail) {
-            append_logf("KBO runtime marker guard waiting source=%s reason=current_save_unavailable", source != NULL ? source : "");
+            kbo_log_runtimef("KBO runtime marker guard waiting source=%s reason=current_save_unavailable", source != NULL ? source : "");
         }
         return 0;
     }
@@ -95,7 +95,7 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
     int path_written = snprintf(description_path, sizeof(description_path), "%s\\description.txt", save_path);
     if (path_written <= 0 || (size_t)path_written >= sizeof(description_path)) {
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=description_path_overflow save=%s",
                 source != NULL ? source : "",
                 save_path);
@@ -113,7 +113,7 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=description_unavailable gle=%lu path=%s",
                 source != NULL ? source : "",
                 GetLastError(),
@@ -125,7 +125,7 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
     LARGE_INTEGER size = {0};
     if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > 1024 * 1024) {
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=description_size_invalid path=%s",
                 source != NULL ? source : "",
                 description_path);
@@ -146,7 +146,7 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
     if (!read_ok || read != (DWORD)size.QuadPart) {
         HeapFree(GetProcessHeap(), 0, text);
         if (log_detail) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime marker guard waiting source=%s reason=description_read_failed path=%s",
                 source != NULL ? source : "",
                 description_path);
@@ -161,7 +161,7 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
         if (!kbo_current_save_has_completed_flag(save_path, source, log_detail)) {
             return 0;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO runtime marker guard passed source=%s save=%s description=%s save_completed=%s\\flag_save_completed.dat",
             source != NULL ? source : "",
             save_path,
@@ -171,7 +171,7 @@ int kbo_current_save_has_required_roster_marker(const char* source, int log_deta
     }
 
     if (log_detail) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO runtime marker guard waiting source=%s reason=marker_missing save=%s description=%s",
             source != NULL ? source : "",
             save_path,

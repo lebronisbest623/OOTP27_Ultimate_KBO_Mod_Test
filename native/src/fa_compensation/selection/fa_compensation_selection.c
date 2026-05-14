@@ -134,7 +134,7 @@ int kbo_manual_select_fa_compensation_player(
     }
     if (rec == NULL || !rec->requires_player_compensation || rec->protect_count == 0u
             || rec->status == KBO_FA_COMPENSATION_STATUS_PLAYER_TRANSFERRED) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA manual compensation select skipped reason=record fa_player=%u selected=%u status=%u source=%s",
             fa_player_id,
             selected_player_id,
@@ -168,7 +168,7 @@ int kbo_manual_select_fa_compensation_player(
         }
     }
     if (selected.player_id == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA manual compensation select skipped reason=not_unprotected fa_player=%u selected=%u source=%s",
             fa_player_id,
             selected_player_id,

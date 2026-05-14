@@ -98,7 +98,7 @@ static void test_json_flags_parser(void)
     const char json[] =
         "{\r\n"
         "  \"enable_foreign_waiver_ai\": true,\r\n"
-        "  \"enable_launcher_injection.txt\": \"YES\",\r\n"
+        "  \"enable_launcher_injection\": \"YES\",\r\n"
         "  \"disable_foreign_injury_replacement\": 0,\r\n"
         "  \"intl_established_fa_multiplier\": \" 5 \",\r\n"
         "  \"nested\": {\"ignored\": false}\r\n"
@@ -107,11 +107,11 @@ static void test_json_flags_parser(void)
     const char* start = NULL;
     const char* end = NULL;
 
-    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "enable_foreign_waiver_ai", NULL, &value));
+    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "enable_foreign_waiver_ai", &value));
     assert(value == 1);
-    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "enable_launcher_injection", "enable_launcher_injection.txt", &value));
+    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "enable_launcher_injection", &value));
     assert(value == 1);
-    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "disable_foreign_injury_replacement", NULL, &value));
+    assert(kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "disable_foreign_injury_replacement", &value));
     assert(value == 0);
     assert(kbo_find_int_value_in_json(json, (DWORD)strlen(json), "intl_established_fa_multiplier", &value));
     assert(value == 5);
@@ -122,44 +122,22 @@ static void test_json_flags_parser(void)
     const char bom_json[] =
         "\xEF\xBB\xBF{\r\n"
         "  \"enable_experimental_runtime_hooks\": true,\r\n"
-        "  \"disable_kbo_no_minor_contract_patch\": true,\r\n"
-        "  \"disable_kbo_no_minor_contract_experimental_patch\": false\r\n"
+        "  \"disable_kbo_no_minor_contract_patch\": true\r\n"
         "}\r\n";
     assert(kbo_find_flag_value_in_json(
         bom_json,
         (DWORD)strlen(bom_json),
         "enable_experimental_runtime_hooks",
-        "enable_experimental_runtime_hooks.txt",
         &value));
     assert(value == 1);
     assert(kbo_find_flag_value_in_json(
         bom_json,
         (DWORD)strlen(bom_json),
         "disable_kbo_no_minor_contract_patch",
-        "disable_kbo_no_minor_contract_experimental_patch",
         &value));
     assert(value == 1);
 
-    const char legacy_no_minor_json[] =
-        "{\r\n"
-        "  \"disable_kbo_no_minor_contract_experimental_patch\": true\r\n"
-        "}\r\n";
-    assert(kbo_find_flag_value_in_json(
-        legacy_no_minor_json,
-        (DWORD)strlen(legacy_no_minor_json),
-        "disable_kbo_no_minor_contract_patch",
-        "disable_kbo_no_minor_contract_experimental_patch",
-        &value));
-    assert(value == 1);
-    assert(kbo_find_flag_value_in_json(
-        legacy_no_minor_json,
-        (DWORD)strlen(legacy_no_minor_json),
-        "disable_kbo_no_minor_contract_experimental_patch",
-        "disable_kbo_no_minor_contract_experimental_patch.txt",
-        &value));
-    assert(value == 1);
-
-    assert(!kbo_find_flag_value_in_json("{ nope", 6u, "enable_foreign_waiver_ai", NULL, &value));
+    assert(!kbo_find_flag_value_in_json("{ nope", 6u, "enable_foreign_waiver_ai", &value));
     printf("test_json_flags_parser: PASS\n");
 }
 
@@ -1272,14 +1250,6 @@ static void test_flag_key_from_file_name(void)
     assert(kbo_flag_key_from_file_name("abcd.txt", tight, sizeof(tight)));
     assert(strcmp(tight, "abcd") == 0);
 
-    assert(strcmp(
-        kbo_flag_legacy_json_key_for_key("enable_foreign_ai_roster_management"),
-        "enable_foreign_ai_roster_research_hooks") == 0);
-    assert(strcmp(
-        kbo_flag_legacy_json_key_for_key("disable_kbo_no_minor_contract_patch"),
-        "disable_kbo_no_minor_contract_experimental_patch") == 0);
-    assert(kbo_flag_legacy_json_key_for_key("enable_launcher_injection") == NULL);
-
     /* NULL/empty inputs and zero-sized output buffer are rejected. */
     assert(!kbo_flag_key_from_file_name(NULL, out, sizeof(out)));
     assert(!kbo_flag_key_from_file_name("", out, sizeof(out)));
@@ -1517,8 +1487,10 @@ int main(void)
     return 0;
 }
 
-void append_logf(const char* fmt, ...)
+void kbo_log_runtimef_at(const char* file, int line, const char* fmt, ...)
 {
+    (void)file;
+    (void)line;
     (void)fmt;
 }
 
@@ -1588,8 +1560,10 @@ int read_kbo_localappdata_flag_file(const char* file_name)
     return 0;
 }
 
-void append_log_line(const char* line)
+void kbo_log_runtime_line_at(const char* file, int source_line, const char* line)
 {
+    (void)file;
+    (void)source_line;
     (void)line;
 }
 

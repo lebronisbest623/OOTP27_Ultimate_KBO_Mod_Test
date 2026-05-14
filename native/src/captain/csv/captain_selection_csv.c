@@ -109,7 +109,7 @@ int kbo_captain_write_selection_csv(
 
     char path[MAX_PATH] = {0};
     if (!kbo_captain_selection_csv_path(rows[0].season, path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain selection csv skipped source=%s reason=path_unavailable season=%u",
             source != NULL ? source : "",
             rows[0].season);
@@ -119,7 +119,7 @@ int kbo_captain_write_selection_csv(
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO captain selection csv open failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO captain selection csv open failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
 
@@ -204,11 +204,11 @@ int kbo_captain_write_selection_csv(
 
     if (!ok) {
         kbo_atomic_abort(file, tmp_path);
-        append_logf("KBO captain selection csv write failed path=%s", path);
+        kbo_log_runtimef("KBO captain selection csv write failed path=%s", path);
         return 0;
     }
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("KBO captain selection csv write failed path=%s", path);
+        kbo_log_runtimef("KBO captain selection csv write failed path=%s", path);
         return 0;
     }
 

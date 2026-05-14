@@ -14,19 +14,19 @@ HMODULE kbo_allstar_get_host_exe(const char* label)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_logf("GetModuleHandleA(NULL) failed for %s", label);
+        kbo_log_runtimef("GetModuleHandleA(NULL) failed for %s", label);
         return NULL;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping %s host=%s", label, host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping %s host=%s", label, host);
         return NULL;
     }
 
     if (!kbo_fix_enabled()) {
-        append_logf("%s skipped: opt-in disabled", label);
+        kbo_log_runtimef("%s skipped: opt-in disabled", label);
         return NULL;
     }
 

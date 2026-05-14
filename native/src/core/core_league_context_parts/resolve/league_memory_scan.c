@@ -28,7 +28,7 @@ uintptr_t kbo_find_league_ptr_by_memory_scan(uint32_t league_id)
         return 0;
     }
     last_scan_ms = now;
-    append_logf("KBO league ptr memory scan started league_id=%u", league_id);
+    kbo_log_runtimef("KBO league ptr memory scan started league_id=%u", league_id);
 
     static const uint32_t id_offsets[] = {
         OOTP27_KBO_LEAGUE_ID_OFFSET,
@@ -73,7 +73,7 @@ uintptr_t kbo_find_league_ptr_by_memory_scan(uint32_t league_id)
                     cached_ptr = candidate;
                     cached_league_id = league_id;
                     cached_id_offset = id_offset;
-                    append_logf(
+                    kbo_log_runtimef(
                         "KBO league ptr found by memory scan league_id=%u ptr=%p id_offset=0x%x league_year=%u phase=%u phase_year=%u",
                         league_id,
                         (void*)candidate,
@@ -92,6 +92,6 @@ uintptr_t kbo_find_league_ptr_by_memory_scan(uint32_t league_id)
         }
     }
 
-    append_logf("KBO league ptr memory scan missed league_id=%u", league_id);
+    kbo_log_runtimef("KBO league ptr memory scan missed league_id=%u", league_id);
     return 0;
 }

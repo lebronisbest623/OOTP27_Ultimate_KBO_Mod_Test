@@ -13,7 +13,7 @@ void kbo_fa_compensation_lock_ledger(const char* source)
     DWORD start = GetTickCount();
     while (InterlockedCompareExchange(&g_kbo_fa_compensation_ledger_lock, 1, 0) != 0) {
         if ((GetTickCount() - start) > 5000u) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA compensation ledger lock waiting source=%s wait_ms=%lu",
                 source != NULL ? source : "",
                 (unsigned long)(GetTickCount() - start));

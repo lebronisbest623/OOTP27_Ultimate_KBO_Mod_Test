@@ -63,14 +63,14 @@ void kbo_register_runtime_thread(HANDLE thread, const char* label)
             snprintf(g_kbo_runtime_threads[i].label, sizeof(g_kbo_runtime_threads[i].label), "%s", thread_label);
             kbo_unlock_runtime_thread_registry();
             if (kbo_should_log_runtime_thread_registration()) {
-                append_logf("registered KBO runtime thread label=\"%s\" handle=%p", thread_label, thread);
+                kbo_log_runtimef("registered KBO runtime thread label=\"%s\" handle=%p", thread_label, thread);
             }
             return;
         }
     }
     kbo_unlock_runtime_thread_registry();
 
-    append_logf("KBO runtime thread registry full; closing untracked thread label=\"%s\" handle=%p", thread_label, thread);
+    kbo_log_runtimef("KBO runtime thread registry full; closing untracked thread label=\"%s\" handle=%p", thread_label, thread);
     CloseHandle(thread);
 }
 
@@ -78,13 +78,13 @@ int kbo_start_runtime_thread(LPTHREAD_START_ROUTINE start, LPVOID parameter, con
 {
     const char* thread_label = label != NULL ? label : "runtime thread";
     if (start == NULL) {
-        append_logf("KBO runtime thread start skipped label=\"%s\" reason=no_start_proc", thread_label);
+        kbo_log_runtimef("KBO runtime thread start skipped label=\"%s\" reason=no_start_proc", thread_label);
         return 0;
     }
 
     HANDLE thread = CreateThread(NULL, 0, start, parameter, 0, NULL);
     if (thread == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO runtime thread start failed label=\"%s\" error=%lu",
             thread_label,
             (unsigned long)GetLastError());
@@ -117,14 +117,14 @@ void kbo_shutdown_runtime_threads(uint32_t timeout_ms)
     kbo_unlock_runtime_thread_registry();
 
     if (count == 0) {
-        append_log_line("KBO runtime shutdown: no registered threads");
+        kbo_log_runtime_line("KBO runtime shutdown: no registered threads");
         return;
     }
 
-    append_logf("KBO runtime shutdown: waiting for %lu thread(s)", (unsigned long)count);
+    kbo_log_runtimef("KBO runtime shutdown: waiting for %lu thread(s)", (unsigned long)count);
     for (DWORD i = 0; i < count; ++i) {
         if (GetThreadId(handles[i]) == GetCurrentThreadId()) {
-            append_logf("KBO runtime shutdown: skipping current thread label=\"%s\"", labels[i]);
+            kbo_log_runtimef("KBO runtime shutdown: skipping current thread label=\"%s\"", labels[i]);
             CloseHandle(handles[i]);
             continue;
         }
@@ -133,9 +133,9 @@ void kbo_shutdown_runtime_threads(uint32_t timeout_ms)
         DWORD remaining = now >= deadline ? 0u : deadline - now;
         DWORD wait = WaitForSingleObject(handles[i], remaining);
         if (wait == WAIT_OBJECT_0) {
-            append_logf("KBO runtime shutdown: joined label=\"%s\"", labels[i]);
+            kbo_log_runtimef("KBO runtime shutdown: joined label=\"%s\"", labels[i]);
         } else {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO runtime shutdown: join timeout/failure label=\"%s\" wait=0x%08lX",
                 labels[i],
                 (unsigned long)wait);
@@ -151,7 +151,7 @@ int kbo_runtime_threads_should_continue(void)
     }
 
     int configured = 1;
-    if (kbo_read_localappdata_json_flag_value("enable_kbo_fix", "enable_kbo_fix.txt", &configured)
+    if (kbo_read_localappdata_json_flag_value("enable_kbo_fix", &configured)
             && !configured) {
         return 0;
     }

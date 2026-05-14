@@ -10,7 +10,7 @@ int kbo_webview_team_action_allowed(uint32_t team_id, const char* source)
         return 1;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "webview team action blocked reason=team_not_human_controlled source=%s team=%u",
         source != NULL ? source : "",
         team_id);

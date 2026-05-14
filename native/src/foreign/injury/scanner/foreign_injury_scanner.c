@@ -73,7 +73,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         if (!has_assignment || !kbo_foreign_injury_player_has_baseball_position(player)) {
             LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_non_roster_log_count);
             if (log_slot <= 60 || (log_slot % 100) == 0) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign injury replacement: skipped non-roster injury candidate source=%s player=%u current=%u active=%u loan=%u original=%u default=%u resolved_team=%u league=%u position=%u role=%u assignment=%d",
                     source != NULL ? source : "",
                     player_id,
@@ -133,7 +133,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                     source,
                     &audit_fields);
             } while (0);
-            append_logf(
+            kbo_log_runtimef(
                 "foreign injury replacement: opened source=%s team=%u player=%u league=%u days_left=%d slot=%s",
                 source != NULL ? source : "",
                 created_rec.team_id,
@@ -188,7 +188,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 if (log_slot <= 80 || (log_slot % 100) == 0) {
                     uint8_t* wait_team = find_kbo_team_by_numeric_id_any_league(rec->team_id, 1);
                     int active_roster = kbo_foreign_injury_team_active_roster_contains_player(wait_team, rec->injured_player_id);
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign injury replacement: waiting top-team return source=%s team=%u injured=%u replacement=%u current=%u active=%u league=%u slot_league=%u loan_active=%u injury=%u days_left=%d active_roster=%d",
                         source != NULL ? source : "",
                         rec->team_id,
@@ -245,7 +245,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 source,
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "foreign injury replacement: activated source=%s team=%u injured=%u replacement=%u league=%u",
             source != NULL ? source : "",
             active_news[i].team_id,
@@ -271,7 +271,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 source,
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "foreign injury replacement: closed source=%s team=%u injured=%u replacement=%u league=%u",
             source != NULL ? source : "",
             closed_news[i].team_id,
@@ -296,7 +296,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 source,
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "foreign injury replacement: scan source=%s scanned_foreign=%d opened=%d active=%d pending=%d closed=%d",
             source != NULL ? source : "",
             scanned,
@@ -318,14 +318,14 @@ DWORD WINAPI kbo_foreign_injury_replacement_thread(LPVOID parameter)
         kbo_foreign_injury_replacement_scan_once("foreign_injury_replacement_thread");
     }
     InterlockedExchange(&g_kbo_foreign_injury_replacement_thread_started, 0);
-    append_log_line("foreign injury replacement thread stopped");
+    kbo_log_runtime_line("foreign injury replacement thread stopped");
     return 0;
 }
 
 void start_kbo_foreign_injury_replacement_thread(void)
 {
     if (!kbo_foreign_injury_replacement_enabled()) {
-        append_log_line("foreign injury replacement: disabled");
+        kbo_log_runtime_line("foreign injury replacement: disabled");
         return;
     }
     if (InterlockedCompareExchange(&g_kbo_foreign_injury_replacement_thread_started, 1, 0) != 0) {
@@ -336,7 +336,7 @@ void start_kbo_foreign_injury_replacement_thread(void)
             kbo_foreign_injury_replacement_thread,
             NULL,
             "foreign injury replacement scanner")) {
-        append_log_line("foreign injury replacement thread started");
+        kbo_log_runtime_line("foreign injury replacement thread started");
     } else {
         InterlockedExchange(&g_kbo_foreign_injury_replacement_thread_started, 0);
     }

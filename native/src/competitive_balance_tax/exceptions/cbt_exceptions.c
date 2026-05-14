@@ -114,7 +114,7 @@ static int kbo_cbt_exception_write_designations(const KboCbtExceptionDesignation
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO CBT exception designation open failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO CBT exception designation open failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
     DWORD written = 0;
@@ -133,7 +133,7 @@ static int kbo_cbt_exception_write_designations(const KboCbtExceptionDesignation
         WriteFile(file, "\r\n", 2, &written, NULL);
     }
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("KBO CBT exception designation atomic commit failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO CBT exception designation atomic commit failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
     return 1;
@@ -145,7 +145,7 @@ int kbo_cbt_exception_save_designation(uint32_t season, uint32_t team_id, const 
         return 0;
     }
     if (!kbo_cbt_exception_player_eligible(team_id, player_key, NULL)) {
-        append_logf("KBO CBT exception rejected season=%u team=%u player_key=%s reason=ineligible", season, team_id, player_key);
+        kbo_log_runtimef("KBO CBT exception rejected season=%u team=%u player_key=%s reason=ineligible", season, team_id, player_key);
         return 0;
     }
     KboCbtExceptionDesignation rows[KBO_CBT_EXCEPTION_MAX];
@@ -216,7 +216,7 @@ int kbo_cbt_exception_auto_designate_missing(uint32_t season, const char* source
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_FA_SALARY_SNAPSHOT_GRADE_MAX * sizeof(KboFaSalarySnapshotGrade));
     if (grades == NULL) {
-        append_logf("KBO CBT exception auto skipped season=%u source=%s reason=grade_alloc_failed", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT exception auto skipped season=%u source=%s reason=grade_alloc_failed", season, source != NULL ? source : "");
         return 0;
     }
 
@@ -228,7 +228,7 @@ int kbo_cbt_exception_auto_designate_missing(uint32_t season, const char* source
         0);
     if (grade_count <= 0) {
         HeapFree(GetProcessHeap(), 0, grades);
-        append_logf("KBO CBT exception auto skipped season=%u source=%s reason=no_salary_snapshot", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT exception auto skipped season=%u source=%s reason=no_salary_snapshot", season, source != NULL ? source : "");
         return 0;
     }
 
@@ -296,7 +296,7 @@ int kbo_cbt_exception_auto_designate_missing(uint32_t season, const char* source
         KboFaSalarySnapshotGrade* grade = &grades[index];
         if (kbo_cbt_exception_save_designation(season, grade->ranking_team_id, grade->player_key, grade->player_name)) {
             created++;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT exception auto designated season=%u team=%u player_key=%s player_name=%s salary=%d credit=%d source=%s",
                 season,
                 grade->ranking_team_id,
@@ -309,7 +309,7 @@ int kbo_cbt_exception_auto_designate_missing(uint32_t season, const char* source
     }
 
     HeapFree(GetProcessHeap(), 0, grades);
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT exception auto complete season=%u created=%d source=%s",
         season,
         created,

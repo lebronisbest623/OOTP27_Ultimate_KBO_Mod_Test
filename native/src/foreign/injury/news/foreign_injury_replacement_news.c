@@ -270,7 +270,7 @@ void kbo_emit_foreign_injury_replacement_news(
                 body,
                 sizeof(body),
                 phase != NULL ? phase : "foreign_injury")) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign injury replacement: news skipped phase=%s team=%u injured=%u league=%u reason=template_unavailable",
             phase != NULL ? phase : "open",
             rec->team_id,
@@ -287,7 +287,7 @@ void kbo_emit_foreign_injury_replacement_news(
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
         title,
         body);
-    append_logf(
+    kbo_log_runtimef(
         "foreign injury replacement: news phase=%s team=%u injured=%u league=%u created=%d",
         phase != NULL ? phase : "open",
         rec->team_id,

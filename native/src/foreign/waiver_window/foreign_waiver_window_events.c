@@ -43,7 +43,7 @@ void kbo_queue_foreign_priority_league_event(
         source != NULL ? source : "foreign_priority_negotiation");
 
     InterlockedExchange(&g_kbo_foreign_priority_pending_lock, 0);
-    append_logf(
+    kbo_log_runtimef(
         "foreign priority negotiation: league event queued source=%s title=%s date=%u",
         g_kbo_foreign_priority_pending_source,
         g_kbo_foreign_priority_pending_title,
@@ -79,7 +79,7 @@ void kbo_flush_pending_foreign_priority_events(const char* source)
     uint32_t month = (event_yyyymmdd / 100u) % 100u;
     uint32_t day = event_yyyymmdd % 100u;
     if (year < 1800u || year > 2200u || month < 1u || month > 12u || day < 1u || day > 31u) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign priority negotiation: pending league event dropped source=%s title=%s date=%u reason=invalid_date",
             queued_source,
             title,
@@ -97,7 +97,7 @@ void kbo_flush_pending_foreign_priority_events(const char* source)
         0,
         queued_source[0] != '\0' ? queued_source : source);
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign priority negotiation: pending league event flushed source=%s flush_source=%s title=%s date=%u created=%d",
         queued_source,
         source != NULL ? source : "",
@@ -161,7 +161,7 @@ uint32_t kbo_detect_offseason_starts_event(uint32_t today_yyyymmdd, uint32_t lea
         if (debug_remaining > 0
                 && event_month >= 9u
                 && event_month <= 12u) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign waiver auto: event probe idx=%d date=%04u-%02u-%02u league=%u type=%u over=%u name=%s event=%p",
                 i,
                 event_year,
@@ -182,7 +182,7 @@ uint32_t kbo_detect_offseason_starts_event(uint32_t today_yyyymmdd, uint32_t lea
     }
 
     if (latest_offseason_start != 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign waiver auto: detected latest Offseason starts date=%u (today=%u)",
             latest_offseason_start,
             today_yyyymmdd);
@@ -209,7 +209,7 @@ int kbo_write_foreign_waiver_window(uint32_t start_yyyymmdd, uint32_t end_yyyymm
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign priority negotiation: failed to write window file error=%lu", GetLastError());
+        kbo_log_runtimef("foreign priority negotiation: failed to write window file error=%lu", GetLastError());
         return 0;
     }
 
@@ -230,7 +230,7 @@ int kbo_write_foreign_waiver_window(uint32_t start_yyyymmdd, uint32_t end_yyyymm
         last_logged_start = start_yyyymmdd;
         last_logged_end = end_yyyymmdd;
         last_logged_ok = ok;
-        append_logf(
+        kbo_log_runtimef(
             "foreign priority negotiation: event window persisted start=%u end=%u reason=%s ok=%d path=%s",
             start_yyyymmdd,
             end_yyyymmdd,
@@ -254,7 +254,7 @@ int kbo_open_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_seria
     kbo_write_foreign_waiver_window(today_yyyymmdd, end_yyyymmdd, reason);
     g_kbo_foreign_waiver_start_event_date = today_yyyymmdd;
     g_kbo_foreign_waiver_close_event_end_date = end_yyyymmdd;
-    append_logf(
+    kbo_log_runtimef(
         "foreign priority negotiation: season-end event opened start=%u end=%u serial=%u~%u reason=%s",
         today_yyyymmdd,
         end_yyyymmdd,

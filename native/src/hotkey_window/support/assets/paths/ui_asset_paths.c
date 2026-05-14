@@ -30,7 +30,7 @@ static void kbo_hub_copy_ootp_install_dir(char* out, size_t out_size)
         }
     }
 
-    append_log_line("KBO F2 hub OOTP install dir unavailable; OOTP skin assets disabled");
+    kbo_log_runtime_line("KBO F2 hub OOTP install dir unavailable; OOTP skin assets disabled");
 }
 
 void kbo_hub_ootp_install_path(const char* relative_path, char* out, size_t out_size)

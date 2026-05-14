@@ -13,7 +13,6 @@ int kbo_get_foreign_fa_quality_cap_enabled_setting(void)
     int value = kbo_economic_default_foreign_fa_quality_cap_enabled();
     if (!kbo_read_localappdata_json_flag_value(
             KBO_FOREIGN_FA_QUALITY_CAP_ENABLED_KEY,
-            "foreign_fa_quality_cap_enabled.txt",
             &value)) {
         if (read_kbo_localappdata_flag_file("disable_intl_established_fa_quality_shaping.txt")) {
             value = 0;
@@ -65,7 +64,7 @@ int kbo_set_asian_games_no_gold_odds_denominator(int value)
 int kbo_get_profiler_enabled_setting(void)
 {
     int value = 0;
-    if (!kbo_read_localappdata_json_flag_value("enable_kbo_profiler", "enable_kbo_profiler.txt", &value)) {
+    if (!kbo_read_localappdata_json_flag_value("enable_kbo_profiler", &value)) {
         value = 0;
     }
     return value ? 1 : 0;
@@ -83,7 +82,6 @@ int kbo_get_allow_all_ui_team_actions_setting(void)
     int value = 1;
     if (!kbo_read_localappdata_json_flag_value(
             KBO_ALLOW_ALL_UI_TEAM_ACTIONS_KEY,
-            "allow_all_ui_team_actions.txt",
             &value)) {
         value = 1;
     }
@@ -107,11 +105,11 @@ int kbo_fix_enabled(void)
 
     int enabled = 1;
     int configured = 0;
-    if (kbo_read_localappdata_json_flag_value("enable_kbo_fix", "enable_kbo_fix.txt", &configured)) {
+    if (kbo_read_localappdata_json_flag_value("enable_kbo_fix", &configured)) {
         enabled = configured ? 1 : 0;
     }
 
     InterlockedCompareExchange(&cached, enabled ? 1 : 0, -1);
-    append_logf("KBO fix opt-in=%d", enabled ? 1 : 0);
+    kbo_log_runtimef("KBO fix opt-in=%d", enabled ? 1 : 0);
     return enabled;
 }

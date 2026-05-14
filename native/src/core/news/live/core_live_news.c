@@ -26,7 +26,7 @@ static int create_kbo_core_message_news(uint32_t league_id, const char* title, c
     uintptr_t global = get_ootp_global_database();
     if (exe == NULL || global == 0
             || !memory_range_readable((void*)(global + OOTP27_GLOBAL_CURRENT_DATE_OFFSET), sizeof(uintptr_t))) {
-        append_logf("core message news skipped source=%s title=%s reason=no_global", source != NULL ? source : "", title);
+        kbo_log_runtimef("core message news skipped source=%s title=%s reason=no_global", source != NULL ? source : "", title);
         return 0;
     }
 
@@ -39,14 +39,14 @@ static int create_kbo_core_message_news(uint32_t league_id, const char* title, c
         live_date = (void*)(current_date + OOTP27_LIVE_DATE_OBJECT_OFFSET);
     }
     if (live_date == NULL) {
-        append_logf("core message news skipped source=%s title=%s reason=no_live_date", source != NULL ? source : "", title);
+        kbo_log_runtimef("core message news skipped source=%s title=%s reason=no_live_date", source != NULL ? source : "", title);
         return 0;
     }
 
     OotpCreateMessageCoreFn create_core =
         (OotpCreateMessageCoreFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_CREATE_MESSAGE_CORE_RVA);
     if (!memory_range_readable((void*)create_core, 16)) {
-        append_logf("core message news skipped source=%s title=%s reason=build_specific_func_unavailable fn=%p", source != NULL ? source : "", title, (void*)create_core);
+        kbo_log_runtimef("core message news skipped source=%s title=%s reason=build_specific_func_unavailable fn=%p", source != NULL ? source : "", title, (void*)create_core);
         return 0;
     }
 
@@ -67,7 +67,7 @@ static int create_kbo_core_message_news(uint32_t league_id, const char* title, c
         created = 1;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "core message news fanout source=%s title=%s league_id=%u team_targets=%d scanned=%d unreadable=%d created=%d",
         source != NULL ? source : "",
         title,
@@ -105,7 +105,7 @@ int create_kbo_native_live_news_with_body(
         title,
         body,
         "native_live_news");
-    append_logf(
+    kbo_log_runtimef(
         "native live news create_news_item skipped title=%s reason=unsafe_rva_call_disabled",
         title);
 
@@ -128,11 +128,11 @@ int create_kbo_native_live_news_with_body(
         body,
         "native_live_news");
     int core_created = 0;
-    append_logf(
+    kbo_log_runtimef(
         "core message news skipped source=%s title=%s reason=unsafe_rva_call_disabled",
         "native_live_news",
         title);
-    append_logf(
+    kbo_log_runtimef(
         "native live news result title=%s date=%04u-%02u-%02u league_id=%u type=%u event=%d league_news=%d sql=%d real=%d native=%d core=%d",
         title,
         year,
@@ -182,7 +182,7 @@ int create_kbo_native_live_news_with_body_live_required(
         body,
         "native_live_news_live_required");
     if (!real_created) {
-        append_logf(
+        kbo_log_runtimef(
             "native live news live-required deferred title=%s date=%04u-%02u-%02u league_id=%u type=%u reason=real_add_unavailable",
             title,
             year,
@@ -210,7 +210,7 @@ int create_kbo_native_live_news_with_body_live_required(
         title,
         body,
         "native_live_news_live_required");
-    append_logf(
+    kbo_log_runtimef(
         "native live news live-required result title=%s date=%04u-%02u-%02u league_id=%u type=%u league_news=%d sql=%d real=%d",
         title,
         year,

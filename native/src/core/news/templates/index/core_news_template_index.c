@@ -146,7 +146,7 @@ int kbo_news_template_file_for_key(
         if (kbo_news_template_file_for_key_from_path(save_index_path, key, out, out_size)) {
             return 1;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO news template index invalid source=%s scope=save key=%s path=%s",
             source != NULL ? source : "",
             key,
@@ -156,14 +156,14 @@ int kbo_news_template_file_for_key(
         if (kbo_news_template_file_for_key_from_path(global_index_path, key, out, out_size)) {
             return 1;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO news template index invalid source=%s scope=global key=%s path=%s",
             source != NULL ? source : "",
             key,
             global_index_path);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO news template index missing source=%s key=%s save_index=%s global_index=%s",
         source != NULL ? source : "",
         key,

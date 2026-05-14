@@ -9,7 +9,7 @@
 DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("foreign roster daily audit thread started");
+    kbo_log_runtime_line("foreign roster daily audit thread started");
 
     uint32_t last_audit_date = 0u;
     while (kbo_runtime_threads_should_continue()) {
@@ -48,7 +48,7 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
     }
 
     InterlockedExchange(&g_kbo_foreign_roster_daily_audit_started, 0);
-    append_log_line("foreign roster daily audit thread stopped");
+    kbo_log_runtime_line("foreign roster daily audit thread stopped");
     return 0;
 }
 

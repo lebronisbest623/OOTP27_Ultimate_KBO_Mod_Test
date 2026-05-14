@@ -15,7 +15,7 @@ void kbo_player_team_seasons_ensure_seed_loaded(void)
     char path[MAX_PATH] = {0};
     KboCsvReader* reader = kbo_player_team_seasons_open_seed(path, sizeof(path));
     if (reader == NULL) {
-        append_log_line("KBO player-team season seed unavailable");
+        kbo_log_runtime_line("KBO player-team season seed unavailable");
         InterlockedExchange(&g_kbo_player_team_season_seed_loaded, 1);
         kbo_player_team_seasons_unlock();
         return;
@@ -43,7 +43,7 @@ void kbo_player_team_seasons_ensure_seed_loaded(void)
     }
 
     kbo_csv_reader_close(reader);
-    append_logf(
+    kbo_log_runtimef(
         "KBO player-team season seed loaded rows=%d path=%s",
         g_kbo_player_team_season_seed_count,
         path);

@@ -54,14 +54,14 @@ void write_foreign_waiver_candidates(const char* source)
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
         static volatile LONG no_vector_log_count = 0;
         if (InterlockedIncrement(&no_vector_log_count) <= 5) {
-            append_log_line("foreign waiver scanner: no player vector");
+            kbo_log_runtime_line("foreign waiver scanner: no player vector");
         }
         return;
     }
 
     char path[MAX_PATH] = {0};
     if (!get_kbo_foreign_waiver_csv_path(path, sizeof(path))) {
-        append_log_line("foreign waiver scanner: unable to resolve output path");
+        kbo_log_runtime_line("foreign waiver scanner: unable to resolve output path");
         return;
     }
 
@@ -80,7 +80,7 @@ void write_foreign_waiver_candidates(const char* source)
 
     HANDLE file = CreateFileA(path, GENERIC_READ | FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign waiver scanner: failed to open %s", path);
+        kbo_log_runtimef("foreign waiver scanner: failed to open %s", path);
         return;
     }
 
@@ -158,6 +158,6 @@ void write_foreign_waiver_candidates(const char* source)
 
     CloseHandle(file);
 
-    append_logf("foreign waiver scanner: scanned=%d candidates=%d file=%s", scanned, written_candidates, path);
+    kbo_log_runtimef("foreign waiver scanner: scanned=%d candidates=%d file=%s", scanned, written_candidates, path);
 }
 

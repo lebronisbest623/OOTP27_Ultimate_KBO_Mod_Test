@@ -24,7 +24,7 @@ uint32_t kbo_read_kbo_league_id_override(void)
     if (!kbo_get_global_data_file("kbo_league_id.txt", path, sizeof(path))) {
         static LONG missing_logged = 0;
         if (InterlockedCompareExchange(&missing_logged, 1, 0) == 0) {
-            append_log_line("KBO league id override: global data path unavailable");
+            kbo_log_runtime_line("KBO league id override: global data path unavailable");
         }
         return 0;
     }
@@ -34,7 +34,7 @@ uint32_t kbo_read_kbo_league_id_override(void)
     if (file == INVALID_HANDLE_VALUE) {
         static LONG missing_file_logged = 0;
         if (InterlockedCompareExchange(&missing_file_logged, 1, 0) == 0) {
-            append_logf("KBO league id override file missing=%s", path);
+            kbo_log_runtimef("KBO league id override file missing=%s", path);
         }
         cached_value = 0u;
         return 0;
@@ -45,7 +45,7 @@ uint32_t kbo_read_kbo_league_id_override(void)
     ReadFile(file, raw, sizeof(raw) - 1, &read, NULL);
     CloseHandle(file);
     if (read == 0) {
-        append_logf("KBO league id override read failed: empty file=%s", path);
+        kbo_log_runtimef("KBO league id override read failed: empty file=%s", path);
         cached_value = 0u;
         return 0;
     }
@@ -82,14 +82,14 @@ uint32_t kbo_read_kbo_league_id_override(void)
             break;
         }
         if (value == 0) {
-            append_logf("KBO league id override parse failed (utf16) file=%s read=%lu", path, read);
+            kbo_log_runtimef("KBO league id override parse failed (utf16) file=%s read=%lu", path, read);
             cached_value = 0u;
             return 0;
         }
         cached_value = value;
         if ((uint32_t)InterlockedCompareExchange(&logged_value, (LONG)value, (LONG)value) != value) {
             InterlockedExchange(&logged_value, (LONG)value);
-            append_logf("KBO league id override file=%s utf16 value=%u", path, value);
+            kbo_log_runtimef("KBO league id override file=%s utf16 value=%u", path, value);
         }
         return value;
     }
@@ -98,7 +98,7 @@ uint32_t kbo_read_kbo_league_id_override(void)
         ++idx;
     }
     if (idx >= (size_t)read) {
-        append_logf("KBO league id override parse failed: no body in file=%s", path);
+        kbo_log_runtimef("KBO league id override parse failed: no body in file=%s", path);
         cached_value = 0u;
         return 0;
     }
@@ -108,7 +108,7 @@ uint32_t kbo_read_kbo_league_id_override(void)
         ++idx;
     }
     if (value == 0) {
-        append_logf("KBO league id override parse failed file=%s", path);
+        kbo_log_runtimef("KBO league id override parse failed file=%s", path);
         cached_value = 0u;
         return 0;
     }
@@ -116,7 +116,7 @@ uint32_t kbo_read_kbo_league_id_override(void)
     cached_value = value;
     if ((uint32_t)InterlockedCompareExchange(&logged_value, (LONG)value, (LONG)value) != value) {
         InterlockedExchange(&logged_value, (LONG)value);
-        append_logf("KBO league id override file=%s value=%u", path, value);
+        kbo_log_runtimef("KBO league id override file=%s value=%u", path, value);
     }
     return value;
 }

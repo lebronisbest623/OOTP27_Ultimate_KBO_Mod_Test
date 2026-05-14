@@ -25,14 +25,14 @@ __declspec(noinline) void ootp_kbo_enable_allstar_setting(uintptr_t league_ptr)
         league_id = kbo_resolve_kbo_league_id();
     }
     if (enable_kbo_allstar_flags_for_core_league(league_ptr, league_id, "allstar_settings_ui_core_fallback")) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star settings UI wrote real league flags by core fallback league_id=%u league=%p",
             league_id,
             (void*)league_ptr);
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO all-star settings UI could not write real league flags league_id=%u league=%p",
         league_id,
         (void*)league_ptr);

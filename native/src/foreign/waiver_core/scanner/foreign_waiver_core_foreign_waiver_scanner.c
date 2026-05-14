@@ -33,7 +33,7 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
                 || !kbo_get_save_scoped_data_file("foreign_waiver_commands.txt", readiness_path, sizeof(readiness_path))) {
             static LONG waiting_logged = 0;
             if (InterlockedCompareExchange(&waiting_logged, 1, 0) == 0) {
-                append_log_line("foreign waiver worker waiting: save path/date not ready");
+                kbo_log_runtime_line("foreign waiver worker waiting: save path/date not ready");
             }
             KBO_PROFILE_END(profile_foreign_waiver_scanner_tick, "foreign_waiver.scanner.not_ready");
             continue;
@@ -60,7 +60,7 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
         KBO_PROFILE_END(profile_foreign_waiver_scanner_tick, "foreign_waiver.scanner.tick");
     }
     InterlockedExchange(&g_kbo_foreign_waiver_scanner_started, 0);
-    append_log_line("foreign waiver scanner thread stopped");
+    kbo_log_runtime_line("foreign waiver scanner thread stopped");
     return 0;
 }
 
@@ -76,9 +76,9 @@ void start_kbo_foreign_waiver_scanner_thread(void)
 
     if (kbo_start_runtime_thread(kbo_foreign_waiver_scanner_thread, NULL, "foreign waiver scanner")) {
         if (background_scanner_enabled) {
-            append_log_line("foreign waiver scanner thread started");
+            kbo_log_runtime_line("foreign waiver scanner thread started");
         } else {
-            append_log_line("foreign waiver lightweight retain worker started; candidate scanner disabled");
+            kbo_log_runtime_line("foreign waiver lightweight retain worker started; candidate scanner disabled");
         }
     } else {
         InterlockedExchange(&g_kbo_foreign_waiver_scanner_started, 0);

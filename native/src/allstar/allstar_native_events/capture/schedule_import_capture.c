@@ -36,7 +36,7 @@ __declspec(noinline) int ootp_kbo_capture_allstar_schedule_import_league(uintptr
         if (scoped_context) {
             log_kbo_allstar_native_event_state("schedule_import_capture", league_ptr, "schedule_import");
         } else {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star schedule import capture accepted raw KBO league=%p reason=%s",
                 (void*)league_ptr,
                 kbo_schedule_context ? "schedule_file_context" : "raw_kbo_context");

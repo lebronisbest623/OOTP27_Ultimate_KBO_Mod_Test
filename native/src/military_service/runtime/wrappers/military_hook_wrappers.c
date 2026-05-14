@@ -61,7 +61,7 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
             inj_active  = p[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
             mil_active  = p[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO military service entry wrapper #%ld original=%p player=%p plausible=%d"
             " player_id=%u parent_team=%u active_team=%u cur_league=%u"
             " loan_team=%u loan_league=%u days_left=%d"
@@ -85,7 +85,7 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
             if (!kbo_current_date_is_valid(&cur_year, &cur_month, &cur_day)) {
                 kbo_current_year_relaxed(&cur_year);
             }
-            append_logf(
+            kbo_log_runtimef(
                 "KBO military service entry deferred player=%p player_id=%u"
                 " year=%u date=%04u-%02u-%02u days_left=%d",
                 (void*)player_ptr,

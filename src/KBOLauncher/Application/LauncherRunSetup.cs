@@ -18,7 +18,6 @@ internal static partial class LauncherApp
         EnsureKboLeagueIdConfig();
         EnsureBundledKboDataManifest();
         EnsureKboScheduleAllstarGameLines(exePath);
-        ImportLegacyKboFlagFilesIfMissing();
         EnsureDefaultKboRuntimeFlags();
     }
 

@@ -156,8 +156,8 @@ Runtime booleans live in:
 %LOCALAPPDATA%\OOTP-KBO\kbo_flags.json
 ```
 
-Native callers still use `read_kbo_localappdata_flag_file("name.txt")` for
-compatibility, but that function maps the old filename form to JSON keys.
+Native callers read canonical JSON keys from `kbo_flags.json`; callers may pass
+old `.txt`-shaped names only as a local normalization convenience.
 Status files, command files, seeds, CSVs, and save-scoped persistence remain
 separate files.
 
@@ -172,14 +172,11 @@ config/kbo-runtime-flags.json
 `tools/generate-runtime-flags.ps1` generates:
 
 - `src/KBOLauncher/Infrastructure/KboFlags.RuntimeDefinitions.cs`
-- `native/src/core/core_flags/keys/runtime_flag_aliases.generated.h`
-- `native/src/core/core_flags/keys/runtime_flag_aliases.generated.c`
 - `native/src/hotkey_window/views/mod/runtime_flags/runtime_flags.generated.h`
 - `native/src/hotkey_window/views/mod/runtime_flags/runtime_flags.generated.c`
 
 `KBOLauncher.Tests/KboRuntimeFlagManifestTests.cs` verifies that the manifest,
-managed defaults/aliases, native legacy alias map, and native F2 UI flag table
-match.
+managed defaults, and native F2 UI flag table match.
 
 ## Native Subsystems
 
@@ -204,8 +201,8 @@ Core uses the following internal grouping:
 - `sql/`: SQL escaping plus league-news/history transaction helpers
 - `teams/`: shared team collection helpers
 - `core_flags/`: runtime flag metadata and local-app-data flag reads.
-  `api/` is split into `runtime/` thread lifecycle controls, `legacy/`
-  filename-compatible flag reads, and `settings/` numeric/UI settings.
+  `api/` is split into `runtime/` thread lifecycle controls and `settings/`
+  numeric/UI settings.
 - `core_league_context_parts/`: league context lookup and event-manager access
 
 ### Foreign Player Policy

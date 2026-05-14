@@ -15,7 +15,7 @@ int kbo_restore_fa_requalification_team_control(
     if (current_year >= rec->last_fa_year + team_control_years) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_skip_log_count);
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA requalification skipped source=%s player=%u team=%u reason=already_eligible current_year=%u last_fa_year=%u eligible_year=%u",
                 source != NULL ? source : "",
                 rec->player_id,
@@ -32,7 +32,7 @@ int kbo_restore_fa_requalification_team_control(
     if (player == NULL) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_skip_log_count);
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA requalification skipped source=%s player=%u team=%u reason=player_not_found current_year=%u last_fa_year=%u",
                 source != NULL ? source : "",
                 rec->player_id,
@@ -45,7 +45,7 @@ int kbo_restore_fa_requalification_team_control(
     if (team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_skip_log_count);
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA requalification skipped source=%s player=%u team=%u reason=team_not_found current_year=%u last_fa_year=%u",
                 source != NULL ? source : "",
                 rec->player_id,
@@ -87,7 +87,7 @@ int kbo_restore_fa_requalification_team_control(
     kbo_add_player_id_to_team_assignment_arrays(team, rec->player_id);
 
     if (changed) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA requalification restored team control source=%s player=%u team=%u year=%u last_fa_year=%u eligible_year=%u old_team=%u old_active=%u old_league=%u league=%u",
             source != NULL ? source : "",
             rec->player_id,
@@ -121,7 +121,7 @@ int kbo_restore_fa_requalification_team_control(
     } else {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_skip_log_count);
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA requalification checked source=%s player=%u team=%u reason=already_controlled current_year=%u last_fa_year=%u eligible_year=%u",
                 source != NULL ? source : "",
                 rec->player_id,
@@ -144,7 +144,7 @@ void kbo_run_fa_requalification_once(const char* source)
     if (!kbo_get_current_yyyymmdd(&today)) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_no_date_log_count);
         if (slot <= 20 || (slot % 60) == 0) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA requalification skipped source=%s reason=current_date_unavailable count=%ld",
                 source != NULL ? source : "",
                 slot);
@@ -160,7 +160,7 @@ void kbo_run_fa_requalification_once(const char* source)
         current_year = today / 10000u;
     }
     if (current_year < 1982u || current_year > 2200u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA requalification skipped source=%s reason=invalid_current_year today=%u current_year=%u",
             source != NULL ? source : "",
             today,
@@ -177,7 +177,7 @@ void kbo_run_fa_requalification_once(const char* source)
         if (g_kbo_fa_requalification_last_no_records_date != today || slot <= 5 || (slot % 60) == 0) {
             char path[MAX_PATH] = {0};
             get_kbo_fa_requalification_path(path, sizeof(path));
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA requalification pass source=%s records=0 restored=0 today=%u path=%s",
                 source != NULL ? source : "",
                 today,
@@ -190,7 +190,7 @@ void kbo_run_fa_requalification_once(const char* source)
     for (int i = 0; i < count; i++) {
         restored += kbo_restore_fa_requalification_team_control(&records[i], current_year, source);
     }
-    append_logf("KBO FA requalification pass source=%s records=%d restored=%d today=%u", source != NULL ? source : "", count, restored, today);
+    kbo_log_runtimef("KBO FA requalification pass source=%s records=%d restored=%d today=%u", source != NULL ? source : "", count, restored, today);
     if (restored > 0) {
                 do {
             KboLogFields audit_fields;
@@ -219,7 +219,7 @@ DWORD WINAPI kbo_fa_requalification_thread(LPVOID parameter)
         kbo_run_fa_requalification_once("fa_requalification_monitor");
     }
     InterlockedExchange(&g_kbo_fa_requalification_thread_started, 0);
-    append_log_line("KBO FA requalification monitor thread stopped");
+    kbo_log_runtime_line("KBO FA requalification monitor thread stopped");
     return 0;
 }
 
@@ -229,7 +229,7 @@ void start_kbo_fa_requalification_thread(void)
         return;
     }
     if (kbo_start_runtime_thread(kbo_fa_requalification_thread, NULL, "FA requalification monitor")) {
-        append_log_line("KBO FA requalification monitor thread started");
+        kbo_log_runtime_line("KBO FA requalification monitor thread started");
     } else {
         InterlockedExchange(&g_kbo_fa_requalification_thread_started, 0);
     }

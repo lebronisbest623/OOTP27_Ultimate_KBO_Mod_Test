@@ -76,7 +76,7 @@ int kbo_original_club_priority_window_allows(uint8_t* player, uint32_t team_id, 
     if (player != NULL && memory_range_readable(player + OOTP27_PLAYER_ID_OFFSET, sizeof(uint32_t))) {
         player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
     }
-    append_logf(
+    kbo_log_runtimef(
         "foreign priority negotiation: blocked action=%s team=%u player=%u priority_team=%u",
         action_name == NULL ? "" : action_name,
         team_id,

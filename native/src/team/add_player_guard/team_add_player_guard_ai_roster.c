@@ -96,7 +96,7 @@ static int kbo_ai_roster_foreign_release_pressure_allows_native_replace(
     static volatile LONG pressure_log_count = 0;
     LONG slot = InterlockedIncrement(&pressure_log_count);
     if (slot <= 300) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign release pressure: allow_native_replace team=%u outgoing=%u incoming=%u target_slot=%d roster_code=%d effective=%u limit=%u outgoing_score=%d threshold=%d",
             team_id,
             outgoing_player_id,
@@ -172,7 +172,7 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
 
     static volatile LONG rescue_log_count = 0;
     LONG rescue_slot = InterlockedIncrement(&rescue_log_count);
-    append_logf(
+    kbo_log_runtimef(
         "ootp ai roster foreign source-select rescue #%ld caller_rva=0x%x context=%p slot_index=%d depth_hint=%d source_count=%d native=%u native_foreign=%d native_fe0=%d native_fe4=%d native_overall=%d native_ratings=%d override=%u source_idx=%d active_team=%u score=%lld current=%u active=%u league=%u default_team=%u status24=%u status25=%u status26=%u f25=%u f62=%u f65=%u f06=%d fe0=%d fe4=%d overall=%d talent=%d ratings=%d",
         rescue_slot,
         caller_rva,
@@ -305,7 +305,7 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
         static volatile LONG shield_log_count = 0;
         LONG shield_slot = InterlockedIncrement(&shield_log_count);
         if (shield_slot <= 1000) {
-            append_logf(
+            kbo_log_runtimef(
                 "ootp ai roster foreign apply rescue shield #%ld caller_rva=0x%x context=%p slot_index=%d target_slot=%d roster_code=%d age_ms=%lu slot_block=%p slot_team=%u before_slot_code=%u before_slot_player=%u incoming_player=%u incoming_foreign=%d incoming_nation=%u incoming_current=%u incoming_active=%u incoming_league=%u incoming_status24=%u incoming_status25=%u incoming_status26=%u incoming_f62=%u incoming_f65=%u incoming_f68=%u incoming_f1a=%u incoming_score_fe0=%d incoming_score_fe4=%d incoming_overall=%d incoming_ratings=%d",
                 shield_slot,
                 caller_rva,
@@ -343,7 +343,7 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
         static volatile LONG release_pressure_apply_log_count = 0;
         LONG slot = InterlockedIncrement(&release_pressure_apply_log_count);
         if (slot <= 300) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign release pressure: shield_bypassed context=%p slot_index=%d target_slot=%d roster_code=%d slot_team=%u outgoing=%u incoming=%u effective=%u outgoing_score=%d threshold=%d",
                 (void*)context_ptr,
                 slot_index,

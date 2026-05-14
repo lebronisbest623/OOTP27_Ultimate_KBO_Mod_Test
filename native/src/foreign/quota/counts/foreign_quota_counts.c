@@ -83,14 +83,14 @@ void kbo_count_team_asian_quota_probe(
             static volatile LONG replacement_seed_count_log_count = 0;
             LONG slot = InterlockedIncrement(&replacement_seed_count_log_count);
             if (slot <= 20) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign replacement player seed excluded from org count team=%u player=%u key_slot=%s nation=%u",
                     team_id,
                     *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
                     replacement_slot_type == KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA ? "Asian quota" : "Regular",
                     nation_id);
             } else if (slot == 21) {
-                append_log_line("foreign replacement player seed org-count exclusion log suppressed after 20 entries");
+                kbo_log_runtime_line("foreign replacement player seed org-count exclusion log suppressed after 20 entries");
             }
             continue;
         }

@@ -156,7 +156,7 @@ void kbo_prune_rewound_custom_event_markers(const char* source)
             int write_ok = rewritten_len == 0u
                 || WriteFile(out, rewritten, (DWORD)rewritten_len, &written, NULL);
             CloseHandle(out);
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event marker rewind prune source=%s current=%u max_marker=%u removed=%d ok=%d path=%s",
                 source != NULL ? source : "",
                 current_date,

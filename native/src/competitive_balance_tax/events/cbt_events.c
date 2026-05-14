@@ -40,7 +40,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
     if (!kbo_current_date_is_valid(&year, &month, &day)) {
         if (kbo_cbt_should_log_no_date()) {
             kbo_cbt_audit_event_schedule("skip", "current_date_unavailable", source, 0u, 0u, 0u, 0u, 0u, 0u, 0, 0, 0, 0, 0);
-            append_logf("KBO CBT event schedule skipped source=%s reason=current_date_unavailable", source != NULL ? source : "");
+            kbo_log_runtimef("KBO CBT event schedule skipped source=%s reason=current_date_unavailable", source != NULL ? source : "");
         }
         return -1;
     }
@@ -51,7 +51,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
         static uint32_t last_logged_no_opening_day = 0u;
         if (last_logged_no_opening_day != today) {
             last_logged_no_opening_day = today;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT event schedule skipped source=%s reason=opening_day_unavailable season=%u today=%u",
                 source != NULL ? source : "",
                 year,
@@ -73,7 +73,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
     uint32_t league_id = kbo_resolve_kbo_league_id();
     if (league_id == 0u) {
         kbo_cbt_audit_event_schedule("skip", "league_id_unavailable", source, year, today, 0u, opening_day, deadline, announcement, 0, 0, 0, 0, 0);
-        append_logf("KBO CBT event schedule skipped source=%s reason=league_id_unavailable season=%u", source != NULL ? source : "", year);
+        kbo_log_runtimef("KBO CBT event schedule skipped source=%s reason=league_id_unavailable season=%u", source != NULL ? source : "", year);
         return -1;
     }
 
@@ -83,7 +83,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
     char announcement_title[160] = {0};
     if (!kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE, deadline_title, sizeof(deadline_title))
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT, announcement_title, sizeof(announcement_title))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT event schedule skipped source=%s reason=title_unavailable season=%u",
             source != NULL ? source : "",
             year);
@@ -146,7 +146,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
         announcement,
         KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d pruned_deadline=%d pruned_announcement=%d ready=%d",
         source != NULL ? source : "",
         year,
@@ -179,7 +179,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
 static DWORD WINAPI kbo_cbt_event_scheduler_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("KBO CBT event scheduler started");
+    kbo_log_runtime_line("KBO CBT event scheduler started");
     uint32_t last_attempt_date = 0u;
     KboCbtRules rules;
     kbo_cbt_rules_load(&rules);
@@ -191,7 +191,7 @@ static DWORD WINAPI kbo_cbt_event_scheduler_thread(LPVOID parameter)
             result = kbo_schedule_cbt_custom_events("cbt_early_event_scheduler");
         }
         if (result >= 0) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT event scheduler ready attempt=%d today=%u result=%d",
                 (int)attempt,
                 today,
@@ -205,7 +205,7 @@ static DWORD WINAPI kbo_cbt_event_scheduler_thread(LPVOID parameter)
             }
         }
         if (should_log) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT event scheduler waiting attempt=%d today=%u result=%d",
                 (int)attempt,
                 today,
@@ -217,14 +217,14 @@ static DWORD WINAPI kbo_cbt_event_scheduler_thread(LPVOID parameter)
         }
     }
     InterlockedExchange(&g_kbo_cbt_event_scheduler_started, 0);
-    append_log_line("KBO CBT event scheduler stopped");
+    kbo_log_runtime_line("KBO CBT event scheduler stopped");
     return 0;
 }
 
 void start_kbo_cbt_event_scheduler_thread(void)
 {
     if (!kbo_fix_enabled()) {
-        append_log_line("KBO CBT event scheduler skipped reason=fix_disabled");
+        kbo_log_runtime_line("KBO CBT event scheduler skipped reason=fix_disabled");
         return;
     }
     if (InterlockedCompareExchange(&g_kbo_cbt_event_scheduler_started, 1, 0) != 0) {
@@ -240,7 +240,7 @@ int kbo_handle_cbt_deadline_event(uint32_t event_yyyymmdd, const char* source)
     uint32_t season = event_yyyymmdd / 10000u;
     kbo_cbt_exception_auto_designate_missing(season, "cbt_deadline_event");
     kbo_cbt_audit_event_handler("apply_exception_designations", "deadline_event", source, event_yyyymmdd, season);
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT exception designation deadline reached source=%s date=%u",
         source != NULL ? source : "",
         event_yyyymmdd);
@@ -253,7 +253,7 @@ int kbo_handle_cbt_announcement_event(uint32_t event_yyyymmdd, const char* sourc
     uint32_t season = event_yyyymmdd / 10000u;
     kbo_cbt_exception_auto_designate_missing(season, "cbt_announcement_event");
     kbo_cbt_audit_event_handler("process_tax", "announcement_event", source, event_yyyymmdd, season);
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT announcement event reached source=%s date=%u season=%u",
         source != NULL ? source : "",
         event_yyyymmdd,

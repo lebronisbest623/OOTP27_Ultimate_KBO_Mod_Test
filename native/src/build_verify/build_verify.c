@@ -13,19 +13,19 @@ OotpBuildInfo read_ootp_build_info(void)
 
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("build verify: GetModuleHandleA(NULL) returned NULL");
+        kbo_log_runtime_line("build verify: GetModuleHandleA(NULL) returned NULL");
         return info;
     }
 
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)exe;
     if (IsBadReadPtr(dos, sizeof(*dos)) || dos->e_magic != IMAGE_DOS_SIGNATURE) {
-        append_log_line("build verify: invalid DOS header");
+        kbo_log_runtime_line("build verify: invalid DOS header");
         return info;
     }
 
     IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)((uint8_t*)exe + dos->e_lfanew);
     if (IsBadReadPtr(nt, sizeof(*nt)) || nt->Signature != IMAGE_NT_SIGNATURE) {
-        append_log_line("build verify: invalid NT header");
+        kbo_log_runtime_line("build verify: invalid NT header");
         return info;
     }
 
@@ -181,12 +181,12 @@ int verify_ootp_build(void)
 {
     OotpBuildInfo info = read_ootp_build_info();
     if (!info.ok) {
-        append_log_line("build verify: failed to read PE headers; skipping all KBO patches");
+        kbo_log_runtime_line("build verify: failed to read PE headers; skipping all KBO patches");
         return 0;
     }
 
     if (KBO_SUPPORTED_OOTP_BUILD_COUNT == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "build verify: discovery mode; detected timestamp=0x%08X size_of_image=0x%08X",
             info.timestamp, info.size_of_image);
         return 1;
@@ -196,21 +196,21 @@ int verify_ootp_build(void)
         const OotpSupportedBuild* build = kbo_supported_ootp_build_at(i);
         if (build != NULL && info.timestamp == build->timestamp && info.size_of_image == build->size_of_image) {
             if (!build->native_patches_supported) {
-                append_logf(
+                kbo_log_runtimef(
                     "build verify: metadata-only label=%s timestamp=0x%08X size_of_image=0x%08X. "
                     "Native patches DISABLED because this build does not have a complete verified RVA table.",
                     build->label, info.timestamp, info.size_of_image);
                 return 0;
             }
 
-            append_logf(
+            kbo_log_runtimef(
                 "build verify: ok label=%s timestamp=0x%08X size_of_image=0x%08X",
                 build->label, info.timestamp, info.size_of_image);
             return 1;
         }
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "build verify: MISMATCH expected one of %u supported builds, "
         "detected timestamp=0x%08X size_of_image=0x%08X. "
         "All KBO patches DISABLED to prevent crashes or save corruption.",

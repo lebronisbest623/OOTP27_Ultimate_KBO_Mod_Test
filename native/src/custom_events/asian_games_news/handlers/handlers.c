@@ -19,7 +19,7 @@ int kbo_handle_asian_games_selection_event(uint32_t event_yyyymmdd, const char* 
     }
     int selected = kbo_select_asian_games_roster(event_yyyymmdd, source);
     if (selected <= 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games selection deferred source=%s date=%u selected=%d",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -32,7 +32,7 @@ int kbo_handle_asian_games_selection_event(uint32_t event_yyyymmdd, const char* 
         news_yyyymmdd,
         "asian_games.selection",
         source);
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games selection reached source=%s event_date=%u news_date=%u selected=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
@@ -55,7 +55,7 @@ int kbo_handle_asian_games_departure_event(uint32_t event_yyyymmdd, const char* 
         uint32_t current_day = 0;
         if (kbo_current_date_is_valid(&current_year, &current_month, &current_day)
                 && current_year > (event_yyyymmdd / 10000u)) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games departure closed stale source=%s date=%u current=%04u-%02u-%02u departed=%d",
                 source != NULL ? source : "",
                 event_yyyymmdd,
@@ -65,7 +65,7 @@ int kbo_handle_asian_games_departure_event(uint32_t event_yyyymmdd, const char* 
                 departed);
             return 1;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games departure deferred source=%s date=%u departed=%d",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -77,7 +77,7 @@ int kbo_handle_asian_games_departure_event(uint32_t event_yyyymmdd, const char* 
         action_yyyymmdd,
         "asian_games.departure",
         source);
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games departure reached source=%s event_date=%u action_date=%u departed=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
@@ -101,7 +101,7 @@ int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const char* sour
         uint32_t current_day = 0;
         if (kbo_current_date_is_valid(&current_year, &current_month, &current_day)
                 && current_year > (event_yyyymmdd / 10000u)) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games final closed stale source=%s date=%u current=%04u-%02u-%02u returned=%d",
                 source != NULL ? source : "",
                 event_yyyymmdd,
@@ -111,7 +111,7 @@ int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const char* sour
                 returned);
             return 1;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games final deferred source=%s date=%u returned=%d",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -126,7 +126,7 @@ int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const char* sour
         action_yyyymmdd,
         template_prefix,
         source);
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games final reached source=%s event_date=%u action_date=%u returned=%d already_finalized=%d result=%u template=%s",
         source != NULL ? source : "",
         event_yyyymmdd,

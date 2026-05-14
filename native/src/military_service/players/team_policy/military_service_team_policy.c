@@ -39,7 +39,7 @@ static int kbo_military_service_add_team_csv_id(const char* team_csv_id)
         }
     }
     if (count >= KBO_MILITARY_SERVICE_TEAM_MAX) {
-        append_logf("KBO military service team policy ignored extra row team=%s max=%d", team_csv_id, KBO_MILITARY_SERVICE_TEAM_MAX);
+        kbo_log_runtimef("KBO military service team policy ignored extra row team=%s max=%d", team_csv_id, KBO_MILITARY_SERVICE_TEAM_MAX);
         return 0;
     }
 
@@ -78,7 +78,7 @@ static int kbo_military_service_load_team_csv_policy(void)
     }
     fclose(file);
 
-    append_logf("KBO military service team policy loaded rows=%d source=%s", loaded_rows, path);
+    kbo_log_runtimef("KBO military service team policy loaded rows=%d source=%s", loaded_rows, path);
     return loaded_rows;
 }
 
@@ -115,7 +115,7 @@ static void kbo_military_service_resolve_team_ids(int force)
 
         LONG old = InterlockedExchange(&entry->team_id, (LONG)team_id);
         if ((uint32_t)old != team_id) {
-            append_logf("KBO military service team resolved csv=%s team=%u", entry->team_csv_id, team_id);
+            kbo_log_runtimef("KBO military service team resolved csv=%s team=%u", entry->team_csv_id, team_id);
         }
     }
 }
@@ -134,7 +134,7 @@ void kbo_load_military_service_team_policy_override_once(void)
     }
 
     if (kbo_military_service_load_team_csv_policy() < 0) {
-        append_logf("KBO military service team policy file missing; no teams enabled file=%s", KBO_MILITARY_SERVICE_TEAM_POLICY_FILE);
+        kbo_log_runtimef("KBO military service team policy file missing; no teams enabled file=%s", KBO_MILITARY_SERVICE_TEAM_POLICY_FILE);
     }
     kbo_military_service_resolve_team_ids(1);
     InterlockedExchange(&g_kbo_military_policy_loaded_state, 2);

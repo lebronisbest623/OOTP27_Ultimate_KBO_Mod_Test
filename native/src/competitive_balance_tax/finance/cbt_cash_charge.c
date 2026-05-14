@@ -173,7 +173,7 @@ static int kbo_cbt_cash_charge_append_ledger(
 
     char path[MAX_PATH] = {0};
     if (!kbo_cbt_cash_charge_path(path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge ledger skipped season=%u team=%u reason=path_unavailable",
             rec->season,
             rec->team_id);
@@ -189,7 +189,7 @@ static int kbo_cbt_cash_charge_append_ledger(
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge ledger open failed season=%u team=%u gle=%lu path=%s",
             rec->season,
             rec->team_id,
@@ -258,7 +258,7 @@ static int kbo_cbt_apply_cash_charge_to_team(
         return 0;
     }
     if (kbo_cbt_cash_charge_already_applied(rec->season, rec->team_id)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge skipped source=%s reason=already_applied season=%u team=%u",
             source != NULL ? source : "",
             rec->season,
@@ -271,7 +271,7 @@ static int kbo_cbt_apply_cash_charge_to_team(
             || !memory_range_readable(
                 team + KBO_CBT_TEAM_FINANCIALS_BLOCK_OFFSET,
                 KBO_CBT_TEAM_FINANCIALS_READABLE_BYTES)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge skipped source=%s reason=team_financials_unavailable season=%u team=%u tax=%d",
             source != NULL ? source : "",
             rec->season,
@@ -282,7 +282,7 @@ static int kbo_cbt_apply_cash_charge_to_team(
 
     uint8_t* financials = team + KBO_CBT_TEAM_FINANCIALS_BLOCK_OFFSET;
     if (!kbo_cbt_financial_block_plausible(financials)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge skipped source=%s reason=financials_guard_failed season=%u team=%u tax=%d team_ptr=%p",
             source != NULL ? source : "",
             rec->season,
@@ -298,7 +298,7 @@ static int kbo_cbt_apply_cash_charge_to_team(
     *cash_ptr = new_cash;
 
     if (!kbo_cbt_cash_charge_append_ledger(rec, old_cash, new_cash, applied_yyyymmdd, source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge ledger failed source=%s season=%u team=%u tax=%d old_cash=%d new_cash=%d",
             source != NULL ? source : "",
             rec->season,
@@ -308,7 +308,7 @@ static int kbo_cbt_apply_cash_charge_to_team(
             new_cash);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT cash charge applied source=%s season=%u team=%u tax=%d old_cash=%d new_cash=%d date=%u",
         source != NULL ? source : "",
         rec->season,
@@ -326,7 +326,7 @@ int kbo_cbt_apply_offseason_cash_charges(uint32_t season, uint32_t applied_yyyym
         return 0;
     }
     if (read_kbo_localappdata_flag_file("disable_kbo_competitive_balance_tax.txt")) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge skipped source=%s season=%u date=%u reason=cbt_disabled",
             source != NULL ? source : "",
             season,
@@ -341,7 +341,7 @@ int kbo_cbt_apply_offseason_cash_charges(uint32_t season, uint32_t applied_yyyym
     KboCbtRecord records[KBO_CBT_RECORDS_MAX];
     int record_count = kbo_cbt_load_records(records, KBO_CBT_RECORDS_MAX, NULL, 0);
     if (record_count <= 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge skipped source=%s season=%u date=%u reason=no_records",
             source != NULL ? source : "",
             season,
@@ -356,7 +356,7 @@ int kbo_cbt_apply_offseason_cash_charges(uint32_t season, uint32_t applied_yyyym
         season,
         applied_yyyymmdd);
     if (charge_season == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT cash charge skipped source=%s season=%u date=%u records=%d reason=no_charge_for_transition_season",
             source != NULL ? source : "",
             season,
@@ -376,7 +376,7 @@ int kbo_cbt_apply_offseason_cash_charges(uint32_t season, uint32_t applied_yyyym
             source != NULL ? source : "offseason_transition");
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT cash charge pass source=%s requested_season=%u charge_season=%u date=%u records=%d applied=%d",
         source != NULL ? source : "",
         season,

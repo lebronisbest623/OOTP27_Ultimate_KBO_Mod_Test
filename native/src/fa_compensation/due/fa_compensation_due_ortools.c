@@ -133,7 +133,7 @@ int kbo_fa_compensation_apply_ortools_order(
         }
     }
     memcpy(candidates, ordered, (SIZE_T)candidate_count * sizeof(candidates[0]));
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA compensation OR-Tools protected order applied source=%s fa_player=%u signing_team=%u candidates=%d protect=%u",
         source != NULL ? source : "",
         rec->player_id,

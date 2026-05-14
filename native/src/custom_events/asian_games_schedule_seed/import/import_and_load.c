@@ -35,7 +35,7 @@ int kbo_import_asian_games_schedule_seed_file_locked(const char* path, const cha
 
     kbo_csv_reader_close(reader);
     if (imported > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games schedule seed import source=%s imported=%d path=%s",
             source != NULL ? source : "",
             imported,

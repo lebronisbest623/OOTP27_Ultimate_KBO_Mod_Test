@@ -142,7 +142,7 @@ uint8_t* kbo_choose_amateur_assignment_team_ortools(
             || !kbo_get_save_scoped_data_file("amateur_assignment_ortools_result.csv", result_path, sizeof(result_path))) {
         static volatile LONG path_fail_log_count = 0;
         if (InterlockedIncrement(&path_fail_log_count) <= 5) {
-            append_log_line("amateur OR-Tools save-scoped request/result path unavailable");
+            kbo_log_runtime_line("amateur OR-Tools save-scoped request/result path unavailable");
         }
         return NULL;
     }
@@ -174,7 +174,7 @@ uint8_t* kbo_choose_amateur_assignment_team_ortools(
             static volatile LONG log_count = 0;
             LONG slot = InterlockedIncrement(&log_count);
             if (slot <= 50 || kbo_amateur_verbose_log_enabled_cached()) {
-                append_logf(
+                kbo_log_runtimef(
                     "amateur OR-Tools assignment player=%u league=%u score=%d target_rep=%d team=%u(rep=%u)->%u(rep=%u)",
                     player_id,
                     league_id,

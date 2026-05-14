@@ -55,7 +55,7 @@ int kbo_opening_day_storyline_guard_active(
     static volatile LONG log_count = 0;
     LONG slot = InterlockedIncrement(&log_count);
     if (slot <= 80 || (slot % 100) == 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO opening-day storyline guard active source=%s date=%u opening_day=%u league=%u reason=defer_runtime_roster_mutation_until_stock_news_pass_finishes slot=%ld",
             source != NULL ? source : "",
             date_key,

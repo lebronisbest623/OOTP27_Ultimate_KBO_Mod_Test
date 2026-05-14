@@ -106,7 +106,7 @@ int kbo_prune_duplicate_custom_events_by_kind_for_date(
     }
 
     if (pruned > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event duplicate prune source=%s league=%u date=%u kind=%d matched=%d pruned=%d keep=%p",
             source != NULL ? source : "",
             league_id,

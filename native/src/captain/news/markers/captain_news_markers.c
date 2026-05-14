@@ -93,7 +93,7 @@ void kbo_captain_news_persist_marker(const char* key, const char* source)
 
     char path[MAX_PATH] = {0};
     if (!kbo_captain_news_marker_path(path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain news marker skipped source=%s key=%s reason=path_unavailable",
             source != NULL ? source : "",
             key);
@@ -109,7 +109,7 @@ void kbo_captain_news_persist_marker(const char* key, const char* source)
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain news marker skipped source=%s key=%s reason=open_failed gle=%lu path=%s",
             source != NULL ? source : "",
             key,
@@ -124,7 +124,7 @@ void kbo_captain_news_persist_marker(const char* key, const char* source)
     if (len <= 0 || len >= (int)sizeof(line)
             || !WriteFile(file, line, (DWORD)len, &written, NULL)
             || written != (DWORD)len) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain news marker write failed source=%s key=%s gle=%lu path=%s",
             source != NULL ? source : "",
             key,

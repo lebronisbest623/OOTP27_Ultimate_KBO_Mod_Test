@@ -69,7 +69,7 @@ void kbo_team_add_player_record_fa_compensation_success(
     LONG slot = InterlockedIncrement(&log_count);
     if (slot <= 160) {
         uint32_t after_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-        append_logf(
+        kbo_log_runtimef(
             "KBO team-add FA compensation probe player=%u team=%u league=%u before_current=%u before_active=%u before_original=%u filing_original=%u filing_league=%u filing_season=%u after_current=%u after_active=%u",
             player_id,
             signing_team_id,

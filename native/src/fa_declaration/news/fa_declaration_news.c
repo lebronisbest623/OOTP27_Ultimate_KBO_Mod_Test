@@ -113,7 +113,7 @@ static void kbo_fa_declaration_news_persist_marker(const char* marker, const cha
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA declaration news marker skipped source=%s marker=%s reason=open_failed gle=%lu path=%s",
             source != NULL ? source : "",
             marker,
@@ -220,7 +220,7 @@ int kbo_emit_fa_declaration_retry_news(
                 body,
                 sizeof(body),
                 source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA declaration retry news skipped source=%s season=%u league_id=%u player=%u reason=templates_unavailable",
             source != NULL ? source : "",
             season,
@@ -240,7 +240,7 @@ int kbo_emit_fa_declaration_retry_news(
     if (created) {
         kbo_fa_declaration_news_persist_marker(marker, source);
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA declaration retry news source=%s date=%u season=%u league=%u player=%u retry_count=%d created=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
@@ -342,7 +342,7 @@ int kbo_emit_fa_declaration_summary_news(
                 body,
                 sizeof(body),
                 source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA declaration news skipped source=%s season=%u league_id=%u reason=templates_unavailable",
             source != NULL ? source : "",
             season,
@@ -361,7 +361,7 @@ int kbo_emit_fa_declaration_summary_news(
     if (created) {
         kbo_fa_declaration_news_persist_marker(marker, source);
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA declaration news source=%s date=%u season=%u league=%u candidates=%d declared=%d deferred=%d created=%d",
         source != NULL ? source : "",
         event_yyyymmdd,

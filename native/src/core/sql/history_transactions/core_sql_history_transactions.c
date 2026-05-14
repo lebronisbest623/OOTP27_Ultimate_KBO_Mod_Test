@@ -29,13 +29,13 @@ int insert_kbo_player_history_sql(
 
     uintptr_t global = get_ootp_global_database();
     if (global == 0 || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
-        append_logf("player history sql skipped source=%s player=%u reason=no_global", source != NULL ? source : "", player_id);
+        kbo_log_runtimef("player history sql skipped source=%s player=%u reason=no_global", source != NULL ? source : "", player_id);
         return 0;
     }
 
     uintptr_t database = *(uintptr_t*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET);
     if (database == 0 || !memory_range_readable((void*)database, 0x10) || kbo_get_sqlite3_exec_fn() == NULL) {
-        append_logf("player history sql skipped source=%s player=%u reason=db_or_exec_unavailable", source != NULL ? source : "", player_id);
+        kbo_log_runtimef("player history sql skipped source=%s player=%u reason=db_or_exec_unavailable", source != NULL ? source : "", player_id);
         return 0;
     }
 
@@ -74,7 +74,7 @@ int insert_kbo_player_history_sql(
     int create_result = kbo_sqlite_exec_direct((void*)database, create_sql);
     int delete_result = kbo_sqlite_exec_direct((void*)database, delete_sql);
     int insert_result = kbo_sqlite_exec_direct((void*)database, insert_sql);
-    append_logf(
+    kbo_log_runtimef(
         "player history sql insert source=%s player=%u date=%s create=%d delete=%d insert=%d",
         source != NULL ? source : "",
         player_id,
@@ -104,13 +104,13 @@ int insert_kbo_roster_transaction_sql(
 
     uintptr_t global = get_ootp_global_database();
     if (global == 0 || !memory_range_readable((void*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET), sizeof(uintptr_t))) {
-        append_logf("roster transaction sql skipped source=%s reason=no_global", source != NULL ? source : "");
+        kbo_log_runtimef("roster transaction sql skipped source=%s reason=no_global", source != NULL ? source : "");
         return 0;
     }
 
     uintptr_t database = *(uintptr_t*)(global + OOTP27_GLOBAL_SQL_DATABASE_OFFSET);
     if (database == 0 || !memory_range_readable((void*)database, 0x10) || kbo_get_sqlite3_exec_fn() == NULL) {
-        append_logf("roster transaction sql skipped source=%s reason=db_or_exec_unavailable", source != NULL ? source : "");
+        kbo_log_runtimef("roster transaction sql skipped source=%s reason=db_or_exec_unavailable", source != NULL ? source : "");
         return 0;
     }
 
@@ -159,7 +159,7 @@ int insert_kbo_roster_transaction_sql(
         team_insert = kbo_sqlite_exec_direct((void*)database, sql);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "roster transaction sql insert source=%s date=%s league=%u team=%u create_league=%d create_team=%d league_insert=%d team_insert=%d",
         source != NULL ? source : "",
         date,

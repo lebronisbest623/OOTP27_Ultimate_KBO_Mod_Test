@@ -97,7 +97,7 @@ static void kbo_log_foreign_replacement_seed_unresolved(const char* key, const c
     if (n > 80) {
         return;
     }
-    append_logf(
+    kbo_log_runtimef(
         "foreign replacement player seed unresolved key=%s reason=%s players=%d",
         key != NULL ? key : "",
         reason != NULL ? reason : "",
@@ -208,7 +208,7 @@ uint32_t kbo_resolve_foreign_replacement_player_seed_key(const char* key, uint8_
         if (out_slot_type != NULL) {
             *out_slot_type = first_slot_type;
         }
-        append_logf(
+        kbo_log_runtimef(
             "foreign replacement player seed resolved key=%s player=%u matches=%d slot=%s",
             key,
             first_match,
@@ -277,7 +277,7 @@ int kbo_import_foreign_replacement_player_seed_file_locked(const char* path, con
 
     kbo_csv_reader_close(reader);
     if (imported > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign replacement player seed import source=%s imported=%d path=%s",
             source != NULL ? source : "",
             imported,

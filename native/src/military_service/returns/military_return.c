@@ -195,7 +195,7 @@ int kbo_return_completed_military_loan_player(
 
     LONG log_index = InterlockedIncrement(&g_military_loan_return_log_count);
     if (log_index <= 120) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military assignment returned #%ld source=%s player_id=%u"
             " service_team=%u original_team=%u"
             " current_team=%u current_league=%u org_team=%u days_left=%d"

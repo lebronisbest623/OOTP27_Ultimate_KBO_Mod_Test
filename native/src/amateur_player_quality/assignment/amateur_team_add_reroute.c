@@ -289,7 +289,7 @@ uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr
     LONG slot = InterlockedIncrement(&reroute_before_log_count);
     int verbose_assignment_log = kbo_amateur_reroute_verbose_log_enabled_cached();
     if (verbose_assignment_log || slot <= 30) {
-        append_logf(
+        kbo_log_runtimef(
             "amateur assignment pre-reroute team-add source=%s player=%u league=%u age=%d score=%d target_rep=%u team=%u(rep=%u)->%u(rep=%u)",
             source != NULL ? source : "",
             player_id,
@@ -302,7 +302,7 @@ uintptr_t kbo_amateur_team_add_player_reroute_before_original(uintptr_t team_ptr
             target_team_id,
             (uint32_t)actual_target_reputation);
     } else if (slot == 31) {
-        append_log_line("amateur assignment pre-reroute log suppressed after 30 players; create enable_amateur_assignment_verbose_log.txt for full logging");
+        kbo_log_runtime_line("amateur assignment pre-reroute log suppressed after 30 players; create enable_amateur_assignment_verbose_log.txt for full logging");
     }
 
     return (uintptr_t)target_team;

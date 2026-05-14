@@ -64,7 +64,7 @@ int create_kbo_real_add_news(
     uintptr_t global = get_ootp_global_database();
     uintptr_t manager = global;
     if (exe == NULL || manager == 0 || title == NULL || title[0] == '\0') {
-        append_logf(
+        kbo_log_runtimef(
             "league news real_add skipped source=%s title=%s reason=no_exe_manager_or_title exe=%p manager=%p global=%p",
             source != NULL ? source : "",
             title != NULL ? title : "",
@@ -86,7 +86,7 @@ int create_kbo_real_add_news(
             || !memory_range_readable((void*)ctor, 16)
             || !memory_range_readable((void*)ensure_strings, 16)
             || !memory_range_readable((void*)real_add, 16)) {
-        append_logf(
+        kbo_log_runtimef(
             "league news real_add skipped source=%s title=%s reason=build_specific_func_unavailable new=%p ctor=%p ensure=%p add=%p",
             source != NULL ? source : "",
             title,
@@ -99,7 +99,7 @@ int create_kbo_real_add_news(
 
     uint8_t* news = (uint8_t*)ootp_new(OOTP27_MESSAGE_OBJECT_SIZE);
     if (news == NULL || !memory_range_readable(news, OOTP27_MESSAGE_OBJECT_SIZE)) {
-        append_logf(
+        kbo_log_runtimef(
             "league news real_add skipped source=%s title=%s reason=alloc_failed object=%p",
             source != NULL ? source : "",
             title,
@@ -156,7 +156,7 @@ int create_kbo_real_add_news(
     int source_mutated = strcmp(title, original_title) != 0
         || strcmp(body != NULL ? body : "", original_body) != 0;
 
-    append_logf(
+    kbo_log_runtimef(
         "league news real_add create source=%s title=%s date=%04u-%02u-%02u league_id=%u type=%u manager=%p object=%p result=%u id8c=%u title_ok=%d body_ok=%d body_file=%d source_mutated=%d title_encoding=%s body_encoding=%s",
         source != NULL ? source : "",
         original_title,

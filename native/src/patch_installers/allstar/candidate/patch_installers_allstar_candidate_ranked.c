@@ -51,7 +51,7 @@ static int install_ranked_player_push_filter_site(HMODULE exe, const AllstarRank
     uint8_t* target = (uint8_t*)exe + site->site_rva;
     if (memory_range_readable(target, OOTP27_ALLSTAR_CANDIDATE_RANKED_PLAYER_PUSH_STOLEN_LEN)
             && (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star ranked candidate player push filter hook already installed label=%s target=%p",
             site->label,
             target);
@@ -59,7 +59,7 @@ static int install_ranked_player_push_filter_site(HMODULE exe, const AllstarRank
     }
 
     if (!memory_range_readable(target, OOTP27_ALLSTAR_CANDIDATE_RANKED_PLAYER_PUSH_STOLEN_LEN)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star ranked candidate player push filter hook target unreadable label=%s target=%p",
             site->label,
             target);
@@ -67,7 +67,7 @@ static int install_ranked_player_push_filter_site(HMODULE exe, const AllstarRank
     }
 
     if (!ranked_player_push_bytes_match(target, site->vector_base_in_rax)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star ranked candidate player push filter hook byte mismatch label=%s target=%p",
             site->label,
             target);
@@ -82,7 +82,7 @@ static int install_ranked_player_push_filter_site(HMODULE exe, const AllstarRank
     void* vector_push_back_address = resolve_relative_call_target(
         target + OOTP27_ALLSTAR_CANDIDATE_RANKED_PLAYER_PUSH_CALL_OFFSET);
     if (vector_push_back_address == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star ranked candidate player push filter hook skipped: vector push helper target unresolved label=%s",
             site->label);
         return 0;
@@ -96,7 +96,7 @@ static int install_ranked_player_push_filter_site(HMODULE exe, const AllstarRank
         vector_push_back_address,
         site->vector_base_in_rax);
     if (stub == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "failed to allocate KBO all-star ranked candidate player push filter hook stub label=%s",
             site->label);
         return 0;
@@ -113,7 +113,7 @@ static int install_ranked_player_push_filter_site(HMODULE exe, const AllstarRank
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf(
+        kbo_log_runtimef(
             "VirtualProtect failed for KBO all-star ranked candidate player push filter hook label=%s error=%lu",
             site->label,
             GetLastError());
@@ -124,7 +124,7 @@ static int install_ranked_player_push_filter_site(HMODULE exe, const AllstarRank
     FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO all-star ranked candidate player push filter hook label=%s target=%p stub=%p return=%p skip=%p vector_push=%p helper=%p base=%s",
         site->label,
         target,
@@ -164,7 +164,7 @@ int install_allstar_candidate_ranked_player_push_filter_patch(void)
         }
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO all-star ranked candidate player push filter hooks finished ok=%d installed_or_present=%d total=%d",
         ok,
         installed,

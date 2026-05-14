@@ -81,7 +81,7 @@ static uint8_t kbo_asian_games_resolve_final_result(uint32_t event_yyyymmdd, LON
             no_gold_odds_denominator);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games final result resolved source=%s date=%u result=%u no_gold_odds=1/%u returned=%d exempted=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
@@ -100,7 +100,7 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         roster_count = g_kbo_asian_games_roster_count;
     }
     if (roster_count <= 0 || roster_count > KBO_ASIAN_GAMES_ROSTER_SIZE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games final skipped source=%s date=%u reason=no_roster count=%ld year=%u",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -124,7 +124,7 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         uint8_t* player = kbo_find_player_by_id(entry->player_id, NULL, NULL);
         if (player == NULL || !kbo_player_pointer_plausible((uintptr_t)player)) {
             missing++;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games final missing player_id=%u index=%ld",
                 entry->player_id,
                 i + 1);
@@ -140,7 +140,7 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 0);
         if (team == NULL) {
             no_team++;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games final no team player_id=%u team=%u league=%u index=%ld",
                 entry->player_id,
                 team_id,
@@ -173,7 +173,7 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
 
         entry->returned = 1u;
         returned++;
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games finalized #%ld player_id=%u team=%u league=%u result=%u gold=%d exempted=%u removed_restricted=%d added_assignment=%d restored_restricted=%u restored_secondary=%u restored_injury=%u restored_days=%d",
             i + 1,
             entry->player_id,
@@ -190,7 +190,7 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
             (int)entry->old_injury_days_left);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games final processed source=%s date=%u roster=%ld result=%u gold=%d returned=%d exempted=%d missing=%d no_team=%d",
         source != NULL ? source : "",
         event_yyyymmdd,

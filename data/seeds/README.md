@@ -21,6 +21,7 @@ Seed groups:
 - `foreign_players`
 - `military_service`
 - `player_team_history`
+- `teams`
 - `runtime`
 - `news_templates`
 - `ui_text`

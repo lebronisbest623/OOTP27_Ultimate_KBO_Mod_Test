@@ -8,7 +8,7 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
     static volatile LONG entry_log_count = 0;
     LONG entry_slot = InterlockedIncrement(&entry_log_count);
     if (entry_slot <= 20) {
-        append_logf(
+        kbo_log_runtimef(
             "amateur assignment batch probe entry list=%p count=%d context=%p",
             (void*)player_list_ptr,
             player_count,
@@ -17,7 +17,7 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
 
     if (player_list_ptr == 0 || player_count <= 0 || player_count > 512) {
         if (entry_slot <= 20) {
-            append_logf(
+            kbo_log_runtimef(
                 "amateur assignment batch probe skipped reason=bad_args list=%p count=%d context=%p",
                 (void*)player_list_ptr,
                 player_count,
@@ -28,7 +28,7 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
 
     if (!memory_range_readable((void*)player_list_ptr, (SIZE_T)player_count * sizeof(uintptr_t))) {
         if (entry_slot <= 20) {
-            append_logf(
+            kbo_log_runtimef(
                 "amateur assignment batch probe skipped reason=unreadable list_readable=%d list=%p count=%d context=%p",
                 memory_range_readable((void*)player_list_ptr, (SIZE_T)player_count * sizeof(uintptr_t)),
                 (void*)player_list_ptr,
@@ -69,7 +69,7 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
         readable_players++;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "amateur assignment batch captured first_league=%u first_team=%u count=%d readable=%d first_player=%u last_player=%u list=%p context=%p",
         first_league_id,
         first_team_id,

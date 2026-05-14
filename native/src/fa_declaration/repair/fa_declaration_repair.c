@@ -152,7 +152,7 @@ int kbo_fa_declaration_repair_retained_contract_salary(
         static LONG repair_log_count = 0;
         LONG slot = InterlockedIncrement(&repair_log_count);
         if (slot <= 160) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA declaration retained contract salary repaired source=%s player=%u season=%u team=%u decision_date=%u start_year=%d->%d slot=%u salary_slot=%d->%d y1=%d->%d offer=%d->%d repair_salary=%d decision_salary=%d demand=%d minimum=%d",
                 source != NULL ? source : "",
                 player_id,
@@ -272,7 +272,7 @@ int kbo_fa_declaration_repair_retained_contracts_for_season(
     }
 
     if (rows > 0 || repaired > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA declaration retained contract repair scan source=%s season=%u rows=%d unique=%d found=%d repaired=%d skipped_team=%d csv=%s",
             source != NULL ? source : "",
             season,

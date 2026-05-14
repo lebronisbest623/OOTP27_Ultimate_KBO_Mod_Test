@@ -77,7 +77,7 @@ void kbo_military_return_preview_persist_marker(const char* key, const char* sou
 
     char path[MAX_PATH] = {0};
     if (!kbo_military_return_preview_marker_path(path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military return preview marker skipped source=%s key=%s reason=path_unavailable",
             source != NULL ? source : "",
             key);
@@ -93,7 +93,7 @@ void kbo_military_return_preview_persist_marker(const char* key, const char* sou
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military return preview marker skipped source=%s key=%s reason=open_failed gle=%lu path=%s",
             source != NULL ? source : "",
             key,
@@ -107,7 +107,7 @@ void kbo_military_return_preview_persist_marker(const char* key, const char* sou
     DWORD written = 0;
     DWORD bytes = (DWORD)strlen(line);
     if (!WriteFile(file, line, bytes, &written, NULL) || written != bytes) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military return preview marker write failed source=%s key=%s gle=%lu path=%s",
             source != NULL ? source : "",
             key,

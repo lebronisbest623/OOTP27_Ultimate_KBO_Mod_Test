@@ -1,5 +1,4 @@
 #include "flag_key.h"
-#include "runtime_flag_aliases.generated.h"
 
 #include <string.h>
 
@@ -49,13 +48,4 @@ int kbo_flag_key_from_file_name(const char* file_name, char* out, size_t out_siz
     memcpy(out, base, len);
     out[len] = '\0';
     return 1;
-}
-
-const char* kbo_flag_legacy_json_key_for_key(const char* key)
-{
-    if (key == NULL) {
-        return NULL;
-    }
-
-    return kbo_flag_generated_legacy_json_key_for_key(key);
 }

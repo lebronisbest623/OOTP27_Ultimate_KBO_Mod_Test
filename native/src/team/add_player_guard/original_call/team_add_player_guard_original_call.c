@@ -46,7 +46,7 @@ void kbo_team_add_log_skipped_bad_original_args(
     if (slot > 120) {
         return;
     }
-    append_logf(
+    kbo_log_runtimef(
         "team_add guard: skipped original bad_args stage=%s caller_rva=0x%x team_ptr=%p player_ptr=%p original_team_ptr=%p team_readable=%d player_plausible=%d",
         stage != NULL ? stage : "unknown",
         caller_rva,

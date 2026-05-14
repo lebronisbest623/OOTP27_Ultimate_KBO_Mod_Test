@@ -93,7 +93,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
     if (!kbo_player_pointer_plausible(player_ptr)) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
         if (slot <= 20) {
-            append_logf("KBO FA signing branch skipped reason=bad_player player_ptr=%p team_ptr=%p", (void*)player_ptr, (void*)team_ptr);
+            kbo_log_runtimef("KBO FA signing branch skipped reason=bad_player player_ptr=%p team_ptr=%p", (void*)player_ptr, (void*)team_ptr);
         }
         return 1;
     }
@@ -106,7 +106,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
     if (player_id == 0u || player_id > 1000000u) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
         if (slot <= 20) {
-            append_logf("KBO FA signing branch skipped reason=bad_player_id player=%u team=%u league=%u", player_id, team_id, league_id);
+            kbo_log_runtimef("KBO FA signing branch skipped reason=bad_player_id player=%u team=%u league=%u", player_id, team_id, league_id);
         }
         return 1;
     }
@@ -117,7 +117,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
         static volatile LONG military_fa_signing_block_log_count = 0;
         LONG slot = InterlockedIncrement(&military_fa_signing_block_log_count);
         if (slot <= 200) {
-            append_logf(
+            kbo_log_runtimef(
                 "military service team FA signing blocked player=%u team=%u league=%u",
                 player_id,
                 team_id,
@@ -129,7 +129,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
     if (!is_kbo_team) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
         if (slot <= 20) {
-            append_logf("KBO FA signing branch skipped reason=non_kbo_team player=%u team_ptr=%p team=%u league=%u", player_id, (void*)team_ptr, team_id, league_id);
+            kbo_log_runtimef("KBO FA signing branch skipped reason=non_kbo_team player=%u team_ptr=%p team=%u league=%u", player_id, (void*)team_ptr, team_id, league_id);
         }
         return 1;
     }
@@ -159,7 +159,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
             static volatile LONG final_block_log_count = 0;
             LONG slot = InterlockedIncrement(&final_block_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "custom foreign policy FA signing blocked player=%u team=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u",
                     player_id,
                     team_id,
@@ -203,7 +203,7 @@ __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t pla
     static volatile LONG post_log_count = 0;
     LONG slot = InterlockedIncrement(&post_log_count);
     if (slot <= 120) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA signing success post player=%u team=%u league=%u current_team=%u active_team=%u original_team=%u",
             player_id,
             team_id,
@@ -229,7 +229,7 @@ __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t pla
     if (signing_year < 1982u || signing_year > 2200u) {
         LONG skip_slot = InterlockedIncrement(&g_kbo_fa_requalification_hook_skip_log_count);
         if (skip_slot <= 20) {
-            append_logf("KBO FA signing success post skipped reason=no_signing_year player=%u team=%u league=%u", player_id, team_id, league_id);
+            kbo_log_runtimef("KBO FA signing success post skipped reason=no_signing_year player=%u team=%u league=%u", player_id, team_id, league_id);
         }
         return;
     }

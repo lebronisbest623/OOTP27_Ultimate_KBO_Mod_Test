@@ -65,7 +65,6 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\core\dates\core_text_date.c") `
     (Join-Path $Root "src\core\sql\escape\core_sql_escape.c") `
     (Join-Path $Root "src\core\core_flags\keys\flag_key.c") `
-    (Join-Path $Root "src\core\core_flags\keys\runtime_flag_aliases.generated.c") `
     (Join-Path $Root "src\core\core_flags\json\json_bool_parser.c") `
     (Join-Path $Root "src\core\core_flags\json\json_string_decode.c") `
     (Join-Path $Root "src\core\news\templates\render\core_news_template_render.c") `

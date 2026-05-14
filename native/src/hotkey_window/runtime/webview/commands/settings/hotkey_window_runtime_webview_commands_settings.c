@@ -12,9 +12,9 @@ int kbo_webview_handle_settings_command(const char* cmd)
         }
         int multiplier = kbo_clamp_intl_established_fa_multiplier(atoi(cmd + 29));
         if (kbo_set_intl_established_fa_multiplier(multiplier)) {
-            append_logf("settings webview: international established FA multiplier=%d", multiplier);
+            kbo_log_runtimef("settings webview: international established FA multiplier=%d", multiplier);
         } else {
-            append_logf("settings webview: failed to write international established FA multiplier=%d", multiplier);
+            kbo_log_runtimef("settings webview: failed to write international established FA multiplier=%d", multiplier);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;
@@ -34,9 +34,9 @@ int kbo_webview_handle_settings_command(const char* cmd)
             || ascii_equals_ignore_case(value, "true")
             || ascii_equals_ignore_case(value, "enabled");
         if (kbo_set_foreign_fa_quality_cap_enabled_setting(enabled)) {
-            append_logf("settings webview: foreign FA quality cap enabled=%d", enabled ? 1 : 0);
+            kbo_log_runtimef("settings webview: foreign FA quality cap enabled=%d", enabled ? 1 : 0);
         } else {
-            append_logf("settings webview: failed to write foreign FA quality cap enabled=%d", enabled ? 1 : 0);
+            kbo_log_runtimef("settings webview: failed to write foreign FA quality cap enabled=%d", enabled ? 1 : 0);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;
@@ -53,9 +53,9 @@ int kbo_webview_handle_settings_command(const char* cmd)
         int value = atoi(cmd + 35);
         int clamped = kbo_clamp_asian_quota_salary_limit_value(value);
         if (kbo_set_asian_quota_salary_limit(value)) {
-            append_logf("settings webview: Asian quota salary limit=%d", clamped);
+            kbo_log_runtimef("settings webview: Asian quota salary limit=%d", clamped);
         } else {
-            append_logf("settings webview: failed to write Asian quota salary limit=%d", value);
+            kbo_log_runtimef("settings webview: failed to write Asian quota salary limit=%d", value);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;
@@ -74,9 +74,9 @@ int kbo_webview_handle_settings_command(const char* cmd)
         int value = atoi(cmd + asian_games_no_gold_odds_prefix_len);
         int clamped = kbo_clamp_asian_games_no_gold_odds_denominator(value);
         if (kbo_set_asian_games_no_gold_odds_denominator(value)) {
-            append_logf("settings webview: Asian Games no-gold odds denominator=%d", clamped);
+            kbo_log_runtimef("settings webview: Asian Games no-gold odds denominator=%d", clamped);
         } else {
-            append_logf("settings webview: failed to write Asian Games no-gold odds denominator=%d", value);
+            kbo_log_runtimef("settings webview: failed to write Asian Games no-gold odds denominator=%d", value);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;
@@ -98,9 +98,9 @@ int kbo_webview_handle_settings_command(const char* cmd)
         int value = slash != NULL ? atoi(slash + 1) : 0;
         int clamped = kbo_clamp_foreign_fa_quality_cap_value(value);
         if (kbo_set_foreign_fa_non_asian_quality_cap_value(index, value)) {
-            append_logf("settings webview: non-Asian foreign FA quality cap index=%d value=%d", index, clamped);
+            kbo_log_runtimef("settings webview: non-Asian foreign FA quality cap index=%d value=%d", index, clamped);
         } else {
-            append_logf("settings webview: failed to write non-Asian foreign FA quality cap index=%d value=%d", index, value);
+            kbo_log_runtimef("settings webview: failed to write non-Asian foreign FA quality cap index=%d value=%d", index, value);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;
@@ -119,9 +119,9 @@ int kbo_webview_handle_settings_command(const char* cmd)
         const char* slash = strchr(rest, '/');
         int value = slash != NULL ? atoi(slash + 1) : 0;
         if (kbo_set_foreign_fa_demand_baseline_value(index, value)) {
-            append_logf("settings webview: foreign FA demand baseline index=%d value=%d", index, kbo_clamp_foreign_fa_demand_baseline_value(value));
+            kbo_log_runtimef("settings webview: foreign FA demand baseline index=%d value=%d", index, kbo_clamp_foreign_fa_demand_baseline_value(value));
         } else {
-            append_logf("settings webview: failed to write foreign FA demand baseline index=%d value=%d", index, value);
+            kbo_log_runtimef("settings webview: failed to write foreign FA demand baseline index=%d value=%d", index, value);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;
@@ -140,9 +140,9 @@ int kbo_webview_handle_settings_command(const char* cmd)
         const char* slash = strchr(rest, '/');
         int value = slash != NULL ? atoi(slash + 1) : 0;
         if (kbo_set_asian_quota_fa_demand_baseline_value(index, value)) {
-            append_logf("settings webview: Asian quota FA demand baseline index=%d value=%d", index, kbo_clamp_foreign_fa_demand_baseline_value(value));
+            kbo_log_runtimef("settings webview: Asian quota FA demand baseline index=%d value=%d", index, kbo_clamp_foreign_fa_demand_baseline_value(value));
         } else {
-            append_logf("settings webview: failed to write Asian quota FA demand baseline index=%d value=%d", index, value);
+            kbo_log_runtimef("settings webview: failed to write Asian quota FA demand baseline index=%d value=%d", index, value);
         }
         g_kbo_hub_selected_view = KBO_HUB_VIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;

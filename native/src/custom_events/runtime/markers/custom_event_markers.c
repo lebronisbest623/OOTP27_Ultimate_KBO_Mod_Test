@@ -172,7 +172,7 @@ void kbo_persist_custom_event_processed_marker(uint32_t event_yyyymmdd, const ch
 
     char path[MAX_PATH] = {0};
     if (!kbo_get_custom_event_processed_marker_path(path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event marker skipped source=%s name=%s date=%u reason=path_unavailable",
             source != NULL ? source : "",
             name,
@@ -189,7 +189,7 @@ void kbo_persist_custom_event_processed_marker(uint32_t event_yyyymmdd, const ch
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event marker skipped source=%s name=%s date=%u reason=open_failed gle=%lu path=%s",
             source != NULL ? source : "",
             name,
@@ -205,7 +205,7 @@ void kbo_persist_custom_event_processed_marker(uint32_t event_yyyymmdd, const ch
     if (len <= 0 || len >= (int)sizeof(line)
             || !WriteFile(file, line, (DWORD)len, &written, NULL)
             || written != (DWORD)len) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event marker write failed source=%s name=%s date=%u gle=%lu path=%s",
             source != NULL ? source : "",
             name,

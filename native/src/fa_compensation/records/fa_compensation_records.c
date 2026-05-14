@@ -96,7 +96,7 @@ int kbo_persist_fa_compensation_records(const KboFaCompensationRecord* records, 
 {
     char path[MAX_PATH] = {0};
     if (!kbo_get_fa_compensation_path(path, sizeof(path))) {
-        append_log_line("KBO FA compensation persist skipped reason=path_unavailable");
+        kbo_log_runtime_line("KBO FA compensation persist skipped reason=path_unavailable");
         return 0;
     }
 
@@ -111,7 +111,7 @@ int kbo_persist_fa_compensation_records(const KboFaCompensationRecord* records, 
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA compensation persist failed reason=create_tmp gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("KBO FA compensation persist failed reason=create_tmp gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
 
@@ -167,10 +167,10 @@ int kbo_persist_fa_compensation_records(const KboFaCompensationRecord* records, 
 
     int ok = kbo_atomic_commit(file, tmp_path, path);
     if (!ok) {
-        append_logf("KBO FA compensation atomic commit failed path=%s", path);
+        kbo_log_runtimef("KBO FA compensation atomic commit failed path=%s", path);
         return 0;
     }
-    append_logf("KBO FA compensation persisted records=%d path=%s", record_count, path);
+    kbo_log_runtimef("KBO FA compensation persisted records=%d path=%s", record_count, path);
     return 1;
 }
 
@@ -182,7 +182,7 @@ int kbo_append_fa_compensation_record(const KboFaCompensationRecord* rec)
 
     char path[MAX_PATH] = {0};
     if (!kbo_get_fa_compensation_path(path, sizeof(path))) {
-        append_log_line("KBO FA compensation append skipped reason=path_unavailable");
+        kbo_log_runtime_line("KBO FA compensation append skipped reason=path_unavailable");
         return 0;
     }
 
@@ -205,7 +205,7 @@ int kbo_append_fa_compensation_record(const KboFaCompensationRecord* rec)
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA compensation append failed reason=open gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("KBO FA compensation append failed reason=open gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
 

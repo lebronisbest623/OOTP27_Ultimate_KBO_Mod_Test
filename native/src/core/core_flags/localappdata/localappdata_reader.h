@@ -3,9 +3,9 @@
 
 #include <stddef.h>
 
-int kbo_read_localappdata_json_flag_value(const char* key, const char* legacy_key, int* out_value);
+int kbo_read_localappdata_json_flag_value(const char* key, int* out_value);
 int kbo_read_localappdata_json_int_value(const char* key, int* out_value);
-int kbo_read_localappdata_named_json_flag_value(const char* file_name, const char* key, const char* legacy_key, int* out_value);
+int kbo_read_localappdata_named_json_flag_value(const char* file_name, const char* key, int* out_value);
 int kbo_read_localappdata_named_json_int_value(const char* file_name, const char* key, int* out_value);
 int kbo_read_localappdata_named_json_string_value(const char* file_name, const char* key, char* out, size_t out_size);
 int kbo_write_localappdata_json_int_value(const char* key, int value);

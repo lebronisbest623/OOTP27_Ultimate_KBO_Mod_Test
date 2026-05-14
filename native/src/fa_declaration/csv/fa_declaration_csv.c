@@ -43,7 +43,7 @@ int kbo_fa_declaration_append_csv(
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA declaration csv open failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO FA declaration csv open failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
 

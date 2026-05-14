@@ -3,7 +3,7 @@
 void start_kbo_full_runtime_marker_wait_thread(HINSTANCE instance)
 {
     if (InterlockedCompareExchange(&g_kbo_full_runtime_marker_wait_started, 1, 0) != 0) {
-        append_log_line("KBO full runtime marker guard thread already started");
+        kbo_log_runtime_line("KBO full runtime marker guard thread already started");
         return;
     }
 
@@ -14,26 +14,26 @@ void start_kbo_full_runtime_marker_wait_thread(HINSTANCE instance)
 
 DWORD WINAPI patch_thread(LPVOID parameter)
 {
-    append_log_line("KBOFix loaded");
-    append_log_line("KBOFix build includes scoped all-star single-division prep/roster/team setup gates");
+    kbo_log_runtime_line("KBOFix loaded");
+    kbo_log_runtime_line("KBOFix build includes scoped all-star single-division prep/roster/team setup gates");
 
     if (!read_kbo_localappdata_flag_file("enable_experimental_runtime_hooks.txt")) {
-        append_log_line("KBOFix: experimental runtime hooks disabled; safe startup mode active");
+        kbo_log_runtime_line("KBOFix: experimental runtime hooks disabled; safe startup mode active");
         return 0;
     }
 
     int diagnostic_minimal_runtime = read_kbo_localappdata_flag_file("enable_kbo_diagnostic_minimal_runtime.txt");
     if (diagnostic_minimal_runtime) {
-        append_log_line("KBO diagnostic minimal runtime enabled: F2 hub and runtime patches disabled");
+        kbo_log_runtime_line("KBO diagnostic minimal runtime enabled: F2 hub and runtime patches disabled");
     }
 
     if (!verify_ootp_build()) {
-        append_log_line("KBOFix: build verification failed; no patches installed");
+        kbo_log_runtime_line("KBOFix: build verification failed; no patches installed");
         return 0;
     }
 
     if (diagnostic_minimal_runtime) {
-        append_log_line("KBO diagnostic minimal runtime: build verified, no runtime patches installed");
+        kbo_log_runtime_line("KBO diagnostic minimal runtime: build verified, no runtime patches installed");
         return 0;
     }
 
@@ -46,19 +46,19 @@ DWORD WINAPI patch_thread(LPVOID parameter)
             && (foreign_ai_roster_management
                 || foreign_ai_controller
                 || read_kbo_localappdata_flag_file("enable_kbo_ai_fa_status_candidate_insert_hook.txt"))) {
-        append_log_line("KBO presave foreign AI FA candidate hook install requested");
+        kbo_log_runtime_line("KBO presave foreign AI FA candidate hook install requested");
         install_kbo_ai_fa_status_candidate_insert_patch();
     }
     if (!read_kbo_localappdata_flag_file("disable_kbo_foreign_ai_offer_candidate_priority_hook.txt")
             && (foreign_ai_roster_management
                 || foreign_ai_controller
                 || read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_candidate_priority_hook.txt"))) {
-        append_log_line("KBO presave foreign AI offer candidate priority hook install requested");
+        kbo_log_runtime_line("KBO presave foreign AI offer candidate priority hook install requested");
         install_kbo_foreign_ai_offer_candidate_priority_patch();
     }
     if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_research_hooks.txt")
             || read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_attach_probe.txt")) {
-        append_log_line("KBO presave foreign AI offer attach hook install requested");
+        kbo_log_runtime_line("KBO presave foreign AI offer attach hook install requested");
         install_kbo_foreign_ai_offer_attach_probe_patch();
     }
     if (foreign_ai_roster_management) {
@@ -68,30 +68,30 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         install_kbo_ai_roster_apply_selection_trace_patch();
         start_kbo_foreign_roster_daily_audit_thread();
     } else {
-        append_log_line("KBO foreign AI roster management skipped: enable_foreign_ai_roster_management is false");
+        kbo_log_runtime_line("KBO foreign AI roster management skipped: enable_foreign_ai_roster_management is false");
     }
     if (!read_kbo_localappdata_flag_file("disable_amateur_assignment_reroute.txt")) {
         install_kbo_amateur_assignment_batch_probe_patch();
     } else {
-        append_log_line("KBO early amateur assignment batch probe skipped: disable_amateur_assignment_reroute is true");
+        kbo_log_runtime_line("KBO early amateur assignment batch probe skipped: disable_amateur_assignment_reroute is true");
     }
     start_kbo_military_seed_bootstrap_thread();
 
-    append_log_line("KBO F2 hub starting before runtime marker guard");
+    kbo_log_runtime_line("KBO F2 hub starting before runtime marker guard");
     start_kbo_hotkey_window_thread((HINSTANCE)parameter);
     start_kbo_cbt_event_scheduler_thread();
     if (!read_kbo_localappdata_flag_file("disable_kbo_cbt_draft_order_penalty_hook.txt")) {
-        append_log_line("KBO CBT draft order penalty hook install requested");
+        kbo_log_runtime_line("KBO CBT draft order penalty hook install requested");
         install_kbo_cbt_draft_order_penalty_patch();
     } else {
-        append_log_line("KBO CBT draft order penalty hook skipped: disable_kbo_cbt_draft_order_penalty_hook is true");
+        kbo_log_runtime_line("KBO CBT draft order penalty hook skipped: disable_kbo_cbt_draft_order_penalty_hook is true");
     }
     start_kbo_fa_salary_snapshot_thread();
     start_kbo_domestic_fa_market_investigation_thread();
     start_kbo_captain_preseason_selection_thread();
 
     if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
-        append_log_line("KBO all-star presave bootstrap install started");
+        kbo_log_runtime_line("KBO all-star presave bootstrap install started");
         install_single_division_allstar_patch();
         install_allstar_team_setup_single_division_patch();
         install_allstar_candidate_team_split_patch();
@@ -101,33 +101,33 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         if (read_kbo_localappdata_flag_file("enable_single_division_allstar_voting_hook.txt")) {
             install_allstar_voting_begin_prepare_patch();
         } else {
-            append_log_line("KBO all-star voting begin prepare hook disabled: kbo_flags.json enable_single_division_allstar_voting_hook is false");
+            kbo_log_runtime_line("KBO all-star voting begin prepare hook disabled: kbo_flags.json enable_single_division_allstar_voting_hook is false");
         }
         if (read_kbo_localappdata_flag_file("enable_single_division_allstar_events.txt")) {
             install_allstar_events_prepare_patch();
         } else {
-            append_log_line("KBO all-star events prepare hook disabled: kbo_flags.json enable_single_division_allstar_events is false");
+            kbo_log_runtime_line("KBO all-star events prepare hook disabled: kbo_flags.json enable_single_division_allstar_events is false");
         }
         if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
             install_allstar_settings_ui_patch();
         } else {
-            append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
+            kbo_log_runtime_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
         }
-        append_log_line("KBO all-star presave bootstrap hooks installed");
+        kbo_log_runtime_line("KBO all-star presave bootstrap hooks installed");
 
         load_allstar_team_rules_once();
-        append_log_line("KBO all-star presave direct league mutations deferred until OOTP invokes scoped hooks");
+        kbo_log_runtime_line("KBO all-star presave direct league mutations deferred until OOTP invokes scoped hooks");
     } else {
-        append_log_line("KBO single-division all-star runtime patches disabled: kbo_flags.json enable_single_division_allstar_runtime_patches is false");
+        kbo_log_runtime_line("KBO single-division all-star runtime patches disabled: kbo_flags.json enable_single_division_allstar_runtime_patches is false");
         if (read_kbo_localappdata_flag_file("enable_single_division_allstar_settings_patch.txt")) {
             install_allstar_settings_ui_patch();
         } else {
-            append_log_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
+            kbo_log_runtime_line("KBO all-star settings UI patch disabled: kbo_flags.json enable_single_division_allstar_settings_patch is false");
         }
     }
 
     if (read_kbo_localappdata_flag_file("disable_kbo_runtime_roster_marker_guard.txt")) {
-        append_log_line("KBO runtime marker guard disabled by flag");
+        kbo_log_runtime_line("KBO runtime marker guard disabled by flag");
         install_kbo_full_runtime_after_roster_marker((HINSTANCE)parameter);
         return 0;
     }
@@ -140,14 +140,14 @@ static DWORD WINAPI kbo_hot_reinject_ai_roster_management_thread(LPVOID paramete
 {
     (void)parameter;
 
-    append_log_line("KBO hot reinject foreign AI roster management requested");
+    kbo_log_runtime_line("KBO hot reinject foreign AI roster management requested");
     if (!read_kbo_localappdata_flag_file("enable_experimental_runtime_hooks.txt")) {
-        append_log_line("KBO hot reinject foreign AI roster management skipped: experimental runtime hooks disabled");
+        kbo_log_runtime_line("KBO hot reinject foreign AI roster management skipped: experimental runtime hooks disabled");
         return 0;
     }
 
     if (!verify_ootp_build()) {
-        append_log_line("KBO hot reinject foreign AI roster management skipped: build verification failed");
+        kbo_log_runtime_line("KBO hot reinject foreign AI roster management skipped: build verification failed");
         return 0;
     }
 
@@ -173,7 +173,7 @@ static DWORD WINAPI kbo_hot_reinject_ai_roster_management_thread(LPVOID paramete
         install_kbo_ai_roster_apply_selection_trace_patch();
         start_kbo_foreign_roster_daily_audit_thread();
     }
-    append_log_line("KBO hot reinject foreign AI roster management finished");
+    kbo_log_runtime_line("KBO hot reinject foreign AI roster management finished");
     return 0;
 }
 

@@ -55,7 +55,7 @@ int kbo_run_captain_preseason_selection_once(const char* source)
 DWORD WINAPI kbo_captain_preseason_selection_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("KBO captain selection maintenance thread started");
+    kbo_log_runtime_line("KBO captain selection maintenance thread started");
 
     while (kbo_runtime_threads_should_continue()) {
         kbo_run_captain_selection_maintenance_once("captain_selection_thread");
@@ -65,7 +65,7 @@ DWORD WINAPI kbo_captain_preseason_selection_thread(LPVOID parameter)
     }
 
     InterlockedExchange(&g_kbo_captain_preseason_thread_started, 0);
-    append_log_line("KBO captain selection maintenance thread stopped");
+    kbo_log_runtime_line("KBO captain selection maintenance thread stopped");
     return 0;
 }
 

@@ -83,7 +83,7 @@ int kbo_cbt_save_records(const KboCbtRecord* records, int count)
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("CBT records open failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("CBT records open failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
 
@@ -110,7 +110,7 @@ int kbo_cbt_save_records(const KboCbtRecord* records, int count)
     }
 
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("CBT records atomic commit failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("CBT records atomic commit failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
     return 1;

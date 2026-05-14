@@ -140,7 +140,7 @@ int kbo_record_fa_compensation_signing(
     if (filing_original_team_id != 0u && filing_original_team_id != row.original_team_id) {
         uint8_t* filing_original_team = find_kbo_team_by_numeric_id_any_league(filing_original_team_id, 0);
         if (filing_original_team != NULL) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA compensation original team override player=%u memory_original=%u filing_original=%u signing_team=%u filing_league=%u filing_season=%u",
                 row.player_id,
                 row.original_team_id,
@@ -161,7 +161,7 @@ int kbo_record_fa_compensation_signing(
         static LONG skip_log_count = 0;
         LONG slot = InterlockedIncrement(&skip_log_count);
         if (slot <= 80) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA compensation skipped player=%u signing_team=%u original_team=%u case=%s grade=%s salary=%d foreign=%u reason=not_compensable",
                 row.player_id,
                 signing_team_id,
@@ -195,7 +195,7 @@ int kbo_record_fa_compensation_signing(
     KboFaCompensationRecord* records = (KboFaCompensationRecord*)HeapAlloc(
         GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)KBO_FA_COMPENSATION_MAX * sizeof(KboFaCompensationRecord));
     if (records == NULL) {
-        append_log_line("KBO FA compensation skipped reason=allocation_failed");
+        kbo_log_runtime_line("KBO FA compensation skipped reason=allocation_failed");
         KBO_PROFILE_END(profile_fa_comp_record_signing, "fa_comp.record_signing.alloc_failed");
         return 0;
     }
@@ -219,7 +219,7 @@ int kbo_record_fa_compensation_signing(
     }
 
     if (record_count >= KBO_FA_COMPENSATION_MAX) {
-        append_logf("KBO FA compensation skipped reason=ledger_full player=%u path=%s", row.player_id, path);
+        kbo_log_runtimef("KBO FA compensation skipped reason=ledger_full player=%u path=%s", row.player_id, path);
         kbo_fa_compensation_unlock_ledger();
         HeapFree(GetProcessHeap(), 0, records);
         KBO_PROFILE_END(profile_fa_comp_ledger, "fa_comp.record_signing.ledger_full");
@@ -258,7 +258,7 @@ int kbo_record_fa_compensation_signing(
         KBO_PROFILE_BEGIN(profile_fa_comp_history);
         kbo_fa_compensation_record_history(&recorded);
         KBO_PROFILE_END(profile_fa_comp_history, "fa_comp.record_signing.history");
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA compensation recorded player=%u name=%s grade=%s signing_team=%u original_team=%u salary=%d cash_with_player=%u cash_only=%u protect=%u ledger=%s",
             recorded.player_id,
             recorded.player_name,

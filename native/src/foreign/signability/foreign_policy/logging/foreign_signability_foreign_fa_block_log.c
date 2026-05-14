@@ -45,7 +45,7 @@ void kbo_log_foreign_signability_block_callsite(
         return;
     }
     logged_callers[slot] = caller_rva;
-    append_logf(
+    kbo_log_runtimef(
         "foreign reserve signability: new block callsite caller_rva=0x%llx player=%u requester_team=%u holder_team=%u original=%d today=%u",
         (unsigned long long)caller_rva,
         player_id,

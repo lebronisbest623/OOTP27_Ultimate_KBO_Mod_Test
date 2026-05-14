@@ -17,14 +17,10 @@
 #include "../../demand_floors/offer/no_minor_offer_demand_floor_patch.h"
 #include "../../common/no_minor_patch_helpers.h"
 #include "../../callbacks/player_action/no_minor_player_action_patch.h"
-#include "../../scan/no_minor_scan_patch.h"
-#include "../../scan/no_minor_string_patch.h"
 #include "../../demand_floors/submit/no_minor_submit_salary_floor_patch.h"
 
 int install_kbo_no_minor_contract_base_patches(HMODULE exe);
-int install_kbo_no_minor_contract_dynamic_flag_patches(HMODULE exe);
 int install_kbo_no_minor_contract_offer_major_flag_patches(HMODULE exe);
 int install_kbo_no_minor_contract_offer_ui_patches(HMODULE exe);
-int install_kbo_no_minor_contract_write_site_patches(HMODULE exe);
 
 #endif

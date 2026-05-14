@@ -8,7 +8,7 @@ internal static partial class KboFlags
 
     public static void WriteKboFlag(string fileName, string label, bool enabled)
     {
-        var key = CanonicalRuntimeFlagKey(NormalizeKboFlagKey(fileName));
+        var key = NormalizeKboFlagKey(fileName);
         var path = GetKboFlagConfigPath();
         WriteKboFlagValue(path, key, enabled);
         Console.WriteLine($"{label}: {path} {key} = {(enabled ? "enabled" : "disabled")}");
@@ -24,20 +24,12 @@ internal static partial class KboFlags
         lock (ConfigWriteLock)
         {
             var flags = ReadKboRawConfig(configPath);
-            CanonicalizeRuntimeFlagAliases(flags);
             foreach (var fileName in fileNames)
             {
-                var key = CanonicalRuntimeFlagKey(NormalizeKboFlagKey(fileName));
-                RemoveLegacyRuntimeAliases(flags, key);
-                flags[key] = JsonValue.Create(enabled);
+                flags[NormalizeKboFlagKey(fileName)] = JsonValue.Create(enabled);
             }
             WriteRawConfigAtomically(configPath, flags);
         }
-    }
-
-    public static void ImportLegacyKboFlagFilesIfMissing()
-    {
-        ImportLegacyKboFlagFilesIfMissing(GetKboFlagConfigPath());
     }
 
     public static void EnsureDefaultKboRuntimeFlags()
@@ -48,7 +40,7 @@ internal static partial class KboFlags
     internal static void EnsureDefaultKboRuntimeFlags(string configPath)
     {
         var raw = ReadKboRawConfig(configPath);
-        var changed = CanonicalizeRuntimeFlagAliases(raw);
+        var changed = false;
 
         foreach (var flag in RuntimeFlags)
         {
@@ -82,56 +74,6 @@ internal static partial class KboFlags
         return true;
     }
 
-    internal static void ImportLegacyKboFlagFilesIfMissing(string configPath)
-    {
-        var configDir = Path.GetDirectoryName(configPath);
-        if (string.IsNullOrWhiteSpace(configDir) || !Directory.Exists(configDir))
-        {
-            return;
-        }
-
-        var raw = ReadKboRawConfig(configPath);
-        var changed = CanonicalizeRuntimeFlagAliases(raw);
-        foreach (var path in Directory.EnumerateFiles(configDir, "*.txt", SearchOption.TopDirectoryOnly))
-        {
-            var fileName = Path.GetFileName(path);
-            if (!fileName.StartsWith("enable_", StringComparison.OrdinalIgnoreCase)
-                    && !fileName.StartsWith("disable_", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var legacyKey = NormalizeKboFlagKey(fileName);
-            if (!LegacyImportFlagKeys.Contains(legacyKey))
-            {
-                continue;
-            }
-            var key = CanonicalRuntimeFlagKey(legacyKey);
-            if (raw.ContainsKey(key))
-            {
-                continue;
-            }
-
-            if (!TryReadLegacyFlagFile(path, out var value))
-            {
-                continue;
-            }
-
-            raw[key] = JsonValue.Create(value);
-            changed = true;
-        }
-
-        if (!changed)
-        {
-            return;
-        }
-
-        lock (ConfigWriteLock)
-        {
-            WriteRawConfigAtomically(configPath, raw);
-        }
-    }
-    
     public static bool ReadKboFlag(string fileName)
     {
         return ReadKboFlag(GetKboFlagConfigPath(), fileName);
@@ -144,13 +86,13 @@ internal static partial class KboFlags
 
     internal static bool ReadKboFlag(string configPath, string fileName)
     {
-        return ReadKboFlagConfig(configPath).TryGetValue(CanonicalRuntimeFlagKey(NormalizeKboFlagKey(fileName)), out var enabled)
+        return ReadKboFlagConfig(configPath).TryGetValue(NormalizeKboFlagKey(fileName), out var enabled)
             && enabled;
     }
 
     internal static bool ReadKboFlagDefaultEnabled(string configPath, string fileName)
     {
-        var key = CanonicalRuntimeFlagKey(NormalizeKboFlagKey(fileName));
+        var key = NormalizeKboFlagKey(fileName);
         return !ReadKboFlagConfig(configPath).TryGetValue(key, out var enabled)
             || enabled;
     }
@@ -196,7 +138,6 @@ internal static partial class KboFlags
             return flags;
         }
 
-        CanonicalizeRuntimeFlagAliases(flags);
         return flags;
     }
 
@@ -366,7 +307,6 @@ internal static partial class KboFlags
         lock (ConfigWriteLock)
         {
             var values = ReadKboRawConfig(configPath);
-            CanonicalizeRuntimeFlagAliases(values);
             values[NormalizeKboFlagKey(key)] = JsonValue.Create(Math.Clamp(value, minValue, maxValue));
             WriteRawConfigAtomically(configPath, values);
         }
@@ -405,91 +345,12 @@ internal static partial class KboFlags
         }
     }
 
-    private static bool TryReadLegacyFlagFile(string path, out bool value)
-    {
-        value = false;
-        try
-        {
-            return TryReadBooleanText(File.ReadAllText(path), out value);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
     public static string NormalizeKboFlagKey(string fileName)
     {
         var key = Path.GetFileName(fileName);
         return key.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)
             ? key[..^4]
             : key;
-    }
-
-    private static string CanonicalRuntimeFlagKey(string key)
-    {
-        key = NormalizeKboFlagKey(key);
-        foreach (var alias in RuntimeFlagAliases)
-        {
-            if (key.Equals(alias.LegacyKey, StringComparison.OrdinalIgnoreCase))
-            {
-                return alias.CanonicalKey;
-            }
-        }
-        return key;
-    }
-
-    private static bool CanonicalizeRuntimeFlagAliases(SortedDictionary<string, JsonNode?> flags)
-    {
-        var changed = false;
-        foreach (var alias in RuntimeFlagAliases)
-        {
-            var legacyKey = NormalizeKboFlagKey(alias.LegacyKey);
-            var canonicalKey = CanonicalRuntimeFlagKey(alias.CanonicalKey);
-            if (!flags.TryGetValue(legacyKey, out var legacyValue))
-            {
-                continue;
-            }
-
-            if (!flags.ContainsKey(canonicalKey))
-            {
-                flags[canonicalKey] = legacyValue?.DeepClone();
-            }
-            flags.Remove(legacyKey);
-            changed = true;
-        }
-        return changed;
-    }
-
-    private static void CanonicalizeRuntimeFlagAliases(SortedDictionary<string, bool> flags)
-    {
-        foreach (var alias in RuntimeFlagAliases)
-        {
-            var legacyKey = NormalizeKboFlagKey(alias.LegacyKey);
-            var canonicalKey = CanonicalRuntimeFlagKey(alias.CanonicalKey);
-            if (!flags.TryGetValue(legacyKey, out var legacyValue))
-            {
-                continue;
-            }
-
-            if (!flags.ContainsKey(canonicalKey))
-            {
-                flags[canonicalKey] = legacyValue;
-            }
-            flags.Remove(legacyKey);
-        }
-    }
-
-    private static void RemoveLegacyRuntimeAliases(SortedDictionary<string, JsonNode?> flags, string canonicalKey)
-    {
-        canonicalKey = CanonicalRuntimeFlagKey(canonicalKey);
-        foreach (var alias in RuntimeFlagAliases)
-        {
-            if (canonicalKey.Equals(alias.CanonicalKey, StringComparison.OrdinalIgnoreCase))
-            {
-                flags.Remove(NormalizeKboFlagKey(alias.LegacyKey));
-            }
-        }
     }
     
     public static void WriteKboForeignWaiverAiFlag(bool enabled)

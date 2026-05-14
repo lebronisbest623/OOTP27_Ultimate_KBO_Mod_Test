@@ -93,7 +93,7 @@ int kbo_run_captain_inseason_repair_once(
                 source,
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain in-season repair skipped source=%s date=%u season=%u league_id=%u reason=no_candidates missing=%d departed=%d",
             source != NULL ? source : "",
             date,
@@ -194,7 +194,7 @@ int kbo_run_captain_inseason_repair_once(
                     || missing_count != last_unresolved_missing
                     || departed_count != last_unresolved_departed
                     || still_missing_count != last_unresolved_count) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO captain in-season repair skipped source=%s date=%u season=%u league_id=%u reason=unresolved_no_changes missing=%d departed=%d unresolved=%d",
                     source != NULL ? source : "",
                     date,
@@ -239,7 +239,7 @@ int kbo_run_captain_inseason_repair_once(
         csv_path,
         sizeof(csv_path));
     if (wrote) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain in-season repair written source=%s date=%u season=%u league_id=%u repaired=%d missing=%d departed=%d unresolved=%d csv=%s",
             source != NULL ? source : "",
             date,

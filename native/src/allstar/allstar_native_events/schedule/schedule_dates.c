@@ -260,7 +260,7 @@ static uint32_t kbo_allstar_resolve_schedule_year(uintptr_t league_ptr, const ch
         static volatile LONG s_plus8_log_count = 0;
         LONG log_index = InterlockedIncrement(&s_plus8_log_count);
         if (log_index <= 40) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star schedule year resolved from raw+8 source=%s raw=%p year=%u",
                 source != NULL ? source : "",
                 (void*)league_ptr,
@@ -276,7 +276,7 @@ static uint32_t kbo_allstar_resolve_schedule_year(uintptr_t league_ptr, const ch
             static volatile LONG s_minus8_log_count = 0;
             LONG log_index = InterlockedIncrement(&s_minus8_log_count);
             if (log_index <= 20) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO all-star schedule year resolved from raw-8 source=%s raw=%p year=%u",
                     source != NULL ? source : "",
                     (void*)league_ptr,
@@ -301,7 +301,7 @@ int seed_kbo_allstar_schedule_dates(uintptr_t league_ptr, const char* source)
     KboAllstarScheduleDate allstar = {0};
     char schedule_path[MAX_PATH] = {0};
     if (!kbo_allstar_load_schedule_dates(league_year, &start, &allstar, schedule_path, sizeof(schedule_path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star native events date seed skipped source=%s league=%p year=%u reason=schedule_unavailable",
             source != NULL ? source : "",
             league,
@@ -344,7 +344,7 @@ int seed_kbo_allstar_schedule_dates(uintptr_t league_ptr, const char* source)
     static volatile LONG s_log_count = 0;
     LONG log_index = InterlockedIncrement(&s_log_count);
     if (changed || log_index <= 80) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star schedule dates seeded source=%s league=%p changed=%d start=%04u-%02u-%02u allstar=%04u-%02u-%02u %02u:%02u path=%s",
             source != NULL ? source : "",
             league,

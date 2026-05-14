@@ -54,7 +54,7 @@ int kbo_persist_fa_compensation_protected_list(
     int exists = GetFileAttributesExA(path, GetFileExInfoStandard, &attrs);
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA protected list persist failed reason=open gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("KBO FA protected list persist failed reason=open gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
 
@@ -107,7 +107,7 @@ int kbo_persist_fa_compensation_protected_list(
     WriteFile(file, "\r\n", 2, &written, NULL);
     CloseHandle(file);
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA protected list generated fa_player=%u signing_team=%u original_team=%u grade=%s protected=%d/%u due=%u path=%s",
         rec->player_id,
         rec->signing_team_id,
@@ -150,7 +150,7 @@ int kbo_persist_fa_compensation_protection_debug(
     int exists = GetFileAttributesExA(path, GetFileExInfoStandard, &attrs);
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA protection debug persist failed reason=open gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("KBO FA protection debug persist failed reason=open gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
 
@@ -240,7 +240,7 @@ int kbo_persist_fa_compensation_protection_debug(
     }
 
     CloseHandle(file);
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA protection debug written fa_player=%u protected=%d unprotected=%d auto=%d path=%s",
         rec->player_id,
         protected_count,

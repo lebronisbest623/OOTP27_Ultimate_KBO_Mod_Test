@@ -58,7 +58,7 @@ static int force_kbo_allstar_candidate_rebuild_once(uintptr_t league_ptr, uint32
 
     HMODULE exe = GetModuleHandleW(NULL);
     if (exe == NULL) {
-        append_log_line("KBO all-star candidate rebuild skipped: host exe unavailable");
+        kbo_log_runtime_line("KBO all-star candidate rebuild skipped: host exe unavailable");
         return 0;
     }
 
@@ -66,7 +66,7 @@ static int force_kbo_allstar_candidate_rebuild_once(uintptr_t league_ptr, uint32
         exe,
         OOTP27_ALLSTAR_CANDIDATE_REBUILD_FUNC_RVA);
     if (!memory_range_readable((void*)rebuild_addr, 16u)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star candidate rebuild skipped: target unreadable league=%p rebuild=%p",
             (void*)league_ptr,
             (void*)rebuild_addr);
@@ -81,7 +81,7 @@ static int force_kbo_allstar_candidate_rebuild_once(uintptr_t league_ptr, uint32
         league_id != 0u ? league_id : fallback_league_id,
         "allstar_voting_begin_candidate_rebuild");
     patch_kbo_allstar_team_names_for_known_exhibition_teams("allstar_voting_begin_candidate_rebuild");
-    append_logf(
+    kbo_log_runtimef(
         "forced KBO all-star candidate rebuild source=allstar_voting_begin league=%p league_id=%u/%u rebuild=%p",
         (void*)league_ptr,
         league_id,
@@ -121,7 +121,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
                 && fallback_league_id != configured_league_id
                 && league_id != OOTP27_KBO_MAIN_LEAGUE_ID
                 && fallback_league_id != OOTP27_KBO_MAIN_LEAGUE_ID) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star voting begin skipped league=%p reason=unscoped_non_kbo league_id=%u/%u configured=%u year=%u",
                 league,
                 league_id,
@@ -135,7 +135,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
             ? layout.game_flag_offset : layout.auto_schedule_offset;
         max_off = max_off > layout.rules_flag_offset ? max_off : layout.rules_flag_offset;
         if (!memory_range_readable((void*)(league_ptr + max_off), 1)) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star voting begin skipped league=%p reason=flag_offsets_unreadable max_off=0x%x",
                 league,
                 max_off);
@@ -145,7 +145,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
             return;
         }
         ensure_kbo_allstar_team_ids(league_ptr, "allstar_voting_begin_fallback");
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star voting begin fallback accepted raw league=%p league_id=%u/%u year=%u rules 0x%x game 0x%x auto 0x%x",
             league,
             league_id,
@@ -168,7 +168,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
 
     LONG log_index = InterlockedIncrement(&g_allstar_voting_prepare_log_count);
     if (log_index <= 20) {
-        append_logf(
+        kbo_log_runtimef(
             "prepared KBO all-star voting begin league=%p league_id=%u/%u year=%u game=%u->%u teams=%u/%u->%u/%u setup=%p called=%d rebuild=%d",
             league,
             league_id,
@@ -219,7 +219,7 @@ static int ootp_kbo_allow_single_division_allstar_native_gate(uintptr_t league_p
             team_a = kbo_allstar_read_u32(league, layout.team_a_offset);
             team_b = kbo_allstar_read_u32(league, layout.team_b_offset);
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star single-division native gate bypassed source=%s league=%p ids=%u/%u game=0x%x:%u teams=%u/%u",
             source != NULL ? source : "",
             (void*)league_ptr,
@@ -279,7 +279,7 @@ __declspec(noinline) int ootp_kbo_allow_single_division_allstar_team_setup(uintp
             league_id = kbo_allstar_read_u32(league, layout.league_id_primary_offset);
             fallback_id = kbo_allstar_read_u32(league, layout.league_id_fallback_offset);
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star team setup single-division gate bypassed league=%p ids=%u/%u game=0x%x:%u",
             (void*)league_ptr,
             league_id,

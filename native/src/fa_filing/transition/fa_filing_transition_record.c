@@ -25,7 +25,7 @@ int kbo_record_fa_filing_transition(
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_FA_FILING_MAX * sizeof(KboFaFilingRecord));
     if (rows == NULL) {
-        append_log_line("KBO FA filing record skipped: allocation failed");
+        kbo_log_runtime_line("KBO FA filing record skipped: allocation failed");
         return 0;
     }
 
@@ -45,7 +45,7 @@ int kbo_record_fa_filing_transition(
     if (slot < 0) {
         kbo_fa_filing_leave_lock();
         HeapFree(GetProcessHeap(), 0, rows);
-        append_logf("KBO FA filing record skipped: ledger full player=%u season=%u", player_id, season);
+        kbo_log_runtimef("KBO FA filing record skipped: ledger full player=%u season=%u", player_id, season);
         return 0;
     }
 
@@ -76,7 +76,7 @@ int kbo_record_fa_filing_transition(
     HeapFree(GetProcessHeap(), 0, rows);
 
     if (wrote) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA filing recorded player=%u date=%u season=%u original_team=%u league=%u caller_rva=0x%x csv=%s",
             player_id,
             filing_date,
@@ -87,7 +87,7 @@ int kbo_record_fa_filing_transition(
             path);
         return 1;
     }
-    append_logf("KBO FA filing record write failed player=%u date=%u csv=%s", player_id, filing_date, path);
+    kbo_log_runtimef("KBO FA filing record write failed player=%u date=%u csv=%s", player_id, filing_date, path);
     return 0;
 }
 

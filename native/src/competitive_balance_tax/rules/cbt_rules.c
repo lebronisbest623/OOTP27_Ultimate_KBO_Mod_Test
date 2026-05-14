@@ -144,7 +144,7 @@ static void kbo_cbt_rules_parse_thresholds(KboCbtRules* out, const char* json, D
 static void kbo_cbt_rules_parse_json(KboCbtRules* out, const char* json, DWORD json_size)
 {
     int v = 0;
-    if (kbo_find_flag_value_in_json(json, json_size, "enabled", NULL, &v)) {
+    if (kbo_find_flag_value_in_json(json, json_size, "enabled", &v)) {
         out->enabled = v ? 1u : 0u;
     }
     if (kbo_find_int_value_in_json(json, json_size, "top_player_count", &v) && v > 0 && v <= 200) {
@@ -227,7 +227,7 @@ void kbo_cbt_rules_load(KboCbtRules* out)
     if (ReadFile(file, buf, size, &read, NULL) && read > 0) {
         buf[read] = '\0';
         kbo_cbt_rules_parse_json(out, buf, read);
-        append_logf("KBO CBT rules loaded path=%s enabled=%u top=%u override=%d",
+        kbo_log_runtimef("KBO CBT rules loaded path=%s enabled=%u top=%u override=%d",
             json_path, (uint32_t)out->enabled, out->top_player_count, out->threshold_override);
     }
     CloseHandle(file);

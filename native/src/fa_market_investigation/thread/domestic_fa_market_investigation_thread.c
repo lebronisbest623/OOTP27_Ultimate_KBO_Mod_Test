@@ -38,7 +38,7 @@ static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* so
     if (rows == NULL || candidates == NULL) {
         if (rows != NULL) { HeapFree(GetProcessHeap(), 0, rows); }
         if (candidates != NULL) { HeapFree(GetProcessHeap(), 0, candidates); }
-        append_log_line("domestic FA market investigation: allocation failed");
+        kbo_log_runtime_line("domestic FA market investigation: allocation failed");
         return 0;
     }
 
@@ -146,7 +146,7 @@ static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* so
         csv_path,
         sizeof(csv_path));
 
-    append_logf(
+    kbo_log_runtimef(
         "domestic FA market investigation summary date=%u league=%u rows=%d scanned=%d domestic=%d relevant=%d quality=%d grade_ab=%d high_demand=%d snapshot_missing=%d long_market=%d unofficial_or_pending=%d truncated=%d csv_written=%d csv=%s",
         today,
         summary.league_id,
@@ -171,7 +171,7 @@ static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* so
     for (int i = 0; i < top_count; i++) {
         const KboDomesticFaInvestigationCandidate* candidate = &candidates[i];
         const KboFaMarketClassification* row = &candidate->row;
-        append_logf(
+        kbo_log_runtimef(
             "domestic FA orphan watch rank=%d player=%u name=\"%s\" age=%u case=%s grade=%s score=%d ovr=%d tal=%d rat=%d car=%d demand=%d grade_salary=%d overall_rank=%u team_rank=%u original_team=%u market_days=%u blockers=%s reason=%s",
             i + 1,
             row->player_id,
@@ -218,7 +218,7 @@ static DWORD WINAPI kbo_domestic_fa_market_investigation_thread(LPVOID parameter
             continue;
         }
         if (!last_enabled) {
-            append_log_line("domestic FA market investigation enabled: observe-only mode active");
+            kbo_log_runtime_line("domestic FA market investigation enabled: observe-only mode active");
             last_scan_date = 0u;
             last_save_path[0] = '\0';
             last_enabled = 1;
@@ -242,7 +242,7 @@ static DWORD WINAPI kbo_domestic_fa_market_investigation_thread(LPVOID parameter
     }
 
     InterlockedExchange(&g_kbo_domestic_fa_market_investigation_started, 0);
-    append_log_line("domestic FA market investigation thread stopped");
+    kbo_log_runtime_line("domestic FA market investigation thread stopped");
     return 0;
 }
 

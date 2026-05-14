@@ -61,7 +61,7 @@ static void kbo_cbt_probe_dump_service_window(uint8_t* player, uint32_t player_i
     for (uint32_t off = 0x820u; off <= 0x880u; off += 0x10u) {
         char hex[384] = {0};
         kbo_cbt_probe_append_row_hex(hex, sizeof(hex), (uintptr_t)(player + off), 64u);
-        append_logf(
+        kbo_log_runtimef(
             "CBT_SERVICE_PROBE: service_window player=%u off=0x%x hex=%s",
             player_id,
             off,
@@ -80,7 +80,7 @@ static void kbo_cbt_probe_decode_service_words(
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "CBT_SERVICE_PROBE: service_decode player=%u cur=%u active=%u original=%u w840=%u w842=%u w844=%u w846=%u w848=%u w84a=%u w84c=%u w84e=%u w850=%u w852=%u w854=%u w856=%u w858=%u w85a=%u w85c=%u w85e=%u w860=%u w862=%u w864=%u w866=%u w868=%u w86a=%u w86c=%u w86e=%u w870=%u w872=%u w874=%u w876=%u w878=%u w87a=%u w87c=%u w87e=%u",
         player_id,
         current_team_id,
@@ -151,7 +151,7 @@ static void kbo_cbt_probe_search_known_player_season_team(
             uint32_t dump_off = off > 32u ? off - 32u : 0u;
             char hex[384] = {0};
             kbo_cbt_probe_append_row_hex(hex, sizeof(hex), (uintptr_t)(player + dump_off), 96u);
-            append_logf(
+            kbo_log_runtimef(
                 "CBT_SERVICE_PROBE: known_season_team_hit player=%u season=%u season_off=0x%x team=%u team_off=0x%x dump_off=0x%x hex=%s",
                 player_id,
                 season,
@@ -165,7 +165,7 @@ static void kbo_cbt_probe_search_known_player_season_team(
         }
     }
     if (emitted == 0) {
-        append_logf(
+        kbo_log_runtimef(
             "CBT_SERVICE_PROBE: known_season_team_hit player=%u season=%u team=%u result=none",
             player_id,
             season,
@@ -262,7 +262,7 @@ void kbo_cbt_service_time_probe_once(void)
     int32_t player_count = 0;
     uint32_t player_vector_offset = 0u;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, &player_vector_offset)) {
-        append_log_line("CBT_SERVICE_PROBE: skipped reason=no_player_vector");
+        kbo_log_runtime_line("CBT_SERVICE_PROBE: skipped reason=no_player_vector");
         InterlockedExchange(&done, 0);
         return;
     }
@@ -273,7 +273,7 @@ void kbo_cbt_service_time_probe_once(void)
         current_year = 2200u;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "CBT_SERVICE_PROBE: begin player_vector=%p count=%d vector_offset=0x%x league=%u year=%u",
         (void*)player_vector,
         player_count,
@@ -290,7 +290,7 @@ void kbo_cbt_service_time_probe_once(void)
         (int)(sizeof(kbo_team_ids) / sizeof(kbo_team_ids[0])),
         &team_scanned,
         &team_unreadable);
-    append_logf(
+    kbo_log_runtimef(
         "CBT_SERVICE_PROBE: team_set league=%u count=%d scanned=%d unreadable=%d ids=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u",
         kbo_league_id,
         kbo_team_count,
@@ -337,7 +337,7 @@ void kbo_cbt_service_time_probe_once(void)
             &emitted_inline);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "CBT_SERVICE_PROBE: done checked=%d emitted_vectors=%d emitted_inline=%d",
         checked,
         emitted_vectors,

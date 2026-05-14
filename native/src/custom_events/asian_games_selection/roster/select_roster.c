@@ -21,7 +21,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
     int32_t player_count = 0;
     uint32_t vector_offset = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games roster selection skipped source=%s year=%u reason=player_vector_unavailable",
             source != NULL ? source : "",
             year);
@@ -48,7 +48,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         HEAP_ZERO_MEMORY,
         sizeof(KboAsianGamesCandidate) * KBO_ASIAN_GAMES_MAX_CANDIDATES);
     if (candidates == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games roster selection skipped source=%s year=%u reason=alloc_failed",
             source != NULL ? source : "",
             year);
@@ -198,7 +198,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
             }
         }
         if (best_index >= 0 && kbo_asian_games_roster_org_count(required_orgs[org_index], selected_count) == 0) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games team-min initial select deferred org=%u best_player=%u best_role=%u reason=position_full_or_team_max",
                 required_orgs[org_index],
                 candidates[best_index].entry.player_id,
@@ -324,7 +324,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
     }
 
     g_kbo_asian_games_roster_count = selected_count;
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games roster selected source=%s year=%u method=%s scanned=%d candidates=%d selected=%d pitchers=%d catchers=%d infielders=%d outfielders=%d wildcards=%d wildcard_fills=%d flex_fills=%d wildcard_replacements=%d required_orgs=%d required_initial=%d required_repairs=%d required_missing=%d team_max=%d allowed_leagues=%u/%u vector_offset=0x%x rejected_nation=%d rejected_status=%d rejected_league=%d rejected_team=%d rejected_service_team=%d rejected_parentless_affiliate=%d",
         source != NULL ? source : "",
         year,
@@ -356,7 +356,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         rejected_parentless_affiliate);
     for (int i = 0; i < selected_count; i++) {
         KboAsianGamesRosterEntry* entry = &g_kbo_asian_games_roster[i];
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games selected #%02d player_id=%u team=%u org=%u league=%u age=%u role=%u bucket=%s wildcard=%u score=%d",
             i + 1,
             entry->player_id,

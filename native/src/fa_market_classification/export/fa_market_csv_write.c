@@ -46,7 +46,7 @@ void kbo_write_fa_market_classification_csv(
                 source,
                 &audit_fields);
         } while (0);
-        append_log_line("FA market classification: unable to resolve CSV path");
+        kbo_log_runtime_line("FA market classification: unable to resolve CSV path");
         return;
     }
 
@@ -74,7 +74,7 @@ void kbo_write_fa_market_classification_csv(
                 source,
                 &audit_fields);
         } while (0);
-        append_logf("FA market classification: failed to open CSV path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("FA market classification: failed to open CSV path=%s gle=%lu", path, GetLastError());
         return;
     }
 
@@ -157,10 +157,10 @@ void kbo_write_fa_market_classification_csv(
     }
 
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("FA market classification: atomic commit failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("FA market classification: atomic commit failed path=%s gle=%lu", path, GetLastError());
         return;
     }
-    append_logf(
+    kbo_log_runtimef(
         "FA market classification: rows=%d candidates=%d scanned=%d league=%u salary_snapshot=%d csv=%s",
         row_count,
         summary->candidates,

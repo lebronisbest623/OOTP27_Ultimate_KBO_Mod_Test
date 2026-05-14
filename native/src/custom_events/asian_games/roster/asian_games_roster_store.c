@@ -39,7 +39,7 @@ void kbo_clear_asian_games_roster_memory(const char* source)
     g_kbo_asian_games_roster_year = 0;
     g_kbo_asian_games_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
     g_kbo_asian_games_roster_save_path[0] = '\0';
-    append_logf("KBO Asian Games roster memory cleared source=%s", source != NULL ? source : "");
+    kbo_log_runtimef("KBO Asian Games roster memory cleared source=%s", source != NULL ? source : "");
 }
 
 void kbo_clear_asian_games_roster_if_save_changed(const char* source)
@@ -62,7 +62,7 @@ int kbo_save_asian_games_roster_csv(const char* source)
 {
     char path[MAX_PATH] = {0};
     if (!kbo_get_asian_games_roster_csv_path(path, sizeof(path))) {
-        append_logf("KBO Asian Games roster csv save skipped source=%s reason=path_unavailable", source != NULL ? source : "");
+        kbo_log_runtimef("KBO Asian Games roster csv save skipped source=%s reason=path_unavailable", source != NULL ? source : "");
         return 0;
     }
 
@@ -74,7 +74,7 @@ int kbo_save_asian_games_roster_csv(const char* source)
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO Asian Games roster csv save skipped source=%s reason=create_failed gle=%lu path=%s", source != NULL ? source : "", GetLastError(), path);
+        kbo_log_runtimef("KBO Asian Games roster csv save skipped source=%s reason=create_failed gle=%lu path=%s", source != NULL ? source : "", GetLastError(), path);
         return 0;
     }
 
@@ -120,13 +120,13 @@ int kbo_save_asian_games_roster_csv(const char* source)
         return 0;
     }
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("KBO Asian Games roster csv save: atomic commit failed path=%s", path);
+        kbo_log_runtimef("KBO Asian Games roster csv save: atomic commit failed path=%s", path);
         return 0;
     }
     if (ok) {
         snprintf(g_kbo_asian_games_roster_save_path, sizeof(g_kbo_asian_games_roster_save_path), "%s", path);
     }
-    append_logf("KBO Asian Games roster csv save source=%s ok=%d year=%u count=%ld path=%s", source != NULL ? source : "", ok, g_kbo_asian_games_roster_year, roster_count, path);
+    kbo_log_runtimef("KBO Asian Games roster csv save source=%s ok=%d year=%u count=%ld path=%s", source != NULL ? source : "", ok, g_kbo_asian_games_roster_year, roster_count, path);
     return ok;
 }
 
@@ -144,7 +144,7 @@ int kbo_load_asian_games_roster_csv(const char* source)
     if (reader == NULL) {
         DWORD scoped_error = GetLastError();
         kbo_clear_asian_games_roster_memory(source);
-        append_logf("KBO Asian Games roster csv load skipped source=%s reason=open_failed gle=%lu path=%s", source != NULL ? source : "", scoped_error, path);
+        kbo_log_runtimef("KBO Asian Games roster csv load skipped source=%s reason=open_failed gle=%lu path=%s", source != NULL ? source : "", scoped_error, path);
         return 0;
     }
 
@@ -207,6 +207,6 @@ int kbo_load_asian_games_roster_csv(const char* source)
     g_kbo_asian_games_roster_year = loaded_year;
     g_kbo_asian_games_result = loaded_result;
     snprintf(g_kbo_asian_games_roster_save_path, sizeof(g_kbo_asian_games_roster_save_path), "%s", path);
-    append_logf("KBO Asian Games roster csv load source=%s year=%u count=%d result=%u path=%s", source != NULL ? source : "", loaded_year, loaded_count, (uint32_t)g_kbo_asian_games_result, path);
+    kbo_log_runtimef("KBO Asian Games roster csv load source=%s year=%u count=%d result=%u path=%s", source != NULL ? source : "", loaded_year, loaded_count, (uint32_t)g_kbo_asian_games_result, path);
     return loaded_count;
 }

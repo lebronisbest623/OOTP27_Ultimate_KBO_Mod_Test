@@ -35,21 +35,21 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
     static uint32_t last_logged_evaluate_today = 0u;
     if (last_logged_evaluate_today != today_yyyymmdd) {
         last_logged_evaluate_today = today_yyyymmdd;
-        append_logf(
+        kbo_log_runtimef(
             "foreign waiver auto: evaluate season-end check today=%u serial=%u prev_marker=%u",
             today_yyyymmdd, today_serial,
             g_kbo_foreign_waiver_last_seen_yyyymmdd);
     }
 
     if (today_yyyymmdd == 0 || today_serial == 0) {
-        append_log_line("foreign waiver auto: season-end check skipped - invalid date");
+        kbo_log_runtime_line("foreign waiver auto: season-end check skipped - invalid date");
         KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.invalid_date");
         return 0;
     }
 
     uint32_t configured_league_id = kbo_get_foreign_waiver_league_id();
     if (configured_league_id == 0u) {
-        append_log_line("foreign waiver auto: missing configured league id; skip season-end evaluation");
+        kbo_log_runtime_line("foreign waiver auto: missing configured league id; skip season-end evaluation");
         KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.no_league_id");
         return 0;
     }
@@ -73,7 +73,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
                 g_kbo_foreign_waiver_start_event_date = recovered_marker;
                 g_kbo_foreign_waiver_close_event_end_date = recovered_end;
                 kbo_write_foreign_waiver_window(recovered_marker, recovered_end, "recovered_recent_offseason_marker");
-                append_logf(
+                kbo_log_runtimef(
                     "foreign waiver auto: recovered missing Offseason starts marker start=%u end=%u today=%u prev_marker=%u",
                     recovered_marker,
                     recovered_end,
@@ -87,14 +87,14 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         static uint32_t last_logged_no_marker_today = 0u;
         if (last_logged_no_marker_today != today_yyyymmdd) {
             last_logged_no_marker_today = today_yyyymmdd;
-            append_logf("foreign waiver auto: no Offseason starts event found today=%u", today_yyyymmdd);
+            kbo_log_runtimef("foreign waiver auto: no Offseason starts event found today=%u", today_yyyymmdd);
         }
         last_checked_result = 2u;
         KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.no_offseason_marker");
         return 0;
     }
     if (today_yyyymmdd < season_end_yyyymmdd) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign waiver auto: waiting for Offseason starts marker season_end=%u today=%u",
             season_end_yyyymmdd,
             today_yyyymmdd);
@@ -108,7 +108,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         (season_end_yyyymmdd / 100u) % 100u,
         season_end_yyyymmdd % 100u);
     if (season_end_serial == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign waiver auto: invalid Offseason starts serial season_end=%u today=%u",
             season_end_yyyymmdd,
             today_yyyymmdd);
@@ -118,7 +118,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
     }
     uint32_t window_end_yyyymmdd = kbo_add_days_yyyymmdd(season_end_yyyymmdd, window_days);
     if (window_end_yyyymmdd == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign waiver auto: invalid Offseason starts window end season_end=%u today=%u",
             season_end_yyyymmdd,
             today_yyyymmdd);
@@ -136,7 +136,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
             g_kbo_foreign_waiver_window_end_serial = season_end_serial + window_days;
             g_kbo_foreign_waiver_start_event_date = season_end_yyyymmdd;
             g_kbo_foreign_waiver_close_event_end_date = window_end_yyyymmdd;
-            append_logf(
+            kbo_log_runtimef(
                 "foreign waiver auto: skipped stale season-end marker season_end=%u end=%u today=%u reason=window_already_elapsed",
                 season_end_yyyymmdd,
                 window_end_yyyymmdd,
@@ -155,7 +155,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         static uint32_t last_logged_already_marker = 0u;
         if (last_logged_already_marker != season_end_yyyymmdd) {
             last_logged_already_marker = season_end_yyyymmdd;
-            append_logf(
+            kbo_log_runtimef(
                 "foreign waiver auto: already opened for marker=%u end=%u today=%u",
                 season_end_yyyymmdd,
                 window_end_yyyymmdd,
@@ -167,7 +167,7 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
     }
 
     g_kbo_foreign_waiver_last_seen_yyyymmdd = season_end_yyyymmdd;
-    append_logf(
+    kbo_log_runtimef(
         "foreign waiver auto: season-end marker confirmed season_end=%u today=%u",
         season_end_yyyymmdd,
         today_yyyymmdd);
@@ -281,7 +281,7 @@ int kbo_is_foreign_waiver_negotiation_window_open(void)
     } else {
         static LONG logged_legacy_disabled = 0;
         if (InterlockedCompareExchange(&logged_legacy_disabled, 1, 0) == 0) {
-            append_log_line("foreign waiver legacy auto detector disabled: kbo_flags.json disable_foreign_waiver_legacy_auto_detector is true");
+            kbo_log_runtime_line("foreign waiver legacy auto detector disabled: kbo_flags.json disable_foreign_waiver_legacy_auto_detector is true");
         }
     }
 
@@ -295,7 +295,7 @@ int kbo_is_foreign_waiver_negotiation_window_open(void)
                 && today_serial > g_kbo_foreign_waiver_window_end_serial) {
             if (g_kbo_foreign_waiver_last_close_event_end != g_kbo_foreign_waiver_window_end_serial) {
                 g_kbo_foreign_waiver_last_close_event_end = g_kbo_foreign_waiver_window_end_serial;
-                append_logf(
+                kbo_log_runtimef(
                     "foreign priority negotiation: event closed today=%u end_serial=%u source=auto detector",
                     today,
                     g_kbo_foreign_waiver_window_end_serial);

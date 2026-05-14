@@ -94,19 +94,19 @@ void load_allstar_team_rules_once(void)
 
     char path[MAX_PATH] = {0};
     if (!get_kbo_allstar_teams_csv_path(path, sizeof(path))) {
-        append_log_line("all-star team split load failed: could not resolve allstar_teams.csv path");
+        kbo_log_runtime_line("all-star team split load failed: could not resolve allstar_teams.csv path");
         return;
     }
 
     KboCsvReader* reader = kbo_csv_reader_open(path);
     if (reader == NULL) {
-        append_logf("all-star team split load skipped: csv reader open failed path=%s", path);
+        kbo_log_runtimef("all-star team split load skipped: csv reader open failed path=%s", path);
         return;
     }
 
     if (!kbo_csv_reader_next_row(reader)) {
         kbo_csv_reader_close(reader);
-        append_logf("all-star team split load failed: empty file path=%s", path);
+        kbo_log_runtimef("all-star team split load failed: empty file path=%s", path);
         return;
     }
     char fields[KBO_ALLSTAR_CSV_MAX_COLUMNS][KBO_ALLSTAR_CSV_FIELD_SIZE];
@@ -129,7 +129,7 @@ void load_allstar_team_rules_once(void)
         &allstar_col);
     if (year_col < 0 || team_id_col < 0 || allstar_col < 0) {
         kbo_csv_reader_close(reader);
-        append_logf(
+        kbo_log_runtimef(
             "all-star team split load skipped: all-star CSV missing columns year_col=%d team_id_col=%d name_col=%d allstar_col=%d path=%s",
             year_col,
             team_id_col,
@@ -185,7 +185,7 @@ void load_allstar_team_rules_once(void)
     }
 
     kbo_csv_reader_close(reader);
-    append_logf(
+    kbo_log_runtimef(
         "all-star team split load: rows=%d loaded=%d invalid_side=%d total=%d year_col=%d team_id_col=%d name_col=%d allstar_col=%d path=%s",
         rows,
         loaded,

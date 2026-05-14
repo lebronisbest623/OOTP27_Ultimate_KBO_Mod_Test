@@ -101,7 +101,7 @@ void kbo_foreign_retention_guard_record_team_add(
     if (slot < 0) {
         LONG skip_slot = InterlockedIncrement(&g_kbo_foreign_retention_guard_skip_log_count);
         if (skip_slot <= 40) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign retention guard: record skipped reason=guard_full player=%u team=%u league=%u signed_on=%u expires_on=%u",
                 player_id,
                 team_id,
@@ -117,7 +117,7 @@ void kbo_foreign_retention_guard_record_team_add(
     if (log_recorded) {
         LONG record_slot = InterlockedIncrement(&g_kbo_foreign_retention_guard_record_log_count);
         if (record_slot <= 200) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign retention guard: recorded holder signing player=%u team=%u league=%u signed_on=%u expires_on=%u contract_status=%u contract_start_year=%u salary_y1=%d",
                 player_id,
                 team_id,

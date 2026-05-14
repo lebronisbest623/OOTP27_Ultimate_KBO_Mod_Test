@@ -307,7 +307,7 @@ int kbo_retention_opportunity_probe_should_block(
     int verbose = kbo_retention_opportunity_probe_logs_enabled();
     if (would_block || retained_by_team || verbose || slot <= 300) {
         if (verbose || slot <= 800) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign ai controller retention gate team=%u player=%u retained=%d candidate_score=%d candidate_pos=%u candidate_asian=%u allowed=%d would_block=%d reason=%s effective_before=%u effective_after=%u limit=%u reserved_after=%u count_asian=%u count_non_asian=%u pending_asian=%u pending_non_asian=%u candidate_pending=%d already_in_org=%d best_retained=%u best_score=%d best_asian=%u active_rights=%u protectable=%u protectable_asian=%u protectable_non_asian=%u margin=%d today=%u",
                 team_id,
                 candidate_id,

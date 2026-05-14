@@ -113,7 +113,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
             static LONG fa_declaration_skip_log_count = 0;
             LONG slot = InterlockedIncrement(&fa_declaration_skip_log_count);
             if (slot <= 120) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO FA declaration transition skipped player=%u original_team=%u team_league=%u declaration_date=%u declaration_season=%u today=%u declared_salary=%d demand=%d old_offer=%d new_offer=%d retained_repaired=%d caller_rva=0x%llx",
                     player_id,
                     original_team_id,
@@ -139,7 +139,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
         static LONG pass_log_count = 0;
         LONG pass_slot = InterlockedIncrement(&pass_log_count);
         if (pass_slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO salary arbitration non-tender pass-through player=%u team=%u team_league=%u player_league=%u draft_league=%u contract_level=%u offer=%d notify=%u caller_rva=0x%llx direct_block_candidate=%d",
                 player_id,
                 team_id,
@@ -187,7 +187,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
     static LONG block_log_count = 0;
     LONG slot = InterlockedIncrement(&block_log_count);
     if (slot <= 120) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO salary arbitration non-tender blocked player=%u team=%u team_league=%u player_league=%u draft_league=%u contract_level=%u old_offer=%d floor=%d notify=%u caller_rva=0x%llx",
             player_id,
             team_id,

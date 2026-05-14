@@ -35,7 +35,7 @@ void kbo_amateur_start_league_batch_flush_thread(void)
         CloseHandle(thread);
     } else {
         InterlockedExchange(&g_kbo_amateur_league_batch_flush_thread_started, 0);
-        append_logf("amateur OR-Tools league batch flush thread failed gle=%lu", GetLastError());
+        kbo_log_runtimef("amateur OR-Tools league batch flush thread failed gle=%lu", GetLastError());
     }
 }
 
@@ -136,7 +136,7 @@ int kbo_amateur_defer_team_add_if_generation(
     static volatile LONG defer_log_count = 0;
     LONG slot = InterlockedIncrement(&defer_log_count);
     if (slot <= 80 || kbo_amateur_verbose_log_enabled_cached()) {
-        append_logf(
+        kbo_log_runtimef(
             "amateur deferred team-add queued caller_rva=0x%x league=%u team=%u source_team=%u player=%u queued=%d teams=%d",
             caller_rva,
             league_id,
@@ -249,7 +249,7 @@ void kbo_prepare_amateur_assignment_batch_ortools(uintptr_t player_list_ptr, int
     int32_t accumulated_teams = g_kbo_amateur_league_batch_team_count;
     int ready = accumulated_teams >= count || accumulated_teams >= KBO_AMATEUR_LEAGUE_BATCH_TEAM_MAX;
     if (!ready) {
-        append_logf(
+        kbo_log_runtimef(
             "amateur OR-Tools league batch accumulating league=%u teams=%d/%d players=%d latest_team=%u latest_players=%d",
             league_id,
             accumulated_teams,

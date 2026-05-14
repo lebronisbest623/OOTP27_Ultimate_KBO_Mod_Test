@@ -163,7 +163,7 @@ static int kbo_ai_fa_status_restore_rights_only_assignment(
     static volatile LONG repair_log_count = 0;
     LONG slot = InterlockedIncrement(&repair_log_count);
     if (slot <= 200) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign retention priority: repaired rights-only assignment team=%u player=%u today=%u before_current=%u before_active=%u before_original=%u before_default=%u before_league=%u before_draft=%u before_level=%u before_restricted=%u before_secondary=%u before_dfa=%u after_current=%u after_active=%u after_original=%u after_default=%u after_league=%u after_draft=%u after_level=%u after_restricted=%u after_secondary=%u after_dfa=%u removed_roster=%d added_restricted=%d",
             requester_team_id,
             candidate->player_id,
@@ -203,7 +203,7 @@ void kbo_ai_fa_status_log_retained_candidate_eval(
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign retention priority: candidate_eval team=%u player=%u can_enter=%d reason=%s score=%d threshold=%d pos=%u/%u asian=%u in_org=%d market=%d holder_org=%d current=%u active=%u original=%u default=%u loan=%u draft=%u level=%u today=%u",
         requester_team_id,
         candidate->player_id,

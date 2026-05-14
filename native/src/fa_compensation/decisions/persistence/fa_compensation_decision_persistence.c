@@ -101,7 +101,7 @@ int kbo_persist_fa_compensation_player_decision(
     int exists = GetFileAttributesExA(path, GetFileExInfoStandard, &attrs);
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA compensation decision persist failed reason=open gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("KBO FA compensation decision persist failed reason=open gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
 
@@ -149,7 +149,7 @@ int kbo_persist_fa_compensation_player_decision(
     WriteFile(file, "\r\n", 2, &written, NULL);
     CloseHandle(file);
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA compensation player selected fa_player=%u original_team=%u signing_team=%u selected=%u name=%s score=%d unprotected=%d decision=%s",
         rec->player_id,
         rec->original_team_id,
@@ -188,7 +188,7 @@ int kbo_persist_fa_compensation_cash_only_decision(
     int exists = GetFileAttributesExA(path, GetFileExInfoStandard, &attrs);
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA compensation cash-only decision persist failed reason=open gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("KBO FA compensation cash-only decision persist failed reason=open gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
 
@@ -223,7 +223,7 @@ int kbo_persist_fa_compensation_cash_only_decision(
     WriteFile(file, "\r\n", 2, &written, NULL);
     CloseHandle(file);
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA compensation cash-only selected fa_player=%u original_team=%u signing_team=%u cash_only=%u decision=%s",
         rec->player_id,
         rec->original_team_id,

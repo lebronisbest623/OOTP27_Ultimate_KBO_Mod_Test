@@ -81,7 +81,7 @@ __declspec(noinline) int ootp_kbo_allstar_candidate_push_filter(
         uint32_t original_team_id = memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))
             ? *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET)
             : 0u;
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star candidate player push inspected player=%u current=%u active=%u original=%u resolved_team=%u player_side=%u candidate_side=%u side_index=%u vector=%p",
             player_id,
             current_team_id,
@@ -93,14 +93,14 @@ __declspec(noinline) int ootp_kbo_allstar_candidate_push_filter(
             side_index,
             candidate_vector);
     } else if (inspect_index == 41) {
-        append_log_line("KBO all-star candidate player push inspect log suppressed after 40 entries");
+        kbo_log_runtime_line("KBO all-star candidate player push inspect log suppressed after 40 entries");
     }
 
     if ((player_side == 1u || player_side == 2u) && player_side != candidate_side) {
         LONG log_index = InterlockedIncrement(&skip_log_count);
         if (log_index <= 40) {
             uint32_t player_id = *(uint32_t*)((uint8_t*)player_ptr + OOTP27_PLAYER_ID_OFFSET);
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star candidate player push skipped player=%u team=%u player_side=%u candidate_side=%u side_index=%u",
                 player_id,
                 team_id,
@@ -108,7 +108,7 @@ __declspec(noinline) int ootp_kbo_allstar_candidate_push_filter(
                 candidate_side,
                 side_index);
         } else if (log_index == 41) {
-            append_log_line("KBO all-star candidate player push skip log suppressed after 40 entries");
+            kbo_log_runtime_line("KBO all-star candidate player push skip log suppressed after 40 entries");
         }
         return 0;
     }
@@ -142,7 +142,7 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
         return 0;
     }
     if (left_team_vector == NULL || right_team_vector == NULL || vector_push_back_ptr == 0) {
-        append_logf("KBO allstar candidate seed: return=0 reason=null_vectors left=%p right=%p push=%p", left_team_vector, right_team_vector, (void*)vector_push_back_ptr);
+        kbo_log_runtimef("KBO allstar candidate seed: return=0 reason=null_vectors left=%p right=%p push=%p", left_team_vector, right_team_vector, (void*)vector_push_back_ptr);
         return 0;
     }
 
@@ -162,14 +162,14 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
 
     uintptr_t global = get_ootp_global_database();
     if (global == 0) {
-        append_log_line("KBO allstar candidate seed: return=0 reason=no_global_db");
+        kbo_log_runtime_line("KBO allstar candidate seed: return=0 reason=no_global_db");
         return 0;
     }
 
     uintptr_t team_vector = *(uintptr_t*)(global + OOTP27_KBO_TEAM_VECTOR_OFFSET);
     int32_t team_count = *(int32_t*)(global + OOTP27_KBO_TEAM_COUNT_OFFSET);
     if (team_vector == 0 || team_count <= 0 || team_count > 10000 || !memory_range_readable((void*)team_vector, (SIZE_T)team_count * sizeof(uintptr_t))) {
-        append_logf("KBO allstar candidate seed: return=0 reason=no_team_vector league_id=%u year=%u", league_id, league_year);
+        kbo_log_runtimef("KBO allstar candidate seed: return=0 reason=no_team_vector league_id=%u year=%u", league_id, league_year);
         return 0;
     }
 
@@ -275,7 +275,7 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
     }
 
     if (left_count <= 0 || right_count <= 0) {
-        append_logf("KBO allstar candidate seed: return=0 reason=empty_side league_id=%u year=%u eligible=%d left=%d right=%d used_csv=%d", league_id, league_year, eligible_count, left_count, right_count, used_csv_split);
+        kbo_log_runtimef("KBO allstar candidate seed: return=0 reason=empty_side league_id=%u year=%u eligible=%d left=%d right=%d used_csv=%d", league_id, league_year, eligible_count, left_count, right_count, used_csv_split);
         return 0;
     }
 
@@ -299,7 +299,7 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
 
     LONG log_index = InterlockedIncrement(&g_allstar_candidate_seed_log_count);
     if (log_index <= 20) {
-        append_logf(
+        kbo_log_runtimef(
             "seeded KBO single-division all-star candidate teams league_id=%u year=%u teams_scanned=%d left_count=%d first_left=%u right_count=%d first_right=%u",
             league_id,
             league_year,
@@ -308,7 +308,7 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
             left_ids[0],
             right_count,
             right_ids[0]);
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star candidate team split source=allstar_teams.csv league_id=%u eligible=%d rule_sides=%d unknown_sides=%d exhibition_skipped=%d duplicate_skipped=%d mode=%s",
             league_id,
             eligible_count,

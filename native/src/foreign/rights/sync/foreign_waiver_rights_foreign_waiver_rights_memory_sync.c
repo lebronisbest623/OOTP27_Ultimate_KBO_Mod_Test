@@ -98,7 +98,7 @@ int kbo_sync_active_foreign_waiver_right_to_memory(
             static LONG unsigned_sync_log_count = 0;
             LONG unsigned_slot = InterlockedIncrement(&unsigned_sync_log_count);
             if (unsigned_slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign reserve rights: repaired unsigned holder assignment player=%u holder_team=%u league=%u today=%u before_current=%u before_active=%u before_original=%u before_default=%u before_league=%u before_draft=%u before_level=%u before_restricted=%u before_secondary=%u before_dfa=%u after_current=%u after_active=%u after_original=%u after_default=%u after_league=%u after_draft=%u after_level=%u after_restricted=%u after_secondary=%u after_dfa=%u removed_current=%d removed_holder=%d added_restricted=%d",
                     player_id,
                     holder_team_id,
@@ -157,7 +157,7 @@ int kbo_sync_active_foreign_waiver_right_to_memory(
             static LONG signed_sync_log_count = 0;
             LONG slot = InterlockedIncrement(&signed_sync_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign reserve rights: kept signed holder unrestricted player=%u holder_team=%u league=%u today=%u current=%u",
                     player_id,
                     holder_team_id,
@@ -191,7 +191,7 @@ int kbo_sync_active_foreign_waiver_right_to_memory(
         static LONG sync_log_count = 0;
         LONG slot = InterlockedIncrement(&sync_log_count);
         if (slot <= 200) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign reserve rights: synced active right to memory player=%u holder_team=%u league=%u today=%u current=%u",
                 player_id,
                 holder_team_id,
@@ -246,7 +246,7 @@ void kbo_sync_active_foreign_waiver_rights_to_memory(
     static LONG batch_log_count = 0;
     LONG slot = InterlockedIncrement(&batch_log_count);
     if (slot <= 120) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign reserve rights: memory sync batch source=%s today=%u rights=%d checked=%d synced=%d",
             source != NULL ? source : "",
             today_yyyymmdd,

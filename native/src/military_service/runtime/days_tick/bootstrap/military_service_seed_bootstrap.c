@@ -29,7 +29,7 @@ void kbo_military_prewarm_save_scoped_bootstrap_files(const char* save_path)
     KboFaRequalificationRecord requalification_records[1];
     kbo_load_fa_requalification_records(requalification_records, 1);
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO save bootstrap files prewarmed save=%s fa_seed=%s",
         save_path,
         fa_seed_path[0] != '\0' ? fa_seed_path : "-");

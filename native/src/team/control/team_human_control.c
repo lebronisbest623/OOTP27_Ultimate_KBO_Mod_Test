@@ -89,7 +89,7 @@ static void kbo_human_control_log_if_changed(const uint32_t* team_ids, int count
         strncat_s(teams, sizeof(teams), item, _TRUNCATE);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO human controlled teams resolved source=%s count=%d teams=%s",
         source != NULL ? source : "",
         count,
@@ -123,7 +123,7 @@ static int kbo_resolve_human_controlled_team_ids_uncached(uint32_t* out_team_ids
 
         uint32_t team_id = *(uint32_t*)((uint8_t*)manager_ptr + OOTP27_HUMAN_MANAGER_CONTROLLED_TEAM_OFFSET);
         if (!kbo_human_control_team_id_valid(team_id)) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO human manager team candidate rejected source=%s index=%d team=%u",
                 source != NULL ? source : "",
                 (int)i,

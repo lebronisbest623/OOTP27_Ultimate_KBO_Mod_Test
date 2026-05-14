@@ -24,7 +24,7 @@ uint8_t* resolve_patch_target_by_rva_or_context_pattern(
         return NULL;
     }
     if (target_offset > context_size || expected_size > context_size - target_offset) {
-        append_logf("%s invalid context target_offset=%llu context_size=%llu expected_size=%llu",
+        kbo_log_runtimef("%s invalid context target_offset=%llu context_size=%llu expected_size=%llu",
             patch_label,
             (unsigned long long)target_offset,
             (unsigned long long)context_size,
@@ -37,13 +37,13 @@ uint8_t* resolve_patch_target_by_rva_or_context_pattern(
     uint8_t* base = (uint8_t*)exe;
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;
     if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-        append_logf("%s context scan failed: invalid DOS header", patch_label);
+        kbo_log_runtimef("%s context scan failed: invalid DOS header", patch_label);
         return NULL;
     }
 
     IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)(base + dos->e_lfanew);
     if (nt->Signature != IMAGE_NT_SIGNATURE) {
-        append_logf("%s context scan failed: invalid NT header", patch_label);
+        kbo_log_runtimef("%s context scan failed: invalid NT header", patch_label);
         return NULL;
     }
 
@@ -74,7 +74,7 @@ uint8_t* resolve_patch_target_by_rva_or_context_pattern(
             if (hits == 1) {
                 found = candidate;
             } else {
-                append_logf("%s context pattern ambiguous hits=%d first=%p another=%p",
+                kbo_log_runtimef("%s context pattern ambiguous hits=%d first=%p another=%p",
                     patch_label,
                     hits,
                     found,
@@ -88,15 +88,15 @@ uint8_t* resolve_patch_target_by_rva_or_context_pattern(
         if (target != NULL && memory_range_readable(target, expected_size)) {
             log_patch_bytes_mismatch(patch_label, target, expected_size);
         } else {
-            append_logf("%s target unreadable target=%p", patch_label, target);
+            kbo_log_runtimef("%s target unreadable target=%p", patch_label, target);
         }
-        append_logf("%s context pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
+        kbo_log_runtimef("%s context pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
         return NULL;
     }
 
     target = found + target_offset;
     if (!memory_range_readable(target, expected_size) || memcmp(target, expected, expected_size) != 0) {
-        append_logf("%s context resolved target failed expected-byte check target=%p context=%p",
+        kbo_log_runtimef("%s context resolved target failed expected-byte check target=%p context=%p",
             patch_label,
             target,
             found);
@@ -106,7 +106,7 @@ uint8_t* resolve_patch_target_by_rva_or_context_pattern(
         return NULL;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "%s resolved by context signature target=%p rva=0x%llx original_rva=0x%08X context=%p",
         patch_label,
         target,
@@ -133,7 +133,7 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_pattern(
         return NULL;
     }
     if (target_offset > context_size || expected_size > context_size - target_offset) {
-        append_logf("%s invalid masked context target_offset=%llu context_size=%llu expected_size=%llu",
+        kbo_log_runtimef("%s invalid masked context target_offset=%llu context_size=%llu expected_size=%llu",
             patch_label,
             (unsigned long long)target_offset,
             (unsigned long long)context_size,
@@ -146,13 +146,13 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_pattern(
     uint8_t* base = (uint8_t*)exe;
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;
     if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-        append_logf("%s masked context scan failed: invalid DOS header", patch_label);
+        kbo_log_runtimef("%s masked context scan failed: invalid DOS header", patch_label);
         return NULL;
     }
 
     IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)(base + dos->e_lfanew);
     if (nt->Signature != IMAGE_NT_SIGNATURE) {
-        append_logf("%s masked context scan failed: invalid NT header", patch_label);
+        kbo_log_runtimef("%s masked context scan failed: invalid NT header", patch_label);
         return NULL;
     }
 
@@ -183,7 +183,7 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_pattern(
             if (hits == 1) {
                 found = candidate;
             } else {
-                append_logf("%s masked context pattern ambiguous hits=%d first=%p another=%p",
+                kbo_log_runtimef("%s masked context pattern ambiguous hits=%d first=%p another=%p",
                     patch_label,
                     hits,
                     found,
@@ -197,15 +197,15 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_pattern(
         if (target != NULL && memory_range_readable(target, expected_size)) {
             log_patch_bytes_mismatch(patch_label, target, expected_size);
         } else {
-            append_logf("%s target unreadable target=%p", patch_label, target);
+            kbo_log_runtimef("%s target unreadable target=%p", patch_label, target);
         }
-        append_logf("%s masked context pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
+        kbo_log_runtimef("%s masked context pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
         return NULL;
     }
 
     target = found + target_offset;
     if (!memory_range_readable(target, expected_size) || memcmp(target, expected, expected_size) != 0) {
-        append_logf("%s masked context resolved target failed expected-byte check target=%p context=%p",
+        kbo_log_runtimef("%s masked context resolved target failed expected-byte check target=%p context=%p",
             patch_label,
             target,
             found);
@@ -215,7 +215,7 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_pattern(
         return NULL;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "%s resolved by masked context signature target=%p rva=0x%llx original_rva=0x%08X context=%p",
         patch_label,
         target,
@@ -242,7 +242,7 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_and_expected_pattern(
         return NULL;
     }
     if (target_offset > context_size || expected_size > context_size - target_offset) {
-        append_logf("%s invalid masked context/expected target_offset=%llu context_size=%llu expected_size=%llu",
+        kbo_log_runtimef("%s invalid masked context/expected target_offset=%llu context_size=%llu expected_size=%llu",
             patch_label,
             (unsigned long long)target_offset,
             (unsigned long long)context_size,
@@ -255,13 +255,13 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_and_expected_pattern(
     uint8_t* base = (uint8_t*)exe;
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;
     if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-        append_logf("%s masked context/expected scan failed: invalid DOS header", patch_label);
+        kbo_log_runtimef("%s masked context/expected scan failed: invalid DOS header", patch_label);
         return NULL;
     }
 
     IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)(base + dos->e_lfanew);
     if (nt->Signature != IMAGE_NT_SIGNATURE) {
-        append_logf("%s masked context/expected scan failed: invalid NT header", patch_label);
+        kbo_log_runtimef("%s masked context/expected scan failed: invalid NT header", patch_label);
         return NULL;
     }
 
@@ -292,7 +292,7 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_and_expected_pattern(
             if (hits == 1) {
                 found = candidate;
             } else {
-                append_logf("%s masked context/expected pattern ambiguous hits=%d first=%p another=%p",
+                kbo_log_runtimef("%s masked context/expected pattern ambiguous hits=%d first=%p another=%p",
                     patch_label,
                     hits,
                     found,
@@ -306,15 +306,15 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_and_expected_pattern(
         if (memory_range_readable(target, expected_size)) {
             log_patch_bytes_mismatch(patch_label, target, expected_size);
         } else {
-            append_logf("%s target unreadable target=%p", patch_label, target);
+            kbo_log_runtimef("%s target unreadable target=%p", patch_label, target);
         }
-        append_logf("%s masked context/expected pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
+        kbo_log_runtimef("%s masked context/expected pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
         return NULL;
     }
 
     target = found + target_offset;
     if (!memory_range_readable(target, expected_size) || !kbo_memory_matches_masked_pattern(target, expected, expected_mask, expected_size)) {
-        append_logf("%s masked context/expected resolved target failed expected-byte check target=%p context=%p",
+        kbo_log_runtimef("%s masked context/expected resolved target failed expected-byte check target=%p context=%p",
             patch_label,
             target,
             found);
@@ -324,7 +324,7 @@ uint8_t* resolve_patch_target_by_rva_or_masked_context_and_expected_pattern(
         return NULL;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "%s resolved by masked context/expected signature target=%p rva=0x%llx original_rva=0x%08X context=%p",
         patch_label,
         target,

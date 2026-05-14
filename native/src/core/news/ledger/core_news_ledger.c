@@ -177,7 +177,7 @@ void kbo_custom_news_ledger_record(
 
     char path[MAX_PATH] = {0};
     if (!kbo_custom_news_ledger_path(path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom news ledger skipped source=%s domain=%s key=%s reason=path_unavailable",
             source != NULL ? source : "",
             domain != NULL ? domain : "",
@@ -194,7 +194,7 @@ void kbo_custom_news_ledger_record(
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom news ledger skipped source=%s domain=%s key=%s reason=open_failed gle=%lu path=%s",
             source != NULL ? source : "",
             domain != NULL ? domain : "",
@@ -241,7 +241,7 @@ void kbo_custom_news_ledger_record(
     DWORD written = 0u;
     DWORD len = (DWORD)strlen(line);
     if (len == 0u || !WriteFile(file, line, len, &written, NULL) || written != len) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom news ledger write failed source=%s domain=%s key=%s gle=%lu path=%s",
             source != NULL ? source : "",
             domain != NULL ? domain : "",

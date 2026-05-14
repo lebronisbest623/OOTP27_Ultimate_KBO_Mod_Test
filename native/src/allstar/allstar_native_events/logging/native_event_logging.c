@@ -15,7 +15,7 @@ void log_kbo_allstar_native_event_state(const char* prefix, uintptr_t league_ptr
     KboAllstarLayout layout = kbo_get_allstar_layout();
     uint8_t* league = (uint8_t*)league_ptr;
     if (league == NULL || !memory_range_readable(league, layout.league_id_fallback_offset + sizeof(uint32_t))) {
-        append_logf("KBO all-star native events %s source=%s league=%p reason=unreadable", prefix, source != NULL ? source : "", league);
+        kbo_log_runtimef("KBO all-star native events %s source=%s league=%p reason=unreadable", prefix, source != NULL ? source : "", league);
         return;
     }
 
@@ -28,7 +28,7 @@ void log_kbo_allstar_native_event_state(const char* prefix, uintptr_t league_ptr
         asg_month = *(uint8_t*)(league + OOTP27_ALLSTAR_DATE_MONTH_OFFSET);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO all-star native events %s source=%s league=%p league_id=%u/%u year=%u phase=%u game=%u auto=%u team0=0x%08x team1=0x%08x asg=%04u-%02u-%02u",
         prefix,
         source != NULL ? source : "",

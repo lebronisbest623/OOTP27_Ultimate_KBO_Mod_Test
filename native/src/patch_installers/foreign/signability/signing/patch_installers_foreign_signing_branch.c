@@ -126,14 +126,14 @@ int install_kbo_fa_signing_branch_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO FA signing branch patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO FA signing branch patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO FA signing branch patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO FA signing branch patch host=%s", host);
         return 0;
     }
 
@@ -153,15 +153,15 @@ int install_kbo_fa_signing_branch_patch(void)
     };
 
     if (target == NULL) {
-        append_log_line("Could not resolve KBO FA signing branch by signature");
+        kbo_log_runtime_line("Could not resolve KBO FA signing branch by signature");
         return 0;
     }
     if (!memory_range_readable(target, stolen_len)) {
-        append_logf("KBO FA signing branch patch target unreadable target=%p", target);
+        kbo_log_runtimef("KBO FA signing branch patch target unreadable target=%p", target);
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO FA signing branch patch already installed target=%p", target);
+        kbo_log_runtimef("KBO FA signing branch patch already installed target=%p", target);
         return 1;
     }
     if (memcmp(target, expected, sizeof(expected)) != 0) {
@@ -170,32 +170,32 @@ int install_kbo_fa_signing_branch_patch(void)
     }
 
     if (post_target == NULL || !memory_range_readable(post_target, sizeof(post_expected))) {
-        append_logf("KBO FA signing success post patch target unreadable target=%p", post_target);
+        kbo_log_runtimef("KBO FA signing success post patch target unreadable target=%p", post_target);
     } else if (post_target[0] == 0xE9) {
-        append_logf("KBO FA signing success post patch already installed target=%p", post_target);
+        kbo_log_runtimef("KBO FA signing success post patch already installed target=%p", post_target);
     } else if (memcmp(post_target, post_expected, sizeof(post_expected)) != 0) {
         log_patch_bytes_mismatch("KBO FA signing success post patch", post_target, sizeof(post_expected));
     } else {
         uint8_t* post_stub = build_kbo_fa_signing_success_post_stub(post_target + sizeof(post_expected), post_target);
         if (post_stub == NULL) {
-            append_log_line("failed to allocate KBO FA signing success post detour stub");
+            kbo_log_runtime_line("failed to allocate KBO FA signing success post detour stub");
         } else {
             intptr_t rel = (intptr_t)post_stub - ((intptr_t)post_target + 5);
             if (rel < INT32_MIN || rel > INT32_MAX) {
-                append_logf("KBO FA signing success post patch skipped reason=stub_out_of_range target=%p stub=%p", post_target, post_stub);
+                kbo_log_runtimef("KBO FA signing success post patch skipped reason=stub_out_of_range target=%p stub=%p", post_target, post_stub);
             } else {
                 uint8_t post_patch[5] = {0xE9, 0,0,0,0};
                 int32_t rel32 = (int32_t)rel;
                 memcpy(&post_patch[1], &rel32, sizeof(rel32));
                 DWORD post_old_protect = 0;
                 if (!VirtualProtect(post_target, sizeof(post_patch), PAGE_EXECUTE_READWRITE, &post_old_protect)) {
-                    append_logf("VirtualProtect failed for KBO FA signing success post patch error=%lu", GetLastError());
+                    kbo_log_runtimef("VirtualProtect failed for KBO FA signing success post patch error=%lu", GetLastError());
                 } else {
                     memcpy(post_target, post_patch, sizeof(post_patch));
                     FlushInstructionCache(GetCurrentProcess(), post_target, sizeof(post_patch));
                     DWORD ignored = 0;
                     VirtualProtect(post_target, sizeof(post_patch), post_old_protect, &ignored);
-                    append_logf(
+                    kbo_log_runtimef(
                         "installed KBO FA signing success post patch target=%p rva=0x%llx stub=%p wrapper=%p",
                         post_target,
                         (unsigned long long)((uintptr_t)post_target - (uintptr_t)exe),
@@ -208,13 +208,13 @@ int install_kbo_fa_signing_branch_patch(void)
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO FA signing branch trampoline");
+        kbo_log_runtime_line("failed to allocate KBO FA signing branch trampoline");
         return 0;
     }
 
     uint8_t* stub = build_kbo_fa_signing_branch_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO FA signing branch detour stub");
+        kbo_log_runtime_line("failed to allocate KBO FA signing branch detour stub");
         return 0;
     }
 
@@ -228,7 +228,7 @@ int install_kbo_fa_signing_branch_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO FA signing branch patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO FA signing branch patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -238,7 +238,7 @@ int install_kbo_fa_signing_branch_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO FA signing branch patch target=%p rva=0x%llx stub=%p trampoline=%p wrapper=%p",
         target,
         (unsigned long long)((uintptr_t)target - (uintptr_t)exe),

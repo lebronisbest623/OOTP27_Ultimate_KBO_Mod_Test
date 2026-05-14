@@ -127,7 +127,7 @@ int kbo_append_amateur_reputation_history(
 {
     char path[MAX_PATH] = {0};
     if (!kbo_get_amateur_reputation_history_path(path, sizeof(path))) {
-        append_logf("amateur reputation history skipped source=%s league=%u year=%u reason=no_save_scoped_path",
+        kbo_log_runtimef("amateur reputation history skipped source=%s league=%u year=%u reason=no_save_scoped_path",
             source != NULL ? source : "", league_id, year);
         return 0;
     }
@@ -147,7 +147,7 @@ int kbo_append_amateur_reputation_history(
 
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("amateur reputation history write failed source=%s league=%u year=%u path=%s error=%lu",
+        kbo_log_runtimef("amateur reputation history write failed source=%s league=%u year=%u path=%s error=%lu",
             source != NULL ? source : "", league_id, year, path, GetLastError());
         return 0;
     }
@@ -193,11 +193,11 @@ int kbo_append_amateur_reputation_history(
 
     CloseHandle(file);
     if (!ok) {
-        append_logf("amateur reputation history write incomplete source=%s league=%u year=%u path=%s",
+        kbo_log_runtimef("amateur reputation history write incomplete source=%s league=%u year=%u path=%s",
             source != NULL ? source : "", league_id, year, path);
         return 0;
     }
-    append_logf("amateur reputation history appended source=%s league=%u year=%u rows=%d path=%s",
+    kbo_log_runtimef("amateur reputation history appended source=%s league=%u year=%u rows=%d path=%s",
         source != NULL ? source : "", league_id, year, row_count, path);
     return 1;
 }
@@ -255,7 +255,7 @@ int kbo_update_amateur_reputation_for_league(uint32_t league_id, const char* sou
     }
 
     if (row_count < 10) {
-        append_logf("amateur reputation update skipped source=%s league=%u year=%u reason=too_few_rows rows=%d",
+        kbo_log_runtimef("amateur reputation update skipped source=%s league=%u year=%u reason=too_few_rows rows=%d",
             source != NULL ? source : "", league_id, year, row_count);
         return 0;
     }
@@ -295,7 +295,7 @@ int kbo_update_amateur_reputation_for_league(uint32_t league_id, const char* sou
     }
 
     if (kbo_amateur_reputation_history_has_year(league_id, year)) {
-        append_logf("amateur reputation update skipped source=%s league=%u year=%u reason=history_already_exists",
+        kbo_log_runtimef("amateur reputation update skipped source=%s league=%u year=%u reason=history_already_exists",
             source != NULL ? source : "", league_id, year);
         return row_count;
     }
@@ -313,12 +313,12 @@ int kbo_update_amateur_reputation_for_league(uint32_t league_id, const char* sou
 
     int top = row_count < 3 ? row_count : 3;
     for (int i = 0; i < top; i++) {
-        append_logf("amateur reputation update top source=%s league=%u year=%u rank=%d team=%u record=%u-%u-%u rep=%u->%u score=%d",
+        kbo_log_runtimef("amateur reputation update top source=%s league=%u year=%u rank=%d team=%u record=%u-%u-%u rep=%u->%u score=%d",
             source != NULL ? source : "", league_id, year, i + 1, rows[i].team_id,
             (uint32_t)rows[i].wins, (uint32_t)rows[i].losses, (uint32_t)rows[i].ties,
             (uint32_t)rows[i].old_reputation, (uint32_t)rows[i].new_reputation, rows[i].score);
     }
-    append_logf("amateur reputation update summary source=%s league=%u year=%u rows=%d playoff=todo regular_offsets=w:0x%x,l:0x%x,t:0x%x",
+    kbo_log_runtimef("amateur reputation update summary source=%s league=%u year=%u rows=%d playoff=todo regular_offsets=w:0x%x,l:0x%x,t:0x%x",
         source != NULL ? source : "", league_id, year, row_count,
         KBO_AMATEUR_TEAM_REGULAR_WINS_OFFSET,
         KBO_AMATEUR_TEAM_REGULAR_LOSSES_OFFSET,

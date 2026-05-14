@@ -254,14 +254,14 @@ int kbo_domestic_fa_write_investigation_csv(
 
     char path[MAX_PATH] = {0};
     if (!kbo_get_save_scoped_data_file("domestic_fa_market_investigation.csv", path, sizeof(path))) {
-        append_log_line("domestic FA market investigation: unable to resolve CSV path");
+        kbo_log_runtime_line("domestic FA market investigation: unable to resolve CSV path");
         return 0;
     }
 
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("domestic FA market investigation: failed to open CSV path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("domestic FA market investigation: failed to open CSV path=%s gle=%lu", path, GetLastError());
         return 0;
     }
 
@@ -327,7 +327,7 @@ int kbo_domestic_fa_write_investigation_csv(
     }
 
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("domestic FA market investigation: atomic commit failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("domestic FA market investigation: atomic commit failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
     if (out_path != NULL && out_path_size > 0) {

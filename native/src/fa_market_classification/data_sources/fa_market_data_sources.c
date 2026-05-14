@@ -191,7 +191,7 @@ int kbo_fa_market_copy_file_if_present(const char* source, const char* destinati
     if (CopyFileA(source, destination, FALSE)) {
         return 1;
     }
-    append_logf("FA market history sqlite copy failed src=%s dst=%s gle=%lu", source, destination, GetLastError());
+    kbo_log_runtimef("FA market history sqlite copy failed src=%s dst=%s gle=%lu", source, destination, GetLastError());
     return 0;
 }
 
@@ -204,13 +204,13 @@ int kbo_fa_market_copy_text_data_sqlite(char* out_path, size_t out_path_size)
 
     char save_path[MAX_PATH] = {0};
     if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
-        append_log_line("FA market history sqlite skipped reason=no_current_save_path");
+        kbo_log_runtime_line("FA market history sqlite skipped reason=no_current_save_path");
         return 0;
     }
 
     char data_dir[MAX_PATH] = {0};
     if (!kbo_get_save_scoped_data_dir(data_dir, sizeof(data_dir))) {
-        append_log_line("FA market history sqlite skipped reason=no_save_scoped_data_dir");
+        kbo_log_runtime_line("FA market history sqlite skipped reason=no_save_scoped_data_dir");
         return 0;
     }
 
@@ -227,7 +227,7 @@ int kbo_fa_market_copy_text_data_sqlite(char* out_path, size_t out_path_size)
         sizeof(source_shm));
 
     if (GetFileAttributesA(source_db) == INVALID_FILE_ATTRIBUTES) {
-        append_logf("FA market history sqlite skipped reason=source_missing path=%s", source_db);
+        kbo_log_runtimef("FA market history sqlite skipped reason=source_missing path=%s", source_db);
         return 0;
     }
 

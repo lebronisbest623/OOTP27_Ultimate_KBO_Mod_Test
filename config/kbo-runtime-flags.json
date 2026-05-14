@@ -1,9 +1,8 @@
-{
+﻿{
   "flags": [
     {
       "key": "disable_foreign_injury_replacement",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Foreign injury replacement",
@@ -14,7 +13,6 @@
     {
       "key": "disable_foreign_waiver_legacy_auto_detector",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Foreign waiver legacy detector",
@@ -25,7 +23,6 @@
     {
       "key": "disable_intl_established_fa_generation_filter",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "International FA generation filter",
@@ -36,7 +33,6 @@
     {
       "key": "disable_kbo_fa_salary_opening_day_snapshot",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "FA salary opening-day snapshot",
@@ -47,7 +43,6 @@
     {
       "key": "disable_kbo_no_minor_contract_patch",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "No minor-contract patch",
@@ -58,7 +53,6 @@
     {
       "key": "enable_kbo_ai_fa_status_candidate_insert_hook",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "AI FA candidate hook",
@@ -69,7 +63,6 @@
     {
       "key": "disable_kbo_foreign_ai_offer_candidate_priority_hook",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Foreign AI offer priority",
@@ -80,7 +73,6 @@
     {
       "key": "disable_kbo_custom_foreign_policy",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Custom foreign policy",
@@ -91,7 +83,6 @@
     {
       "key": "disable_kbo_foreign_signing_branch_patch",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Foreign signing branch hook",
@@ -102,7 +93,6 @@
     {
       "key": "disable_kbo_foreign_trade_check_patch",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Foreign trade quota guard",
@@ -114,7 +104,6 @@
     {
       "key": "disable_kbo_sangmu_fa_block_core",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Military team FA block",
@@ -125,7 +114,6 @@
     {
       "key": "disable_kbo_submit_offer_probe_patch",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Submit-offer probe",
@@ -137,7 +125,6 @@
     {
       "key": "disable_amateur_assignment_reroute",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Amateur reputation assignment",
@@ -148,13 +135,11 @@
     {
       "key": "disable_kbo_competitive_balance_tax",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery"
     },
     {
       "key": "disable_kbo_fa_compensation",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "FA compensation",
@@ -165,7 +150,6 @@
     {
       "key": "disable_kbo_military_team_add_guard_patch",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Military team add guard",
@@ -176,7 +160,6 @@
     {
       "key": "disable_kbo_runtime_roster_marker_guard",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Runtime roster marker guard",
@@ -187,7 +170,6 @@
     {
       "key": "disable_kbo_salary_arbitration_no_withdraw_patch",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Salary arbitration no-withdraw",
@@ -198,7 +180,6 @@
     {
       "key": "enable_amateur_assignment_verbose_log",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Diagnostic",
       "ui": {
         "label": "Amateur assignment verbose log",
@@ -209,7 +190,6 @@
     {
       "key": "enable_experimental_runtime_hooks",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Runtime patch engine",
@@ -220,7 +200,6 @@
     {
       "key": "enable_fa_requalification",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Legacy",
       "ui": {
         "label": "FA requalification",
@@ -231,7 +210,6 @@
     {
       "key": "enable_foreign_waiver_ai",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "User",
       "ui": {
         "label": "Foreign waiver AI",
@@ -242,7 +220,6 @@
     {
       "key": "enable_foreign_waiver_background_scanner",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Foreign waiver background scanner",
@@ -253,7 +230,6 @@
     {
       "key": "enable_foreign_ai_roster_management",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "User",
       "ui": {
         "label": "Enhanced foreign AI (Experimental)",
@@ -264,7 +240,6 @@
     {
       "key": "enable_foreign_ai_controller",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "User",
       "ui": {
         "label": "Foreign AI Controller (Experimental)",
@@ -275,19 +250,16 @@
     {
       "key": "disable_foreign_ai_controller",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery"
     },
     {
       "key": "enable_foreign_waiver_event_probe",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Diagnostic"
     },
     {
       "key": "enable_kbo_domestic_fa_market_investigation",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Diagnostic",
       "ui": {
         "label": "Domestic FA market investigation",
@@ -298,7 +270,6 @@
     {
       "key": "enable_intl_established_fa_quality_probe_patch",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "International FA quality probe",
@@ -309,7 +280,6 @@
     {
       "key": "enable_kbo_ai_fa_fallback_patch",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "AI FA fallback patch",
@@ -320,13 +290,11 @@
     {
       "key": "enable_kbo_asian_quota_probe_logs",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Diagnostic"
     },
     {
       "key": "enable_kbo_callup_foreign_limit_patch",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Foreign call-up limit patch",
@@ -337,25 +305,21 @@
     {
       "key": "enable_kbo_cbt_service_time_probe",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Diagnostic"
     },
     {
       "key": "enable_kbo_custom_foreign_offer_logs",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Diagnostic"
     },
     {
       "key": "enable_kbo_diagnostic_minimal_runtime",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Diagnostic"
     },
     {
       "key": "enable_kbo_fa_signability_hooks",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Legacy",
       "ui": {
         "label": "Legacy FA signability hooks",
@@ -366,19 +330,16 @@
     {
       "key": "enable_kbo_fix",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery"
     },
     {
       "key": "enable_kbo_foreign_trade_check_patch",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery"
     },
     {
       "key": "enable_kbo_offer_eligibility_patch",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Offer eligibility patch",
@@ -389,7 +350,6 @@
     {
       "key": "enable_kbo_player_team_signability_patch",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Player-team signability patch",
@@ -400,19 +360,16 @@
     {
       "key": "enable_kbo_sangmu_offer_only",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Diagnostic"
     },
     {
       "key": "enable_kbo_sangmu_signability_only",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Diagnostic"
     },
     {
       "key": "enable_kbo_season_phase_monitor",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Season phase monitor",
@@ -423,19 +380,16 @@
     {
       "key": "enable_kbo_submit_offer_probe_patch",
       "defaultValue": null,
-      "importLegacy": true,
       "lifecycle": "Recovery"
     },
     {
       "key": "enable_launcher_injection",
       "defaultValue": true,
-      "importLegacy": true,
       "lifecycle": "User"
     },
     {
       "key": "enable_single_division_allstar_events",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "User",
       "ui": {
         "label": "Single-division All-Star events",
@@ -446,7 +400,6 @@
     {
       "key": "enable_single_division_allstar_runtime_patches",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Single-division All-Star runtime",
@@ -457,7 +410,6 @@
     {
       "key": "enable_single_division_allstar_settings_patch",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Single-division All-Star settings",
@@ -468,7 +420,6 @@
     {
       "key": "enable_single_division_allstar_voting_hook",
       "defaultValue": false,
-      "importLegacy": true,
       "lifecycle": "Recovery",
       "ui": {
         "label": "Single-division All-Star voting",
@@ -482,15 +433,6 @@
     "enable_single_division_allstar_settings_patch",
     "enable_single_division_allstar_voting_hook",
     "enable_single_division_allstar_events"
-  ],
-  "aliases": [
-    {
-      "legacyKey": "disable_kbo_no_minor_contract_experimental_patch",
-      "canonicalKey": "disable_kbo_no_minor_contract_patch"
-    },
-    {
-      "legacyKey": "enable_foreign_ai_roster_research_hooks",
-      "canonicalKey": "enable_foreign_ai_roster_management"
-    }
   ]
 }
+

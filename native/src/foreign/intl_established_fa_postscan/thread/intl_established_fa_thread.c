@@ -21,7 +21,7 @@ void kbo_intl_established_fa_postscan_try_run(void)
         g_kbo_intl_established_fa_postscan.attempts = batch.attempts + 1;
         g_kbo_intl_established_fa_postscan.due_tick = now + KBO_INTL_ESTABLISHED_FA_POSTSCAN_RETRY_MS;
         InterlockedExchange(&g_kbo_intl_established_fa_postscan.pending, 1);
-        append_logf(
+        kbo_log_runtimef(
             "international established FA postscan retry batch=%ld attempt=%d reason=no_player_vector",
             batch.batch_id,
             batch.attempts + 1);
@@ -36,7 +36,7 @@ void kbo_intl_established_fa_postscan_try_run(void)
         g_kbo_intl_established_fa_postscan.attempts = batch.attempts + 1;
         g_kbo_intl_established_fa_postscan.due_tick = now + KBO_INTL_ESTABLISHED_FA_POSTSCAN_RETRY_MS;
         InterlockedExchange(&g_kbo_intl_established_fa_postscan.pending, 1);
-        append_logf(
+        kbo_log_runtimef(
             "international established FA postscan retry batch=%ld attempt=%d reason=waiting_for_players before=%d after=%d expected=%d",
             batch.batch_id,
             batch.attempts + 1,
@@ -53,7 +53,7 @@ void kbo_intl_established_fa_postscan_try_run(void)
 DWORD WINAPI kbo_intl_established_fa_postscan_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("international established FA postscan worker started");
+    kbo_log_runtime_line("international established FA postscan worker started");
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->intl_established_fa_postscan_sleep_ms)) {
             break;
@@ -61,7 +61,7 @@ DWORD WINAPI kbo_intl_established_fa_postscan_thread(LPVOID parameter)
         kbo_intl_established_fa_postscan_try_run();
     }
     InterlockedExchange(&g_kbo_intl_established_fa_postscan_worker_started, 0);
-    append_log_line("international established FA postscan worker stopped");
+    kbo_log_runtime_line("international established FA postscan worker stopped");
     return 0;
 }
 

@@ -40,7 +40,7 @@ uint32_t kbo_get_foreign_waiver_league_id(void)
             cached_league_id = kbo_resolve_kbo_league_id();
         }
         if (cached_league_id != 0u) {
-            append_logf("foreign waiver: resolved league id=%u", cached_league_id);
+            kbo_log_runtimef("foreign waiver: resolved league id=%u", cached_league_id);
         }
     }
     return cached_league_id;

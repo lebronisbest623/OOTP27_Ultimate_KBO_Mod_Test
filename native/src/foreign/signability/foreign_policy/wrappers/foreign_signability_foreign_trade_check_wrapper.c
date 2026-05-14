@@ -28,7 +28,7 @@ __declspec(noinline) int ootp_kbo_trade_check_foreign_policy_probe(
             static volatile LONG trade_block_log_count = 0;
             LONG slot = InterlockedIncrement(&trade_block_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "custom foreign policy trade blocked trade=%p request_side=%d blocked_side=%d team=%u incoming_player=%u effective_before=%u effective_after=%u limit=%u",
                     (void*)trade_ptr,
                     side,

@@ -55,7 +55,7 @@ int install_kbo_no_minor_contract_submit_salary_floor_patch(HMODULE exe)
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO no-minor submit salary floor already installed target=%p", target);
+        kbo_log_runtimef("KBO no-minor submit salary floor already installed target=%p", target);
         return 1;
     }
     if (memcmp(target, expected, sizeof(expected)) != 0) {
@@ -68,7 +68,7 @@ int install_kbo_no_minor_contract_submit_salary_floor_patch(HMODULE exe)
         target + (OOTP27_NO_MINOR_CONTRACT_SUBMIT_MIN_CHECK_13B07BB_RVA - OOTP27_NO_MINOR_CONTRACT_SUBMIT_SALARY_FLOOR_13B0712_RVA),
         target + (OOTP27_NO_MINOR_CONTRACT_SUBMIT_AFTER_MIN_CHECK_13B0860_RVA - OOTP27_NO_MINOR_CONTRACT_SUBMIT_SALARY_FLOOR_13B0712_RVA));
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO no-minor submit salary floor detour stub");
+        kbo_log_runtime_line("failed to allocate KBO no-minor submit salary floor detour stub");
         return 0;
     }
 
@@ -84,7 +84,7 @@ int install_kbo_no_minor_contract_submit_salary_floor_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO no-minor submit salary floor error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO no-minor submit salary floor error=%lu", GetLastError());
         return 0;
     }
 
@@ -94,7 +94,7 @@ int install_kbo_no_minor_contract_submit_salary_floor_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO no-minor submit salary floor target=%p stub=%p floor_source=[r14+0x278]",
         target,
         stub);

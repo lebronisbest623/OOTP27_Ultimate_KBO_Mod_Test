@@ -79,7 +79,7 @@ void kbo_log_asian_quota_signability_probe(
     uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
     uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
 
-    append_logf(
+    kbo_log_runtimef(
         "asian quota signability probe player=%u requester_team=%d nation=%u asian_candidate=%d exception_available=%d"
         " original=%d team_foreign_raw=%u team_asian=%u team_non_asian=%u team_effective_foreign=%u effective_after=%u current_team=%u active_team=%u caller_rva=0x%llx",
         player_id,
@@ -148,7 +148,7 @@ void kbo_log_asian_quota_offer_probe(
         &effective_count,
         &effective_after);
 
-    append_logf(
+    kbo_log_runtimef(
         "asian quota offer probe player=%u requester_team=%d nation=%u asian_candidate=%d original=%u flag=%d"
         " exception_available=%d team_foreign_raw=%u team_asian=%u team_non_asian_foreign=%u team_effective_foreign=%u effective_after=%u current_team=%u active_team=%u current_league=%u today=%u",
         player_id,

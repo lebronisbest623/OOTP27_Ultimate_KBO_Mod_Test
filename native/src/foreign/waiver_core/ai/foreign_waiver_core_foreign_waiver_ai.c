@@ -57,7 +57,7 @@ static int kbo_apply_ai_foreign_waiver_rules(
 
     uint8_t* destination_team = find_kbo_team_by_numeric_id_any_league(target_team_id, 1);
     if (destination_team == NULL) {
-        append_logf("foreign waiver auto: target team not found target_team=%u", target_team_id);
+        kbo_log_runtimef("foreign waiver auto: target team not found target_team=%u", target_team_id);
         return 0;
     }
 
@@ -74,12 +74,12 @@ static int kbo_apply_ai_foreign_waiver_rules(
     }
 
     if (!kbo_retain_foreign_player_rights(player, destination_team, fallback_league, player_id, target_team_id)) {
-        append_logf("foreign waiver auto: retain failed player=%u -> team=%u value=%d forced=%d",
+        kbo_log_runtimef("foreign waiver auto: retain failed player=%u -> team=%u value=%d forced=%d",
             player_id, target_team_id, value_score, forced);
         return 0;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign waiver auto: retained player=%u -> team=%u value=%d forced=%d",
         player_id, target_team_id, value_score, forced);
     kbo_append_foreign_waiver_decision_record("ai", "RETAIN", target_team_id, player_id, value_score, forced, 1);
@@ -141,7 +141,7 @@ void run_foreign_waiver_ai_core_once(void)
     uint32_t window_start = 0u;
     uint32_t window_end = 0u;
     kbo_current_foreign_waiver_window_dates(&window_start, &window_end);
-    append_logf(
+    kbo_log_runtimef(
         "foreign waiver auto: window check -> OPEN (window: %u~%u)",
         window_start,
         window_end);
@@ -220,7 +220,7 @@ void run_foreign_waiver_ai_core_once(void)
                 &retain_threshold,
                 &retain_reason)) {
             skipped++;
-            append_logf(
+            kbo_log_runtimef(
                 "foreign waiver auto: SKIP player=%u team=%u value=%d forced=%d threshold=%d reason=%s",
                 player_id,
                 decision_team_id,
@@ -236,14 +236,14 @@ void run_foreign_waiver_ai_core_once(void)
             retained++;
         } else {
             skipped++;
-            append_logf(
+            kbo_log_runtimef(
                 "foreign waiver auto: SKIP player=%u team=%u value=%d forced=%d reason=retain_failed",
                 player_id, decision_team_id, score, forced);
             kbo_append_foreign_waiver_decision_record("ai", "SKIP", decision_team_id, player_id, score, forced, 0);
         }
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign waiver auto: all-player decisions considered=%d retained=%d skipped=%d target_team=%u",
         considered,
         retained,

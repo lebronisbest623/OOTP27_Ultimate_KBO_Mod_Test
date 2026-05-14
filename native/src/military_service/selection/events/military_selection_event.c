@@ -107,7 +107,7 @@ int kbo_route_military_candidate_to_sang(
         news_entry->score = score;
         news_entry->player_ptr = (uintptr_t)player;
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO military selection drafted source=%s year=%u player_id=%u original_team=%u service_team=%u score=%d pre=%d register=%d attach=%d",
         source != NULL ? source : "",
         entry_year,
@@ -135,14 +135,14 @@ static int kbo_route_queued_military_draft_candidates(
     uint8_t* sang = find_kbo_team_by_csv_id_any_league("SANG", 0);
     if (sang == NULL || !memory_range_readable(sang, OOTP27_KBO_TEAM_READABLE_BYTES)) {
         kbo_military_selection_audit_flow("military.selection.routing", "skip", "service_team_unavailable", source, entry_year, 0u, 0, 0, kbo_count_military_draft_candidates_for_year(entry_year), 0, 0, 0, 0, 0, 0, 0u);
-        append_logf("KBO military selection skipped source=%s year=%u reason=no_sang", source != NULL ? source : "", entry_year);
+        kbo_log_runtimef("KBO military selection skipped source=%s year=%u reason=no_sang", source != NULL ? source : "", entry_year);
         return 0;
     }
     uint32_t sang_id = *(uint32_t*)(sang + OOTP27_KBO_TEAM_ID_OFFSET);
     uint32_t sang_league_id = *(uint32_t*)(sang + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
     if (sang_id == 0u || sang_league_id == 0u) {
         kbo_military_selection_audit_flow("military.selection.routing", "skip", "service_team_ids_invalid", source, entry_year, sang_id, 0, 0, kbo_count_military_draft_candidates_for_year(entry_year), 0, 0, 0, 0, 0, 0, 0u);
-        append_logf("KBO military selection skipped source=%s year=%u reason=bad_sang_ids team=%u league=%u", source != NULL ? source : "", entry_year, sang_id, sang_league_id);
+        kbo_log_runtimef("KBO military selection skipped source=%s year=%u reason=bad_sang_ids team=%u league=%u", source != NULL ? source : "", entry_year, sang_id, sang_league_id);
         return 0;
     }
 
@@ -154,7 +154,7 @@ static int kbo_route_queued_military_draft_candidates(
     }
     if (slots <= 0) {
         kbo_military_selection_audit_flow("military.selection.routing", "skip", "service_team_full", source, entry_year, sang_id, on_roster, slots, kbo_count_military_draft_candidates_for_year(entry_year), 0, 0, 0, 0, 0, 0, 0u);
-        append_logf("KBO military selection skipped source=%s year=%u reason=sang_full active=%d", source != NULL ? source : "", entry_year, on_roster);
+        kbo_log_runtimef("KBO military selection skipped source=%s year=%u reason=sang_full active=%d", source != NULL ? source : "", entry_year, on_roster);
         return 0;
     }
 
@@ -172,7 +172,7 @@ static int kbo_route_queued_military_draft_candidates(
         source);
     if (routed > 0) {
         kbo_military_selection_audit_flow("military.selection.routing", "route_candidates", "ortools_selected", source, entry_year, sang_id, on_roster, slots, kbo_count_military_draft_candidates_for_year(entry_year), considered, routed, 0, 0, 0, 0, 0u);
-        append_logf(
+        kbo_log_runtimef(
             "KBO military selection processed source=%s year=%u method=ortools queued=%d considered=%d routed=%d active_before=%d slots=%d",
             source != NULL ? source : "",
             entry_year,
@@ -236,7 +236,7 @@ static int kbo_route_queued_military_draft_candidates(
             source) ? 1 : 0;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO military selection processed source=%s year=%u method=greedy queued=%d considered=%d routed=%d active_before=%d slots=%d",
         source != NULL ? source : "",
         entry_year,
@@ -263,7 +263,7 @@ int kbo_refresh_military_selection_candidates_from_memory(
     uint32_t vector_offset = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)) {
         kbo_military_selection_audit_flow("military.selection.refresh", "skip", "player_vector_unavailable", source, entry_year, sang_id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0u);
-        append_logf(
+        kbo_log_runtimef(
             "KBO military selection candidate refresh skipped source=%s year=%u reason=player_vector_unavailable",
             source != NULL ? source : "",
             entry_year);
@@ -316,7 +316,7 @@ int kbo_refresh_military_selection_candidates_from_memory(
             "military_selection_memory_refresh") ? 1 : 0;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO military selection candidate refresh source=%s year=%u scanned=%d eligible=%d queued_or_refreshed=%d total_queued=%d vector_off=0x%x",
         source != NULL ? source : "",
         entry_year,
@@ -364,7 +364,7 @@ int run_kbo_custom_military_event(
             routed,
             source);
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO military selection reached source=%s event=%s year=%u routed=%d seeded=%d returned=%d refreshed=%d news=%d queued_left=%d",
         source != NULL ? source : "",
         event_name != NULL ? event_name : "",

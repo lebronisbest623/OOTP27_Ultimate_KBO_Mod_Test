@@ -111,7 +111,7 @@ int kbo_import_captain_seed_file_locked(const char* path, const char* source)
 
     kbo_csv_reader_close(reader);
     if (imported > 0 || parse_failed > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain seed import source=%s imported=%d parse_failed=%d path=%s",
             source != NULL ? source : "",
             imported,
@@ -163,5 +163,5 @@ void kbo_ensure_captain_seeds_loaded(void)
     InterlockedExchange(&g_kbo_captain_seed_loaded, 1);
     int count = g_kbo_captain_seed_count;
     kbo_unlock_captain_seeds();
-    append_logf("KBO captain seeds ready count=%d", count);
+    kbo_log_runtimef("KBO captain seeds ready count=%d", count);
 }

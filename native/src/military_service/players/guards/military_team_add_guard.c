@@ -55,7 +55,7 @@ int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t play
         static volatile LONG bad_player_log_count = 0;
         LONG slot = InterlockedIncrement(&bad_player_log_count);
         if (slot <= 40) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO military team-add guard skipped reason=bad_player team=%u player_ptr=%p",
                 team_id,
                 (void*)player_ptr);
@@ -107,7 +107,7 @@ int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t play
                 static volatile LONG service_block_log_count = 0;
                 LONG slot = InterlockedIncrement(&service_block_log_count);
                 if (slot <= 300) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "KBO military team-add blocked active service transfer player=%u target_team=%u target_league=%u original_team=%u original_league=%u current_team=%u current_league=%u active_team=%u loan_team=%u days_left=%d military_active=%u active_index=%d today=%u",
                         player_id,
                         team_id,
@@ -145,7 +145,7 @@ int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t play
     static volatile LONG block_log_count = 0;
     LONG slot = InterlockedIncrement(&block_log_count);
     if (slot <= 300) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military team-add blocked player=%u team=%u league=%u current_team=%u current_league=%u active_team=%u loan_team=%u days_left=%d military_active=%u active_index=%d today=%u",
             player_id,
             team_id,

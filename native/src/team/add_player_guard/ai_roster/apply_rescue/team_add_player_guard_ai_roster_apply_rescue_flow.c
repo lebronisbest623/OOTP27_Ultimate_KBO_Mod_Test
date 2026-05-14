@@ -26,7 +26,7 @@ static int kbo_ai_roster_foreign_apply_rescue_enabled(void)
                 &g_kbo_ai_roster_foreign_apply_rescue_move_enabled_cached,
                 computed,
                 -1) == -1) {
-            append_logf(
+            kbo_log_runtimef(
                 "ootp ai roster foreign apply rescue move mode enabled=%ld explicit=%d disabled=%d",
                 computed,
                 explicit_enable,
@@ -93,7 +93,7 @@ static uint8_t kbo_ai_roster_context_flow_apply_rescue_team_add(
     static volatile LONG trace_log_count = 0;
     LONG trace_slot = InterlockedIncrement(&trace_log_count);
     if (trace_slot <= 300) {
-        append_logf(
+        kbo_log_runtimef(
             "ootp ai roster foreign apply rescue team-add #%ld result=%u context=%p slot_block=%p target_slot=%u team=%u team_league=%u player=%u foreign=%d nation=%u current=%u->%u active=%u->%u league=%u->%u status24=%u->%u status25=%u->%u status26=%u->%u f62=%u->%u f65=%u->%u f68=%u->%u f1a=%u->%u overall=%d ratings=%d",
             trace_slot,
             (uint32_t)result,
@@ -214,7 +214,7 @@ int kbo_ai_roster_context_flow_apply_rescue(
     static volatile LONG trace_log_count = 0;
     LONG trace_slot = InterlockedIncrement(&trace_log_count);
     if (trace_slot <= 1000) {
-        append_logf(
+        kbo_log_runtimef(
             "ootp ai roster foreign apply rescue #%ld context=%p slot_index=%u target_slot=%u roster_code=11 slot_block=%p slot_team=%u active_team=%u before_slot_code=%u after_slot_code=%u before_slot_player=%u after_slot_player=%u player=%u foreign=%d nation=%u current=%u->%u active=%u->%u league=%u status24=%u->%u status25=%u->%u status26=%u->%u f62=%u->%u f65=%u->%u f68=%u->%u f1a=%u->%u score_fe0=%d score_fe4=%d overall=%d ratings=%d",
             trace_slot,
             (void*)context_ptr,

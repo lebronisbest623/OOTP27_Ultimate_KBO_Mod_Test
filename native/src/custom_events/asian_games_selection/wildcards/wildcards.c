@@ -133,7 +133,7 @@ int kbo_asian_games_apply_wildcard_replacements(
         (*wildcard_count)++;
         replacements++;
 
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games wildcard replacement slot=%d old_player=%u old_age=%u old_role=%u old_score=%d new_player=%u new_age=%u new_role=%u new_score=%d gain=%d military_ready=%d same_bucket=%d",
             best_roster_index + 1,
             old_entry.player_id,

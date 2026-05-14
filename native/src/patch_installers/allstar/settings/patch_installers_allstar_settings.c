@@ -42,9 +42,9 @@ int install_allstar_settings_ui_patch(void)
     }
     int ok_value = 0;
     if (value_site == NULL || !memory_range_readable(value_site, sizeof(april_expected))) {
-        append_logf("KBO all-star settings value hook target unreadable target=%p", value_site);
+        kbo_log_runtimef("KBO all-star settings value hook target unreadable target=%p", value_site);
     } else if (is_rip_absolute_jump_patch(value_site) || is_rax_absolute_jump_patch(value_site)) {
-        append_logf("KBO all-star settings value hook already installed target=%p", value_site);
+        kbo_log_runtimef("KBO all-star settings value hook already installed target=%p", value_site);
         ok_value = 1;
     } else if (memcmp(value_site, expected, sizeof(april_expected)) != 0) {
         log_patch_bytes_mismatch("KBO all-star settings value hook", value_site, sizeof(april_expected));
@@ -52,13 +52,13 @@ int install_allstar_settings_ui_patch(void)
         void* return_address = value_site + sizeof(april_expected);
         void* checkbox_set_bool_address = resolve_relative_call_target(value_site + 11);
         if (checkbox_set_bool_address == NULL) {
-            append_log_line("KBO all-star settings value hook skipped: checkbox setter target unresolved");
+            kbo_log_runtime_line("KBO all-star settings value hook skipped: checkbox setter target unresolved");
             return 0;
         }
 
         uint8_t* stub = build_allstar_settings_enable_stub(return_address, checkbox_set_bool_address, layout.game_flag_offset);
         if (stub == NULL) {
-            append_log_line("failed to allocate KBO all-star settings value hook stub");
+            kbo_log_runtime_line("failed to allocate KBO all-star settings value hook stub");
         } else {
             uint8_t patch[16] = {
                 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
@@ -69,13 +69,13 @@ int install_allstar_settings_ui_patch(void)
 
             DWORD old_protect = 0;
             if (!VirtualProtect(value_site, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-                append_logf("VirtualProtect failed for KBO all-star settings value hook error=%lu", GetLastError());
+                kbo_log_runtimef("VirtualProtect failed for KBO all-star settings value hook error=%lu", GetLastError());
             } else {
                 memcpy(value_site, patch, sizeof(patch));
                 FlushInstructionCache(GetCurrentProcess(), value_site, sizeof(patch));
                 DWORD ignored = 0;
                 VirtualProtect(value_site, sizeof(patch), old_protect, &ignored);
-                append_logf(
+                kbo_log_runtimef(
                     "installed KBO all-star settings value hook target=%p stub=%p return=%p checkbox_set_bool=%p helper=%p",
                     value_site,
                     stub,

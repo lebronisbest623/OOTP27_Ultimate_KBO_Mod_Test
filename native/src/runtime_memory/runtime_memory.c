@@ -175,7 +175,7 @@ uintptr_t get_ootp_global_database(void)
                 continue;
             }
             g_ootp_cached_global_db = v;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO: global db found by scan section=%d rva=0x%08lX ptr=0x%llX teams=%d",
                 (int)s,
                 (unsigned long)(sections[s].VirtualAddress + off),

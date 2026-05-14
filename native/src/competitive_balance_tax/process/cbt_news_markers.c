@@ -90,7 +90,7 @@ void kbo_cbt_news_persist_marker(const char* key, const char* source)
 
     char path[MAX_PATH] = {0};
     if (!kbo_cbt_news_marker_path(path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT news marker skipped source=%s key=%s reason=path_unavailable",
             source != NULL ? source : "",
             key);
@@ -106,7 +106,7 @@ void kbo_cbt_news_persist_marker(const char* key, const char* source)
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO CBT news marker skipped source=%s key=%s reason=open_failed gle=%lu path=%s",
             source != NULL ? source : "",
             key,

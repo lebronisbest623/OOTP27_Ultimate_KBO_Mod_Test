@@ -23,7 +23,7 @@ int kbo_load_fa_market_history_cases(
         have_signature = kbo_fa_market_get_text_data_signatures(save_path, &db_sig, &wal_sig, &shm_sig);
         if (have_signature && kbo_fa_market_history_cache_matches(save_path, &db_sig, &wal_sig, &shm_sig)) {
             int cached_found = kbo_fa_market_copy_history_cache_for_rows(rows, row_count, histories, max_histories);
-            append_logf("FA market history sqlite cache hit found=%d rows=%d save=%s", cached_found, row_count, save_path);
+            kbo_log_runtimef("FA market history sqlite cache hit found=%d rows=%d save=%s", cached_found, row_count, save_path);
             return cached_found;
         }
     }
@@ -41,7 +41,7 @@ int kbo_load_fa_market_history_cases(
     KboFaMarketSqlite3* db = NULL;
     int open_result = api->open_v2(db_path, &db, KBO_SQLITE_OPEN_READONLY, NULL);
     if (open_result != KBO_SQLITE_OK || db == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "FA market history sqlite open failed result=%d path=%s msg=%s",
             open_result,
             db_path,
@@ -64,7 +64,7 @@ int kbo_load_fa_market_history_cases(
     KboFaMarketSqlite3Stmt* stmt = NULL;
     int prepare_result = api->prepare_v2(db, sql, -1, &stmt, NULL);
     if (prepare_result != KBO_SQLITE_OK || stmt == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "FA market history sqlite prepare failed result=%d msg=%s",
             prepare_result,
             api->errmsg != NULL ? api->errmsg(db) : "");
@@ -85,7 +85,7 @@ int kbo_load_fa_market_history_cases(
             kbo_fa_market_mark_history_case(&histories[i]);
             found++;
         } else if (step_result != KBO_SQLITE_DONE) {
-            append_logf(
+            kbo_log_runtimef(
                 "FA market history sqlite step failed player=%u result=%d msg=%s",
                 rows[i].player_id,
                 step_result,
@@ -95,7 +95,7 @@ int kbo_load_fa_market_history_cases(
 
     api->finalize(stmt);
     api->close(db);
-    append_logf("FA market history sqlite loaded found=%d rows=%d db=%s", found, row_count, db_path);
+    kbo_log_runtimef("FA market history sqlite loaded found=%d rows=%d db=%s", found, row_count, db_path);
     if (have_signature) {
         kbo_fa_market_store_history_cache(save_path, &db_sig, &wal_sig, &shm_sig, histories, row_count);
     }
@@ -129,7 +129,7 @@ int kbo_fa_market_overlay_filing_history_cases(
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_FA_FILING_MAX * sizeof(KboFaFilingRecord));
     if (filings == NULL) {
-        append_log_line("FA market filing ledger overlay skipped: allocation failed");
+        kbo_log_runtime_line("FA market filing ledger overlay skipped: allocation failed");
         return 0;
     }
 
@@ -173,7 +173,7 @@ int kbo_fa_market_overlay_filing_history_cases(
             return applied;
         }
         last_overlay_log_tick = now;
-        append_logf(
+        kbo_log_runtimef(
             "FA market filing ledger overlay applied=%d filings=%d rows=%d csv=%s",
             applied,
             filing_count,

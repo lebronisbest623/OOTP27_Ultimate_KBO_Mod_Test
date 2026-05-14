@@ -225,7 +225,7 @@ int kbo_select_asian_games_roster_ortools(
         outfielder_count,
         wildcard_count);
     if (applied > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games OR-Tools roster selected source=%s candidates=%d selected=%d required_orgs=%d pitchers=%d catchers=%d infielders=%d outfielders=%d wildcards=%d",
             source != NULL ? source : "",
             candidate_count,

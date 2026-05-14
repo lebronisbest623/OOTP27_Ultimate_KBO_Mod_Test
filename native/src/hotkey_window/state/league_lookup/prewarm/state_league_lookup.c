@@ -23,7 +23,7 @@ void kbo_hub_prewarm_league_display_cache(void)
         found = kbo_scan_named_league_ptrs_for_ids(league_ids, league_count, (SIZE_T)0x00400000u);
     }
     g_kbo_league_display_cache_prewarmed_global = global;
-    append_logf(
+    kbo_log_runtimef(
         "KBO: F2 league cache prewarmed leagues=%d found=%d ms=%llu",
         league_count,
         found,
@@ -55,7 +55,7 @@ void kbo_hub_queue_league_display_cache_prewarm(void)
             NULL,
             "F2 league display cache prewarm")) {
         InterlockedExchange(&g_kbo_league_display_cache_prewarm_running, 0);
-        append_log_line("KBO: F2 league cache prewarm queue failed");
+        kbo_log_runtime_line("KBO: F2 league cache prewarm queue failed");
     }
 }
 
@@ -92,7 +92,7 @@ uintptr_t kbo_find_league_ptr(uint32_t league_id)
         g_kbo_league_ptr_cache_ptr = 0;
     }
 
-    append_logf("KBO: named league ptr scan started id=%u", league_id);
+    kbo_log_runtimef("KBO: named league ptr scan started id=%u", league_id);
 
     int score = -1000;
     char name[96] = {0};
@@ -103,7 +103,7 @@ uintptr_t kbo_find_league_ptr(uint32_t league_id)
 
     if (league_ptr != 0 && score >= KBO_NAMED_LEAGUE_SCAN_MIN_SCORE) {
         uint32_t year = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
-        append_logf("KBO: named league ptr FOUND id=%u ptr=%p score=%d year=%u name=%s",
+        kbo_log_runtimef("KBO: named league ptr FOUND id=%u ptr=%p score=%d year=%u name=%s",
             league_id, (void*)league_ptr, score, year, name);
         g_kbo_league_ptr_cache_id  = league_id;
         g_kbo_league_ptr_cache_ptr = league_ptr;
@@ -111,7 +111,7 @@ uintptr_t kbo_find_league_ptr(uint32_t league_id)
         return league_ptr;
     }
 
-    append_logf("KBO: named league ptr scan missed id=%u best_score=%d name=%s",
+    kbo_log_runtimef("KBO: named league ptr scan missed id=%u best_score=%d name=%s",
         league_id, score, name[0] != '\0' ? name : "(none)");
     kbo_remember_league_ptr_miss(league_id, now_ms);
     return 0;
@@ -126,19 +126,19 @@ void kbo_hub_read_league_name(uintptr_t league_ptr, char* out, size_t out_size)
 
     char name[96] = {0};
     if (!copy_ootp_string_object_text((uint8_t*)league_ptr, OOTP27_KBO_LEAGUE_NAME_STRING_OFFSET, name, sizeof(name))) {
-        append_logf("KBO: league name read failed ptr=%p offset=0x%x",
+        kbo_log_runtimef("KBO: league name read failed ptr=%p offset=0x%x",
             (void*)league_ptr, OOTP27_KBO_LEAGUE_NAME_STRING_OFFSET);
         return;
     }
 
     int score = kbo_hub_league_name_likeness_score(name);
     if (score < 30) {
-        append_logf("KBO: league name rejected ptr=%p score=%d name=%s",
+        kbo_log_runtimef("KBO: league name rejected ptr=%p score=%d name=%s",
             (void*)league_ptr, score, name);
         return;
     }
 
-    append_logf("KBO: league name read ptr=%p offset=0x%x score=%d name=%s",
+    kbo_log_runtimef("KBO: league name read ptr=%p offset=0x%x score=%d name=%s",
         (void*)league_ptr, OOTP27_KBO_LEAGUE_NAME_STRING_OFFSET, score, name);
     snprintf(out, out_size, "%s", name);
 }

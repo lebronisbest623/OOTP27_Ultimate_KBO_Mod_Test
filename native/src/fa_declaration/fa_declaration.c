@@ -113,7 +113,7 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         if (candidates != NULL) { HeapFree(GetProcessHeap(), 0, candidates); }
         if (market_rows != NULL) { HeapFree(GetProcessHeap(), 0, market_rows); }
         if (salary_grades != NULL) { HeapFree(GetProcessHeap(), 0, salary_grades); }
-        append_log_line("KBO FA declaration event skipped reason=allocation_failed");
+        kbo_log_runtime_line("KBO FA declaration event skipped reason=allocation_failed");
                 do {
             KboLogFields audit_fields;
             kbo_log_fields_init(&audit_fields);
@@ -176,7 +176,7 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         HeapFree(GetProcessHeap(), 0, candidates);
         HeapFree(GetProcessHeap(), 0, market_rows);
         HeapFree(GetProcessHeap(), 0, salary_grades);
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA declaration event deferred source=%s date=%u reason=no_player_vector",
             source != NULL ? source : "",
             event_yyyymmdd);
@@ -277,7 +277,7 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         if (!candidates[i].declared) {
             continue;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA declaration decided player=%u name=%s team=%u case=%s grade=%s score=%d threshold=%d reason=%s",
             candidates[i].player_id,
             candidates[i].player_name,
@@ -295,7 +295,7 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         if (candidates[i].declared) {
             continue;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA declaration deferred player=%u name=%s team=%u case=%s grade=%s score=%d threshold=%d reason=%s",
             candidates[i].player_id,
             candidates[i].player_name,
@@ -308,7 +308,7 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         deferred_logs++;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA declaration event source=%s date=%u season=%u league=%u market_rows=%d market_candidates=%d active_scanned=%d active_candidates=%d candidates=%d declared=%d deferred=%d retry=%d no_market=%d grades=%d retained_repaired=%d csv=%s",
         source != NULL ? source : "",
         event_yyyymmdd,

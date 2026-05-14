@@ -33,7 +33,7 @@ __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     uint32_t site_rva)
 {
     if (league_ptr == 0 || !memory_range_readable((void*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET), sizeof(uint8_t))) {
-        append_logf("KBO season phase write probe site=0x%x league=%p value=%u reason=bad_league", site_rva, (void*)league_ptr, value);
+        kbo_log_runtimef("KBO season phase write probe site=0x%x league=%p value=%u reason=bad_league", site_rva, (void*)league_ptr, value);
         return;
     }
 
@@ -64,7 +64,7 @@ __declspec(noinline) void ootp_kbo_season_phase_write_probe(
 
 #define KBO_SEASON_PHASE_PROBE_OFFSET(index) (OOTP27_SEASON_PHASE_PROBE_BASE_OFFSET + ((uint32_t)(index) * sizeof(uint32_t)))
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO season phase write site=0x%x league=%p ids=%u/%u date=%u league_year=%u old=%u new=%u label=%s",
         site_rva,
         (void*)league_ptr,
@@ -83,7 +83,7 @@ static void kbo_log_season_phase_league_candidates(uint32_t league_id)
 
     uintptr_t global = get_ootp_global_database();
     if (global == 0) {
-        append_logf("KBO season phase candidates unavailable league_id=%u reason=no_global", league_id);
+        kbo_log_runtimef("KBO season phase candidates unavailable league_id=%u reason=no_global", league_id);
         return;
     }
 
@@ -111,7 +111,7 @@ static void kbo_log_season_phase_league_candidates(uint32_t league_id)
             continue;
         }
 
-        append_logf(
+        kbo_log_runtimef(
             "KBO season phase candidate vector league_id=%u vec_off=0x%x vector=%p count=%d",
             league_id,
             vec_off,
@@ -143,7 +143,7 @@ static void kbo_log_season_phase_league_candidates(uint32_t league_id)
                 phase_year = *(uint32_t*)(candidate + OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET);
             }
 
-            append_logf(
+            kbo_log_runtimef(
                 "KBO season phase candidate row vec_off=0x%x index=%d ptr=%p ids={4cc0:%u,4cc4:%u,4cc8:%u,4ccc:%u} league_year=%u phase=%u phase_year=%u",
                 vec_off,
                 j,
@@ -160,7 +160,7 @@ static void kbo_log_season_phase_league_candidates(uint32_t league_id)
     }
 
     if (logged_rows == 0) {
-        append_logf("KBO season phase candidates empty league_id=%u", league_id);
+        kbo_log_runtimef("KBO season phase candidates empty league_id=%u", league_id);
     }
 }
 
@@ -184,7 +184,7 @@ static void kbo_log_season_phase_probe_window(uintptr_t league_ptr, uint32_t dat
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO season phase probe league=%p date=%u "
         "44d0=%u/%u/%u 44d4=%u/%u/%u 44d8=%u/%u/%u 44dc=%u/%u/%u "
         "44e0=%u/%u/%u 44e4=%u/%u/%u 44e8=%u/%u/%u 44ec=%u/%u/%u "
@@ -240,7 +240,7 @@ static void kbo_log_season_phase_changed_words(uintptr_t league_ptr, uint32_t da
         last_ptr = league_ptr;
         last_date_key = date_key;
         has_snapshot = 1;
-        append_logf("KBO season phase diff baseline league=%p date=%u range=0x%x-0x%x", (void*)league_ptr, date_key, BASE_OFFSET, END_OFFSET);
+        kbo_log_runtimef("KBO season phase diff baseline league=%p date=%u range=0x%x-0x%x", (void*)league_ptr, date_key, BASE_OFFSET, END_OFFSET);
         return;
     }
     if (date_key == last_date_key) {
@@ -281,7 +281,7 @@ static void kbo_log_season_phase_changed_words(uintptr_t league_ptr, uint32_t da
     }
 
     if (count > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO season phase diff league=%p date=%u prev_date=%u count=%d%s changes=%s",
             (void*)league_ptr,
             date_key,
@@ -304,7 +304,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
     uint8_t last_phase = 0xffu;
     uintptr_t last_league_ptr = 0;
 
-    append_log_line("KBO season phase monitor started");
+    kbo_log_runtime_line("KBO season phase monitor started");
 
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->season_phase_monitor_sleep_ms)) {
@@ -320,7 +320,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
         uint32_t day = 0;
         if (!kbo_current_date_is_valid(&year, &month, &day)) {
             if (last_date != 0u) {
-                append_log_line("KBO season phase monitor waiting reason=current_date_unavailable");
+                kbo_log_runtime_line("KBO season phase monitor waiting reason=current_date_unavailable");
             }
             last_league_ptr = 0;
             last_date = 0u;
@@ -334,7 +334,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
                 || !memory_range_readable((void*)league_ptr, OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET + sizeof(uint32_t))) {
             kbo_log_season_phase_league_candidates(league_id);
             if (last_league_ptr != 0 || last_league_id != league_id) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO season phase monitor waiting league_id=%u reason=league_unavailable",
                     league_id);
             }
@@ -355,7 +355,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
                 || league_year != last_league_year
                 || phase != last_phase
                 || phase_year != last_phase_year) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO season phase league=%p league_id=%u date=%04u-%02u-%02u league_year=%u phase=%u label=%s phase_year=%u",
                 (void*)league_ptr,
                 league_id,
@@ -375,7 +375,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             last_phase_year = phase_year;
         }
     }
-    append_log_line("KBO season phase monitor stopped");
+    kbo_log_runtime_line("KBO season phase monitor stopped");
     InterlockedExchange(&g_kbo_season_phase_monitor_started, 0);
 
     return 0;

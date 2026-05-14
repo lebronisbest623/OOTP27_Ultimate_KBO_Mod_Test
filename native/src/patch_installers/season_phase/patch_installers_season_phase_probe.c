@@ -20,7 +20,7 @@ static int install_kbo_season_phase_opening_day_snapshot_hook_patch(
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_logf("%s skipped reason=no_exe", label);
+        kbo_log_runtimef("%s skipped reason=no_exe", label);
         return 0;
     }
 
@@ -29,12 +29,12 @@ static int install_kbo_season_phase_opening_day_snapshot_hook_patch(
         return 0;
     }
     if (!memory_range_readable(target, expected_size)) {
-        append_logf("%s skipped target=%p reason=unreadable", label, target);
+        kbo_log_runtimef("%s skipped target=%p reason=unreadable", label, target);
         return 0;
     }
 
     if (target[0] == 0xE8) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return 1;
     }
 
@@ -45,13 +45,13 @@ static int install_kbo_season_phase_opening_day_snapshot_hook_patch(
 
     uint8_t* stub = build_kbo_season_phase_opening_day_event_stub(target, base_reg, site_rva, value);
     if (stub == NULL) {
-        append_logf("%s skipped target=%p reason=stub_alloc_failed", label, target);
+        kbo_log_runtimef("%s skipped target=%p reason=stub_alloc_failed", label, target);
         return 0;
     }
 
     intptr_t rel = (intptr_t)stub - ((intptr_t)target + 5);
     if (rel < INT32_MIN || rel > INT32_MAX) {
-        append_logf("%s skipped target=%p stub=%p reason=stub_too_far", label, target, stub);
+        kbo_log_runtimef("%s skipped target=%p stub=%p reason=stub_too_far", label, target, stub);
         return 0;
     }
 
@@ -64,7 +64,7 @@ static int install_kbo_season_phase_opening_day_snapshot_hook_patch(
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, expected_size, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("%s VirtualProtect failed target=%p error=%lu", label, target, GetLastError());
+        kbo_log_runtimef("%s VirtualProtect failed target=%p error=%lu", label, target, GetLastError());
         return 0;
     }
 
@@ -74,7 +74,7 @@ static int install_kbo_season_phase_opening_day_snapshot_hook_patch(
     DWORD ignored = 0;
     VirtualProtect(target, expected_size, old_protect, &ignored);
 
-    append_logf("%s installed target=%p stub=%p rva=0x%x base=%u value=%u", label, target, stub, site_rva, (unsigned)base_reg, (unsigned)value);
+    kbo_log_runtimef("%s installed target=%p stub=%p rva=0x%x base=%u value=%u", label, target, stub, site_rva, (unsigned)base_reg, (unsigned)value);
     return 1;
 }
 

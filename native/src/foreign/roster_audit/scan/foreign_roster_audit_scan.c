@@ -13,7 +13,7 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
         static volatile LONG no_vector_log_count = 0;
         LONG slot = InterlockedIncrement(&no_vector_log_count);
         if (slot <= 5) {
-            append_log_line("foreign roster audit: no player vector");
+            kbo_log_runtime_line("foreign roster audit: no player vector");
             kbo_rule_audit_emit_fields(
                 "foreign_roster.audit",
                 "skip",
@@ -33,7 +33,7 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
         g_kbo_foreign_roster_audit_generation = 0u;
         memset(g_kbo_foreign_roster_audit, 0, sizeof(g_kbo_foreign_roster_audit));
         snprintf(g_kbo_foreign_roster_audit_save_path, sizeof(g_kbo_foreign_roster_audit_save_path), "%s", save_path);
-        append_logf("foreign roster audit: baseline reset save=%s source=%s", save_path, source != NULL ? source : "");
+        kbo_log_runtimef("foreign roster audit: baseline reset save=%s source=%s", save_path, source != NULL ? source : "");
     }
 
     g_kbo_foreign_roster_audit_generation++;
@@ -120,7 +120,7 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
             } else {
                 static volatile LONG full_log_count = 0;
                 if (InterlockedIncrement(&full_log_count) <= 5) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign roster audit: state table full max=%d player=%u",
                         KBO_FOREIGN_ROSTER_AUDIT_MAX,
                         current.player_id);
@@ -145,7 +145,7 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
             current_cleared++;
             LONG slot = InterlockedIncrement(&release_detail_log_count);
             if (slot <= 240) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign roster audit: %s player=%u nation=%u current=%u->%u active=%u->%u original=%u->%u restricted=%u->%u secondary=%u->%u dfa=%u->%u loan=%u->%u injury=%u->%u score=%d->%d date=%s source=%s",
                     change_type,
                     current.player_id,
@@ -189,7 +189,7 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
     }
 
     if (baseline_scan || changed > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign roster audit: source=%s date=%s scanned=%d foreign=%d rostered=%d active_retained=%d free=%d changed=%d new=%d current_cleared=%d active_cleared=%d snapshot=%d save=%s",
             source != NULL ? source : "",
             date,

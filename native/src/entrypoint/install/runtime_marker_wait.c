@@ -18,7 +18,7 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
     InterlockedExchange64(
         &g_kbo_runtime_marker_guard_started_filetime,
         kbo_filetime_to_i64(guard_started_time));
-    append_log_line("KBO full runtime marker guard thread started");
+    kbo_log_runtime_line("KBO full runtime marker guard thread started");
 
     uint32_t last_date_serial = 0u;
     int stable_date_ticks = 0;
@@ -34,7 +34,7 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
             if (!early_amateur_team_add_guard_installed
                     && !read_kbo_localappdata_flag_file("disable_amateur_assignment_reroute.txt")
                     && !read_kbo_localappdata_flag_file("disable_kbo_military_team_add_guard_patch.txt")) {
-                append_log_line("KBO early amateur team-add guard installing after roster marker");
+                kbo_log_runtime_line("KBO early amateur team-add guard installing after roster marker");
                 early_amateur_team_add_guard_installed = install_kbo_military_team_add_guard_patch();
             }
 
@@ -55,7 +55,7 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
             }
 
             if (log_detail || stable_date_ticks == 1) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO full runtime marker guard waiting source=runtime_marker_wait reason=current_date_not_stable date_serial=%u stable_ticks=%d",
                     today_serial,
                     stable_date_ticks);
@@ -67,6 +67,6 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
         Sleep((DWORD)tuning->runtime_marker_wait_sleep_ms);
     }
 
-    append_log_line("KBO full runtime marker guard gave up: required roster marker was not found");
+    kbo_log_runtime_line("KBO full runtime marker guard gave up: required roster marker was not found");
     return 0;
 }

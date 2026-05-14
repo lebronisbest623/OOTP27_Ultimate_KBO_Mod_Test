@@ -4,7 +4,7 @@ int install_kbo_salary_arbitration_no_withdraw_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO salary arbitration no-withdraw patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO salary arbitration no-withdraw patch");
         return 0;
     }
 
@@ -200,10 +200,10 @@ int install_kbo_salary_arbitration_no_withdraw_patch(void)
                 sizeof(expected_final_zero_tender_gate),
                 final_zero_stub);
         } else {
-            append_log_line("failed to allocate KBO salary arbitration final zero-offer tender floor stub");
+            kbo_log_runtime_line("failed to allocate KBO salary arbitration final zero-offer tender floor stub");
         }
     } else {
-        append_log_line("KBO salary arbitration AI final zero-offer tender floor target unresolved");
+        kbo_log_runtime_line("KBO salary arbitration AI final zero-offer tender floor target unresolved");
     }
 
     uint8_t* ai_offer_target_681012 = resolve_patch_target_by_rva_or_context_pattern(
@@ -227,10 +227,10 @@ int install_kbo_salary_arbitration_no_withdraw_patch(void)
             sizeof(expected_ai_offer_write_681012),
             ai_offer_stub_681012);
         } else {
-            append_log_line("failed to allocate KBO salary arbitration AI offer floor 681012 stub");
+            kbo_log_runtime_line("failed to allocate KBO salary arbitration AI offer floor 681012 stub");
         }
     } else {
-        append_log_line("KBO salary arbitration AI offer floor 681012 target unresolved");
+        kbo_log_runtime_line("KBO salary arbitration AI offer floor 681012 target unresolved");
     }
 
     uint8_t* zero_offer_target_682089 = resolve_patch_target_by_rva_or_context_pattern(
@@ -254,10 +254,10 @@ int install_kbo_salary_arbitration_no_withdraw_patch(void)
             sizeof(expected_zero_offer_check_682089),
             zero_offer_check_stub_682089);
         } else {
-            append_log_line("failed to allocate KBO salary arbitration AI zero-offer final check 682089 stub");
+            kbo_log_runtime_line("failed to allocate KBO salary arbitration AI zero-offer final check 682089 stub");
         }
     } else {
-        append_log_line("KBO salary arbitration AI zero-offer final check 682089 target unresolved");
+        kbo_log_runtime_line("KBO salary arbitration AI zero-offer final check 682089 target unresolved");
     }
 
     uint8_t* high_limit_skip_target = resolve_patch_target_by_rva_or_masked_context_pattern(
@@ -301,10 +301,10 @@ int install_kbo_salary_arbitration_no_withdraw_patch(void)
                 sizeof(expected_high_limit_non_tender_gate_6820af),
                 high_limit_non_tender_stub_6820af);
         } else {
-            append_log_line("failed to allocate KBO salary arbitration high-limit non-tender gate 6820af stub");
+            kbo_log_runtime_line("failed to allocate KBO salary arbitration high-limit non-tender gate 6820af stub");
         }
     } else {
-        append_log_line("KBO salary arbitration high-limit non-tender gate 6820af target unresolved");
+        kbo_log_runtime_line("KBO salary arbitration high-limit non-tender gate 6820af target unresolved");
     }
 
     uint8_t* ai_offer_target_6827cd = resolve_patch_target_by_rva_or_masked_context_pattern(
@@ -320,7 +320,7 @@ int install_kbo_salary_arbitration_no_withdraw_patch(void)
     if (ai_offer_target_6827cd != NULL) {
         void* ai_offer_superstar_source_6827cd = resolve_rip_relative_lea_target(ai_offer_target_6827cd + 6);
         if (ai_offer_superstar_source_6827cd == NULL) {
-            append_log_line("failed to resolve KBO salary arbitration AI offer floor 6827cd superstar source");
+            kbo_log_runtime_line("failed to resolve KBO salary arbitration AI offer floor 6827cd superstar source");
         } else {
             uint8_t* ai_offer_stub_6827cd = build_kbo_salary_arbitration_ai_offer_write_6827cd_stub(
                 ai_offer_superstar_source_6827cd,
@@ -333,16 +333,16 @@ int install_kbo_salary_arbitration_no_withdraw_patch(void)
                     sizeof(expected_ai_offer_write_6827cd),
                     ai_offer_stub_6827cd);
             } else {
-                append_log_line("failed to allocate KBO salary arbitration AI offer floor 6827cd stub");
+                kbo_log_runtime_line("failed to allocate KBO salary arbitration AI offer floor 6827cd stub");
             }
         }
     } else {
-        append_log_line("KBO salary arbitration AI offer floor 6827cd target unresolved");
+        kbo_log_runtime_line("KBO salary arbitration AI offer floor 6827cd target unresolved");
     }
 
     ok |= install_kbo_salary_arbitration_non_tender_function_patch(exe);
 
-    append_logf("KBO salary arbitration no-withdraw/zero-offer patch complete installed_any=%d", ok ? 1 : 0);
+    kbo_log_runtimef("KBO salary arbitration no-withdraw/zero-offer patch complete installed_any=%d", ok ? 1 : 0);
     return ok;
 }
 

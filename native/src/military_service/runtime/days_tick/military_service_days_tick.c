@@ -171,7 +171,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
             static volatile LONG discovered_register_log_count = 0;
             LONG discovered_slot = InterlockedIncrement(&discovered_register_log_count);
             if (discovered_slot <= 160) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO military discovered active loan registered source=%s player=%u service_team=%u original_team=%u original_league=%u days_left=%d military_active=%u",
                     source != NULL ? source : "",
                     player_id,
@@ -268,7 +268,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
             || deferred_returns > 0
             || deferred_invalid_releases > 0
             || log_index <= 20) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military service day tick source=%s date_serial=%u"
             " seeded=%d tracked=%d newly_registered=%d monitored=%d managed=%d returned=%d invalid_released=%d"
             " return_preview_news=%d deferred_returns=%d deferred_invalid=%d count=%d vector_off=0x%x",
@@ -289,7 +289,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
 DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("KBO military service day tick thread started");
+    kbo_log_runtime_line("KBO military service day tick thread started");
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->military_days_tick_sleep_ms)) {
             break;
@@ -297,7 +297,7 @@ DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
         kbo_tick_military_service_days("military_days_tick", NULL);
     }
     InterlockedExchange(&g_military_days_tick_started, 0);
-    append_log_line("KBO military service day tick thread stopped");
+    kbo_log_runtime_line("KBO military service day tick thread stopped");
     return 0;
 }
 

@@ -72,7 +72,7 @@ int kbo_load_military_service_seed_file_locked(const char* path)
     }
     kbo_csv_reader_close(reader);
     if (loaded > 0) {
-        append_logf("KBO military service seed loaded=%d path=%s", loaded, path);
+        kbo_log_runtimef("KBO military service seed loaded=%d path=%s", loaded, path);
     }
     return loaded;
 }
@@ -95,7 +95,7 @@ int kbo_persist_military_service_resolved_cache_locked(void)
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO military service resolved cache persist failed path=%s gle=%lu", path, (unsigned long)GetLastError());
+        kbo_log_runtimef("KBO military service resolved cache persist failed path=%s gle=%lu", path, (unsigned long)GetLastError());
         return 0;
     }
     DWORD written = 0;
@@ -125,7 +125,7 @@ int kbo_persist_military_service_resolved_cache_locked(void)
         }
     }
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("KBO military service resolved cache: atomic commit failed path=%s", path);
+        kbo_log_runtimef("KBO military service resolved cache: atomic commit failed path=%s", path);
         return 0;
     }
     return 1;
@@ -186,13 +186,13 @@ uint32_t kbo_resolve_military_service_seed_key_from_players_dat(const char* key)
 
     char players_dat_path[MAX_PATH] = {0};
     if (!kbo_get_current_players_dat_path_for_military_seed(players_dat_path, sizeof(players_dat_path))) {
-        append_logf("KBO military service seed unresolved key=%s reason=players.dat missing or save not written", key);
+        kbo_log_runtimef("KBO military service seed unresolved key=%s reason=players.dat missing or save not written", key);
         return 0u;
     }
 
     HANDLE file = CreateFileA(players_dat_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO military service seed unresolved key=%s reason=players.dat open failed gle=%lu", key, (unsigned long)GetLastError());
+        kbo_log_runtimef("KBO military service seed unresolved key=%s reason=players.dat open failed gle=%lu", key, (unsigned long)GetLastError());
         return 0u;
     }
 
@@ -200,7 +200,7 @@ uint32_t kbo_resolve_military_service_seed_key_from_players_dat(const char* key)
     file_size.QuadPart = 0;
     if (!GetFileSizeEx(file, &file_size) || file_size.QuadPart <= 0 || file_size.QuadPart > 512ll * 1024ll * 1024ll) {
         CloseHandle(file);
-        append_logf("KBO military service seed unresolved key=%s reason=players.dat size unsupported", key);
+        kbo_log_runtimef("KBO military service seed unresolved key=%s reason=players.dat size unsupported", key);
         return 0u;
     }
 
@@ -215,7 +215,7 @@ uint32_t kbo_resolve_military_service_seed_key_from_players_dat(const char* key)
     CloseHandle(file);
     if (!read_ok) {
         HeapFree(GetProcessHeap(), 0, raw);
-        append_logf("KBO military service seed unresolved key=%s reason=players.dat read failed", key);
+        kbo_log_runtimef("KBO military service seed unresolved key=%s reason=players.dat read failed", key);
         return 0u;
     }
 
@@ -244,13 +244,13 @@ uint32_t kbo_resolve_military_service_seed_key_from_players_dat(const char* key)
 
     HeapFree(GetProcessHeap(), 0, raw);
     if (ambiguous) {
-        append_logf("KBO military service seed unresolved key=%s reason=players.dat ambiguous", key);
+        kbo_log_runtimef("KBO military service seed unresolved key=%s reason=players.dat ambiguous", key);
         return 0u;
     }
     if (matched_player_id != 0u) {
-        append_logf("KBO military service seed resolved via players.dat key=%s player=%u", key, matched_player_id);
+        kbo_log_runtimef("KBO military service seed resolved via players.dat key=%s player=%u", key, matched_player_id);
     } else {
-        append_logf("KBO military service seed unresolved key=%s reason=players.dat no matching player record header", key);
+        kbo_log_runtimef("KBO military service seed unresolved key=%s reason=players.dat no matching player record header", key);
     }
     return matched_player_id;
 }

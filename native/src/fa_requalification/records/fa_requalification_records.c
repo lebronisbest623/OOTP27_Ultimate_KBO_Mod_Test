@@ -51,7 +51,7 @@ void kbo_ensure_fa_requalification_template(void)
     DWORD written = 0;
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
     CloseHandle(file);
-    append_logf("KBO FA requalification template created path=%s", path);
+    kbo_log_runtimef("KBO FA requalification template created path=%s", path);
 }
 
 int kbo_load_fa_requalification_records(KboFaRequalificationRecord* records, int max_records)
@@ -133,7 +133,7 @@ int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* recor
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA requalification write failed path=%s err=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO FA requalification write failed path=%s err=%lu", path, GetLastError());
         return 0;
     }
 
@@ -163,7 +163,7 @@ int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* recor
     }
 
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("KBO FA requalification write: atomic commit failed path=%s", path);
+        kbo_log_runtimef("KBO FA requalification write: atomic commit failed path=%s", path);
         return 0;
     }
     return 1;
@@ -193,7 +193,7 @@ int kbo_record_fa_requalification_signing_with_grade(
 
     if (found >= 0) {
         if (records[found].original_team_id == team_id && records[found].last_fa_year == signing_year) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO FA requalification signing already recorded source=%s player=%u team=%u signing_year=%u fa_count=%u",
                 source != NULL ? source : "",
                 player_id,
@@ -212,7 +212,7 @@ int kbo_record_fa_requalification_signing_with_grade(
         snprintf(records[found].last_fa_grade, sizeof(records[found].last_fa_grade), "%s", grade != NULL && grade[0] != '\0' ? grade : "UNKNOWN");
     } else {
         if (count >= KBO_FA_REQUALIFICATION_MAX) {
-            append_logf("KBO FA requalification signing record dropped source=%s player=%u team=%u reason=max_records", source != NULL ? source : "", player_id, team_id);
+            kbo_log_runtimef("KBO FA requalification signing record dropped source=%s player=%u team=%u reason=max_records", source != NULL ? source : "", player_id, team_id);
             kbo_unlock_fa_requalification_records();
             return 0;
         }
@@ -225,7 +225,7 @@ int kbo_record_fa_requalification_signing_with_grade(
     }
 
     int ok = kbo_write_fa_requalification_records(records, count);
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA requalification signing recorded source=%s player=%u team=%u signing_year=%u eligible_year=%u records=%d ok=%d",
         source != NULL ? source : "",
         player_id,

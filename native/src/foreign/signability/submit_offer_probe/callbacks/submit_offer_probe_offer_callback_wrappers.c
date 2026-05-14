@@ -53,7 +53,7 @@ static int kbo_no_minor_force_contract_offer_major_terms(
         static LONG force_log_count = 0;
         LONG slot = InterlockedIncrement(&force_log_count);
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor offer terms forced: source=%s offer=%p salary=%d option_salary=%d major_flag=%u floor=%d",
                 source,
                 (void*)offer_ptr,
@@ -98,7 +98,7 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
     static LONG callback_log_count = 0;
     LONG slot = InterlockedIncrement(&callback_log_count);
     if (slot <= 400 && callback_id >= 0xf60u && callback_id <= 0xfa0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO no-minor offer callback: screen=%p sender=%p id=0x%llx value=%p player=%u selected=%d contract_ctl=%p major_option_ctl=%p submit_ctl=%p",
             (void*)screen_ptr,
             (void*)sender_ptr,
@@ -124,7 +124,7 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
         }
         LONG after_slot = InterlockedIncrement(&callback_log_count);
         if (after_slot <= 400 && callback_id >= 0xf60u && callback_id <= 0xfa0u) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor offer callback after: screen=%p id=0x%llx result=%d selected=%d",
                 (void*)screen_ptr,
                 (unsigned long long)callback_id,
@@ -161,7 +161,7 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
     static LONG contract_callback_log_count = 0;
     LONG slot = InterlockedIncrement(&contract_callback_log_count);
     if (slot <= 600) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO no-minor contract callback: offer=%p sender=%p id=0x%llx value=%p player=%d salary=%d option_salary=%d major_flag=%u",
             (void*)offer_ptr,
             (void*)sender_ptr,
@@ -196,7 +196,7 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
 
         LONG after_slot = InterlockedIncrement(&contract_callback_log_count);
         if (after_slot <= 600) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor contract callback after: offer=%p id=0x%llx result=%d salary=%d option_salary=%d major_flag=%u final_salary=%d final_option_salary=%d final_major_flag=%u floor=%d forced=%d",
                 (void*)offer_ptr,
                 (unsigned long long)callback_id,

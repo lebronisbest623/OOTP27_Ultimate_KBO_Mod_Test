@@ -29,7 +29,7 @@ int kbo_run_custom_event_by_kind(
         if (title != NULL && title[0] != '\0') {
             kbo_persist_custom_event_processed_marker(event_yyyymmdd, title, source);
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event runner skipped completed source=%s kind=%s date=%u league_id=%u",
             source != NULL ? source : "",
             kbo_custom_event_kind_key(kind),

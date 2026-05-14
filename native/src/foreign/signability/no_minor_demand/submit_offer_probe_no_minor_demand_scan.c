@@ -24,7 +24,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         static LONG no_date_log_count = 0;
         LONG slot = InterlockedIncrement(&no_date_log_count);
         if (slot <= 5) {
-            append_logf("KBO no-minor demand floor scan skipped source=%s reason=current_date_unavailable", source);
+            kbo_log_runtimef("KBO no-minor demand floor scan skipped source=%s reason=current_date_unavailable", source);
         }
         KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.no_date");
         return 0;
@@ -42,7 +42,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         static LONG no_floor_log_count = 0;
         LONG slot = InterlockedIncrement(&no_floor_log_count);
         if (slot <= 20) {
-            append_logf("KBO no-minor demand floor scan skipped source=%s reason=no_floor", source);
+            kbo_log_runtimef("KBO no-minor demand floor scan skipped source=%s reason=no_floor", source);
         }
         KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.no_floor");
         return 0;
@@ -55,7 +55,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         static LONG no_league_log_count = 0;
         LONG slot = InterlockedIncrement(&no_league_log_count);
         if (slot <= 20) {
-            append_logf("KBO no-minor demand floor scan skipped source=%s reason=no_league", source);
+            kbo_log_runtimef("KBO no-minor demand floor scan skipped source=%s reason=no_league", source);
         }
         KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.no_league");
         return 0;
@@ -73,7 +73,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         static LONG no_vector_log_count = 0;
         LONG slot = InterlockedIncrement(&no_vector_log_count);
         if (slot <= 20) {
-            append_logf("KBO no-minor demand floor scan skipped source=%s reason=no_player_vector", source);
+            kbo_log_runtimef("KBO no-minor demand floor scan skipped source=%s reason=no_player_vector", source);
         }
         KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.no_player_vector");
         return 0;
@@ -100,7 +100,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
         static LONG snapshot_fail_log_count = 0;
         LONG slot = InterlockedIncrement(&snapshot_fail_log_count);
         if (slot <= 20 || (slot % 100) == 0) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor demand floor scan skipped source=%s reason=player_vector_snapshot_failed detail=%s vector=%p count=%d vector_off=0x%x log_slot=%ld",
                 source,
                 snapshot_failure_reason != NULL ? snapshot_failure_reason : "unknown",
@@ -187,7 +187,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
                     player_changed = 1;
                     LONG foreign_detail_slot = InterlockedIncrement(&foreign_detail_log_count);
                     if (foreign_detail_slot <= kbo_foreign_player_policy()->no_minor_scan_max_detail_logs) {
-                        append_logf(
+                        kbo_log_runtimef(
                             "KBO foreign FA demand remapped: source=%s player=%u asian_quota=%d old_demand=%d mapped_demand=%d original_superstar=%d foreign_superstar=%d",
                             source,
                             player_id,
@@ -206,7 +206,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             changed++;
             LONG detail_slot = InterlockedIncrement(&detail_log_count);
             if (detail_slot <= kbo_foreign_player_policy()->no_minor_scan_max_detail_logs) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO no-minor demand floor prescan applied: source=%s player=%u old_demand=%d floor=%d observed_contract_level=%u",
                     source,
                     player_id,
@@ -223,7 +223,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
     static LONG summary_log_count = 0;
     LONG summary_slot = changed > 0 ? InterlockedIncrement(&summary_log_count) : 0;
     if (changed > 0 && (summary_slot <= 20 || (summary_slot % 40) == 0)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO no-minor demand floor prescan complete: source=%s league=%u vector_off=0x%x scanned=%d teamless=%d changed=%d demand_fixed=%d retained_demand_fixed=%d foreign_demand_mapped=%d level_observed_nonmajor=%d floor=%d summary_slot=%ld",
             source,
             league_id,

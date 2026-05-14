@@ -65,7 +65,7 @@ int patch_kbo_no_minor_contract_write_site_by_pattern_ordinal(
     (void)exe;
     uint8_t* target = find_ootp_executable_pattern_nth(expected, size, desired_index, expected_hits);
     if (target == NULL) {
-        append_logf("%s ordinal pattern unresolved desired=%d expected_hits=%d", label, desired_index, expected_hits);
+        kbo_log_runtimef("%s ordinal pattern unresolved desired=%d expected_hits=%d", label, desired_index, expected_hits);
         return 0;
     }
     return patch_static_bytes(label, target, expected, patch, size);

@@ -49,7 +49,7 @@ int kbo_queue_military_draft_candidate(
         if (original_league_id != 0u) {
             candidate->original_league_id = original_league_id;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO military draft candidate refreshed source=%s player_id=%u year=%u original_team=%u original_league=%u selected=%u player=%p",
             source != NULL ? source : "",
             player_id,
@@ -74,7 +74,7 @@ int kbo_queue_military_draft_candidate(
     candidate->entry_year = entry_year;
     candidate->original_team_id = original_team_id;
     candidate->original_league_id = original_league_id;
-    append_logf(
+    kbo_log_runtimef(
         "KBO military draft candidate queued source=%s slot=%ld player_id=%u year=%u original_team=%u original_league=%u player=%p",
         source != NULL ? source : "",
         slot,

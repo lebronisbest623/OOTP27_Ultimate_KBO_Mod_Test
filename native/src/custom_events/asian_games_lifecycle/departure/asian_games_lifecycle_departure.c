@@ -83,7 +83,7 @@ int kbo_asian_games_depart_selected_players(uint32_t event_yyyymmdd, const char*
         roster_count = g_kbo_asian_games_roster_count;
     }
     if (roster_count <= 0 || roster_count > KBO_ASIAN_GAMES_ROSTER_SIZE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games departure skipped source=%s date=%u reason=no_roster count=%ld year=%u",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -110,7 +110,7 @@ int kbo_asian_games_depart_selected_players(uint32_t event_yyyymmdd, const char*
         uint8_t* player = kbo_find_player_by_id(entry->player_id, NULL, NULL);
         if (player == NULL || !kbo_player_pointer_plausible((uintptr_t)player)) {
             missing++;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games departure missing player_id=%u index=%ld",
                 entry->player_id,
                 i + 1);
@@ -122,7 +122,7 @@ int kbo_asian_games_depart_selected_players(uint32_t event_yyyymmdd, const char*
         uint8_t* team = find_kbo_team_by_numeric_id_any_league(current_team_id, 0);
         if (team == NULL) {
             no_team++;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games departure no team player_id=%u team=%u league=%u index=%ld",
                 entry->player_id,
                 current_team_id,
@@ -160,7 +160,7 @@ int kbo_asian_games_depart_selected_players(uint32_t event_yyyymmdd, const char*
         entry->departed = 1u;
         departed++;
 
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games departed #%ld player_id=%u team=%u league=%u role=%u bucket=%s days_left=%d removed=%d added_restricted=%d old_restricted=%u old_secondary=%u old_injury=%u old_days=%d",
             i + 1,
             entry->player_id,
@@ -177,7 +177,7 @@ int kbo_asian_games_depart_selected_players(uint32_t event_yyyymmdd, const char*
             (int)entry->old_injury_days_left);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games departure processed source=%s date=%u roster=%ld departed=%d missing=%d no_team=%d days_left=%d",
         source != NULL ? source : "",
         event_yyyymmdd,

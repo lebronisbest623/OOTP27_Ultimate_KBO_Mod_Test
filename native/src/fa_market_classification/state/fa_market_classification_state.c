@@ -87,7 +87,7 @@ KboFaMarketSqliteApi* kbo_fa_market_get_sqlite_api(void)
     g_kbo_fa_market_sqlite_api.attempted = 1;
     HMODULE module = LoadLibraryA("winsqlite3.dll");
     if (module == NULL) {
-        append_logf("FA market history sqlite unavailable reason=load_winsqlite3_failed gle=%lu", GetLastError());
+        kbo_log_runtimef("FA market history sqlite unavailable reason=load_winsqlite3_failed gle=%lu", GetLastError());
         return NULL;
     }
 
@@ -125,7 +125,7 @@ KboFaMarketSqliteApi* kbo_fa_market_get_sqlite_api(void)
         && g_kbo_fa_market_sqlite_api.column_text != NULL
         && g_kbo_fa_market_sqlite_api.errmsg != NULL;
     if (!g_kbo_fa_market_sqlite_api.available) {
-        append_log_line("FA market history sqlite unavailable reason=missing_winsqlite3_exports");
+        kbo_log_runtime_line("FA market history sqlite unavailable reason=missing_winsqlite3_exports");
         return NULL;
     }
     return &g_kbo_fa_market_sqlite_api;

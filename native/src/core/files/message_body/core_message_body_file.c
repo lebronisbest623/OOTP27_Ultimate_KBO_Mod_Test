@@ -43,7 +43,7 @@ int write_kbo_message_body_file(uint32_t message_id, const char* title, const ch
 
     char save_path[MAX_PATH] = {0};
     if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
-        append_logf("league news body file skipped source=%s title=%s reason=no_save_path", source != NULL ? source : "", title);
+        kbo_log_runtimef("league news body file skipped source=%s title=%s reason=no_save_path", source != NULL ? source : "", title);
         return 0;
     }
 
@@ -56,7 +56,7 @@ int write_kbo_message_body_file(uint32_t message_id, const char* title, const ch
 
     WCHAR wide_path[KBO_WIDE_PATH_CHARS] = {0};
     if (!kbo_utf8_to_wide_path(path, wide_path, KBO_WIDE_PATH_CHARS)) {
-        append_logf(
+        kbo_log_runtimef(
             "league news body file skipped source=%s title=%s id=%u reason=path_convert_failed path=%s",
             source != NULL ? source : "",
             title,
@@ -67,7 +67,7 @@ int write_kbo_message_body_file(uint32_t message_id, const char* title, const ch
 
     HANDLE file = CreateFileW(wide_path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "league news body file skipped source=%s title=%s id=%u reason=create_failed gle=%lu path=%s",
             source != NULL ? source : "",
             title,
@@ -92,7 +92,7 @@ int write_kbo_message_body_file(uint32_t message_id, const char* title, const ch
     kbo_free_ootp_internal_text(internal_title);
     kbo_free_ootp_internal_text(internal_body);
 
-    append_logf(
+    kbo_log_runtimef(
         "league news body file write source=%s title=%s id=%u ok=%u bytes=%lu encoding=%s path=%s",
         source != NULL ? source : "",
         title,

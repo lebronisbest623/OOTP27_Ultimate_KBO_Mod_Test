@@ -53,7 +53,7 @@ int kbo_fast_block_fa_candidate_before_original(
             static volatile LONG rights_fast_block_log_count = 0;
             LONG slot = InterlockedIncrement(&rights_fast_block_log_count);
             if (slot <= 40) {
-                append_logf(
+                kbo_log_runtimef(
                     "FA fast-block source=%s reason=foreign_reserve player=%u requester_team=%u holder_team=%u today=%u",
                     context != NULL ? context : "",
                     player_id,
@@ -61,7 +61,7 @@ int kbo_fast_block_fa_candidate_before_original(
                     holder_team_id,
                     today);
             } else if (slot == 41) {
-                append_log_line("FA fast-block foreign_reserve log suppressed after 40 entries");
+                kbo_log_runtime_line("FA fast-block foreign_reserve log suppressed after 40 entries");
             }
             KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.reserve_blocked");
             return 1;
@@ -87,7 +87,7 @@ int kbo_fast_block_fa_candidate_before_original(
             static volatile LONG custom_fast_block_log_count = 0;
             LONG slot = InterlockedIncrement(&custom_fast_block_log_count);
             if (slot <= 40) {
-                append_logf(
+                kbo_log_runtimef(
                     "FA fast-block source=%s reason=custom_foreign_policy player=%u requester_team=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u",
                     context != NULL ? context : "",
                     player_id,
@@ -99,7 +99,7 @@ int kbo_fast_block_fa_candidate_before_original(
                     injured_player_id,
                     today);
             } else if (slot == 41) {
-                append_log_line("FA fast-block custom_foreign_policy log suppressed after 40 entries");
+                kbo_log_runtime_line("FA fast-block custom_foreign_policy log suppressed after 40 entries");
             }
             KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.custom_blocked");
             return 1;

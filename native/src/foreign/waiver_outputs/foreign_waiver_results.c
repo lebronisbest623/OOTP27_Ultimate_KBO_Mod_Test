@@ -187,7 +187,7 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
                 source,
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "foreign reserve rights: result announcement skipped source=%s date=%u reason=body_template_unavailable",
             source != NULL ? source : "",
             event_yyyymmdd);
@@ -208,7 +208,7 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
                 source,
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "foreign reserve rights: result announcement skipped source=%s date=%u reason=title_template_unavailable",
             source != NULL ? source : "",
             event_yyyymmdd);
@@ -226,7 +226,7 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
     kbo_record_foreign_waiver_announcement(event_yyyymmdd);
     kbo_record_foreign_waiver_announcement_body(event_yyyymmdd, source, body);
     g_kbo_foreign_waiver_last_result_announcement = event_yyyymmdd;
-    append_logf(
+    kbo_log_runtimef(
         "foreign reserve rights: result announcement source=%s date=%u created=%d mode=file_recorded_native_news_disabled body=%s",
         source != NULL ? source : "",
         event_yyyymmdd,

@@ -108,7 +108,7 @@ void kbo_emit_fa_compensation_player_selected_news(
                 body,
                 sizeof(body),
                 "fa_compensation_player")) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA compensation news skipped selected=%u fa_player=%u reason=template_unavailable",
             selected->player_id,
             rec->player_id);
@@ -133,7 +133,7 @@ int kbo_transfer_fa_compensation_player_to_original_team(
     uint8_t* player = kbo_find_player_by_id(selected->player_id, &before_current_team, &before_current_league);
     uint8_t* destination_team = find_kbo_team_by_numeric_id_any_league(rec->original_team_id, 1);
     if (player == NULL || destination_team == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA compensation transfer failed reason=lookup fa_player=%u selected=%u player=%p team=%p original_team=%u source=%s",
             rec->player_id,
             selected->player_id,
@@ -146,7 +146,7 @@ int kbo_transfer_fa_compensation_player_to_original_team(
 
     uint32_t before_active_team = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
     if (before_current_team != rec->signing_team_id && before_active_team != rec->signing_team_id) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA compensation transfer skipped reason=player_not_on_signing_team fa_player=%u selected=%u current=%u active=%u signing_team=%u original_team=%u source=%s",
             rec->player_id,
             selected->player_id,
@@ -172,7 +172,7 @@ int kbo_transfer_fa_compensation_player_to_original_team(
     uint32_t after_current_team = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
     uint32_t after_active_team = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
     if (after_current_team != rec->original_team_id && after_active_team != rec->original_team_id) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA compensation transfer failed reason=post_verify fa_player=%u selected=%u current=%u->%u active=%u->%u original_team=%u source=%s",
             rec->player_id,
             selected->player_id,
@@ -205,7 +205,7 @@ int kbo_transfer_fa_compensation_player_to_original_team(
         insert_kbo_player_history_sql(selected->player_id, year, month, day, history_text, "fa_compensation_transfer");
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA compensation player transferred fa_player=%u selected=%u name=%s signing_team=%u original_team=%u current=%u->%u active=%u->%u pre=%d register=%d attach=%d source=%s",
         rec->player_id,
         selected->player_id,

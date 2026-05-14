@@ -70,7 +70,7 @@ int kbo_asian_games_replace_for_missing_org(
     g_kbo_asian_games_roster[best_roster_index] = candidates[best_candidate_index].entry;
     candidates[best_candidate_index].selected = 1u;
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games team-min replacement org=%u slot=%d old_player=%u old_team=%u new_player=%u new_team=%u loss=%d",
         missing_org_id,
         best_roster_index + 1,

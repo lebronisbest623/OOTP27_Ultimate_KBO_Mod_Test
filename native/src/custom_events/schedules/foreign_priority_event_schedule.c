@@ -68,7 +68,7 @@ static uint32_t kbo_recent_foreign_waiver_marker_anchor(uint32_t today_yyyymmdd,
         return 0u;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO custom event schedule fallback source=%s reason=recent_foreign_waiver_marker today=%u season_end=%u age_days=%u",
         source != NULL ? source : "",
         today_yyyymmdd,
@@ -102,7 +102,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
 
     if (league_id == 0u) {
         kbo_audit_foreign_priority_schedule("skip", "league_id_unavailable", source, &audit);
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule skipped source=%s reason=league_id_unavailable today=%u season_end=%u",
             source != NULL ? source : "",
             today,
@@ -111,7 +111,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
     }
     if (today == 0u || offseason_starts_yyyymmdd == 0u) {
         kbo_audit_foreign_priority_schedule("skip", "anchor_unavailable", source, &audit);
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule skipped source=%s reason=anchor_unavailable today=%u season_end=%u",
             source != NULL ? source : "",
             today,
@@ -121,7 +121,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
 
     if (offseason_starts_yyyymmdd > today) {
         kbo_audit_foreign_priority_schedule("skip", "offseason_starts_in_future", source, &audit);
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule skipped source=%s reason=offseason_starts_in_future season_end=%u today=%u",
             source != NULL ? source : "",
             offseason_starts_yyyymmdd,
@@ -148,7 +148,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
     audit.military_selection_date = military_selection_date;
     if (close_date == 0u || fa_declaration_date == 0u) {
         kbo_audit_foreign_priority_schedule("fail", "derived_date_invalid", source, &audit);
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule skipped source=%s reason=derived_date_invalid season_end=%u anchor=%u close=%u fa_declaration=%u",
             source != NULL ? source : "",
             offseason_starts_yyyymmdd,
@@ -167,7 +167,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_FA_DECLARATION, fa_declaration_title, sizeof(fa_declaration_title))
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_MILITARY_SELECTION, military_title, sizeof(military_title))) {
         kbo_audit_foreign_priority_schedule("fail", "title_unavailable", source, &audit);
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule skipped source=%s reason=title_unavailable season_end=%u",
             source != NULL ? source : "",
             offseason_starts_yyyymmdd);
@@ -199,7 +199,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
         static uint32_t last_logged_already_scheduled = 0u;
         if (last_logged_already_scheduled != offseason_starts_yyyymmdd) {
             last_logged_already_scheduled = offseason_starts_yyyymmdd;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event schedule skipped source=%s reason=already_scheduled_for_season_end today=%u season_end=%u",
                 source != NULL ? source : "",
                 today,
@@ -298,7 +298,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
     audit.created_military = created_military;
     audit.ready = open_exists && close_exists && fa_declaration_exists && military_exists;
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO custom event schedule source=%s season_end=%u anchor=%u open=%u close=%u fa_declaration=%u military=%u created_open=%d created_close=%d created_fa_declaration=%d created_military=%d ready=%d",
         source != NULL ? source : "",
         offseason_starts_yyyymmdd,
@@ -328,7 +328,7 @@ int kbo_schedule_foreign_priority_custom_events_for_anchor(
 {
     uint32_t today = 0u;
     if (!kbo_get_current_yyyymmdd(&today) || today == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule skipped source=%s reason=current_date_unavailable",
             source != NULL ? source : "");
         return -1;
@@ -353,7 +353,7 @@ int kbo_schedule_foreign_priority_custom_events(const char* source)
         league_id = kbo_resolve_kbo_league_id();
     }
     if (!kbo_get_current_yyyymmdd(&today) || today == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule skipped source=%s reason=current_date_unavailable",
             source != NULL ? source : "");
         return -1;
@@ -366,7 +366,7 @@ int kbo_schedule_foreign_priority_custom_events(const char* source)
     if (offseason_starts_yyyymmdd == 0u) {
         offseason_starts_yyyymmdd = kbo_recent_phase_transition_offseason_anchor(league_id, today);
         if (offseason_starts_yyyymmdd != 0u) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event schedule fallback source=%s reason=recent_phase_transition_anchor today=%u season_end=%u",
                 source != NULL ? source : "",
                 today,
@@ -380,7 +380,7 @@ int kbo_schedule_foreign_priority_custom_events(const char* source)
         static uint32_t last_logged_no_event_today = 0u;
         if (last_logged_no_event_today != today) {
             last_logged_no_event_today = today;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event schedule skipped source=%s reason=no_offseason_starts_event today=%u",
                 source != NULL ? source : "",
                 today);

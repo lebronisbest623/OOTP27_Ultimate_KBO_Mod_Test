@@ -113,7 +113,7 @@ int kbo_enforce_foreign_waiver_signability(
                                 default_team_id = *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET);
                             }
                         }
-                        append_logf(
+                        kbo_log_runtimef(
                             "foreign reserve signability: holder-visible generic request player=%u holder_team=%u original=%d adjusted=%d today=%u caller_rva=0x%llx current=%u active=%u original_team=%u default_team=%u league=%u score=%d threshold=%d",
                             player_id,
                             holder_team_id,
@@ -149,7 +149,7 @@ int kbo_enforce_foreign_waiver_signability(
                             default_team_id = *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET);
                         }
                     }
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign reserve signability: blocked generic request player=%u holder_team=%u original=%d forced=0 today=%u caller_rva=0x%llx current=%u active=%u original_team=%u default_team=%u league=%u score=%d threshold=%d",
                         player_id,
                         holder_team_id,
@@ -186,7 +186,7 @@ int kbo_enforce_foreign_waiver_signability(
                             default_team_id = *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET);
                         }
                     }
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign reserve signability: blocked display request player=%u requester_team=%u holder_team=%u original=%d today=%u caller_rva=0x%llx current=%u active=%u original_team=%u default_team=%u league=%u score=%d",
                         player_id,
                         team_id,
@@ -211,7 +211,7 @@ int kbo_enforce_foreign_waiver_signability(
                 LONG slot = InterlockedIncrement(&allow_log_count);
                 int adjusted = kbo_foreign_reserve_holder_signability(original_signability);
                 if (slot <= 80) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign reserve signability: holder adjusted player=%u team=%u original=%d adjusted=%d today=%u caller_rva=0x%llx score=%d",
                         player_id,
                         team_id,
@@ -227,7 +227,7 @@ int kbo_enforce_foreign_waiver_signability(
             static LONG block_log_count = 0;
             LONG slot = InterlockedIncrement(&block_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign reserve signability: blocked player=%u requester_team=%u holder_team=%u original=%d forced=0 today=%u caller_rva=0x%llx",
                     player_id,
                     team_id,
@@ -270,7 +270,7 @@ int kbo_enforce_foreign_waiver_signability(
         static volatile LONG custom_policy_signability_log_count = 0;
         LONG slot = InterlockedIncrement(&custom_policy_signability_log_count);
         if (slot <= 200) {
-            append_logf(
+            kbo_log_runtimef(
                 "custom foreign policy signability player=%u requester_team=%d original=%d adjusted=%d allowed=%d override=%d effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u caller_rva=0x%llx",
                 player_id,
                 requesting_team_id,
@@ -311,7 +311,7 @@ int kbo_enforce_foreign_waiver_signability(
             int adjusted = original_signability != 0 ? original_signability : 4;
             adjusted = kbo_no_minor_contract_signability_floor(adjusted);
             if (slot <= 120) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign injury replacement signability allowed player=%u requester_team=%d injured=%u slot=%s original=%d adjusted=%d effective=%u limit=%u today=%u caller_rva=0x%llx",
                     player_id,
                     requesting_team_id,

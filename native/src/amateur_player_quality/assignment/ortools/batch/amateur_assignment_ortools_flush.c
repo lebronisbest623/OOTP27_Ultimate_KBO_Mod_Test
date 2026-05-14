@@ -82,7 +82,7 @@ void kbo_amateur_apply_deferred_original_fallback(
                 "amateur_assignment",
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "amateur deferred team-add fallback applied league=%u applied=%d/%d skipped_cross_league=%d reason=%s",
             league_id,
             applied,
@@ -208,7 +208,7 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
     kbo_amateur_audit_ortools_batch(
         "optimize", "result_loaded", reason, league_id,
         optimizer_player_count, accumulated_teams, count, assigned, deferred_count, -1, 0u);
-    append_logf(
+    kbo_log_runtimef(
         "amateur OR-Tools league batch prepared league=%u teams=%d/%d players=%d assignments=%d deferred=%d reason=%s",
         league_id,
         accumulated_teams,
@@ -311,7 +311,7 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
             static volatile LONG failed_log_count = 0;
             LONG slot = InterlockedIncrement(&failed_log_count);
             if (slot <= 20 || kbo_amateur_verbose_log_enabled_cached()) {
-                append_logf(
+                kbo_log_runtimef(
                     "amateur deferred team-add failed player=%u source_team=%u target_team=%u target_found=%d",
                     item->player_id,
                     item->source_team_id,
@@ -339,7 +339,7 @@ int kbo_amateur_flush_league_batch_ortools(const char* reason, int force)
                 "amateur_assignment",
                 &audit_fields);
         } while (0);
-        append_logf(
+        kbo_log_runtimef(
             "amateur deferred team-add batch applied league=%u applied=%d/%d fallback_original=%d target_not_found=%d target_add_failed=%d source_retry_applied=%d still_failed=%d",
             league_id,
             applied,

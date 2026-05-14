@@ -187,7 +187,7 @@ void kbo_record_custom_foreign_pending_offer(uint32_t team_id, uint8_t* candidat
     static volatile LONG pending_offer_log_count = 0;
     LONG slot = InterlockedIncrement(&pending_offer_log_count);
     if (slot <= 200) {
-        append_logf(
+        kbo_log_runtimef(
             "custom foreign policy pending offer recorded team=%u player=%u asian=%u today=%u",
             team_id,
             player_id,

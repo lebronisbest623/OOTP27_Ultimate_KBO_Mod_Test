@@ -103,7 +103,7 @@ int kbo_no_minor_clamp_player_demand_salary(uintptr_t player_ptr, uintptr_t scre
         static LONG floor_miss_log_count = 0;
         LONG miss_slot = InterlockedIncrement(&floor_miss_log_count);
         if (miss_slot <= 40) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor demand floor skipped: source=%s screen=%p player=%u reason=no_floor",
                 source,
                 (void*)screen_ptr,
@@ -131,7 +131,7 @@ int kbo_no_minor_clamp_player_demand_salary(uintptr_t player_ptr, uintptr_t scre
         static LONG clamp_log_count = 0;
         LONG clamp_slot = InterlockedIncrement(&clamp_log_count);
         if (clamp_slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor demand floor applied: source=%s screen=%p player=%u old_demand=%d floor=%d observed_contract_level=%u",
                 source,
                 (void*)screen_ptr,

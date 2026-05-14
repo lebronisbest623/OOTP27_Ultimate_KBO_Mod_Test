@@ -321,7 +321,7 @@ void kbo_intl_established_fa_postscan_schedule(
     g_kbo_intl_established_fa_postscan.attempts = 0;
     InterlockedExchange(&g_kbo_intl_established_fa_postscan.pending, 1);
 
-    append_logf(
+    kbo_log_runtimef(
         "international established FA postscan scheduled batch=%ld league_id=%u/%u before_count=%d before_max_player=%u original=%d multiplier=%d expected=%d date=%u vector_ready=%d",
         batch_id,
         primary_league_id,

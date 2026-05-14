@@ -44,10 +44,3 @@ int install_kbo_no_minor_contract_offer_major_flag_patches(HMODULE exe)
         16u);
     return ok;
 }
-
-int install_kbo_no_minor_contract_dynamic_flag_patches(HMODULE exe)
-{
-    append_log_line("KBO no-minor-contract dynamic player +0x8a8 patches retired: preserving player/import/storyline state");
-    append_log_line("KBO no-minor-contract option text branch patch retired: UI text now follows scoped offer controls");
-    return install_kbo_no_minor_contract_offer_major_flag_patches(exe);
-}

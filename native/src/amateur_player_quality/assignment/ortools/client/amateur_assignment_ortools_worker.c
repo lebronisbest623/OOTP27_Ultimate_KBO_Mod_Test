@@ -101,7 +101,7 @@ static int kbo_amateur_ortools_start_worker(const char* tool_path)
     if (!ok) {
         static volatile LONG create_fail_count = 0;
         if (InterlockedIncrement(&create_fail_count) <= 5) {
-            append_logf("amateur OR-Tools worker launch failed gle=%lu tool=%s", GetLastError(), tool_path);
+            kbo_log_runtimef("amateur OR-Tools worker launch failed gle=%lu tool=%s", GetLastError(), tool_path);
         }
         CloseHandle(stdin_write);
         CloseHandle(stdout_read);
@@ -110,7 +110,7 @@ static int kbo_amateur_ortools_start_worker(const char* tool_path)
 
     g_kbo_amateur_ortools_worker_stdin = stdin_write;
     g_kbo_amateur_ortools_worker_stdout = stdout_read;
-    append_logf("amateur OR-Tools worker started tool=%s", tool_path);
+    kbo_log_runtimef("amateur OR-Tools worker started tool=%s", tool_path);
     return 1;
 }
 
@@ -148,7 +148,7 @@ int kbo_amateur_ortools_run_worker(const char* tool_path, const char* request_pa
                 }
                 if (available == 0) {
                     if (GetTickCount() - start > 5000u) {
-                        append_log_line("amateur OR-Tools worker timed out");
+                        kbo_log_runtime_line("amateur OR-Tools worker timed out");
                         kbo_amateur_ortools_close_worker();
                         break;
                     }
@@ -172,7 +172,7 @@ int kbo_amateur_ortools_run_worker(const char* tool_path, const char* request_pa
             if (!ok && response[0] != '\0') {
                 static volatile LONG fail_log_count = 0;
                 if (InterlockedIncrement(&fail_log_count) <= 5) {
-                    append_logf("amateur OR-Tools worker response=%s", response);
+                    kbo_log_runtimef("amateur OR-Tools worker response=%s", response);
                 }
             }
         }
@@ -210,7 +210,7 @@ int kbo_amateur_ortools_run(const char* tool_path, int is_python_script, const c
     if (!CreateProcessA(NULL, command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         static volatile LONG create_fail_count = 0;
         if (InterlockedIncrement(&create_fail_count) <= 5) {
-            append_logf("amateur OR-Tools optimizer launch failed gle=%lu tool=%s", GetLastError(), tool_path);
+            kbo_log_runtimef("amateur OR-Tools optimizer launch failed gle=%lu tool=%s", GetLastError(), tool_path);
         }
         return 0;
     }
@@ -219,7 +219,7 @@ int kbo_amateur_ortools_run(const char* tool_path, int is_python_script, const c
     DWORD exit_code = 1;
     if (wait == WAIT_TIMEOUT) {
         TerminateProcess(pi.hProcess, 1);
-        append_log_line("amateur OR-Tools optimizer timed out");
+        kbo_log_runtime_line("amateur OR-Tools optimizer timed out");
     } else {
         GetExitCodeProcess(pi.hProcess, &exit_code);
     }

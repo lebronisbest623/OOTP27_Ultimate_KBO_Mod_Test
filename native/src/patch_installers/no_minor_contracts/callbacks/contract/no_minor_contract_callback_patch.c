@@ -50,18 +50,18 @@ int install_kbo_no_minor_contract_contract_callback_probe_patch(HMODULE exe)
         "KBO no-minor contract callback probe");
     if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO no-minor contract callback probe already installed target=%p", target);
+        kbo_log_runtimef("KBO no-minor contract callback probe already installed target=%p", target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO no-minor contract callback probe trampoline");
+        kbo_log_runtime_line("failed to allocate KBO no-minor contract callback probe trampoline");
         return 0;
     }
     uint8_t* stub = build_kbo_fa_contract_offer_callback_probe_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO no-minor contract callback probe detour stub");
+        kbo_log_runtime_line("failed to allocate KBO no-minor contract callback probe detour stub");
         return 0;
     }
 
@@ -76,7 +76,7 @@ int install_kbo_no_minor_contract_contract_callback_probe_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO no-minor contract callback probe error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO no-minor contract callback probe error=%lu", GetLastError());
         return 0;
     }
 
@@ -86,7 +86,7 @@ int install_kbo_no_minor_contract_contract_callback_probe_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO no-minor contract callback probe target=%p stub=%p trampoline=%p wrapper=%p",
         target,
         stub,

@@ -165,7 +165,7 @@ static int kbo_get_current_save_path_from_own_file_handles(char* out, size_t out
         char save_path[KBO_UTF8_PATH_BYTES] = {0};
         if (kbo_extract_lg_save_path_from_file_path(path, save_path, sizeof(save_path))) {
             snprintf(out, out_size, "%s", save_path);
-            append_logf("KBO save path resolved by own file handle path=%s source=%s", out, path);
+            kbo_log_runtimef("KBO save path resolved by own file handle path=%s source=%s", out, path);
             found = 1;
             break;
         }

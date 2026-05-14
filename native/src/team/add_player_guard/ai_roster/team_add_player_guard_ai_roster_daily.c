@@ -195,7 +195,7 @@ int kbo_run_foreign_ai_roster_daily_callup(const char* source)
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
         static volatile LONG no_vector_log_count = 0;
         if (InterlockedIncrement(&no_vector_log_count) <= 5) {
-            append_logf("ootp ai roster foreign daily callup skipped source=%s reason=no_player_vector", source != NULL ? source : "");
+            kbo_log_runtimef("ootp ai roster foreign daily callup skipped source=%s reason=no_player_vector", source != NULL ? source : "");
         }
         return 0;
     }
@@ -208,7 +208,7 @@ int kbo_run_foreign_ai_roster_daily_callup(const char* source)
     if (player_snapshot == NULL) {
         static volatile LONG snapshot_log_count = 0;
         if (InterlockedIncrement(&snapshot_log_count) <= 20) {
-            append_logf(
+            kbo_log_runtimef(
                 "ootp ai roster foreign daily callup skipped source=%s reason=player_vector_snapshot_failed detail=%s vector=%p count=%d",
                 source != NULL ? source : "",
                 snapshot_failure_reason != NULL ? snapshot_failure_reason : "",
@@ -290,7 +290,7 @@ int kbo_run_foreign_ai_roster_daily_callup(const char* source)
         static volatile LONG detail_log_count = 0;
         LONG detail_slot = InterlockedIncrement(&detail_log_count);
         if (detail_slot <= 240) {
-            append_logf(
+            kbo_log_runtimef(
                 "ootp ai roster foreign daily callup #%ld source=%s attempt=%d result=%u moved=%d team=%u team_league=%u player=%u nation=%u score=%lld current=%u->%u active=%u->%u league=%u->%u status24=%u->%u status25=%u->%u status26=%u->%u f25=%u f62=%u->%u f65=%u->%u overall=%d ratings=%d",
                 detail_slot,
                 source != NULL ? source : "",
@@ -327,7 +327,7 @@ int kbo_run_foreign_ai_roster_daily_callup(const char* source)
     static volatile LONG summary_log_count = 0;
     LONG summary_slot = InterlockedIncrement(&summary_log_count);
     if (summary_slot <= 1000 && (applied > 0 || failed > 0 || total_scan.eligible_seen > 0)) {
-        append_logf(
+        kbo_log_runtimef(
             "ootp ai roster foreign daily callup summary #%ld source=%s attempts=%d applied=%d failed=%d scanned=%d foreign=%d eligible=%d blocked_limit=%d skipped_status=%d skipped_not_minor=%d skipped_no_team=%d",
             summary_slot,
             source != NULL ? source : "",

@@ -17,14 +17,14 @@ int install_kbo_trade_check_foreign_policy_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO trade foreign policy patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO trade foreign policy patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO trade foreign policy patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO trade foreign policy patch host=%s", host);
         return 0;
     }
 
@@ -56,19 +56,19 @@ int install_kbo_trade_check_foreign_policy_patch(void)
         "KBO trade foreign policy patch");
     if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO trade foreign policy patch already installed target=%p", target);
+        kbo_log_runtimef("KBO trade foreign policy patch already installed target=%p", target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO trade foreign policy trampoline");
+        kbo_log_runtime_line("failed to allocate KBO trade foreign policy trampoline");
         return 0;
     }
 
     uint8_t* stub = build_kbo_trade_check_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO trade foreign policy detour stub");
+        kbo_log_runtime_line("failed to allocate KBO trade foreign policy detour stub");
         return 0;
     }
 
@@ -82,7 +82,7 @@ int install_kbo_trade_check_foreign_policy_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO trade foreign policy patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO trade foreign policy patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -92,7 +92,7 @@ int install_kbo_trade_check_foreign_policy_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO trade foreign policy patch target=%p rva=0x%llx stub=%p trampoline=%p wrapper=%p",
         target,
         (unsigned long long)((uintptr_t)target - (uintptr_t)exe),

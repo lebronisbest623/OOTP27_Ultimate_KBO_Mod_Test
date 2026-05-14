@@ -59,7 +59,7 @@ static int patch_kbo_allstar_team_name(
     if (patched > 0) {
         LONG log_index = InterlockedIncrement(&g_allstar_team_name_log_count);
         if (log_index <= 20) {
-            append_logf(
+            kbo_log_runtimef(
                 "patched KBO all-star team name source=%s team=%p team_id=%u old=%s new=%s slots=%d",
                 source != NULL ? source : "",
                 team,
@@ -191,7 +191,7 @@ static int patch_kbo_allstar_team_names_for_league_id_or_any(uint32_t league_id,
         static volatile LONG already_named_log_count = 0;
         LONG log_index = InterlockedIncrement(&already_named_log_count);
         if (log_index <= 5) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star team names already patched source=%s league_id=%u candidates=%d",
                 source != NULL ? source : "",
                 league_id,
@@ -245,7 +245,7 @@ int ensure_kbo_allstar_team_ids(uintptr_t league_ptr, const char* source)
 
     static volatile LONG unsafe_team_id_write_logged = 0;
     if (InterlockedCompareExchange(&unsafe_team_id_write_logged, 1, 0) == 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star team id direct write disabled source=%s league=%p offsets=0x%x/0x%x reason=latest_build_layout_overlaps_serialized_object",
             source != NULL ? source : "",
             (void*)league_ptr,

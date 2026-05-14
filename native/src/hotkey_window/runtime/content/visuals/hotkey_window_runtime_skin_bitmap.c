@@ -110,7 +110,7 @@ void kbo_hub_load_skin_assets(void)
 
     kbo_hub_local_asset_path("github-mark.png", path, sizeof(path));
     g_kbo_hub_asset_github = kbo_hub_load_png_hbitmap_wic(path);
-    append_logf("KBO F2 hub github asset path=%s loaded=%d", path, g_kbo_hub_asset_github != NULL);
+    kbo_log_runtimef("KBO F2 hub github asset path=%s loaded=%d", path, g_kbo_hub_asset_github != NULL);
 
     kbo_hub_skin_image_path("menu_arrow_right.png", path, sizeof(path));
     g_kbo_hub_asset_menu_arrow = kbo_hub_load_png_hbitmap_wic(path);

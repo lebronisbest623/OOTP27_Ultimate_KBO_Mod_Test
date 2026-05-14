@@ -116,7 +116,7 @@ static void kbo_ensure_fa_market_cases_seed_template(void)
     DWORD written = 0;
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
     CloseHandle(file);
-    append_logf("FA market seed template created path=%s", path);
+    kbo_log_runtimef("FA market seed template created path=%s", path);
 }
 
 int kbo_load_fa_market_seed_cases(KboFaMarketSeedCase* seeds, int max_seeds, char* out_path, size_t out_path_size)

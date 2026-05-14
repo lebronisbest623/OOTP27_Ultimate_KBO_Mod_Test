@@ -364,5 +364,5 @@ void kbo_log_runtime_message(KboLogLevel level, const char* domain, const char* 
     KboLogFields fields;
     kbo_log_fields_init(&fields);
     kbo_log_field_str(&fields, "message", message != NULL ? message : "");
-    kbo_log_runtime_event(level, domain, event, NULL, NULL, "append_log_line", &fields);
+    kbo_log_runtime_event(level, domain, event, NULL, NULL, "runtime_message", &fields);
 }

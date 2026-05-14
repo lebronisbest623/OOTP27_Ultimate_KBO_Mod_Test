@@ -101,7 +101,7 @@ uint32_t kbo_detect_offseason_anchor_by_league_year(uint32_t league_id, uint32_t
     }
 
     if (league_year > current_year) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule fallback source=%s reason=league_year_ahead today=%u current_year=%u league_year=%u previous_league_year=%u",
             source != NULL ? source : "",
             today_yyyymmdd,
@@ -112,7 +112,7 @@ uint32_t kbo_detect_offseason_anchor_by_league_year(uint32_t league_id, uint32_t
     }
 
     if (previous_observed != 0u && league_year > previous_observed && (today_yyyymmdd % 10000u) >= 1001u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event schedule fallback source=%s reason=league_year_advanced today=%u current_year=%u league_year=%u previous_league_year=%u",
             source != NULL ? source : "",
             today_yyyymmdd,

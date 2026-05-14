@@ -101,7 +101,7 @@ static int kbo_load_name_cache_for_save(const char* save_path)
     HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO names.dat cache skipped reason=open_failed gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("KBO names.dat cache skipped reason=open_failed gle=%lu path=%s", GetLastError(), path);
         InterlockedExchange(&g_kbo_name_cache_loading, 0);
         return 0;
     }
@@ -109,7 +109,7 @@ static int kbo_load_name_cache_for_save(const char* save_path)
     LARGE_INTEGER file_size;
     if (!GetFileSizeEx(file, &file_size) || file_size.QuadPart <= 0
             || file_size.QuadPart > (LONGLONG)KBO_NAMES_DAT_MAX_BYTES) {
-        append_logf("KBO names.dat cache skipped reason=bad_size size=%lld path=%s", file_size.QuadPart, path);
+        kbo_log_runtimef("KBO names.dat cache skipped reason=bad_size size=%lld path=%s", file_size.QuadPart, path);
         CloseHandle(file);
         InterlockedExchange(&g_kbo_name_cache_loading, 0);
         return 0;
@@ -120,7 +120,7 @@ static int kbo_load_name_cache_for_save(const char* save_path)
     SIZE_T table_bytes = ((SIZE_T)KBO_NAME_ID_CACHE_MAX + 1u) * KBO_NAME_CACHE_TEXT_BYTES;
     char* cache = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, table_bytes);
     if (data == NULL || cache == NULL) {
-        append_logf("KBO names.dat cache skipped reason=alloc_failed bytes=%lu table=%llu", bytes_to_read, (unsigned long long)table_bytes);
+        kbo_log_runtimef("KBO names.dat cache skipped reason=alloc_failed bytes=%lu table=%llu", bytes_to_read, (unsigned long long)table_bytes);
         if (data != NULL) { HeapFree(GetProcessHeap(), 0, data); }
         if (cache != NULL) { HeapFree(GetProcessHeap(), 0, cache); }
         CloseHandle(file);
@@ -132,7 +132,7 @@ static int kbo_load_name_cache_for_save(const char* save_path)
     BOOL ok = ReadFile(file, data, bytes_to_read, &read, NULL);
     CloseHandle(file);
     if (!ok || read != bytes_to_read) {
-        append_logf("KBO names.dat cache skipped reason=read_failed gle=%lu read=%lu expected=%lu path=%s",
+        kbo_log_runtimef("KBO names.dat cache skipped reason=read_failed gle=%lu read=%lu expected=%lu path=%s",
             GetLastError(), read, bytes_to_read, path);
         HeapFree(GetProcessHeap(), 0, data);
         HeapFree(GetProcessHeap(), 0, cache);
@@ -183,14 +183,14 @@ static int kbo_load_name_cache_for_save(const char* save_path)
     HeapFree(GetProcessHeap(), 0, data);
     if (loaded == 0) {
         HeapFree(GetProcessHeap(), 0, cache);
-        append_logf("KBO names.dat cache skipped reason=no_records path=%s", path);
+        kbo_log_runtimef("KBO names.dat cache skipped reason=no_records path=%s", path);
         InterlockedExchange(&g_kbo_name_cache_loading, 0);
         return 0;
     }
 
     g_kbo_name_cache_texts = cache;
     snprintf(g_kbo_name_cache_save_path, sizeof(g_kbo_name_cache_save_path), "%s", save_path);
-    append_logf("KBO names.dat cache loaded entries=%u path=%s", loaded, path);
+    kbo_log_runtimef("KBO names.dat cache loaded entries=%u path=%s", loaded, path);
 
     InterlockedExchange(&g_kbo_name_cache_loading, 0);
     return 1;

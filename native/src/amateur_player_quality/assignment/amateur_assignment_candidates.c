@@ -274,7 +274,7 @@ int kbo_amateur_assignment_get_cached_candidates(
             cache,
             KBO_AMATEUR_ASSIGNMENT_TEAM_MAX);
         kbo_amateur_assignment_refresh_player_counts(league_id, cache, *count_ptr);
-        append_logf(
+        kbo_log_runtimef(
             "amateur assignment candidate cache built league=%u teams=%d counts=refreshed",
             league_id,
             *count_ptr);

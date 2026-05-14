@@ -57,7 +57,7 @@ int install_kbo_no_minor_contract_demand_write_floor_aab739_patch(HMODULE exe)
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO no-minor demand write floor AAB739 already installed target=%p", target);
+        kbo_log_runtimef("KBO no-minor demand write floor AAB739 already installed target=%p", target);
         return 1;
     }
     if (!kbo_memory_matches_masked_pattern(target, expected, expected_mask, sizeof(expected))) {
@@ -67,7 +67,7 @@ int install_kbo_no_minor_contract_demand_write_floor_aab739_patch(HMODULE exe)
 
     void* notify_target = resolve_relative_call_target(target + 6);
     if (notify_target == NULL) {
-        append_log_line("failed to resolve KBO no-minor demand write floor AAB739 notify call");
+        kbo_log_runtime_line("failed to resolve KBO no-minor demand write floor AAB739 notify call");
         return 0;
     }
     uint8_t* stub = build_kbo_no_minor_demand_write_floor_aab739_stub(
@@ -75,7 +75,7 @@ int install_kbo_no_minor_contract_demand_write_floor_aab739_patch(HMODULE exe)
         notify_target,
         target + (OOTP27_NO_MINOR_CONTRACT_FA_DEMAND_WRITE_AAB739_DONE_RVA - OOTP27_NO_MINOR_CONTRACT_FA_DEMAND_WRITE_AAB739_RVA));
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO no-minor demand write floor AAB739 detour stub");
+        kbo_log_runtime_line("failed to allocate KBO no-minor demand write floor AAB739 detour stub");
         return 0;
     }
 
@@ -89,7 +89,7 @@ int install_kbo_no_minor_contract_demand_write_floor_aab739_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO no-minor demand write floor AAB739 error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO no-minor demand write floor AAB739 error=%lu", GetLastError());
         return 0;
     }
 
@@ -99,7 +99,7 @@ int install_kbo_no_minor_contract_demand_write_floor_aab739_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf("installed KBO no-minor demand write floor AAB739 target=%p stub=%p", target, stub);
+    kbo_log_runtimef("installed KBO no-minor demand write floor AAB739 target=%p stub=%p", target, stub);
     return 1;
 }
 
@@ -144,7 +144,7 @@ int install_kbo_no_minor_contract_demand_write_floor_1077952_patch(HMODULE exe)
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO no-minor demand write floor 1077952 already installed target=%p", target);
+        kbo_log_runtimef("KBO no-minor demand write floor 1077952 already installed target=%p", target);
         return 1;
     }
     if (memcmp(target, expected, sizeof(expected)) != 0) {
@@ -154,7 +154,7 @@ int install_kbo_no_minor_contract_demand_write_floor_1077952_patch(HMODULE exe)
 
     uint8_t* stub = build_kbo_no_minor_demand_write_floor_1077952_stub(target + sizeof(expected));
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO no-minor demand write floor 1077952 detour stub");
+        kbo_log_runtime_line("failed to allocate KBO no-minor demand write floor 1077952 detour stub");
         return 0;
     }
 
@@ -168,7 +168,7 @@ int install_kbo_no_minor_contract_demand_write_floor_1077952_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO no-minor demand write floor 1077952 error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO no-minor demand write floor 1077952 error=%lu", GetLastError());
         return 0;
     }
 
@@ -178,6 +178,6 @@ int install_kbo_no_minor_contract_demand_write_floor_1077952_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf("installed KBO no-minor demand write floor 1077952 target=%p stub=%p", target, stub);
+    kbo_log_runtimef("installed KBO no-minor demand write floor 1077952 target=%p stub=%p", target, stub);
     return 1;
 }

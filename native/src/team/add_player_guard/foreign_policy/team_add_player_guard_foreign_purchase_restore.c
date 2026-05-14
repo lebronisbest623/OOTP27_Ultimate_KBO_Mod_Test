@@ -82,7 +82,7 @@ static int kbo_team_add_restore_active_foreign_right_after_blocked_purchase(
         OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET,
         player_id);
 
-    append_logf(
+    kbo_log_runtimef(
         "custom foreign policy blocked reserve-right restored player=%u blocked_team=%u holder_team=%u holder_league=%u today=%u caller_rva=0x%x before_current=%u before_active=%u before_original=%u before_default=%u before_league=%u before_draft=%u before_level=%u before_restricted=%u before_secondary=%u before_dfa=%u after_current=%u after_active=%u after_original=%u after_default=%u after_league=%u after_draft=%u after_level=%u after_restricted=%u after_secondary=%u after_dfa=%u removed_roster=%d added_restricted=%d",
         player_id,
         blocked_team_id,
@@ -195,7 +195,7 @@ int kbo_team_add_restore_source_team_after_blocked_foreign_purchase(
     uint32_t restored_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
     uint32_t restored_active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
     if (restored_current_team_id != source_team_id) {
-        append_logf(
+        kbo_log_runtimef(
             "custom foreign policy blocked purchase source restore failed player=%u blocked_team=%u source_team=%u source_league=%u caller_rva=0x%x restored_current=%u restored_active=%u",
             player_id,
             blocked_team_id,
@@ -207,7 +207,7 @@ int kbo_team_add_restore_source_team_after_blocked_foreign_purchase(
         return 0;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "custom foreign policy blocked purchase restored source player=%u blocked_team=%u source_team=%u source_league=%u caller_rva=0x%x restored_current=%u restored_active=%u pre=%d register=%d attach=%d",
         player_id,
         blocked_team_id,

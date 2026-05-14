@@ -219,7 +219,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             if (slot <= 200 || kbo_team_add_amateur_verbose_log_enabled_cached()) {
                 uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
                 uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
-                append_logf(
+                kbo_log_runtimef(
                     "amateur team_add caller trace #%ld caller_rva=0x%x player=%u league=%u age=%d original_team=%u rerouted=%d",
                     slot,
                     caller_rva,
@@ -302,7 +302,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             kbo_amateur_assignment_mark_rejected_target(rejected_league_id, effective_team_id);
         }
         if (fallback_slot <= 80) {
-            append_logf(
+            kbo_log_runtimef(
                 "amateur assignment reroute target rejected; retrying alternate player=%u original_team=%u rejected_team=%u attempt=%d",
                 player_id,
                 original_team_id,

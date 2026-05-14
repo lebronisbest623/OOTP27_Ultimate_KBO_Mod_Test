@@ -29,11 +29,11 @@ int install_kbo_no_minor_contract_offer_player_demand_floor_patch(
         return 0;
     }
     if (!memory_range_readable(target, stolen_len)) {
-        append_logf("%s target unreadable target=%p", label, target);
+        kbo_log_runtimef("%s target unreadable target=%p", label, target);
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return 1;
     }
     if (memcmp(target, expected, stolen_len) != 0) {
@@ -45,7 +45,7 @@ int install_kbo_no_minor_contract_offer_player_demand_floor_patch(
         ? build_kbo_fa_offer_player_demand_floor_17b50b4_stub(target + stolen_len)
         : build_kbo_fa_offer_player_demand_floor_17a79bb_stub(target + stolen_len);
     if (stub == NULL) {
-        append_logf("failed to allocate %s detour stub", label);
+        kbo_log_runtimef("failed to allocate %s detour stub", label);
         return 0;
     }
 
@@ -59,7 +59,7 @@ int install_kbo_no_minor_contract_offer_player_demand_floor_patch(
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, stolen_len, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for %s error=%lu", label, GetLastError());
         return 0;
     }
 
@@ -69,7 +69,7 @@ int install_kbo_no_minor_contract_offer_player_demand_floor_patch(
     DWORD ignored = 0;
     VirtualProtect(target, stolen_len, old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed %s target=%p stub=%p probe=%p",
         label,
         target,

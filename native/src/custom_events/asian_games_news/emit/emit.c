@@ -78,7 +78,7 @@ int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* template_pref
     };
     if (!kbo_news_template_render_key(title_key, vars, (int)(sizeof(vars) / sizeof(vars[0])), title, sizeof(title), source)
             || !kbo_news_template_render_key(lead_key, vars, (int)(sizeof(vars) / sizeof(vars[0])), lead, sizeof(lead), source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games news skipped source=%s template=%s reason=template_unavailable",
             source != NULL ? source : "",
             template_prefix);
@@ -90,7 +90,7 @@ int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* template_pref
         league_id = kbo_resolve_kbo_league_id();
     }
     if (league_id == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games news skipped source=%s title=%s reason=league_id_unavailable",
             source != NULL ? source : "",
             title);
@@ -100,7 +100,7 @@ int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* template_pref
     char body[8192] = {0};
     kbo_build_asian_games_news_body(body, sizeof(body), event_yyyymmdd, template_prefix, lead, source);
     if (body[0] == '\0') {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games news skipped source=%s template=%s title=%s reason=body_template_unavailable",
             source != NULL ? source : "",
             template_prefix,
@@ -115,7 +115,7 @@ int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* template_pref
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
         title,
         body);
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games news source=%s template=%s title=%s date=%u league_id=%u created=%d",
         source != NULL ? source : "",
         template_prefix,

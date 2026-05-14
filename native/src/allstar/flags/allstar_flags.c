@@ -68,7 +68,7 @@ static uintptr_t normalize_kbo_allstar_league_ptr(uintptr_t league_ptr, uint32_t
             continue;
         }
 
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star normalized league pointer source=%s league_id=%u raw=%p normalized=%p delta=%lld",
             source != NULL ? source : "",
             league_id,
@@ -102,7 +102,7 @@ static int write_kbo_allstar_flags(uintptr_t league_ptr, const char* source)
 
     if (old_rules_allstar != 1 || old_allstar_game != 1 || old_auto_schedule_allstar != 1) {
         uint32_t league_year = *(uint32_t*)(league + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
-        append_logf(
+        kbo_log_runtimef(
             "enabled KBO all-star flags source=%s league=%p year=%u rules 0x%x=%u->1 game 0x%x=%u->1 auto 0x%x=%u->1",
             source,
             league,
@@ -123,7 +123,7 @@ int enable_kbo_allstar_raw_flags_if_kbo_context(uintptr_t league_ptr, const char
         static volatile LONG s_skip_log_count = 0;
         LONG log_index = InterlockedIncrement(&s_skip_log_count);
         if (log_index <= 80) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star raw flag write skipped source=%s league=%p reason=raw_context_not_enabled",
                 source != NULL ? source : "",
                 (void*)league_ptr);
@@ -137,7 +137,7 @@ int enable_kbo_allstar_raw_flags_if_kbo_context(uintptr_t league_ptr, const char
     max_off = max_off > layout.auto_schedule_offset ? max_off : layout.auto_schedule_offset;
     max_off = max_off > layout.rules_flag_offset ? max_off : layout.rules_flag_offset;
     if (!memory_range_readable(league, max_off + 1u)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star raw flag write skipped source=%s league=%p reason=flag_offsets_unreadable max_off=0x%x",
             source != NULL ? source : "",
             league,
@@ -160,7 +160,7 @@ int enable_kbo_allstar_raw_flags_if_kbo_context(uintptr_t league_ptr, const char
     uint32_t league_id = kbo_allstar_read_u32(league, layout.league_id_primary_offset);
     uint32_t fallback_league_id = kbo_allstar_read_u32(league, layout.league_id_fallback_offset);
     if (old_rules_allstar != 1 || old_allstar_game != 1 || old_auto_schedule_allstar != 1) {
-        append_logf(
+        kbo_log_runtimef(
             "enabled KBO all-star raw flags source=%s league=%p ids=%u/%u year=%u rules 0x%x=%u->1 game 0x%x=%u->1 auto 0x%x=%u->1",
             source != NULL ? source : "",
             league,
@@ -184,7 +184,7 @@ void enable_kbo_allstar_flags(uintptr_t league_ptr, const char* source)
         static volatile LONG s_skip_log_count = 0;
         LONG log_index = InterlockedIncrement(&s_skip_log_count);
         if (log_index <= 40) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star strict flag enable skipped source=%s league=%p reason=context_not_enabled",
                 source != NULL ? source : "",
                 (void*)league_ptr);
@@ -202,7 +202,7 @@ int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t leag
         static volatile LONG skip_log_count = 0;
         LONG log_index = InterlockedIncrement(&skip_log_count);
         if (log_index <= 60) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star core fallback flag write skipped source=%s league_id=%u league=%p reason=latest_build_preserve_serialized_objects",
                 source != NULL ? source : "",
                 league_id,
@@ -214,7 +214,7 @@ int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t leag
     KboAllstarLayout layout = kbo_get_allstar_layout();
     league_ptr = normalize_kbo_allstar_league_ptr(league_ptr, league_id, &layout, source);
     if (!league_matches_configured_allstar_id(league_ptr, league_id, &layout)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star core fallback rejected source=%s league_id=%u league=%p reason=id_mismatch_or_unreadable",
             source != NULL ? source : "",
             league_id,
@@ -222,7 +222,7 @@ int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t leag
         return 0;
     }
     if (!league_year_plausible(league_ptr)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star core fallback rejected source=%s league_id=%u league=%p reason=year_unusable",
             source != NULL ? source : "",
             league_id,
@@ -231,7 +231,7 @@ int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t leag
     }
 
     if (!write_kbo_allstar_flags(league_ptr, source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star core fallback rejected source=%s league_id=%u league=%p reason=layout_unreadable",
             source != NULL ? source : "",
             league_id,
@@ -239,7 +239,7 @@ int enable_kbo_allstar_flags_for_core_league(uintptr_t league_ptr, uint32_t leag
         return 0;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO all-star flags enabled by core league fallback source=%s league_id=%u league=%p",
         source != NULL ? source : "",
         league_id,
@@ -284,7 +284,7 @@ static uintptr_t find_kbo_allstar_core_league_from_extended_global_vectors(uint3
                 continue;
             }
 
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star core fallback found league in extended global vector league_id=%u vec=0x%x index=%d league=%p year=%u",
                 league_id,
                 vec_off,
@@ -307,7 +307,7 @@ uintptr_t find_kbo_allstar_core_fallback_league(uint32_t league_id)
             && (uint32_t)cached_id == league_id
             && league_matches_configured_allstar_id(cached, league_id, &layout)
             && league_year_plausible(cached)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star core fallback using cached league league_id=%u league=%p",
             league_id,
             (void*)cached);
@@ -321,7 +321,7 @@ uintptr_t find_kbo_allstar_core_fallback_league(uint32_t league_id)
 
     league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);
     if (league_ptr != 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star core fallback found league in standard global vectors league_id=%u league=%p",
             league_id,
             (void*)league_ptr);
@@ -352,7 +352,7 @@ void force_kbo_allstar_flags_for_configured_league(const char* source)
         }
     }
     if (league_ptr == 0 || !enabled) {
-        append_logf("KBO all-star force flags skipped source=%s league_id=%u reason=league_not_found", source != NULL ? source : "", league_id);
+        kbo_log_runtimef("KBO all-star force flags skipped source=%s league_id=%u reason=league_not_found", source != NULL ? source : "", league_id);
         return;
     }
     InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
@@ -370,7 +370,7 @@ int force_kbo_allstar_flags_for_league_pointer(uintptr_t league_ptr, const char*
             league_ptr,
             league_id,
             source != NULL ? source : "allstar_force_flags_pointer")) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO all-star force flags skipped source=%s league_id=%u league=%p reason=pointer_rejected",
             source != NULL ? source : "",
             league_id,

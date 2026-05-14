@@ -93,7 +93,7 @@ HANDLE kbo_open_foreign_roster_audit_append_file(void)
 {
     char path[MAX_PATH] = {0};
     if (!get_kbo_foreign_roster_audit_csv_path(path, sizeof(path))) {
-        append_log_line("foreign roster audit: unable to resolve audit output path");
+        kbo_log_runtime_line("foreign roster audit: unable to resolve audit output path");
         return INVALID_HANDLE_VALUE;
     }
 
@@ -108,7 +108,7 @@ HANDLE kbo_open_foreign_roster_audit_append_file(void)
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign roster audit: failed to open audit file path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("foreign roster audit: failed to open audit file path=%s gle=%lu", path, GetLastError());
         return INVALID_HANDLE_VALUE;
     }
     if (needs_header || kbo_foreign_roster_audit_csv_empty(file)) {
@@ -214,14 +214,14 @@ HANDLE kbo_open_foreign_roster_snapshot_file(void)
 {
     char path[MAX_PATH] = {0};
     if (!get_kbo_foreign_roster_snapshot_csv_path(path, sizeof(path))) {
-        append_log_line("foreign roster audit: unable to resolve snapshot output path");
+        kbo_log_runtime_line("foreign roster audit: unable to resolve snapshot output path");
         return INVALID_HANDLE_VALUE;
     }
 
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign roster audit: failed to open snapshot file path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("foreign roster audit: failed to open snapshot file path=%s gle=%lu", path, GetLastError());
         return INVALID_HANDLE_VALUE;
     }
     snprintf(g_kbo_foreign_roster_snapshot_tmp_path, sizeof(g_kbo_foreign_roster_snapshot_tmp_path), "%s", tmp_path);
@@ -236,7 +236,7 @@ void kbo_close_foreign_roster_snapshot_file(HANDLE file)
         return;
     }
     if (!kbo_atomic_commit(file, g_kbo_foreign_roster_snapshot_tmp_path, g_kbo_foreign_roster_snapshot_dest_path)) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign roster audit: failed to commit snapshot file path=%s gle=%lu",
             g_kbo_foreign_roster_snapshot_dest_path,
             GetLastError());

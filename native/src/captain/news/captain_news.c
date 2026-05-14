@@ -60,7 +60,7 @@ int kbo_emit_captain_initial_selection_news(
                 NULL,
                 0u,
                 source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain summary news skipped source=%s season=%u league_id=%u reason=templates_unavailable",
             source != NULL ? source : "",
             season,
@@ -89,7 +89,7 @@ int kbo_emit_captain_initial_selection_news(
                 NULL,
                 0u,
                 source)) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO captain summary news skipped source=%s season=%u league_id=%u reason=line_template_unavailable",
                 source != NULL ? source : "",
                 season,
@@ -103,7 +103,7 @@ int kbo_emit_captain_initial_selection_news(
         listed++;
     }
     if (listed <= 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain summary news skipped source=%s season=%u league_id=%u reason=no_listed_captains",
             source != NULL ? source : "",
             season,
@@ -129,7 +129,7 @@ int kbo_emit_captain_initial_selection_news(
     if (created) {
         kbo_captain_news_persist_marker(marker, source);
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO captain summary news source=%s date=%u season=%u league_id=%u listed=%d created=%d template=%s",
         source != NULL ? source : "",
         date,
@@ -195,7 +195,7 @@ int kbo_emit_captain_replacement_news(
                 NULL,
                 0u,
                 source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain replacement news skipped source=%s season=%u league_id=%u team=%u old_player=%u new_player=%u reason=templates_unavailable",
             source != NULL ? source : "",
             season,
@@ -217,7 +217,7 @@ int kbo_emit_captain_replacement_news(
     if (created) {
         kbo_captain_news_persist_marker(marker, source);
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO captain replacement news source=%s date=%u season=%u league_id=%u team=%u old_player=%u new_player=%u created=%d template=%s",
         source != NULL ? source : "",
         date,

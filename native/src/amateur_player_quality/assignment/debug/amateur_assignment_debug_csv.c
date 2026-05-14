@@ -53,7 +53,7 @@ void kbo_amateur_assignment_append_debug_csv(
     if (file == INVALID_HANDLE_VALUE) {
         static volatile LONG open_log_count = 0;
         if (InterlockedIncrement(&open_log_count) <= 5) {
-            append_logf("amateur assignment debug csv open failed path=%s gle=%lu", path, GetLastError());
+            kbo_log_runtimef("amateur assignment debug csv open failed path=%s gle=%lu", path, GetLastError());
         }
         return;
     }

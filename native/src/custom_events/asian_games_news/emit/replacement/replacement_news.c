@@ -102,7 +102,7 @@ int kbo_emit_asian_games_replacement_news(
                 body,
                 sizeof(body),
                 source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games replacement news skipped source=%s date=%u old_player=%u new_player=%u reason=template_unavailable",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -119,7 +119,7 @@ int kbo_emit_asian_games_replacement_news(
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
         title,
         body);
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games replacement news source=%s date=%u old_player=%u new_player=%u created=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
@@ -191,7 +191,7 @@ int kbo_emit_asian_games_replacement_news_batch(
                 line,
                 sizeof(line),
                 source)) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games replacement batch news skipped source=%s date=%u reason=line_template_unavailable",
                 source != NULL ? source : "",
                 event_yyyymmdd);
@@ -256,7 +256,7 @@ int kbo_emit_asian_games_replacement_news_batch(
                 body,
                 sizeof(body),
                 source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games replacement batch news skipped source=%s date=%u count=%d reason=template_unavailable",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -272,7 +272,7 @@ int kbo_emit_asian_games_replacement_news_batch(
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
         title,
         body);
-    append_logf(
+    kbo_log_runtimef(
         "KBO Asian Games replacement batch news source=%s date=%u count=%d league_id=%u created=%d",
         source != NULL ? source : "",
         event_yyyymmdd,

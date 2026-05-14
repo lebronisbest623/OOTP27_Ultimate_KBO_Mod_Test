@@ -135,7 +135,7 @@ int kbo_write_fa_filing_records_unlocked(
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA filing csv open failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO FA filing csv open failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
 
@@ -166,7 +166,7 @@ int kbo_write_fa_filing_records_unlocked(
     }
 
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("KBO FA filing csv atomic commit failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO FA filing csv atomic commit failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
     return 1;

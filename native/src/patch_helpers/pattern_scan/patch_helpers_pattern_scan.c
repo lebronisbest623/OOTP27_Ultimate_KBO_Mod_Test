@@ -15,7 +15,7 @@ uint8_t* resolve_patch_target_by_rva_or_pattern(
 
     uint8_t* target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, rva);
     if (memory_range_readable(target, expected_size) && memcmp(target, expected, expected_size) == 0) {
-        append_logf(
+        kbo_log_runtimef(
             "%s resolved by rva target=%p rva=0x%08X",
             patch_label,
             target,
@@ -26,13 +26,13 @@ uint8_t* resolve_patch_target_by_rva_or_pattern(
     uint8_t* base = (uint8_t*)exe;
     IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;
     if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-        append_logf("%s signature scan failed: invalid DOS header", patch_label);
+        kbo_log_runtimef("%s signature scan failed: invalid DOS header", patch_label);
         return NULL;
     }
 
     IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)(base + dos->e_lfanew);
     if (nt->Signature != IMAGE_NT_SIGNATURE) {
-        append_logf("%s signature scan failed: invalid NT header", patch_label);
+        kbo_log_runtimef("%s signature scan failed: invalid NT header", patch_label);
         return NULL;
     }
 
@@ -63,7 +63,7 @@ uint8_t* resolve_patch_target_by_rva_or_pattern(
             if (hits == 1) {
                 found = candidate;
             } else {
-                append_logf(
+                kbo_log_runtimef(
                     "%s signature pattern ambiguous hits=%d first=%p another=%p original_rva=0x%08X",
                     patch_label,
                     hits,
@@ -76,7 +76,7 @@ uint8_t* resolve_patch_target_by_rva_or_pattern(
     }
 
     if (hits == 1 && found != NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "%s resolved by unique signature target=%p rva=0x%llx original_rva=0x%08X",
             patch_label,
             found,
@@ -88,9 +88,9 @@ uint8_t* resolve_patch_target_by_rva_or_pattern(
     if (target != NULL && memory_range_readable(target, expected_size)) {
         log_patch_bytes_mismatch(patch_label, target, expected_size);
     } else {
-        append_logf("%s target unreadable target=%p", patch_label, target);
+        kbo_log_runtimef("%s target unreadable target=%p", patch_label, target);
     }
-    append_logf("%s signature pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
+    kbo_log_runtimef("%s signature pattern not found hits=%d original_rva=0x%08X", patch_label, hits, rva);
     return NULL;
 }
 

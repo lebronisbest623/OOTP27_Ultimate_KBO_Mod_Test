@@ -97,7 +97,7 @@ int scan_kbo_custom_events_once(const char* source)
                 || kbo_custom_event_ledger_completed(configured_league_id, event_yyyymmdd, kind)) {
             kbo_mark_custom_event_processed(event_ptr);
             kbo_persist_custom_event_processed_marker(event_yyyymmdd, name, source);
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event skipped completed source=%s kind=%s name=%s event_date=%04u-%02u-%02u",
                 source != NULL ? source : "",
                 kbo_custom_event_kind_key(kind),
@@ -126,7 +126,7 @@ int scan_kbo_custom_events_once(const char* source)
             triggered++;
         }
 
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event triggered source=%s name=%s event_date=%04u-%02u-%02u current=%04u-%02u-%02u over=%u event=%p action_result=%d",
             source != NULL ? source : "",
             name,
@@ -146,7 +146,7 @@ int scan_kbo_custom_events_once(const char* source)
     }
 
     if (triggered == 0 && deferred > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event scan deferred source=%s current=%04u-%02u-%02u deferred=%d count=%d manager=%p vector=%p",
             source != NULL ? source : "",
             current_year,
@@ -160,7 +160,7 @@ int scan_kbo_custom_events_once(const char* source)
     }
 
     if (triggered > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event scan source=%s current=%04u-%02u-%02u triggered=%d count=%d manager=%p vector=%p",
             source != NULL ? source : "",
             current_year,

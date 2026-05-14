@@ -231,13 +231,13 @@ int create_kbo_league_event(
 
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_logf("league event create skipped source=%s title=%s reason=no_exe_module", source != NULL ? source : "", title);
+        kbo_log_runtimef("league event create skipped source=%s title=%s reason=no_exe_module", source != NULL ? source : "", title);
         return 0;
     }
 
     uintptr_t event_manager = get_kbo_league_event_manager();
     if (event_manager == 0) {
-        append_logf(
+        kbo_log_runtimef(
             "league event create skipped source=%s title=%s reason=event_manager_unreadable",
             source != NULL ? source : "",
             title);
@@ -245,7 +245,7 @@ int create_kbo_league_event(
     }
 
     if (kbo_league_event_exists(event_manager, year, month, day, league_id, event_type, title)) {
-        append_logf(
+        kbo_log_runtimef(
             "league event create skipped source=%s title=%s reason=already_exists date=%04u-%02u-%02u league_id=%u type=%u manager=%p",
             source != NULL ? source : "",
             title,
@@ -261,7 +261,7 @@ int create_kbo_league_event(
     OotpCreateLeagueEventFn create_event =
         (OotpCreateLeagueEventFn)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_CREATE_LEAGUE_EVENT_RVA);
     if (!memory_range_readable((void*)create_event, 16)) {
-        append_logf("league event create skipped source=%s title=%s reason=build_specific_create_func_unavailable fn=%p", source != NULL ? source : "", title, (void*)create_event);
+        kbo_log_runtimef("league event create skipped source=%s title=%s reason=build_specific_create_func_unavailable fn=%p", source != NULL ? source : "", title, (void*)create_event);
         return 0;
     }
 
@@ -281,7 +281,7 @@ int create_kbo_league_event(
         title_for_ootp,
         aux_id);
 
-    append_logf(
+    kbo_log_runtimef(
         "league event create source=%s title=%s date=%04u-%02u-%02u league_id=%u type=%u aux=%u manager=%p event=%p",
         source != NULL ? source : "",
         title,
@@ -293,7 +293,7 @@ int create_kbo_league_event(
         (uint32_t)aux_id,
         (void*)event_manager,
         event);
-    append_logf(
+    kbo_log_runtimef(
         "league event verify source=%s title=%s date=%04u-%02u-%02u league_id=%u type=%u present=%d",
         source != NULL ? source : "",
         title,

@@ -101,7 +101,7 @@ static uint32_t kbo_custom_event_resolve_offseason_transition_anchor(
 {
     uint32_t offseason_starts = kbo_get_latest_offseason_starts_event(today_yyyymmdd);
     if (offseason_starts != 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event offseason transition anchor source=%s reason=offseason_starts_event today=%u anchor=%u",
             source != NULL ? source : "",
             today_yyyymmdd,
@@ -115,7 +115,7 @@ static uint32_t kbo_custom_event_resolve_offseason_transition_anchor(
             && kbo_custom_event_date_allows_offseason_transition(previous_phase_date)
             && kbo_custom_event_date_gap_days(previous_phase_date, today_yyyymmdd, &gap_days)
             && gap_days <= 1u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event offseason transition anchor source=%s reason=previous_phase_date today=%u anchor=%u gap_days=%u",
             source != NULL ? source : "",
             today_yyyymmdd,
@@ -205,7 +205,7 @@ int kbo_custom_event_schedule_pending_offseason_transition(
     int scheduled = kbo_schedule_foreign_priority_custom_events_for_anchor(
         source,
         g_kbo_custom_event_pending_offseason_transition_anchor);
-    append_logf(
+    kbo_log_runtimef(
         "KBO custom event offseason transition schedule source=%s today=%u anchor=%u result=%d",
         source != NULL ? source : "",
         today_yyyymmdd,
@@ -297,7 +297,7 @@ int kbo_custom_event_monitor_check_offseason_transition(
             || g_kbo_custom_event_last_phase_league_year != league_year
             || g_kbo_custom_event_last_seen_league_phase != phase
             || g_kbo_custom_event_last_phase_year != phase_year) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event phase observed source=%s league=%p league_id=%u date=%u league_year=%u previous_phase=%u phase=%u phase_year=%u",
             source != NULL ? source : "",
             (void*)league_ptr,
@@ -329,7 +329,7 @@ int kbo_custom_event_monitor_check_offseason_transition(
                     transition_anchor,
                     g_kbo_custom_event_pending_offseason_transition_anchor,
                     0);
-                append_logf(
+                kbo_log_runtimef(
                     "KBO custom event offseason transition detected source=%s league=%p league_id=%u date=%u anchor=%u league_year=%u previous_phase=%u phase=%u",
                     source != NULL ? source : "",
                     (void*)league_ptr,
@@ -358,7 +358,7 @@ int kbo_custom_event_monitor_check_offseason_transition(
                     0);
             }
         } else {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event offseason transition ignored source=%s reason=date_window date=%u previous_phase=%u phase=%u",
                 source != NULL ? source : "",
                 today_yyyymmdd,

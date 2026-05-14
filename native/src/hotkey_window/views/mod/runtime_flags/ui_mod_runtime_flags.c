@@ -20,7 +20,7 @@ int kbo_get_mod_runtime_flag_enabled(const KboModRuntimeFlagSetting* setting)
         return 0;
     }
     int raw_value = setting->enabled_value ? 0 : 1;
-    if (!kbo_read_localappdata_json_flag_value(setting->key, setting->key, &raw_value)) {
+    if (!kbo_read_localappdata_json_flag_value(setting->key, &raw_value)) {
         return setting->default_enabled ? 1 : 0;
     }
     return raw_value == setting->enabled_value ? 1 : 0;

@@ -10,7 +10,7 @@ int kbo_persist_foreign_injury_replacements_locked(void)
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("foreign injury replacement: persist failed path=%s gle=%lu", path, (unsigned long)GetLastError());
+        kbo_log_runtimef("foreign injury replacement: persist failed path=%s gle=%lu", path, (unsigned long)GetLastError());
         return 0;
     }
 
@@ -41,7 +41,7 @@ int kbo_persist_foreign_injury_replacements_locked(void)
     }
 
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("foreign injury replacement: atomic commit failed path=%s", path);
+        kbo_log_runtimef("foreign injury replacement: atomic commit failed path=%s", path);
         return 0;
     }
     snprintf(g_kbo_foreign_injury_replacement_loaded_path, sizeof(g_kbo_foreign_injury_replacement_loaded_path), "%s", path);

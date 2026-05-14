@@ -43,7 +43,7 @@ void kbo_log_foreign_team_add_trace(
     LONG slot = InterlockedIncrement(&trace_log_count);
     if (slot > 800) {
         if (slot == 801) {
-            append_log_line("foreign team_add caller trace suppressed after 800 entries");
+            kbo_log_runtime_line("foreign team_add caller trace suppressed after 800 entries");
         }
         return;
     }
@@ -59,7 +59,7 @@ void kbo_log_foreign_team_add_trace(
         after_original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign team_add caller trace #%ld caller_rva=0x%x result=%s/%u team=%u league=%u player=%u nation=%u before_current=%u before_active=%u before_original=%u after_current=%u after_active=%u after_original=%u secondary=%u dfa=%u contract_level=%u pos_group=%u pos_role=%u overall=%u talent=%u ratings=%u args=%llu,%llu,%llu,%llu,%llu,%llu",
         slot,
         caller_rva,

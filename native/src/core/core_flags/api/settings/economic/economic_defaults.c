@@ -128,7 +128,6 @@ int kbo_economic_default_foreign_fa_quality_cap_enabled(void)
     if (kbo_read_localappdata_named_json_flag_value(
             KBO_ECONOMIC_DEFAULTS_FILE,
             "foreign_fa_quality_cap_enabled",
-            NULL,
             &value)) {
         return value ? 1 : 0;
     }

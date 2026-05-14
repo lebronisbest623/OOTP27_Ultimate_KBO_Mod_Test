@@ -116,7 +116,7 @@ void kbo_team_add_normalize_foreign_retention_contract_success(
     static volatile LONG normalize_log_count = 0;
     LONG slot = InterlockedIncrement(&normalize_log_count);
     if (slot <= 200) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign no-minor team-add cleanup applied player=%u team=%u league=%u caller_rva=0x%x before_current=%u before_active=%u before_original=%u old_original=%u old_default=%u after_current=%u after_active=%u after_original=%u after_default=%u old_contract_level=%u after_contract_level=%u old_restricted=%u old_secondary=%u old_dfa=%u after_restricted=%u after_secondary=%u after_dfa=%u removed_restricted=%d",
             player_id,
             team_id,

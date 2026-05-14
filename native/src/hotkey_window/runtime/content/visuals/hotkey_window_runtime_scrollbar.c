@@ -226,7 +226,7 @@ void kbo_show_or_hide_hotkey_window(void)
 
     if (IsWindowVisible(hwnd)) {
         ShowWindow(hwnd, SW_HIDE);
-        append_logf("KBO F2 hub hidden hwnd=%p", (void*)hwnd);
+        kbo_log_runtimef("KBO F2 hub hidden hwnd=%p", (void*)hwnd);
         return;
     }
 
@@ -240,7 +240,7 @@ void kbo_show_or_hide_hotkey_window(void)
     kbo_hub_apply_fixed_window_placement(hwnd, 0);
     ShowWindow(hwnd, SW_SHOWNORMAL);
     SetForegroundWindow(hwnd);
-    append_logf("KBO F2 hub shown hwnd=%p owner=%p", (void*)hwnd, (void*)owner);
+    kbo_log_runtimef("KBO F2 hub shown hwnd=%p owner=%p", (void*)hwnd, (void*)owner);
 }
 
 int kbo_queue_hotkey_window_toggle(void)
@@ -253,12 +253,12 @@ int kbo_queue_hotkey_window_toggle(void)
 
     HWND hwnd = g_kbo_hotkey_window;
     if (hwnd == NULL || !IsWindow(hwnd)) {
-        append_log_line("KBO F2 hub toggle skipped reason=no_window");
+        kbo_log_runtime_line("KBO F2 hub toggle skipped reason=no_window");
         return 0;
     }
 
     PostMessageA(hwnd, KBO_WM_TOGGLE_SERVICE_MONITOR, 0, 0);
-    append_logf("KBO F2 hub toggle queued hwnd=%p", (void*)hwnd);
+    kbo_log_runtimef("KBO F2 hub toggle queued hwnd=%p", (void*)hwnd);
     return 1;
 }
 
@@ -269,7 +269,7 @@ int kbo_request_hotkey_window_refresh(const char* source)
         return 0;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO F2 hub refresh requested source=%s hwnd=%p",
         source != NULL ? source : "",
         (void*)hwnd);

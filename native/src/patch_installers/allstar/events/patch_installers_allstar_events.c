@@ -80,13 +80,13 @@ int install_allstar_voting_begin_prepare_patch(void)
     }
 
     if (!memory_range_readable(target, sizeof(april_expected))) {
-        append_logf("KBO all-star voting begin prepare hook target unreadable target=%p", target);
+        kbo_log_runtimef("KBO all-star voting begin prepare hook target unreadable target=%p", target);
         return 0;
     }
 
     int ok = 0;
     if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO all-star voting begin prepare hook already installed target=%p", target);
+        kbo_log_runtimef("KBO all-star voting begin prepare hook already installed target=%p", target);
         ok = 1;
     } else if (memcmp(target, expected, sizeof(april_expected)) != 0) {
         log_patch_bytes_mismatch("KBO all-star voting begin prepare hook", target, sizeof(april_expected));
@@ -97,7 +97,7 @@ int install_allstar_voting_begin_prepare_patch(void)
         void* allstar_team_setup_address = resolve_allstar_team_setup_address();
         uint8_t* stub = build_allstar_voting_begin_prepare_stub(return_address, no_game_address, allstar_team_setup_address, layout.game_flag_offset);
         if (stub == NULL) {
-            append_log_line("failed to allocate KBO all-star voting begin prepare hook stub");
+            kbo_log_runtime_line("failed to allocate KBO all-star voting begin prepare hook stub");
         } else {
             uint8_t patch[16] = {
                 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
@@ -108,13 +108,13 @@ int install_allstar_voting_begin_prepare_patch(void)
 
             DWORD old_protect = 0;
             if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-                append_logf("VirtualProtect failed for KBO all-star voting begin prepare hook error=%lu", GetLastError());
+                kbo_log_runtimef("VirtualProtect failed for KBO all-star voting begin prepare hook error=%lu", GetLastError());
             } else {
                 memcpy(target, patch, sizeof(patch));
                 FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
                 DWORD ignored = 0;
                 VirtualProtect(target, sizeof(patch), old_protect, &ignored);
-                append_logf(
+                kbo_log_runtimef(
                     "installed KBO all-star voting begin prepare hook target=%p stub=%p return=%p no_game=%p setup=%p helper=%p",
                     target,
                     stub,
@@ -161,13 +161,13 @@ int install_allstar_events_prepare_patch(void)
     }
 
     if (!memory_range_readable(target, sizeof(april_expected))) {
-        append_logf("KBO all-star events prepare hook target unreadable target=%p", target);
+        kbo_log_runtimef("KBO all-star events prepare hook target unreadable target=%p", target);
         return 0;
     }
 
     int ok = 0;
     if (is_rip_absolute_jump_patch(target) || is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO all-star events prepare hook already installed target=%p", target);
+        kbo_log_runtimef("KBO all-star events prepare hook already installed target=%p", target);
         ok = 1;
     } else if (memcmp(target, expected, sizeof(april_expected)) != 0) {
         log_patch_bytes_mismatch("KBO all-star events prepare hook", target, sizeof(april_expected));
@@ -177,14 +177,14 @@ int install_allstar_events_prepare_patch(void)
         void* allstar_prep_address = resolve_relative_call_target(
             target + OOTP27_MAKE_ALLSTAR_EVENTS_PREP_CALL_OFFSET);
         if (allstar_prep_address == NULL) {
-            append_log_line("KBO all-star events prepare hook skipped: prep call target unresolved");
+            kbo_log_runtime_line("KBO all-star events prepare hook skipped: prep call target unresolved");
             return 0;
         }
         void* make_events_address = kbo_resolve_build_specific_rva_ptr(
             exe,
             OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA);
         if (!memory_range_readable(make_events_address, 16u)) {
-            append_logf("KBO all-star events prepare hook skipped: make-events target unreadable target=%p", make_events_address);
+            kbo_log_runtimef("KBO all-star events prepare hook skipped: make-events target unreadable target=%p", make_events_address);
             return 0;
         }
         InterlockedExchangePointer(
@@ -193,7 +193,7 @@ int install_allstar_events_prepare_patch(void)
 
         uint8_t* stub = build_allstar_events_prepare_stub(return_address, allstar_prep_address, layout.game_flag_offset);
         if (stub == NULL) {
-            append_log_line("failed to allocate KBO all-star events prepare hook stub");
+            kbo_log_runtime_line("failed to allocate KBO all-star events prepare hook stub");
         } else {
             uint8_t patch[19] = {
                 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
@@ -204,13 +204,13 @@ int install_allstar_events_prepare_patch(void)
 
             DWORD old_protect = 0;
             if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-                append_logf("VirtualProtect failed for KBO all-star events prepare hook error=%lu", GetLastError());
+                kbo_log_runtimef("VirtualProtect failed for KBO all-star events prepare hook error=%lu", GetLastError());
             } else {
                 memcpy(target, patch, sizeof(patch));
                 FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
                 DWORD ignored = 0;
                 VirtualProtect(target, sizeof(patch), old_protect, &ignored);
-                append_logf(
+                kbo_log_runtimef(
                     "installed KBO all-star events prepare hook target=%p stub=%p return=%p make_events=%p prep=%p helper=%p",
                     target,
                     stub,

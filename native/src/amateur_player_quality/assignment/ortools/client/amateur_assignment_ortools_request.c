@@ -55,7 +55,7 @@ int kbo_amateur_ortools_get_tool_path(char* out, size_t out_size, int* out_is_py
     if (!exists) {
         static volatile LONG missing_log_count = 0;
         if (InterlockedIncrement(&missing_log_count) <= 5) {
-            append_logf(
+            kbo_log_runtimef(
                 "amateur OR-Tools optimizer missing exe=%stools\\kbo_optimizer.exe script=%stools\\kbo_optimizer.py",
                 module_path,
                 module_path);

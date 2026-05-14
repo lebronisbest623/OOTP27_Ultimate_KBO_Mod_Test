@@ -49,12 +49,12 @@ int kbo_retain_foreign_player_rights(
     }
 
     if (!kbo_set_foreign_waiver_right(team_id, player_id, team_league_id, today_yyyymmdd, expires_yyyymmdd)) {
-        append_logf("foreign reserve rights: failed to store right team=%u player=%u", team_id, player_id);
+        kbo_log_runtimef("foreign reserve rights: failed to store right team=%u player=%u", team_id, player_id);
         return 0;
     }
 
     if (!kbo_add_player_id_to_team_fixed_array(retaining_team, OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET, player_id)) {
-        append_logf("foreign reserve rights: restricted array full team=%u player=%u", team_id, player_id);
+        kbo_log_runtimef("foreign reserve rights: restricted array full team=%u player=%u", team_id, player_id);
         return 0;
     }
 
@@ -63,7 +63,7 @@ int kbo_retain_foreign_player_rights(
     *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = team_id;
     *(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET) = team_league_id;
 
-    append_logf("foreign reserve rights: retained team=%u player=%u league=%u from=%u until=%u",
+    kbo_log_runtimef("foreign reserve rights: retained team=%u player=%u league=%u from=%u until=%u",
                team_id, player_id, team_league_id, today_yyyymmdd, expires_yyyymmdd);
     return 1;
 }

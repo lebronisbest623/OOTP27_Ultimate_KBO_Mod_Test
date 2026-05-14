@@ -41,7 +41,7 @@ int kbo_dispatch_custom_event_by_kind(
 {
     if (kind == KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_OPEN) {
         if (g_kbo_foreign_priority_last_open_event_fired_date == event_yyyymmdd) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event skipped duplicate by date source=%s kind=%s event_date=%04u-%02u-%02u",
                 source != NULL ? source : "",
                 kbo_custom_event_kind_key(kind),
@@ -63,7 +63,7 @@ int kbo_dispatch_custom_event_by_kind(
 
     if (kind == KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_CLOSE) {
         if (g_kbo_foreign_priority_last_close_event_fired_date == event_yyyymmdd) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO custom event skipped duplicate by date source=%s kind=%s event_date=%04u-%02u-%02u",
                 source != NULL ? source : "",
                 kbo_custom_event_kind_key(kind),
@@ -72,7 +72,7 @@ int kbo_dispatch_custom_event_by_kind(
                 event_day);
             return -1;
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event close marker reached source=%s date=%04u-%02u-%02u",
             source != NULL ? source : "",
             event_year,

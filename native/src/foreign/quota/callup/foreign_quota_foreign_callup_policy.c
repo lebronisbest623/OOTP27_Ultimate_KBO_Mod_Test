@@ -77,7 +77,7 @@ uint8_t kbo_custom_foreign_policy_callup_allows(
     static volatile LONG log_count = 0;
     LONG slot = InterlockedIncrement(&log_count);
     if (slot <= 240) {
-        append_logf(
+        kbo_log_runtimef(
             "custom foreign policy callup team=%u player=%u type=%s active_count=%d ootp_limit=%d allowed=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u active_asian_h=%u active_asian_p=%u active_non_asian_h=%u active_non_asian_p=%u",
             team_id,
             player_id,
@@ -133,7 +133,7 @@ uint8_t kbo_callup_foreign_limit_allows_with_asian_quota(
             if (memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
                 team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
             }
-            append_logf(
+            kbo_log_runtimef(
                 "foreign injury replacement callup exception team=%u player=%u type=%s active_count=%d limit=%d effective_after=%u",
                 team_id,
                 *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
@@ -181,7 +181,7 @@ uint8_t kbo_callup_foreign_limit_allows_with_asian_quota(
         if (memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
             team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
         }
-        append_logf(
+        kbo_log_runtimef(
             "asian quota callup limit check team=%u player=%u nation=%u type=%s active_count=%d limit=%d effective_after=%u allowed=%u active_asian_h=%u active_asian_p=%u active_non_asian_h=%u active_non_asian_p=%u",
             team_id,
             *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),

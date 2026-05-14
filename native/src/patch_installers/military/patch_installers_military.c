@@ -17,14 +17,14 @@ int install_kbo_military_service_entry_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO military service entry patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO military service entry patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO military service entry patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO military service entry patch host=%s", host);
         return 0;
     }
 
@@ -41,7 +41,7 @@ int install_kbo_military_service_entry_patch(void)
     };
     uint8_t* target = find_ootp_executable_pattern(expected_signature, sizeof(expected_signature));
     if (target == NULL) {
-        append_log_line("Could not resolve military service entry function by signature");
+        kbo_log_runtime_line("Could not resolve military service entry function by signature");
         return 0;
     }
     const size_t stolen_len = 18;
@@ -58,7 +58,7 @@ int install_kbo_military_service_entry_patch(void)
     };
 
     if (target[0] == 0x48 && target[1] == 0xB8 && target[10] == 0xFF && target[11] == 0xE0) {
-        append_logf("KBO military service entry patch already installed target=%p", target);
+        kbo_log_runtimef("KBO military service entry patch already installed target=%p", target);
         return 1;
     }
 
@@ -69,13 +69,13 @@ int install_kbo_military_service_entry_patch(void)
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO military service entry trampoline");
+        kbo_log_runtime_line("failed to allocate KBO military service entry trampoline");
         return 0;
     }
 
     uint8_t* stub = build_kbo_military_service_entry_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO military service entry detour stub");
+        kbo_log_runtime_line("failed to allocate KBO military service entry detour stub");
         return 0;
     }
 
@@ -89,7 +89,7 @@ int install_kbo_military_service_entry_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO military service entry patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO military service entry patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -99,7 +99,7 @@ int install_kbo_military_service_entry_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO military service entry patch target=%p stub=%p trampoline=%p wrapper=%p",
         target,
         stub,
@@ -112,14 +112,14 @@ int install_kbo_military_status_update_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO military status update patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO military status update patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO military status update patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO military status update patch host=%s", host);
         return 0;
     }
 
@@ -136,7 +136,7 @@ int install_kbo_military_status_update_patch(void)
     };
     uint8_t* target = find_ootp_executable_pattern(expected_signature, sizeof(expected_signature));
     if (target == NULL) {
-        append_log_line("Could not resolve military status update function by signature");
+        kbo_log_runtime_line("Could not resolve military status update function by signature");
         return 0;
     }
     const size_t stolen_len = 17;
@@ -153,7 +153,7 @@ int install_kbo_military_status_update_patch(void)
     };
 
     if (target[0] == 0x48 && target[1] == 0xB8 && target[10] == 0xFF && target[11] == 0xE0) {
-        append_logf("KBO military status update patch already installed target=%p", target);
+        kbo_log_runtimef("KBO military status update patch already installed target=%p", target);
         return 1;
     }
 
@@ -164,13 +164,13 @@ int install_kbo_military_status_update_patch(void)
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO military status update trampoline");
+        kbo_log_runtime_line("failed to allocate KBO military status update trampoline");
         return 0;
     }
 
     uint8_t* stub = build_kbo_military_status_update_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO military status update detour stub");
+        kbo_log_runtime_line("failed to allocate KBO military status update detour stub");
         return 0;
     }
 
@@ -184,7 +184,7 @@ int install_kbo_military_status_update_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO military status update patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO military status update patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -194,7 +194,7 @@ int install_kbo_military_status_update_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO military status update patch target=%p stub=%p trampoline=%p wrapper=%p",
         target,
         stub,
@@ -207,14 +207,14 @@ int install_kbo_military_team_add_guard_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO military team-add guard patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO military team-add guard patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO military team-add guard patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO military team-add guard patch host=%s", host);
         return 0;
     }
 
@@ -227,7 +227,7 @@ int install_kbo_military_team_add_guard_patch(void)
     };
     uint8_t* rva_target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, OOTP27_TEAM_ADD_PLAYER_RVA);
     if (memory_range_readable(rva_target, sizeof(expected)) && is_rax_absolute_jump_patch(rva_target)) {
-        append_logf("KBO military team-add guard patch already installed target=%p", rva_target);
+        kbo_log_runtimef("KBO military team-add guard patch already installed target=%p", rva_target);
         return 1;
     }
 
@@ -241,20 +241,20 @@ int install_kbo_military_team_add_guard_patch(void)
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO military team-add guard patch already installed target=%p", target);
+        kbo_log_runtimef("KBO military team-add guard patch already installed target=%p", target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO military team-add guard trampoline");
+        kbo_log_runtime_line("failed to allocate KBO military team-add guard trampoline");
         return 0;
     }
     kbo_set_team_add_player_guard_trampoline(trampoline);
 
     uint8_t* stub = build_kbo_team_add_player_guard_detour_stub();
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO military team-add guard detour stub");
+        kbo_log_runtime_line("failed to allocate KBO military team-add guard detour stub");
         kbo_clear_team_add_player_guard_trampoline();
         return 0;
     }
@@ -269,7 +269,7 @@ int install_kbo_military_team_add_guard_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO military team-add guard patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO military team-add guard patch error=%lu", GetLastError());
         kbo_clear_team_add_player_guard_trampoline();
         return 0;
     }
@@ -280,7 +280,7 @@ int install_kbo_military_team_add_guard_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO military team-add guard patch target=%p rva=0x%llx stub=%p trampoline=%p wrapper=%p",
         target,
         (unsigned long long)((uintptr_t)target - (uintptr_t)exe),

@@ -71,7 +71,7 @@ __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(int32_t 
         scaled = policy->max_scaled_count;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "international established FA multiplier league=%p league_id=%u/%u original=%d multiplier=%d scaled=%d",
         (void*)league_ptr,
         primary_id,
@@ -175,7 +175,7 @@ __declspec(noinline) uint8_t ootp_kbo_intl_established_fa_generation_filter_allo
     LONG slot = InterlockedIncrement(&g_kbo_intl_established_fa_generation_filter_block_count);
     if (slot <= 160) {
         int16_t age = *(int16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
-        append_logf(
+        kbo_log_runtimef(
             "international established FA generation filter rejected #%ld reason=%s player=%u nation=%u asian_quota=%d age=%d pos=%u/%u league_id=%u/%u score=%d cap=%d action=retry_without_registering",
             slot,
             reject_reason,
@@ -190,7 +190,7 @@ __declspec(noinline) uint8_t ootp_kbo_intl_established_fa_generation_filter_allo
             value_score,
             quality_cap);
     } else if (slot == 161) {
-        append_log_line("international established FA generation filter rejected log suppressed after 160 players");
+        kbo_log_runtime_line("international established FA generation filter rejected log suppressed after 160 players");
     }
 
     return 0u;
@@ -212,7 +212,7 @@ __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
 
     uint8_t* player = (uint8_t*)player_ptr;
     if (!memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
-        append_logf(
+        kbo_log_runtimef(
             "international established FA quality probe skipped reason=player_unreadable player=%p league=%p league_id=%u/%u",
             (void*)player_ptr,
             (void*)league_ptr,
@@ -224,7 +224,7 @@ __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
     LONG slot = InterlockedIncrement(&g_kbo_intl_established_fa_quality_probe_log_count);
     if (slot > 512) {
         if (slot == 513) {
-            append_log_line("international established FA quality probe suppressed after 512 generated players");
+            kbo_log_runtime_line("international established FA quality probe suppressed after 512 generated players");
         }
         return;
     }
@@ -249,7 +249,7 @@ __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
     int32_t value_score = kbo_foreign_waiver_value_score(player);
     int asian_quota = kbo_nation_is_asian_quota_candidate(nation_id);
 
-    append_logf(
+    kbo_log_runtimef(
         "international established FA quality probe #%ld player=%p player_id=%u league=%p league_id=%u/%u nation=%u asian_quota=%d age=%d pos=%u/%u gen=flags:%u context:%u grade:%u special:%u draft=db1:%u db2:%u db5:%u db6:%u value=overall:%d talent:%d ratings:%d career:%d score:%d",
         slot,
         (void*)player_ptr,

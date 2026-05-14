@@ -46,11 +46,11 @@ int patch_kbo_salary_arbitration_r11_detour_at(
     }
 
     if (!memory_range_readable(target, size)) {
-        append_logf("%s target unreadable target=%p", label, target);
+        kbo_log_runtimef("%s target unreadable target=%p", label, target);
         return 0;
     }
     if (is_r11_absolute_jump_patch(target)) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return 1;
     }
     if (memcmp(target, expected, size) != 0) {
@@ -70,7 +70,7 @@ int patch_kbo_salary_arbitration_r11_detour_at(
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, size, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for %s error=%lu", label, GetLastError());
         return 0;
     }
 
@@ -80,7 +80,7 @@ int patch_kbo_salary_arbitration_r11_detour_at(
     DWORD ignored = 0;
     VirtualProtect(target, size, old_protect, &ignored);
 
-    append_logf("installed %s target=%p stub=%p", label, target, stub);
+    kbo_log_runtimef("installed %s target=%p stub=%p", label, target, stub);
     return 1;
 }
 
@@ -121,19 +121,19 @@ int install_kbo_salary_arbitration_non_tender_function_patch(HMODULE exe)
         "KBO salary arbitration non-tender function");
     if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO salary arbitration non-tender function already installed target=%p", target);
+        kbo_log_runtimef("KBO salary arbitration non-tender function already installed target=%p", target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO salary arbitration non-tender trampoline");
+        kbo_log_runtime_line("failed to allocate KBO salary arbitration non-tender trampoline");
         return 0;
     }
 
     uint8_t* stub = build_kbo_salary_arbitration_non_tender_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO salary arbitration non-tender detour stub");
+        kbo_log_runtime_line("failed to allocate KBO salary arbitration non-tender detour stub");
         return 0;
     }
 
@@ -147,7 +147,7 @@ int install_kbo_salary_arbitration_non_tender_function_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO salary arbitration non-tender function error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO salary arbitration non-tender function error=%lu", GetLastError());
         return 0;
     }
 
@@ -157,7 +157,7 @@ int install_kbo_salary_arbitration_non_tender_function_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO salary arbitration non-tender function target=%p stub=%p trampoline=%p wrapper=%p",
         target,
         stub,

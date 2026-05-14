@@ -244,7 +244,7 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
         static LONG write_floor_log_count = 0;
         LONG slot = InterlockedIncrement(&write_floor_log_count);
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor demand write floor: source=0x%x player=%u proposed=%d adjusted=%d floor=%d observed_contract_level=%u",
                 source_rva,
                 player_id,
@@ -267,7 +267,7 @@ DWORD WINAPI kbo_no_minor_contract_demand_floor_scanner_thread(LPVOID param)
     const KboForeignPlayerPolicy* policy = kbo_foreign_player_policy();
     if (!kbo_runtime_sleep_should_continue((uint32_t)policy->no_minor_scan_initial_delay_ms)) {
         InterlockedExchange(&g_kbo_no_minor_contract_demand_floor_scanner_started, 0);
-        append_log_line("stopped KBO no-minor demand floor scanner thread");
+        kbo_log_runtime_line("stopped KBO no-minor demand floor scanner thread");
         return 0;
     }
 
@@ -284,7 +284,7 @@ DWORD WINAPI kbo_no_minor_contract_demand_floor_scanner_thread(LPVOID param)
         }
     }
     InterlockedExchange(&g_kbo_no_minor_contract_demand_floor_scanner_started, 0);
-    append_log_line("stopped KBO no-minor demand floor scanner thread");
+    kbo_log_runtime_line("stopped KBO no-minor demand floor scanner thread");
     return 0;
 }
 
@@ -301,6 +301,6 @@ void start_kbo_no_minor_contract_demand_floor_scanner_thread(void)
         InterlockedExchange(&g_kbo_no_minor_contract_demand_floor_scanner_started, 0);
         return;
     }
-    append_log_line("started KBO no-minor demand floor scanner thread");
+    kbo_log_runtime_line("started KBO no-minor demand floor scanner thread");
 }
 

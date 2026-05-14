@@ -74,7 +74,7 @@ uintptr_t get_kbo_league_event_manager(void)
             return cached_event_manager;
         }
         if (!save_matches && cached_save_path[0] != '\0') {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO event manager cache invalidated reason=save_changed old=%s new=%s manager=%p",
                 cached_save_path,
                 have_current_save_path ? current_save_path : "",
@@ -94,7 +94,7 @@ uintptr_t get_kbo_league_event_manager(void)
             if (have_current_save_path) {
                 snprintf(cached_save_path, sizeof(cached_save_path), "%s", current_save_path);
             }
-            append_logf(
+            kbo_log_runtimef(
                 "KBO event manager resolved source=legacy_global league_id=%u offset=0x%x manager=%p",
                 cached_league_id,
                 cached_offset,
@@ -103,7 +103,7 @@ uintptr_t get_kbo_league_event_manager(void)
         }
         if (!logged_current_date_rejected) {
             logged_current_date_rejected = 1;
-            append_logf(
+            kbo_log_runtimef(
                 "KBO event manager legacy global candidate rejected current_date_ptr=%p",
                 (void*)legacy_candidate);
         }
@@ -129,7 +129,7 @@ uintptr_t get_kbo_league_event_manager(void)
         if (have_current_save_path) {
             snprintf(cached_save_path, sizeof(cached_save_path), "%s", current_save_path);
         }
-        append_logf(
+        kbo_log_runtimef(
             "KBO event manager resolved source=league_scan league_id=%u league=%p offset=0x%x manager=%p",
             cached_league_id,
             (void*)league_ptr,

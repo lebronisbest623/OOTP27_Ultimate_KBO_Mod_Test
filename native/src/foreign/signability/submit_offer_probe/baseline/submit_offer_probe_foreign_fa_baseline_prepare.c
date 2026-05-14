@@ -96,7 +96,7 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     static LONG prepare_log_count = 0;
     LONG slot = InterlockedIncrement(&prepare_log_count);
     if (slot <= 120) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO foreign FA demand baseline prepared source=0x%x player=%u asian_quota=%d reserve_right=%d holder_team=%u today=%u financials=%p patched=%d original_superstar=%d foreign_superstar=%d",
             source_rva,
             memory_range_readable(player + OOTP27_PLAYER_ID_OFFSET, sizeof(uint32_t))
@@ -132,7 +132,7 @@ void kbo_prepare_foreign_fa_offer_demand_baseline(uintptr_t player_ptr, const ch
         static LONG no_financials_log_count = 0;
         LONG slot = InterlockedIncrement(&no_financials_log_count);
         if (slot <= 40) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO foreign FA demand baseline offer-build skipped source=%s reason=no_financials player=%u",
                 source != NULL ? source : "",
                 memory_range_readable(player + OOTP27_PLAYER_ID_OFFSET, sizeof(uint32_t))
@@ -155,7 +155,7 @@ void kbo_prepare_foreign_fa_offer_demand_baseline(uintptr_t player_ptr, const ch
         static LONG offer_prepare_log_count = 0;
         LONG slot = InterlockedIncrement(&offer_prepare_log_count);
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO foreign FA demand baseline offer-build active source=%s player=%u league=%u financials=%p",
                 source != NULL ? source : "",
                 memory_range_readable(player + OOTP27_PLAYER_ID_OFFSET, sizeof(uint32_t))
@@ -222,12 +222,12 @@ void kbo_log_financials_salary_baseline_probe(const char* source)
     uint8_t* financials = kbo_resolve_current_league_financials(&league_id);
     if (financials == NULL) {
         if (slot <= 20) {
-            append_logf("KBO financials salary baseline probe skipped source=%s reason=no_financials", source != NULL ? source : "");
+            kbo_log_runtimef("KBO financials salary baseline probe skipped source=%s reason=no_financials", source != NULL ? source : "");
         }
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO financials salary baseline probe source=%s league=%u financials=%p off278=%d off27c=%d off280=%d off284=%d off288=%d off28c=%d off290=%d off294=%d off298=%d off29c=%d off2a0=%d off2a4=%d off2a8=%d off2ac=%d off360=%d off364=%d off368=%d off36c=%d off370=%d off374=%d off378=%d off37c=%d off380=%d off384=%d off388=%d off38c=%d off390=%d",
         source != NULL ? source : "",
         league_id,

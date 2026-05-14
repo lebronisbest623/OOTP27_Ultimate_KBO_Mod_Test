@@ -18,7 +18,7 @@ public sealed class KboFlagsTests : IDisposable
     }
 
     [Fact]
-    public void ReadKboFlagConfig_ReadsFlatJsonAndNormalizesLegacyTxtKeys()
+    public void ReadKboFlagConfig_ReadsFlatJsonAndNormalizesTxtKeys()
     {
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, """
@@ -184,23 +184,6 @@ public sealed class KboFlagsTests : IDisposable
     }
 
     [Fact]
-    public void EnsureDefaultKboRuntimeFlags_MigratesNoMinorContractExperimentalFlagToOfficialKey()
-    {
-        Directory.CreateDirectory(tempDir);
-        File.WriteAllText(ConfigPath, """
-        {
-          "disable_kbo_no_minor_contract_experimental_patch": true
-        }
-        """);
-
-        global::KboFlags.EnsureDefaultKboRuntimeFlags(ConfigPath);
-
-        var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        flags["disable_kbo_no_minor_contract_patch"].Should().BeTrue();
-        flags.ContainsKey("disable_kbo_no_minor_contract_experimental_patch").Should().BeFalse();
-    }
-
-    [Fact]
     public void EnsureDefaultKboRuntimeFlags_DoesNotOverwriteExistingOptOuts()
     {
         Directory.CreateDirectory(tempDir);
@@ -215,44 +198,6 @@ public sealed class KboFlagsTests : IDisposable
 
         global::KboFlags.ReadKboFlag(ConfigPath, "enable_kbo_foreign_trade_check_patch.txt").Should().BeFalse();
         global::KboFlags.ReadKboFlag(ConfigPath, "enable_experimental_runtime_hooks.txt").Should().BeFalse();
-    }
-
-    [Fact]
-    public void ImportLegacyKboFlagFilesIfMissing_CopiesKnownBooleanFlagsOnly()
-    {
-        Directory.CreateDirectory(tempDir);
-        File.WriteAllText(Path.Combine(tempDir, "enable_launcher_injection.txt"), "1");
-        File.WriteAllText(Path.Combine(tempDir, "enable_experimental_runtime_hooks.txt"), "enabled");
-        File.WriteAllText(Path.Combine(tempDir, "disable_foreign_injury_replacement.txt"), "off");
-        File.WriteAllText(Path.Combine(tempDir, "enable_player_profile_ocr_click_v1.txt"), "1");
-        File.WriteAllText(Path.Combine(tempDir, "kbo_league_id.txt"), "100");
-        File.WriteAllText(Path.Combine(tempDir, "foreign_waiver_negotiation_window.txt"), "2026");
-
-        global::KboFlags.ImportLegacyKboFlagFilesIfMissing(ConfigPath);
-
-        var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        flags["enable_launcher_injection"].Should().BeTrue();
-        flags["enable_experimental_runtime_hooks"].Should().BeTrue();
-        flags["disable_foreign_injury_replacement"].Should().BeFalse();
-        flags.ContainsKey("enable_player_profile_ocr_click_v1").Should().BeFalse();
-        flags.ContainsKey("kbo_league_id").Should().BeFalse();
-        flags.ContainsKey("foreign_waiver_negotiation_window").Should().BeFalse();
-    }
-
-    [Fact]
-    public void ImportLegacyKboFlagFilesIfMissing_DoesNotOverwriteJsonValues()
-    {
-        Directory.CreateDirectory(tempDir);
-        File.WriteAllText(ConfigPath, """
-        {
-          "enable_launcher_injection": false
-        }
-        """);
-        File.WriteAllText(Path.Combine(tempDir, "enable_launcher_injection.txt"), "1");
-
-        global::KboFlags.ImportLegacyKboFlagFilesIfMissing(ConfigPath);
-
-        global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt").Should().BeFalse();
     }
 
     [Fact]

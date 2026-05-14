@@ -37,7 +37,7 @@ void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd)
     g_kbo_foreign_waiver_rights_count = w;
     InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
     if (removed > 0) {
-        append_logf("foreign reserve rights: expired=%d today=%u", removed, today_yyyymmdd);
+        kbo_log_runtimef("foreign reserve rights: expired=%d today=%u", removed, today_yyyymmdd);
         kbo_persist_foreign_waiver_rights();
     }
 }
@@ -60,7 +60,7 @@ int kbo_set_foreign_waiver_right(
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         if (g_kbo_foreign_waiver_rights[i].player_id == player_id) {
             if (g_kbo_foreign_waiver_rights[i].team_id != team_id) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign reserve rights: reassigned exclusive holder player=%u old_team=%u new_team=%u",
                     player_id,
                     g_kbo_foreign_waiver_rights[i].team_id,
@@ -157,7 +157,7 @@ int kbo_clear_foreign_waiver_right(uint32_t team_id, uint32_t player_id)
     if (removed > 0) {
         kbo_clear_foreign_waiver_right_memory_marks(team_id, player_id, 1, 0);
 
-        append_logf("foreign reserve rights: released team=%u player=%u removed=%d", team_id, player_id, removed);
+        kbo_log_runtimef("foreign reserve rights: released team=%u player=%u removed=%d", team_id, player_id, removed);
         kbo_persist_foreign_waiver_rights();
     }
     return removed;
@@ -168,7 +168,7 @@ int kbo_consume_foreign_waiver_right_after_holder_signing(uint32_t team_id, uint
     int removed = kbo_remove_foreign_waiver_right_record(team_id, player_id);
     if (removed > 0) {
         kbo_clear_foreign_waiver_right_memory_marks(team_id, player_id, 0, 1);
-        append_logf(
+        kbo_log_runtimef(
             "foreign reserve rights: consumed after holder signing team=%u player=%u removed=%d",
             team_id,
             player_id,

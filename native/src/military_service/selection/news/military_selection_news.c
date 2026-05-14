@@ -121,7 +121,7 @@ int kbo_emit_military_selection_news(
 
     uint32_t league_id = kbo_resolve_kbo_league_id();
     if (league_id == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military selection news skipped source=%s date=%u reason=league_id_unavailable count=%d",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -151,7 +151,7 @@ int kbo_emit_military_selection_news(
                 body,
                 sizeof(body),
                 source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military selection news skipped source=%s date=%u reason=template_unavailable count=%d",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -162,7 +162,7 @@ int kbo_emit_military_selection_news(
 
     char line_template[256] = {0};
     if (!kbo_news_template_load("military.selection.line", line_template, sizeof(line_template), NULL, 0u, source)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military selection news skipped source=%s date=%u reason=line_template_unavailable count=%d",
             source != NULL ? source : "",
             event_yyyymmdd,
@@ -209,7 +209,7 @@ int kbo_emit_military_selection_news(
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
         title,
         body);
-    append_logf(
+    kbo_log_runtimef(
         "KBO military selection news source=%s date=%u league_id=%u count=%d created=%d",
         source != NULL ? source : "",
         event_yyyymmdd,

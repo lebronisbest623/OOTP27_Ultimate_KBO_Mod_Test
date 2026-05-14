@@ -287,7 +287,7 @@ int kbo_json_int_value_at(const char* value, const char* end, int* out_value)
     return parsed == 1 && kbo_json_int_token_value(value, &token, out_value);
 }
 
-static int kbo_find_value_token_in_json(const char* json, DWORD json_size, const char* key, const char* legacy_key, jsmntok_t* out_value)
+static int kbo_find_value_token_in_json(const char* json, DWORD json_size, const char* key, jsmntok_t* out_value)
 {
     if (json == NULL || key == NULL || out_value == NULL) {
         return 0;
@@ -308,32 +308,20 @@ static int kbo_find_value_token_in_json(const char* json, DWORD json_size, const
             return 1;
         }
     }
-    if (legacy_key == NULL) {
-        return 0;
-    }
-    for (int i = 1; i + 1 < parsed; i++) {
-        if (tokens[i].type != JSMN_STRING) {
-            continue;
-        }
-        if (kbo_token_equals_key(json, &tokens[i], legacy_key)) {
-            *out_value = tokens[i + 1];
-            return 1;
-        }
-    }
     return 0;
 }
 
-int kbo_find_flag_value_in_json(const char* json, DWORD json_size, const char* key, const char* legacy_key, int* out_value)
+int kbo_find_flag_value_in_json(const char* json, DWORD json_size, const char* key, int* out_value)
 {
     jsmntok_t value = {0};
-    return kbo_find_value_token_in_json(json, json_size, key, legacy_key, &value)
+    return kbo_find_value_token_in_json(json, json_size, key, &value)
         && kbo_json_bool_token_value(json, &value, out_value);
 }
 
 int kbo_find_int_value_in_json(const char* json, DWORD json_size, const char* key, int* out_value)
 {
     jsmntok_t value = {0};
-    return kbo_find_value_token_in_json(json, json_size, key, NULL, &value)
+    return kbo_find_value_token_in_json(json, json_size, key, &value)
         && kbo_json_int_token_value(json, &value, out_value);
 }
 
@@ -348,6 +336,6 @@ int kbo_find_string_value_in_json(const char* json, DWORD json_size, const char*
 int kbo_find_json_value_span(const char* json, DWORD json_size, const char* key, const char** out_start, const char** out_end)
 {
     jsmntok_t value = {0};
-    return kbo_find_value_token_in_json(json, json_size, key, NULL, &value)
+    return kbo_find_value_token_in_json(json, json_size, key, &value)
         && kbo_json_token_span_value(json, &value, out_start, out_end);
 }

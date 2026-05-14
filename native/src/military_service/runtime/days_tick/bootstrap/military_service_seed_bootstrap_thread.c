@@ -19,7 +19,7 @@
 DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("KBO military service seed bootstrap thread started");
+    kbo_log_runtime_line("KBO military service seed bootstrap thread started");
 
     char last_save_path[MAX_PATH] = {0};
     int settled_attempts = 0;
@@ -36,7 +36,7 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
         if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
             if (attempt <= tuning->military_seed_bootstrap_log_initial_attempts
                     || attempt % tuning->military_seed_bootstrap_log_interval == 0) {
-                append_logf("KBO military service seed bootstrap waiting attempt=%d reason=no_save_path", attempt);
+                kbo_log_runtimef("KBO military service seed bootstrap waiting attempt=%d reason=no_save_path", attempt);
             }
             continue;
         }
@@ -58,7 +58,7 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
                 || (sang == NULL && kpb == NULL)) {
             if (attempt <= tuning->military_seed_bootstrap_log_initial_attempts
                     || attempt % tuning->military_seed_bootstrap_log_interval == 0) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO military service seed bootstrap waiting attempt=%d reason=state_not_ready date_serial=%u player_count=%d sang=%p kpb=%p save=%s",
                     attempt,
                     today_serial,
@@ -78,7 +78,7 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
         int seeded = 0;
         int returned = kbo_tick_military_service_days("military_seed_bootstrap", &seeded);
         if (seeded > 0 || returned > 0) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO military service seed bootstrap applied attempt=%d seeded=%d returned=%d save=%s",
                 attempt,
                 seeded,
@@ -91,7 +91,7 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
             settled_attempts++;
         }
         if (settled_attempts >= 3) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO military service seed bootstrap settled attempt=%d seeded=0 returned=0 save=%s",
                 attempt,
                 save_path);
@@ -99,6 +99,6 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
         }
     }
 
-    append_log_line("KBO military service seed bootstrap ended without settled save");
+    kbo_log_runtime_line("KBO military service seed bootstrap ended without settled save");
     return 0;
 }

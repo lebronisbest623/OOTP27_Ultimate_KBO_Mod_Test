@@ -84,14 +84,14 @@ int kbo_fa_salary_snapshot_write_csv(
 
     char path[MAX_PATH] = {0};
     if (!kbo_fa_salary_snapshot_path(season, path, sizeof(path))) {
-        append_logf("KBO FA salary snapshot skipped source=%s reason=path_unavailable season=%u", source != NULL ? source : "", season);
+        kbo_log_runtimef("KBO FA salary snapshot skipped source=%s reason=path_unavailable season=%u", source != NULL ? source : "", season);
         return 0;
     }
 
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf("KBO FA salary snapshot failed open path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO FA salary snapshot failed open path=%s gle=%lu", path, GetLastError());
         return 0;
     }
 
@@ -155,7 +155,7 @@ int kbo_fa_salary_snapshot_write_csv(
     }
 
     if (!kbo_atomic_commit(file, tmp_path, path)) {
-        append_logf("KBO FA salary snapshot atomic commit failed path=%s gle=%lu", path, GetLastError());
+        kbo_log_runtimef("KBO FA salary snapshot atomic commit failed path=%s gle=%lu", path, GetLastError());
         return 0;
     }
     if (out_path != NULL && out_path_size > 0) {
@@ -172,7 +172,7 @@ int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        append_logf("KBO FA salary snapshot skipped source=%s reason=no_player_vector date=%u", source != NULL ? source : "", date);
+        kbo_log_runtimef("KBO FA salary snapshot skipped source=%s reason=no_player_vector date=%u", source != NULL ? source : "", date);
         kbo_audit_fa_salary_snapshot_capture_skip(
             "player_vector_unavailable",
             source,
@@ -193,7 +193,7 @@ int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date
         player_count,
         &snapshot_failure_reason);
     if (player_snapshot == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA salary snapshot skipped source=%s reason=player_vector_snapshot_failed detail=%s vector=%p count=%d",
             source != NULL ? source : "",
             snapshot_failure_reason != NULL ? snapshot_failure_reason : "",
@@ -218,7 +218,7 @@ int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date
         HEAP_ZERO_MEMORY,
         (SIZE_T)player_count * sizeof(KboFaSalarySnapshotRow));
     if (rows == NULL) {
-        append_logf("KBO FA salary snapshot skipped source=%s reason=alloc_failed count=%d", source != NULL ? source : "", player_count);
+        kbo_log_runtimef("KBO FA salary snapshot skipped source=%s reason=alloc_failed count=%d", source != NULL ? source : "", player_count);
         kbo_audit_fa_salary_snapshot_capture_skip(
             "allocation_failed",
             source,
@@ -299,7 +299,7 @@ int kbo_capture_fa_salary_opening_day_snapshot(const char* source, uint32_t date
     if (wrote) {
         InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_season, (LONG)season);
         InterlockedExchange(&g_kbo_fa_salary_snapshot_cached_exists_value, 1);
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA salary opening-day snapshot written source=%s date=%u season=%u opening_day=%u league=%u scanned=%d rows=%d salary_rows=%d zero_salary_rows=%d csv=%s",
             source != NULL ? source : "",
             date,

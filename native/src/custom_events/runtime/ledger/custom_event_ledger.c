@@ -186,7 +186,7 @@ void kbo_custom_event_ledger_record(
 
     char path[MAX_PATH] = {0};
     if (!kbo_custom_event_ledger_path(path, sizeof(path))) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event ledger skipped source=%s kind=%s date=%u reason=path_unavailable",
             source != NULL ? source : "",
             kbo_custom_event_kind_key(kind),
@@ -203,7 +203,7 @@ void kbo_custom_event_ledger_record(
         FILE_ATTRIBUTE_NORMAL,
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event ledger skipped source=%s kind=%s date=%u reason=open_failed gle=%lu path=%s",
             source != NULL ? source : "",
             kbo_custom_event_kind_key(kind),
@@ -249,7 +249,7 @@ void kbo_custom_event_ledger_record(
     DWORD written = 0u;
     DWORD len = (DWORD)strlen(line);
     if (len == 0u || !WriteFile(file, line, len, &written, NULL) || written != len) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO custom event ledger write failed source=%s kind=%s date=%u gle=%lu path=%s",
             source != NULL ? source : "",
             kbo_custom_event_kind_key(kind),

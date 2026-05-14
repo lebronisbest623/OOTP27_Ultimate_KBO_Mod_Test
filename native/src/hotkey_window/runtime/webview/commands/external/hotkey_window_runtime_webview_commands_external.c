@@ -17,7 +17,7 @@ int kbo_webview_handle_external_or_foreign_command(const char* cmd, HWND hwnd)
         uint32_t player_id = (uint32_t)strtoul(cmd + 7, NULL, 10);
         if (player_id != 0u) {
             g_kbo_hub_selected_foreign_player_id = player_id;
-            append_logf("foreign rights webview: selected player=%u", player_id);
+            kbo_log_runtimef("foreign rights webview: selected player=%u", player_id);
         }
         kbo_webview_navigate_current();
         return 1;

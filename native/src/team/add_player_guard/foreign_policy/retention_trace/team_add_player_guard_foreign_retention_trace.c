@@ -97,7 +97,7 @@ void kbo_team_add_log_foreign_retention_result(
     static volatile LONG retention_result_log_count = 0;
     LONG slot = InterlockedIncrement(&retention_result_log_count);
     if (slot <= 200) {
-        append_logf(
+        kbo_log_runtimef(
             "foreign retention re-signing: %s result=%u team=%u holder_team=%u player=%u today=%u before_current=%u before_active=%u before_original=%u after_current=%u after_active=%u after_original=%u contract_level=%u contract_status=%u contract_start_year=%u salary_y1=%d score=%d caller_rva=0x%x",
             label,
             result,

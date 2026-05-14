@@ -30,14 +30,14 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
             NULL);
         if (captured != 0
                 && enable_kbo_allstar_raw_flags_if_kbo_context(captured, "startup_retry_captured_raw")) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star force retry using captured raw league attempt=%d league_id=%u league=%p",
                 attempt,
                 league_id,
                 (void*)captured);
             seed_kbo_allstar_schedule_dates(captured, "startup_retry_captured_raw");
             if (run_kbo_allstar_native_event_generation(captured, "startup_retry_captured_raw")) {
-                append_log_line("KBO all-star force retry completed by captured raw league");
+                kbo_log_runtime_line("KBO all-star force retry completed by captured raw league");
                 return 0;
             }
         }
@@ -47,19 +47,19 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
 
         uintptr_t league_ptr = kbo_find_allstar_league_ptr(league_id);
         if (league_ptr != 0) {
-            append_logf("KBO all-star force retry found league attempt=%d league_id=%u league=%p", attempt, league_id, (void*)league_ptr);
+            kbo_log_runtimef("KBO all-star force retry found league attempt=%d league_id=%u league=%p", attempt, league_id, (void*)league_ptr);
             enable_kbo_allstar_flags(league_ptr, "startup_retry");
             InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
             seed_kbo_allstar_schedule_dates(league_ptr, "startup_retry");
             run_kbo_allstar_native_event_generation(league_ptr, "startup_retry");
-            append_log_line("KBO all-star force retry completed");
+            kbo_log_runtime_line("KBO all-star force retry completed");
             return 0;
         }
 
         league_ptr = find_kbo_allstar_core_fallback_league(league_id);
         if (league_ptr != 0
                 && enable_kbo_allstar_flags_for_core_league(league_ptr, league_id, "startup_retry_core_fallback")) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO all-star force retry found league by core fallback attempt=%d league_id=%u league=%p",
                 attempt,
                 league_id,
@@ -67,7 +67,7 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
             InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
             seed_kbo_allstar_schedule_dates(league_ptr, "startup_retry_core_fallback");
             run_kbo_allstar_native_event_generation(league_ptr, "startup_retry_core_fallback");
-            append_log_line("KBO all-star force retry completed by core fallback");
+            kbo_log_runtime_line("KBO all-star force retry completed by core fallback");
             return 0;
         }
 
@@ -76,7 +76,7 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
         }
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO all-star force retry gave up: league not found after %d attempts",
         tuning->allstar_force_retry_attempts);
     return 0;
@@ -90,7 +90,7 @@ void start_kbo_allstar_force_retry_thread(void)
     }
 
     if (kbo_start_runtime_thread(kbo_allstar_force_retry_thread, NULL, "all-star force retry")) {
-        append_log_line("KBO all-star force retry thread started");
+        kbo_log_runtime_line("KBO all-star force retry thread started");
     } else {
         InterlockedExchange(&started, 0);
     }

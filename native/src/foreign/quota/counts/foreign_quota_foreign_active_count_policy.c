@@ -33,7 +33,7 @@ int32_t kbo_apply_active_asian_quota_count_exception(
         if (memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
             team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
         }
-        append_logf(
+        kbo_log_runtimef(
             "asian quota active foreign slot exception team=%u type=%s original=%d adjusted=%d asian_hitters=%u asian_pitchers=%u",
             team_id,
             pitcher_count ? "pitcher" : "hitter",
@@ -76,7 +76,7 @@ int32_t kbo_custom_foreign_policy_neutralized_count(
         if (memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
             team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
         }
-        append_logf(
+        kbo_log_runtimef(
             "custom foreign policy neutralized OOTP active count team=%u type=%s original=%d adjusted=0 active_effective=%u active_asian_h=%u active_asian_p=%u active_non_asian_h=%u active_non_asian_p=%u",
             team_id,
             pitcher_count ? "pitcher" : "hitter",

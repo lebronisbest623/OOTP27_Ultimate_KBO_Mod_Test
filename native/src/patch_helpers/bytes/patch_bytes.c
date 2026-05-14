@@ -48,7 +48,7 @@ void log_patch_bytes_mismatch(const char* label, const uint8_t* target, size_t s
     for (size_t i = 0; i < size && offset + 4 < sizeof(bytes); i++) {
         offset += (size_t)snprintf(bytes + offset, sizeof(bytes) - offset, "%s%02X", i == 0 ? "" : " ", target[i]);
     }
-    append_logf("%s bytes mismatch at %p: %s", label, target, bytes);
+    kbo_log_runtimef("%s bytes mismatch at %p: %s", label, target, bytes);
 }
 
 void log_extended_context(const char* label, const uint8_t* target, int pre_bytes, int total_bytes)
@@ -58,7 +58,7 @@ void log_extended_context(const char* label, const uint8_t* target, int pre_byte
         start = (const uint8_t*)0x10000u;
     }
     if (!memory_range_readable(start, (SIZE_T)total_bytes)) {
-        append_logf("%s extended ctx unreadable start=%p pre=%d total=%d", label, start, pre_bytes, total_bytes);
+        kbo_log_runtimef("%s extended ctx unreadable start=%p pre=%d total=%d", label, start, pre_bytes, total_bytes);
         return;
     }
     for (int row = 0; row < total_bytes; row += 16) {
@@ -69,7 +69,7 @@ void log_extended_context(const char* label, const uint8_t* target, int pre_byte
                 "%s%02X", col == 0 ? "" : " ", start[row + col]);
         }
         int rel = row - pre_bytes;
-        append_logf("%s ctx%+d [%p]: %s", label, rel, start + row, hex);
+        kbo_log_runtimef("%s ctx%+d [%p]: %s", label, rel, start + row, hex);
     }
 }
 
@@ -89,7 +89,7 @@ int kbo_memory_matches_masked_pattern(const uint8_t* data, const uint8_t* patter
 int patch_static_bytes(const char* label, uint8_t* target, const uint8_t* expected, const uint8_t* patch, size_t size)
 {
     if (memcmp(target, patch, size) == 0) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return 1;
     }
 
@@ -100,7 +100,7 @@ int patch_static_bytes(const char* label, uint8_t* target, const uint8_t* expect
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, size, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for %s error=%lu", label, GetLastError());
         return 0;
     }
 
@@ -110,7 +110,7 @@ int patch_static_bytes(const char* label, uint8_t* target, const uint8_t* expect
     DWORD ignored = 0;
     VirtualProtect(target, size, old_protect, &ignored);
 
-    append_logf("installed %s target=%p", label, target);
+    kbo_log_runtimef("installed %s target=%p", label, target);
     return 1;
 }
 

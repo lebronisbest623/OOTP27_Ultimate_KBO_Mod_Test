@@ -51,7 +51,7 @@ int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryR
     player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = 0u;
     player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 0u;
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign injury replacement: restored active replacement source=%s team=%u player=%u added_arrays=%d before_current=%u before_active=%u before_original=%u",
         source != NULL ? source : "",
         rec->team_id,
@@ -210,7 +210,7 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
     player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = 0u;
     player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 0u;
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign injury replacement: released replacement source=%s team=%u player=%u removed_arrays=%d before_current=%u before_active=%u before_original=%u before_league=%u current_team_league=%u release_league=%u before_original_league=%u before_default=%u old_status41=%u old_contract_level=%u old_contract_status=%u non_kbo_repair=%d market=1",
         source != NULL ? source : "",
         team_id,

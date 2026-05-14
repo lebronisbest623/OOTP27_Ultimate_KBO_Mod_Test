@@ -10,7 +10,7 @@ void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanStat
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        append_logf(
+        kbo_log_runtimef(
             "international established FA postscan failed batch=%ld reason=no_player_vector expected=%d before_count=%d",
             batch->batch_id,
             batch->expected_count,
@@ -249,7 +249,7 @@ void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanStat
         }
 
         if (logged < KBO_INTL_ESTABLISHED_FA_POSTSCAN_MAX_DETAIL_LOGS) {
-            append_logf(
+            kbo_log_runtimef(
                 "international established FA postscan player batch=%ld index=%d player=%u nation=%u asian_quota=%d age=%d pos=%u/%u market_candidate=%d block=team:%d retired:%d age:%d draft:%d context:%d team=%u active=%u original_team=%u league=%u original_league=%u loan_league=%u draft_league=%u status=retired:%u flags:%u restricted:%u secondary:%u loan:%u dfa:%u injury:%u contract=level:%u status:%u start:%u salary:%d demand:%d draft=class:%u subtype:%u eligible:%u original_eligible:%u extra:%u gen=flags:%u context:%u grade:%u special:%u quality=policy:%s cap:%d field_cap:%d original:%d adjusted:%d changed:%d value=overall:%d talent:%d ratings:%d career:%d score=%d",
                 batch->batch_id,
                 i,
@@ -316,7 +316,7 @@ void kbo_intl_established_fa_postscan_run(const KboIntlEstablishedFaPostscanStat
     int asian_avg = asian > 0 ? (int)(asian_score_sum / asian) : 0;
     int non_asian_avg = non_asian > 0 ? (int)(non_asian_score_sum / non_asian) : 0;
 
-    append_logf(
+    kbo_log_runtimef(
         "international established FA postscan summary batch=%ld date=%s before_count=%d after_count=%d before_max_player=%u original=%d expected=%d matched=%d valid=%d foreign=%d asian=%d non_asian=%d teamless=%d league_match=%d market_candidate=%d market_block=team:%d retired:%d age:%d draft:%d context:%d draft_eligible_cleared=%d avg_score=%d asian_avg=%d non_asian_avg=%d max_score=%d asian_max=%d non_asian_max=%d quality_shaping=%d pitchers=%d asian_pitchers=%d non_asian_pitchers=%d asian_starters=%d asian_bullpen=%d non_asian_starters=%d non_asian_bullpen=%d adjusted=%d asian_adjusted=%d non_asian_adjusted=%d starter_adjusted=%d bullpen_adjusted=%d csv=%s",
         batch->batch_id,
         date,

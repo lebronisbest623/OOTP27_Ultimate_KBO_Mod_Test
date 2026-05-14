@@ -94,6 +94,13 @@
       ]
     },
     {
+      "id": "teams",
+      "label": "Teams",
+      "files": [
+        { "path": "team_classification_seed.csv", "source": "teams/team_classification_seed.csv", "label": "Team classification seed", "kind": "seed" }
+      ]
+    },
+    {
       "id": "runtime",
       "label": "Runtime",
       "files": [

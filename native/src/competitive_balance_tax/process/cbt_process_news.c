@@ -156,7 +156,7 @@ void kbo_cbt_insert_violation_news_v2(
                 body,
                 sizeof(body),
                 "cbt_violation")) {
-        append_logf("KBO CBT violation news skipped season=%u team=%u reason=template_unavailable", rec->season, rec->team_id);
+        kbo_log_runtimef("KBO CBT violation news skipped season=%u team=%u reason=template_unavailable", rec->season, rec->team_id);
         return;
     }
 
@@ -234,7 +234,7 @@ int kbo_cbt_insert_opening_day_summary_news(
                 body,
                 sizeof(body),
                 "cbt_summary")) {
-        append_logf("KBO CBT opening-day news skipped season=%u reason=template_unavailable", season);
+        kbo_log_runtimef("KBO CBT opening-day news skipped season=%u reason=template_unavailable", season);
         return 0;
     }
 
@@ -247,7 +247,7 @@ int kbo_cbt_insert_opening_day_summary_news(
                 no_violations,
                 sizeof(no_violations),
                 "cbt_summary")) {
-            append_logf("KBO CBT opening-day news skipped season=%u reason=no_violations_template_unavailable", season);
+            kbo_log_runtimef("KBO CBT opening-day news skipped season=%u reason=no_violations_template_unavailable", season);
             return 0;
         }
         kbo_news_text_append(body, sizeof(body), no_violations);
@@ -256,7 +256,7 @@ int kbo_cbt_insert_opening_day_summary_news(
         char line_template[1024] = {0};
         if (!kbo_news_template_load("cbt.summary.violations_header", header, sizeof(header), NULL, 0u, "cbt_summary")
                 || !kbo_news_template_load("cbt.summary.violation_line", line_template, sizeof(line_template), NULL, 0u, "cbt_summary")) {
-            append_logf("KBO CBT opening-day news skipped season=%u reason=violation_list_template_unavailable", season);
+            kbo_log_runtimef("KBO CBT opening-day news skipped season=%u reason=violation_list_template_unavailable", season);
             return 0;
         }
         kbo_news_text_append(body, sizeof(body), header);
@@ -318,7 +318,7 @@ int kbo_cbt_insert_opening_day_summary_news(
                     penalty,
                     sizeof(penalty),
                     "cbt_summary")) {
-                append_logf("KBO CBT opening-day news skipped season=%u reason=draft_penalty_template_unavailable", season);
+                kbo_log_runtimef("KBO CBT opening-day news skipped season=%u reason=draft_penalty_template_unavailable", season);
                 return 0;
             }
             kbo_news_text_append(body, sizeof(body), penalty);
@@ -326,7 +326,7 @@ int kbo_cbt_insert_opening_day_summary_news(
     }
 
     int created = create_kbo_native_live_news_with_body(year, month, day, league_id, 2u, title, body);
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT opening-day news season=%u date=%04u%02u%02u league_id=%u reviewed=%d violations=%d created=%d",
         season,
         year,

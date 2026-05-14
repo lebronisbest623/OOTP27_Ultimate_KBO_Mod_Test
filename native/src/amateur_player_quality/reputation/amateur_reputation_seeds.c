@@ -99,7 +99,7 @@ int kbo_load_reputation_seed_path_into_cache(const char* path)
     }
     KboCsvReader* reader = kbo_csv_reader_open(path);
     if (reader == NULL) {
-        append_logf("team reputation seed load skipped path=%s reason=read_failed", path);
+        kbo_log_runtimef("team reputation seed load skipped path=%s reason=read_failed", path);
         return 0;
     }
 
@@ -125,7 +125,7 @@ int kbo_load_reputation_seed_path_into_cache(const char* path)
 
     int added = g_kbo_amateur_reputation_seed_count - before;
     kbo_csv_reader_close(reader);
-    append_logf("team reputation seed loaded added=%d total=%d path=%s", added, g_kbo_amateur_reputation_seed_count, path);
+    kbo_log_runtimef("team reputation seed loaded added=%d total=%d path=%s", added, g_kbo_amateur_reputation_seed_count, path);
     return 1;
 }
 
@@ -206,7 +206,7 @@ int kbo_apply_amateur_reputation_history_to_cache(void)
     }
 
     kbo_csv_reader_close(reader);
-    append_logf("amateur reputation history replayed rows=%d path=%s", applied, path);
+    kbo_log_runtimef("amateur reputation history replayed rows=%d path=%s", applied, path);
     return applied;
 }
 
@@ -241,7 +241,7 @@ void kbo_ensure_amateur_reputation_seeds_loaded(void)
     InterlockedExchange(&g_kbo_amateur_reputation_seed_loaded, 1);
     int count = g_kbo_amateur_reputation_seed_count;
     kbo_unlock_amateur_reputation_seeds();
-    append_logf("team reputation seeds ready count=%d", count);
+    kbo_log_runtimef("team reputation seeds ready count=%d", count);
 }
 
 int kbo_find_amateur_team_reputation_for_league(uint32_t league_id, uint32_t team_id, uint8_t* out_reputation)

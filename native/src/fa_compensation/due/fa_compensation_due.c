@@ -49,7 +49,7 @@ static int kbo_submit_fa_compensation_protected_list_record(
         auto_protected,
         KBO_FA_COMPENSATION_PROTECTED_LIST_MAX);
     if (candidate_count <= 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA protected list deferred reason=no_candidates fa_player=%u signing_team=%u due=%u",
             rec->player_id,
             rec->signing_team_id,
@@ -243,7 +243,7 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
             KboFaCompensationDecisionRow decision;
             if (kbo_load_latest_fa_compensation_decision(task_rec.player_id, &decision)
                     && strcmp(decision.action, "CASH_ONLY") == 0) {
-                append_logf(
+                kbo_log_runtimef(
                     "KBO FA compensation cash-only recorded fa_player=%u original_team=%u signing_team=%u cash_only=%u source=%s",
                     task_rec.player_id,
                     task_rec.original_team_id,

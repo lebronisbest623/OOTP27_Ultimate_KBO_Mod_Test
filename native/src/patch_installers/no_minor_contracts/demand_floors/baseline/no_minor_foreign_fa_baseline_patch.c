@@ -53,7 +53,7 @@ int install_kbo_foreign_fa_demand_baseline_prepare_patch(HMODULE exe)
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO foreign FA demand baseline prepare already installed target=%p", target);
+        kbo_log_runtimef("KBO foreign FA demand baseline prepare already installed target=%p", target);
         return 1;
     }
     if (memcmp(target, expected, sizeof(expected)) != 0) {
@@ -63,7 +63,7 @@ int install_kbo_foreign_fa_demand_baseline_prepare_patch(HMODULE exe)
 
     uint8_t* stub = build_kbo_foreign_fa_demand_baseline_prepare_aab624_stub(target + sizeof(expected));
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO foreign FA demand baseline prepare detour stub");
+        kbo_log_runtime_line("failed to allocate KBO foreign FA demand baseline prepare detour stub");
         return 0;
     }
 
@@ -77,7 +77,7 @@ int install_kbo_foreign_fa_demand_baseline_prepare_patch(HMODULE exe)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO foreign FA demand baseline prepare error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO foreign FA demand baseline prepare error=%lu", GetLastError());
         return 0;
     }
 
@@ -87,6 +87,6 @@ int install_kbo_foreign_fa_demand_baseline_prepare_patch(HMODULE exe)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf("installed KBO foreign FA demand baseline prepare target=%p stub=%p", target, stub);
+    kbo_log_runtimef("installed KBO foreign FA demand baseline prepare target=%p stub=%p", target, stub);
     return 1;
 }

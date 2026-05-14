@@ -136,7 +136,7 @@ int kbo_team_add_foreign_policy_should_block(
         LONG minor_slot = InterlockedIncrement(&minor_market_block_log_count);
         if (minor_slot <= 200) {
             uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
-            append_logf(
+            kbo_log_runtimef(
                 "custom foreign policy minor-league market signing blocked player=%u team=%u parent_team=%u team_league=%u kbo_league=%u before_current=%u before_active=%u before_original=%u contract_level=%u affiliate=%d market_caller=%d caller_rva=0x%x",
                 player_id,
                 team_id,
@@ -186,7 +186,7 @@ int kbo_team_add_foreign_policy_should_block(
                 static volatile LONG reserve_holder_allow_log_count = 0;
                 LONG allow_slot = InterlockedIncrement(&reserve_holder_allow_log_count);
                 if (allow_slot <= 200) {
-                    append_logf(
+                    kbo_log_runtimef(
                         "foreign retention re-signing: holder_quota_check team=%u player=%u today=%u before_current=%u before_active=%u current=%u active=%u original=%u score=%d quota_allowed=%d effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u caller_rva=0x%x",
                         team_id,
                         player_id,
@@ -214,7 +214,7 @@ int kbo_team_add_foreign_policy_should_block(
             static volatile LONG reserve_block_log_count = 0;
             LONG reserve_slot = InterlockedIncrement(&reserve_block_log_count);
             if (reserve_slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign retention re-signing: blocked_non_holder_team_add team=%u holder_team=%u player=%u today=%u before_current=%u before_active=%u current=%u active=%u original=%u score=%d caller_rva=0x%x",
                     team_id,
                     holder_team_id,
@@ -249,7 +249,7 @@ int kbo_team_add_foreign_policy_should_block(
                 uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
                 uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
                 int score = kbo_foreign_waiver_value_score(player);
-                append_logf(
+                kbo_log_runtimef(
                     "custom foreign policy former-org market signing blocked player=%u team=%u source_team=%u source_org=%u target_org=%u before_current=%u before_active=%u current=%u active=%u score=%d caller_rva=0x%x",
                     player_id,
                     team_id,
@@ -290,7 +290,7 @@ int kbo_team_add_foreign_policy_should_block(
         uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
         uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
         uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-        append_logf(
+        kbo_log_runtimef(
             "custom foreign policy team-add blocked player=%u team=%u before_current=%u before_active=%u current=%u active=%u effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u",
             player_id,
             team_id,

@@ -271,7 +271,7 @@ int kbo_captain_select_for_preseason(
         &scanned_teams,
         &unreadable_teams);
     if (team_count <= 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain selection skipped reason=no_teams league_id=%u scanned=%d unreadable=%d",
             league_id,
             scanned_teams,
@@ -299,7 +299,7 @@ int kbo_captain_select_for_preseason(
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        append_logf("KBO captain selection skipped reason=no_player_vector league_id=%u", league_id);
+        kbo_log_runtimef("KBO captain selection skipped reason=no_player_vector league_id=%u", league_id);
         return 0;
     }
 
@@ -309,7 +309,7 @@ int kbo_captain_select_for_preseason(
         player_count,
         &snapshot_failure_reason);
     if (player_snapshot == NULL) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO captain selection skipped reason=player_vector_snapshot_failed detail=%s vector=%p count=%d",
             snapshot_failure_reason != NULL ? snapshot_failure_reason : "",
             (void*)player_vector,
@@ -381,7 +381,7 @@ int kbo_captain_select_for_preseason(
     if (out_selected_count != NULL) {
         *out_selected_count = selected_count;
     }
-    append_logf(
+    kbo_log_runtimef(
         "KBO captain selection candidates date=%u season=%u league_id=%u teams=%d players=%d selected=%d",
         date,
         season,

@@ -143,7 +143,7 @@ static int32_t kbo_ai_fa_status_force_closed_replacement_market_candidates(
             static LONG force_log_count = 0;
             LONG slot = InterlockedIncrement(&force_log_count);
             if (slot <= 200) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign injury replacement FA market candidate forced player=%u requester_team=%u index=%d next=%d",
                     forced_player_id,
                     requester_team_id,
@@ -205,7 +205,7 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
         static LONG block_log_count = 0;
         LONG slot = InterlockedIncrement(&block_log_count);
         if (slot <= 300) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign reserve AI FA status candidate blocked player=%u requester_team=%u holder_team=%u index=%d today=%u",
                 player_id,
                 requester_team_id,
@@ -250,7 +250,7 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
             static LONG custom_policy_ai_block_log_count = 0;
             LONG slot = InterlockedIncrement(&custom_policy_ai_block_log_count);
             if (slot <= 300) {
-                append_logf(
+                kbo_log_runtimef(
                     "custom foreign policy AI FA status candidate blocked player=%u requester_team=%u index=%d effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u today=%u",
                     player_id,
                     requester_team_id,

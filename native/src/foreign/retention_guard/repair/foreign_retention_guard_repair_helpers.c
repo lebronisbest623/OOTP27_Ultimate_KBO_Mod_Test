@@ -253,7 +253,7 @@ void kbo_foreign_retention_guard_log_cleaned(
     if (repair_slot > 200) {
         return;
     }
-    append_logf(
+    kbo_log_runtimef(
         "foreign retention guard: cleaned signed holder source=%s player=%u team=%u today=%u before_current=%u before_active=%u before_original=%u before_default=%u before_league=%u before_restricted=%u before_secondary=%u before_contract_level=%u after_current=%u after_active=%u after_default=%u after_contract_level=%u",
         source != NULL ? source : "",
         rec->player_id,
@@ -296,7 +296,7 @@ void kbo_foreign_retention_guard_log_restored(
     int32_t salary_y1 = memory_range_readable(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET, sizeof(int32_t))
         ? *(int32_t*)(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET)
         : 0;
-    append_logf(
+    kbo_log_runtimef(
         "foreign retention guard: restored cleared holder signing source=%s player=%u team=%u league=%u today=%u signed_on=%u expires_on=%u before_current=%u before_active=%u before_original=%u before_default=%u before_league=%u before_restricted=%u before_secondary=%u before_contract_level=%u after_current=%u after_active=%u after_original=%u after_default=%u after_league=%u after_contract_level=%u salary_y1=%d",
         source != NULL ? source : "",
         rec->player_id,

@@ -95,7 +95,7 @@ static void kbo_cbt_compute_team_payrolls(
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_CBT_TEAM_MAX * sizeof(KboCbtTeamPayroll));
     if (scratch == NULL) {
-        append_log_line("KBO CBT skipped reason=team_scratch_alloc_failed");
+        kbo_log_runtime_line("KBO CBT skipped reason=team_scratch_alloc_failed");
         return;
     }
 
@@ -155,7 +155,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
 
     if (read_kbo_localappdata_flag_file("disable_kbo_competitive_balance_tax.txt")) {
         kbo_cbt_audit_process("skip", "flag_disabled", source, season, news_yyyymmdd, 0, 0, 0, 0, 0u, 0, 0);
-        append_logf("KBO CBT skipped season=%u source=%s reason=flag_disabled", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT skipped season=%u source=%s reason=flag_disabled", season, source != NULL ? source : "");
         return;
     }
 
@@ -175,14 +175,14 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
     kbo_cbt_rules_load(&rules);
     if (!rules.enabled) {
         kbo_cbt_audit_process("skip", "rules_disabled", source, season, news_yyyymmdd, 0, 0, 0, 0, 0u, 0, 0);
-        append_logf("KBO CBT skipped season=%u source=%s reason=disabled", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT skipped season=%u source=%s reason=disabled", season, source != NULL ? source : "");
         return;
     }
 
     int32_t threshold = kbo_cbt_get_threshold(&rules, season);
     if (threshold <= 0) {
         kbo_cbt_audit_process("skip", "threshold_unavailable", source, season, news_yyyymmdd, threshold, 0, 0, 0, 0u, 0, 0);
-        append_logf("KBO CBT skipped season=%u source=%s reason=no_threshold", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT skipped season=%u source=%s reason=no_threshold", season, source != NULL ? source : "");
         return;
     }
 
@@ -198,7 +198,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
     int grade_count = kbo_fa_salary_snapshot_load_grade_rows(season, grades, KBO_FA_SALARY_SNAPSHOT_GRADE_MAX, NULL, 0);
     if (grade_count <= 0) {
         kbo_cbt_audit_process("skip", "salary_snapshot_empty", source, season, news_yyyymmdd, threshold, grade_count, 0, 0, 0u, 0, 0);
-        append_logf("KBO CBT skipped season=%u source=%s reason=no_salary_data", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT skipped season=%u source=%s reason=no_salary_data", season, source != NULL ? source : "");
         HeapFree(GetProcessHeap(), 0, grades);
         return;
     }
@@ -210,7 +210,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
         (SIZE_T)KBO_CBT_TEAM_MAX * sizeof(KboCbtTeamPayroll));
     if (teams == NULL) {
         kbo_cbt_audit_process("fail", "team_payroll_alloc_failed", source, season, news_yyyymmdd, threshold, grade_count, 0, 0, 0u, 0, 0);
-        append_logf("KBO CBT skipped season=%u source=%s reason=team_alloc_failed", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT skipped season=%u source=%s reason=team_alloc_failed", season, source != NULL ? source : "");
         HeapFree(GetProcessHeap(), 0, grades);
         return;
     }
@@ -224,7 +224,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
 
     if (team_count == 0) {
         kbo_cbt_audit_process("skip", "no_teams", source, season, news_yyyymmdd, threshold, grade_count, team_count, exception_count, 0u, 0, 0);
-        append_logf("KBO CBT skipped season=%u source=%s reason=no_teams", season, source != NULL ? source : "");
+        kbo_log_runtimef("KBO CBT skipped season=%u source=%s reason=no_teams", season, source != NULL ? source : "");
         HeapFree(GetProcessHeap(), 0, teams);
         return;
     }
@@ -298,7 +298,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
                 consecutive_count,
                 draft_penalty,
                 teams[i].exception_credit);
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT violation season=%u team=%u payroll=%d threshold=%d overage=%d rate=%u%% tax=%d consecutive=%u draft_penalty=%d exception_credit=%d source=%s",
                 season, team_id, payroll, threshold, overage,
                 tax_rate, tax_amount, consecutive_count, draft_penalty,
@@ -310,7 +310,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
             }
         } else {
             kbo_cbt_audit_team("clean", "threshold_not_exceeded", source, season, team_id, payroll, threshold, 0, 0u, 0, 0u, 0, teams[i].exception_credit);
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT clean season=%u team=%u payroll=%d threshold=%d exception_credit=%d source=%s",
                 season, team_id, payroll, threshold,
                 teams[i].exception_credit,
@@ -324,7 +324,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
         snprintf(summary_marker, sizeof(summary_marker), "summary|%u|%u", season, league_id);
         if (kbo_cbt_news_marker_exists(summary_marker)) {
             kbo_cbt_audit_summary_news("skip", "marker_exists", source, season, league_id, team_count, new_violations);
-            append_logf(
+            kbo_log_runtimef(
                 "KBO CBT opening-day news skipped season=%u league_id=%u reason=summary_marker_exists source=%s",
                 season,
                 league_id,
@@ -357,7 +357,7 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
     HeapFree(GetProcessHeap(), 0, records);
     HeapFree(GetProcessHeap(), 0, teams);
 
-    append_logf(
+    kbo_log_runtimef(
         "KBO CBT processed season=%u teams=%d violations=%d threshold=%d source=%s",
         season, team_count, new_violations, threshold,
         source != NULL ? source : "");

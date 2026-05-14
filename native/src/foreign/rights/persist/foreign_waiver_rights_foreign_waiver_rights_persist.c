@@ -6,7 +6,7 @@ int kbo_persist_foreign_waiver_rights(void)
 {
     char path[MAX_PATH] = {0};
     if (!kbo_get_foreign_waiver_rights_path(path, sizeof(path))) {
-        append_log_line("foreign reserve rights: persist skipped reason=path_unavailable");
+        kbo_log_runtime_line("foreign reserve rights: persist skipped reason=path_unavailable");
         return 0;
     }
 
@@ -26,7 +26,7 @@ int kbo_persist_foreign_waiver_rights(void)
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
-        append_logf("foreign reserve rights: persist failed reason=create_tmp gle=%lu path=%s", GetLastError(), path);
+        kbo_log_runtimef("foreign reserve rights: persist failed reason=create_tmp gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
     char header[64] = "player_id,team_id,league_id,retained_on,expires_on\r\n";
@@ -52,10 +52,10 @@ int kbo_persist_foreign_waiver_rights(void)
     int ok = kbo_atomic_commit(file, tmp_path, path);
     InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
     if (!ok) {
-        append_logf("foreign reserve rights: atomic commit failed path=%s", path);
+        kbo_log_runtimef("foreign reserve rights: atomic commit failed path=%s", path);
         return 0;
     }
-    append_logf("foreign reserve rights: persisted=%d path=%s", g_kbo_foreign_waiver_rights_count, path);
+    kbo_log_runtimef("foreign reserve rights: persisted=%d path=%s", g_kbo_foreign_waiver_rights_count, path);
     return 1;
 }
 

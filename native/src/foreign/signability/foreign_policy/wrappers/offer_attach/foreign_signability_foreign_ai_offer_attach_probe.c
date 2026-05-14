@@ -156,7 +156,7 @@ static void kbo_log_foreign_ai_offer_attach(
     int32_t score = kbo_foreign_waiver_value_score(player);
     int32_t selected_offer_id = *(int32_t*)(player + KBO_PLAYER_SELECTED_OFFER_ID_OFFSET);
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign ai offer attach probe #%ld caller_rva=0x%x player=%u nation=%u pos_group=%u pos_role=%u holder_team=%u today=%u current=%u active=%u original=%u demand=%d score=%d selected_offer=%d offer=%p offer_team=%d offer_org=%d salary24=%d salary38=%d years=%u flags_aa=%u ab=%u ac=%u d0=%u d8=%u type_ae=%u type_b0=%u",
         slot,
         caller_rva,
@@ -246,7 +246,7 @@ static void kbo_log_foreign_ai_offer_build(
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign ai offer build probe #%ld player=%u holder_team=%u today=%u team_arg=%d current=%u active=%u original=%u demand=%d score=%d flag_ptr=%p flag_value=%u offer=%p offer_major=%u offer_minor=%u offer_team=%d offer_org=%d salary24=%d salary38=%d years=%u flags_aa=%u ab=%u ac=%u type_ae=%u type_b0=%u",
         slot,
         player_id,
@@ -305,7 +305,7 @@ static void kbo_log_foreign_ai_offer_final_gate(
         return;
     }
 
-    append_logf(
+    kbo_log_runtimef(
         "foreign ai offer final gate probe #%ld result=%u player=%u holder_team=%u today=%u team=%u salary_arg=%d current=%u active=%u original=%u demand=%d score=%d offer=%p offer_major=%u offer_minor=%u offer_team=%d offer_org=%d salary24=%d salary38=%d years=%u flags_aa=%u ab=%u ac=%u type_ae=%u type_b0=%u",
         slot,
         (uint32_t)result,

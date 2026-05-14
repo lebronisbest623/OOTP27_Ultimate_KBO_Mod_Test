@@ -115,7 +115,7 @@ void kbo_cbt_probe_dump_candidate_rows(
             continue;
         }
 
-        append_logf(
+        kbo_log_runtimef(
             "CBT_SERVICE_PROBE: season_vector_candidate player=%u p=%p vector_off=0x%x bytes=%llu stride=%u entries=%u inspect=%u u16_year_hits=%u first_year=%u r%u@0x%x u16_kbo_team_hits=%u first_team=%u r%u@0x%x u16_year_team_near=%u u32_year_hits=%u u32_kbo_team_hits=%u u32_year_team_near=%u cur=%u active=%u original=%u year=%u",
             player_id,
             (void*)player,
@@ -145,7 +145,7 @@ void kbo_cbt_probe_dump_candidate_rows(
             uintptr_t row = begin + ((uintptr_t)i * stride);
             char hex[256] = {0};
             kbo_cbt_probe_append_row_hex(hex, sizeof(hex), row, stride <= 48u ? stride : 48u);
-            append_logf(
+            kbo_log_runtimef(
                 "CBT_SERVICE_PROBE: season_vector_row player=%u vector_off=0x%x stride=%u row=%u hex=%s",
                 player_id,
                 vector_offset,
@@ -219,7 +219,7 @@ void kbo_cbt_probe_scan_player_inline_tables(
         if (year_hits > 1u && kbo_team_hits > 0u && year_team_near_hits > 0u) {
             char hex[256] = {0};
             kbo_cbt_probe_append_row_hex(hex, sizeof(hex), (uintptr_t)(player + off), 64u);
-            append_logf(
+            kbo_log_runtimef(
                 "CBT_SERVICE_PROBE: inline_candidate player=%u p=%p off=0x%x bytes=64 u16_year_hits=%u first_year=%u@0x%x u16_kbo_team_hits=%u first_team=%u@0x%x u16_year_team_near=%u hex=%s",
                 player_id,
                 (void*)player,

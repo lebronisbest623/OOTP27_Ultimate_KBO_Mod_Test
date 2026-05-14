@@ -14,14 +14,14 @@ int install_kbo_ai_fa_signability_random_fallback_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO AI FA signability fallback patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO AI FA signability fallback patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO AI FA signability fallback patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO AI FA signability fallback patch host=%s", host);
         return 0;
     }
 
@@ -71,7 +71,7 @@ int install_kbo_ai_fa_signability_random_fallback_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO AI FA signability fallback patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO AI FA signability fallback patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -81,6 +81,6 @@ int install_kbo_ai_fa_signability_random_fallback_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf("installed KBO AI FA signability fallback patch target=%p", target);
+    kbo_log_runtimef("installed KBO AI FA signability fallback patch target=%p", target);
     return 1;
 }

@@ -16,7 +16,7 @@ uint32_t kbo_resolve_kbo_league_id(void)
     uint32_t override = kbo_read_kbo_league_id_override();
     if (override != 0) {
         if (cached_league_id == 0 || cached_league_id != override) {
-            append_logf("KBO league id override used override=%u cached=%u", override, cached_league_id);
+            kbo_log_runtimef("KBO league id override used override=%u cached=%u", override, cached_league_id);
         }
         cached_league_id = override;
         return cached_league_id;
@@ -113,7 +113,7 @@ uint32_t kbo_resolve_kbo_league_id(void)
     }
 
     cached_league_id = best_league_id;
-    append_logf("KBO league id resolved current_year=%u team_count=%d selected=%u",
+    kbo_log_runtimef("KBO league id resolved current_year=%u team_count=%d selected=%u",
         current_year, team_count, best_league_id);
     return best_league_id;
 }

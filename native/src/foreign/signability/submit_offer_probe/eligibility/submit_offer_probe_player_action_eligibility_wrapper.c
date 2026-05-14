@@ -11,7 +11,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_action_eligibility_wrapper(
         static LONG blocked_log_count = 0;
         LONG slot = InterlockedIncrement(&blocked_log_count);
         if (slot <= 80) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO no-minor player action blocked: context=%p action=0x%x strict=%u",
                 (void*)action_context,
                 action_id,

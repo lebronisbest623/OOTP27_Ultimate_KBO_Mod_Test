@@ -78,7 +78,7 @@ uintptr_t kbo_find_allstar_league_ptr(uint32_t league_id)
     for (uint32_t vec_off = 0x130u; vec_off <= 0x5F8u; vec_off += 8u) {
         found = kbo_scan_league_vec(global, vec_off, league_id, &layout);
         if (found) {
-            append_logf("KBO allstar: found league at extended global+0x%x ptr=%p", vec_off, (void*)found);
+            kbo_log_runtimef("KBO allstar: found league at extended global+0x%x ptr=%p", vec_off, (void*)found);
             return found;
         }
     }
@@ -105,7 +105,7 @@ uintptr_t kbo_find_allstar_league_ptr(uint32_t league_id)
                 if (rl <= 40) {
                     uint8_t ph = memory_range_readable((void*)(candidate + OOTP27_KBO_LEAGUE_PHASE_OFFSET), 1)
                         ? *(uint8_t*)(candidate + OOTP27_KBO_LEAGUE_PHASE_OFFSET) : 0xffu;
-                    append_logf("KBO allstar: global+0x%x ptr=%p year=%u phase=%u rejected by plausibility",
+                    kbo_log_runtimef("KBO allstar: global+0x%x ptr=%p year=%u phase=%u rejected by plausibility",
                         ptr_off, (void*)candidate, yr, (unsigned)ph);
                 }
                 continue;
@@ -115,7 +115,7 @@ uintptr_t kbo_find_allstar_league_ptr(uint32_t league_id)
             uint32_t lid_p = kbo_allstar_read_u32(lp, layout.league_id_primary_offset);
             uint32_t lid_f = kbo_allstar_read_u32(lp, layout.league_id_fallback_offset);
             if (lid_a == league_id || lid_p == league_id || lid_f == league_id) {
-                append_logf("KBO allstar: found league via direct db scan global+0x%x ptr=%p year=%u id=%u/%u/%u",
+                kbo_log_runtimef("KBO allstar: found league via direct db scan global+0x%x ptr=%p year=%u id=%u/%u/%u",
                     ptr_off, (void*)candidate, yr, lid_a, lid_p, lid_f);
                 return candidate;
             }

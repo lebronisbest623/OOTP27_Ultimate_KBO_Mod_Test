@@ -167,8 +167,6 @@
 #include "src/patch_installers/foreign/roster_limits/trade/patch_installers_foreign_trade_check.h"
 #include "src/patch_installers/foreign/ai_fa/patch_installers_foreign_ai_fa_status.h"
 #include "src/patch_installers/no_minor_contracts/common/no_minor_patch_helpers.h"
-#include "src/patch_installers/no_minor_contracts/scan/no_minor_scan_patch.h"
-#include "src/patch_installers/no_minor_contracts/scan/no_minor_string_patch.h"
 #include "src/patch_installers/no_minor_contracts/callbacks/offer/no_minor_offer_callback_patch.h"
 #include "src/patch_installers/no_minor_contracts/callbacks/contract/no_minor_contract_callback_patch.h"
 #include "src/patch_installers/no_minor_contracts/callbacks/player_action/no_minor_player_action_patch.h"

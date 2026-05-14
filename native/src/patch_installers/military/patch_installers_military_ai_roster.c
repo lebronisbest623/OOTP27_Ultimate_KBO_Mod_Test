@@ -26,7 +26,7 @@ static int install_kbo_foreign_roster_move_trace_patch(
 {
     uint8_t* rva_target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, target_rva);
     if (memory_range_readable(rva_target, patch_len) && is_rax_absolute_jump_patch(rva_target)) {
-        append_logf("%s already installed target=%p", label, rva_target);
+        kbo_log_runtimef("%s already installed target=%p", label, rva_target);
         return 1;
     }
 
@@ -40,20 +40,20 @@ static int install_kbo_foreign_roster_move_trace_patch(
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, patch_len);
     if (trampoline == NULL) {
-        append_logf("failed to allocate %s trampoline", label);
+        kbo_log_runtimef("failed to allocate %s trampoline", label);
         return 0;
     }
     set_trampoline(trampoline);
 
     uint8_t patch[32] = {0};
     if (patch_len > sizeof(patch) || patch_len < 12) {
-        append_logf("%s invalid patch_len=%llu", label, (unsigned long long)patch_len);
+        kbo_log_runtimef("%s invalid patch_len=%llu", label, (unsigned long long)patch_len);
         return 0;
     }
     memset(patch, 0x90, patch_len);
@@ -65,7 +65,7 @@ static int install_kbo_foreign_roster_move_trace_patch(
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, patch_len, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for %s error=%lu", label, GetLastError());
         return 0;
     }
 
@@ -75,7 +75,7 @@ static int install_kbo_foreign_roster_move_trace_patch(
     DWORD ignored = 0;
     VirtualProtect(target, patch_len, old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed %s target=%p rva=0x%llx stub=%p trampoline=%p wrapper=%p",
         label,
         target,
@@ -89,20 +89,20 @@ static int install_kbo_foreign_roster_move_trace_patch(
 int install_kbo_ai_roster_select_trace_patch(void)
 {
     if (read_kbo_localappdata_flag_file("disable_ai_roster_select_trace.txt")) {
-        append_log_line("KBO AI roster select trace skipped: disable_ai_roster_select_trace is true");
+        kbo_log_runtime_line("KBO AI roster select trace skipped: disable_ai_roster_select_trace is true");
         return 1;
     }
 
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO AI roster select trace patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO AI roster select trace patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO AI roster select trace patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO AI roster select trace patch host=%s", host);
         return 0;
     }
 
@@ -127,20 +127,20 @@ int install_kbo_ai_roster_select_trace_patch(void)
 int install_kbo_ai_roster_primary_apply_flow_trace_patch(void)
 {
     if (read_kbo_localappdata_flag_file("disable_ai_roster_primary_apply_flow_trace.txt")) {
-        append_log_line("KBO AI roster primary apply-flow trace skipped: disable_ai_roster_primary_apply_flow_trace is true");
+        kbo_log_runtime_line("KBO AI roster primary apply-flow trace skipped: disable_ai_roster_primary_apply_flow_trace is true");
         return 1;
     }
 
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO AI roster primary apply-flow trace patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO AI roster primary apply-flow trace patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO AI roster primary apply-flow trace patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO AI roster primary apply-flow trace patch host=%s", host);
         return 0;
     }
 
@@ -164,20 +164,20 @@ int install_kbo_ai_roster_primary_apply_flow_trace_patch(void)
 int install_kbo_ai_roster_apply_selection_trace_patch(void)
 {
     if (read_kbo_localappdata_flag_file("disable_ai_roster_apply_selection_trace.txt")) {
-        append_log_line("KBO AI roster apply-selection trace skipped: disable_ai_roster_apply_selection_trace is true");
+        kbo_log_runtime_line("KBO AI roster apply-selection trace skipped: disable_ai_roster_apply_selection_trace is true");
         return 1;
     }
 
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO AI roster apply-selection trace patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO AI roster apply-selection trace patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO AI roster apply-selection trace patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO AI roster apply-selection trace patch host=%s", host);
         return 0;
     }
 

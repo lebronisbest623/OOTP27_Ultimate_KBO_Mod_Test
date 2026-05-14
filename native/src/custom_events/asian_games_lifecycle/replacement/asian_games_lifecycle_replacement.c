@@ -38,7 +38,7 @@ int kbo_asian_games_find_replacement_for_entry(
     int32_t player_count = 0;
     uint32_t vector_offset = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)) {
-        append_logf("KBO Asian Games replacement skipped source=%s old_player=%u reason=player_vector_unavailable", source != NULL ? source : "", old_entry->player_id);
+        kbo_log_runtimef("KBO Asian Games replacement skipped source=%s old_player=%u reason=player_vector_unavailable", source != NULL ? source : "", old_entry->player_id);
         return 0;
     }
 
@@ -133,7 +133,7 @@ int kbo_asian_games_find_replacement_for_entry(
     }
 
     if (best_entry.player_id == 0u) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games replacement unavailable source=%s old_player=%u old_role=%u scanned=%d rejected_service_team=%d vector_offset=0x%x",
             source != NULL ? source : "",
             old_entry->player_id,
@@ -181,7 +181,7 @@ int kbo_asian_games_replace_unavailable_players(uint32_t event_yyyymmdd, const c
         KboAsianGamesRosterEntry new_entry;
         uint32_t new_org_id = 0u;
         if (!kbo_asian_games_find_replacement_for_entry(entry, i, &new_entry, &new_org_id, source)) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO Asian Games replacement failed source=%s date=%u old_player=%u slot=%ld",
                 source != NULL ? source : "",
                 event_yyyymmdd,
@@ -196,7 +196,7 @@ int kbo_asian_games_replace_unavailable_players(uint32_t event_yyyymmdd, const c
             new_entries[replacements] = new_entry;
         }
         replacements++;
-        append_logf(
+        kbo_log_runtimef(
             "KBO Asian Games injury replacement source=%s date=%u slot=%ld old_player=%u old_team=%u old_role=%u new_player=%u new_team=%u new_org=%u new_role=%u same_bucket=%d wildcard=%u score=%d",
             source != NULL ? source : "",
             event_yyyymmdd,

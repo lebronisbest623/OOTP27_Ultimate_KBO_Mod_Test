@@ -22,14 +22,14 @@ int install_kbo_active_foreign_count_patch(
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_logf("GetModuleHandleA(NULL) failed for %s", label);
+        kbo_log_runtimef("GetModuleHandleA(NULL) failed for %s", label);
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping %s host=%s", label, host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping %s host=%s", label, host);
         return 0;
     }
 
@@ -53,19 +53,19 @@ int install_kbo_active_foreign_count_patch(
         label);
     if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_logf("failed to allocate %s trampoline", label);
+        kbo_log_runtimef("failed to allocate %s trampoline", label);
         return 0;
     }
 
     uint8_t* stub = build_stub(trampoline);
     if (stub == NULL) {
-        append_logf("failed to allocate %s detour stub", label);
+        kbo_log_runtimef("failed to allocate %s detour stub", label);
         return 0;
     }
 
@@ -80,7 +80,7 @@ int install_kbo_active_foreign_count_patch(
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for %s error=%lu", label, GetLastError());
         return 0;
     }
 
@@ -90,7 +90,7 @@ int install_kbo_active_foreign_count_patch(
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf("installed %s target=%p stub=%p trampoline=%p", label, target, stub, trampoline);
+    kbo_log_runtimef("installed %s target=%p stub=%p trampoline=%p", label, target, stub, trampoline);
     return 1;
 }
 

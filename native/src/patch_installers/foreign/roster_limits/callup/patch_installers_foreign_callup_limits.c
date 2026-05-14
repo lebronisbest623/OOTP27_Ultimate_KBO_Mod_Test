@@ -24,14 +24,14 @@ int install_kbo_callup_foreign_limit_branch_patch(
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_logf("GetModuleHandleA(NULL) failed for %s", label);
+        kbo_log_runtimef("GetModuleHandleA(NULL) failed for %s", label);
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping %s host=%s", label, host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping %s host=%s", label, host);
         return 0;
     }
 
@@ -40,11 +40,11 @@ int install_kbo_callup_foreign_limit_branch_patch(
         return 0;
     }
     if (!memory_range_readable(target, patch_len)) {
-        append_logf("%s target unreadable target=%p", label, target);
+        kbo_log_runtimef("%s target unreadable target=%p", label, target);
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("%s already installed target=%p", label, target);
+        kbo_log_runtimef("%s already installed target=%p", label, target);
         return 1;
     }
     if (memcmp(target, expected, patch_len) != 0) {
@@ -55,7 +55,7 @@ int install_kbo_callup_foreign_limit_branch_patch(
     uint8_t* allow_target = target + allow_delta;
     uint8_t* fallback_target = target + fallback_delta;
     if (!memory_range_readable(allow_target, 1u) || !memory_range_readable(fallback_target, 1u)) {
-        append_logf(
+        kbo_log_runtimef(
             "%s branch destination unreadable allow=%p fallback=%p",
             label,
             allow_target,
@@ -70,7 +70,7 @@ int install_kbo_callup_foreign_limit_branch_patch(
         wrapper,
         total_check);
     if (stub == NULL) {
-        append_logf("failed to allocate %s stub", label);
+        kbo_log_runtimef("failed to allocate %s stub", label);
         return 0;
     }
 
@@ -81,7 +81,7 @@ int install_kbo_callup_foreign_limit_branch_patch(
         0x90
     };
     if (patch_len < 13 || patch_len > sizeof(patch)) {
-        append_logf("%s invalid patch_len=%llu", label, (unsigned long long)patch_len);
+        kbo_log_runtimef("%s invalid patch_len=%llu", label, (unsigned long long)patch_len);
         return 0;
     }
     for (size_t i = 13; i < patch_len; i++) {
@@ -91,7 +91,7 @@ int install_kbo_callup_foreign_limit_branch_patch(
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, patch_len, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for %s error=%lu", label, GetLastError());
         return 0;
     }
     memcpy(target, patch, patch_len);
@@ -99,7 +99,7 @@ int install_kbo_callup_foreign_limit_branch_patch(
     DWORD ignored = 0;
     VirtualProtect(target, patch_len, old_protect, &ignored);
 
-    append_logf("installed %s target=%p stub=%p patch_len=%llu", label, target, stub, (unsigned long long)patch_len);
+    kbo_log_runtimef("installed %s target=%p stub=%p patch_len=%llu", label, target, stub, (unsigned long long)patch_len);
     return 1;
 }
 

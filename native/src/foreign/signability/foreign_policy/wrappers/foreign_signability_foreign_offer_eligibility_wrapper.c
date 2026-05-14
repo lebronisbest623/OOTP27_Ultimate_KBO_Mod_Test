@@ -79,7 +79,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
             static volatile LONG generic_holder_log_count = 0;
             LONG slot = InterlockedIncrement(&generic_holder_log_count);
             if (slot <= 120) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign reserve offer eligibility holder-visible generic player=%u holder_team=%u original=%u adjusted=%u flag=%d today=%u score=%d threshold=%d",
                     player_id,
                     holder_team_id,
@@ -113,7 +113,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
             static volatile LONG holder_log_count = 0;
             LONG holder_slot = InterlockedIncrement(&holder_log_count);
             if (holder_slot <= 120) {
-                append_logf(
+                kbo_log_runtimef(
                     "foreign reserve offer eligibility holder adjusted player=%u requester_team=%d holder_team=%u original=%u adjusted=%u flag=%d today=%u score=%d",
                     player_id,
                     team_id,
@@ -130,7 +130,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
         static volatile LONG log_count = 0;
         LONG slot = InterlockedIncrement(&log_count);
         if (slot <= 80) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign reserve offer eligibility blocked player=%u requester_team=%d holder_team=%u original=%u flag=%d today=%u",
                 player_id,
                 team_id,
@@ -178,7 +178,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
         LONG offer_log_slot = InterlockedIncrement(&custom_policy_offer_log_count);
         if (offer_log_slot <= 120 || InterlockedCompareExchange(&custom_policy_offer_log_enabled, 0, 0) != 0) {
             if (offer_log_slot <= 240) {
-                append_logf(
+                kbo_log_runtimef(
                     "custom foreign policy offer player=%u requester_team=%d original=%u adjusted=%u allowed=%d override=%d effective_before=%u effective_after=%u limit=%u injury_slot=%s injured=%u flag=%d today=%u",
                     player_id,
                     team_id,
@@ -224,7 +224,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
             adjusted = 4u;
         }
         if (slot <= 120) {
-            append_logf(
+            kbo_log_runtimef(
                 "foreign injury replacement offer eligibility allowed player=%u requester_team=%d injured=%u slot=%s original=%u adjusted=%u effective=%u limit=%u flag=%d today=%u",
                 player_id,
                 team_id,

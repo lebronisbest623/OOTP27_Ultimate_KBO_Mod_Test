@@ -192,7 +192,7 @@ int kbo_load_asian_quota_nation_ids_once(void)
         }
     }
 
-    append_logf("asian quota: loaded nation_ids=%d path=%s", count, path);
+    kbo_log_runtimef("asian quota: loaded nation_ids=%d path=%s", count, path);
     InterlockedExchange(&g_kbo_asian_quota_nation_count, (LONG)count);
     return count;
 }

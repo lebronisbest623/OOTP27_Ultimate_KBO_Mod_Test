@@ -17,14 +17,14 @@ int install_kbo_player_team_signability_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO player/team signability patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO player/team signability patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO player/team signability patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO player/team signability patch host=%s", host);
         return 0;
     }
 
@@ -47,19 +47,19 @@ int install_kbo_player_team_signability_patch(void)
     if (target == NULL) { return 0; }
 
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO player/team signability patch already installed target=%p", target);
+        kbo_log_runtimef("KBO player/team signability patch already installed target=%p", target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO player/team signability trampoline");
+        kbo_log_runtime_line("failed to allocate KBO player/team signability trampoline");
         return 0;
     }
 
     uint8_t* stub = build_kbo_player_team_signability_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO player/team signability detour stub");
+        kbo_log_runtime_line("failed to allocate KBO player/team signability detour stub");
         return 0;
     }
 
@@ -73,7 +73,7 @@ int install_kbo_player_team_signability_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO player/team signability patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO player/team signability patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -83,7 +83,7 @@ int install_kbo_player_team_signability_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO player/team signability patch target=%p stub=%p trampoline=%p wrapper=%p",
         target,
         stub,
@@ -96,14 +96,14 @@ int install_kbo_player_offer_eligibility_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO player offer eligibility patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO player offer eligibility patch");
         return 0;
     }
 
     char host[MAX_PATH] = {0};
     GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
     if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
-        append_logf("host is not ootp27.exe, skipping KBO player offer eligibility patch host=%s", host);
+        kbo_log_runtimef("host is not ootp27.exe, skipping KBO player offer eligibility patch host=%s", host);
         return 0;
     }
 
@@ -135,19 +135,19 @@ int install_kbo_player_offer_eligibility_patch(void)
     if (target == NULL) { return 0; }
 
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO player offer eligibility patch already installed target=%p", target);
+        kbo_log_runtimef("KBO player offer eligibility patch already installed target=%p", target);
         return 1;
     }
 
     uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
     if (trampoline == NULL) {
-        append_log_line("failed to allocate KBO player offer eligibility trampoline");
+        kbo_log_runtime_line("failed to allocate KBO player offer eligibility trampoline");
         return 0;
     }
 
     uint8_t* stub = build_kbo_player_offer_eligibility_detour_stub(trampoline);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO player offer eligibility detour stub");
+        kbo_log_runtime_line("failed to allocate KBO player offer eligibility detour stub");
         return 0;
     }
 
@@ -162,7 +162,7 @@ int install_kbo_player_offer_eligibility_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO player offer eligibility patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO player offer eligibility patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -172,7 +172,7 @@ int install_kbo_player_offer_eligibility_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO player offer eligibility patch target=%p stub=%p trampoline=%p wrapper=%p",
         target,
         stub,

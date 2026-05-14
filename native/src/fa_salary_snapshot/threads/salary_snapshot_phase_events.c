@@ -42,7 +42,7 @@ static void kbo_fa_salary_snapshot_set_pending_phase_event(uintptr_t league_ptr,
     InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_value, (LONG)value);
     InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_site_rva, (LONG)site_rva);
     InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_pending_active, 1);
-    append_logf(
+    kbo_log_runtimef(
         "KBO FA salary opening-day phase hook observed site=0x%x league=%p value=%u",
         site_rva,
         (void*)league_ptr,
@@ -58,7 +58,7 @@ static void kbo_fa_salary_snapshot_drain_phase_events_once(void)
     }
 
     if (latest - consumed > (LONG)KBO_FA_SALARY_PHASE_EVENT_RING_SIZE) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA salary opening-day phase hook event ring overflow consumed=%ld latest=%ld",
             (long)consumed,
             (long)latest);
@@ -96,7 +96,7 @@ static void kbo_fa_salary_snapshot_try_pending_phase_event(void)
 
     uint32_t league_id = kbo_resolve_kbo_league_id();
     if (!kbo_fa_salary_snapshot_phase_event_league_is_kbo(league_ptr, league_id)) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA salary opening-day phase hook ignored site=0x%x league=%p value=%u reason=not_kbo_league",
             site_rva,
             (void*)league_ptr,
@@ -134,7 +134,7 @@ static void kbo_fa_salary_snapshot_try_pending_phase_event(void)
     }
 
     if (date > opening_day) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO FA salary opening-day phase hook missed exact opening day site=0x%x date=%u opening_day=%u league=%u",
             site_rva,
             date,
@@ -154,7 +154,7 @@ static void kbo_fa_salary_snapshot_try_pending_phase_event(void)
 static DWORD WINAPI kbo_fa_salary_snapshot_phase_event_thread(LPVOID parameter)
 {
     (void)parameter;
-    append_log_line("KBO FA salary opening-day phase hook event thread started");
+    kbo_log_runtime_line("KBO FA salary opening-day phase hook event thread started");
 
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->fa_salary_snapshot_phase_event_sleep_ms)) {
@@ -176,7 +176,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_phase_event_thread(LPVOID parameter)
         }
     }
     InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_event_thread_started, 0);
-    append_log_line("KBO FA salary opening-day phase hook event thread stopped");
+    kbo_log_runtime_line("KBO FA salary opening-day phase hook event thread stopped");
 
     return 0;
 }

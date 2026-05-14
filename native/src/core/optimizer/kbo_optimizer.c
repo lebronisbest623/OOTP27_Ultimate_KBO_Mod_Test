@@ -61,7 +61,7 @@ static int kbo_optimizer_get_tool_path(char* out, size_t out_size, int* out_is_p
     if (!exists) {
         static volatile LONG missing_log_count = 0;
         if (InterlockedIncrement(&missing_log_count) <= 8) {
-            append_logf(
+            kbo_log_runtimef(
                 "KBO optimizer missing exe=%stools\\kbo_optimizer.exe script=%stools\\kbo_optimizer.py",
                 module_path,
                 module_path);
@@ -122,7 +122,7 @@ int kbo_optimizer_run_mode(
     if (!CreateProcessA(NULL, command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         static volatile LONG create_fail_count = 0;
         if (InterlockedIncrement(&create_fail_count) <= 8) {
-            append_logf("KBO optimizer launch failed mode=%s gle=%lu tool=%s", mode, GetLastError(), tool_path);
+            kbo_log_runtimef("KBO optimizer launch failed mode=%s gle=%lu tool=%s", mode, GetLastError(), tool_path);
         }
         return 0;
     }
@@ -131,7 +131,7 @@ int kbo_optimizer_run_mode(
     DWORD exit_code = 1u;
     if (wait == WAIT_TIMEOUT) {
         TerminateProcess(pi.hProcess, 1);
-        append_logf("KBO optimizer timed out mode=%s timeout_ms=%lu", mode, timeout_ms != 0u ? timeout_ms : 8000u);
+        kbo_log_runtimef("KBO optimizer timed out mode=%s timeout_ms=%lu", mode, timeout_ms != 0u ? timeout_ms : 8000u);
     } else {
         GetExitCodeProcess(pi.hProcess, &exit_code);
     }
@@ -144,7 +144,7 @@ int kbo_optimizer_run_mode(
     if (!ok) {
         static volatile LONG fail_count = 0;
         if (InterlockedIncrement(&fail_count) <= 8) {
-            append_logf("KBO optimizer failed mode=%s exit=%lu result=%s", mode, exit_code, result_path);
+            kbo_log_runtimef("KBO optimizer failed mode=%s exit=%lu result=%s", mode, exit_code, result_path);
         }
     }
     return ok;

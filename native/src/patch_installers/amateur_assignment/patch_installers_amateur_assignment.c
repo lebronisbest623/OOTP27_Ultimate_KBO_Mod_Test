@@ -11,7 +11,7 @@ int install_kbo_amateur_assignment_batch_probe_patch(void)
 {
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        append_log_line("GetModuleHandleA(NULL) failed for KBO amateur assignment batch probe patch");
+        kbo_log_runtime_line("GetModuleHandleA(NULL) failed for KBO amateur assignment batch probe patch");
         return 0;
     }
 
@@ -23,7 +23,7 @@ int install_kbo_amateur_assignment_batch_probe_patch(void)
     };
     uint8_t* rva_target = (uint8_t*)exe + OOTP27_AMATEUR_ASSIGNMENT_BATCH_PREP_RVA;
     if (memory_range_readable(rva_target, sizeof(expected)) && is_rax_absolute_jump_patch(rva_target)) {
-        append_logf("KBO amateur assignment batch probe patch already installed target=%p", rva_target);
+        kbo_log_runtimef("KBO amateur assignment batch probe patch already installed target=%p", rva_target);
         return 1;
     }
     uint8_t* target = resolve_patch_target_by_rva_or_pattern(
@@ -36,14 +36,14 @@ int install_kbo_amateur_assignment_batch_probe_patch(void)
         return 0;
     }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO amateur assignment batch probe patch already installed target=%p", target);
+        kbo_log_runtimef("KBO amateur assignment batch probe patch already installed target=%p", target);
         return 1;
     }
 
     uint8_t* stub = build_kbo_amateur_assignment_batch_probe_stub(
         target + OOTP27_AMATEUR_ASSIGNMENT_BATCH_PREP_STOLEN_LEN);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO amateur assignment batch probe stub");
+        kbo_log_runtime_line("failed to allocate KBO amateur assignment batch probe stub");
         return 0;
     }
 
@@ -57,7 +57,7 @@ int install_kbo_amateur_assignment_batch_probe_patch(void)
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO amateur assignment batch probe patch error=%lu", GetLastError());
+        kbo_log_runtimef("VirtualProtect failed for KBO amateur assignment batch probe patch error=%lu", GetLastError());
         return 0;
     }
 
@@ -67,7 +67,7 @@ int install_kbo_amateur_assignment_batch_probe_patch(void)
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
-    append_logf(
+    kbo_log_runtimef(
         "installed KBO amateur assignment batch probe patch target=%p stub=%p probe=%p",
         target,
         stub,

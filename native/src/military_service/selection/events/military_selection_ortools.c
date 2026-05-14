@@ -205,7 +205,7 @@ int kbo_route_queued_military_draft_candidates_ortools(
             source) ? 1 : 0;
     }
     if (routed > 0) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO military OR-Tools selection processed source=%s year=%u considered=%d selected=%d routed=%d slots=%d",
             source != NULL ? source : "",
             entry_year,

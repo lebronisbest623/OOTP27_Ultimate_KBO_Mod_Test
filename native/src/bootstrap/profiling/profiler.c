@@ -81,7 +81,7 @@ int kbo_profiler_is_enabled(void)
 
     int enabled = 0;
     int configured = 0;
-    if (kbo_read_localappdata_json_flag_value("enable_kbo_profiler", "enable_kbo_profiler.txt", &configured)) {
+    if (kbo_read_localappdata_json_flag_value("enable_kbo_profiler", &configured)) {
         enabled = configured ? 1 : 0;
     }
     InterlockedCompareExchange(&g_kbo_profiler_enabled_cache, enabled ? 1 : 0, -1);

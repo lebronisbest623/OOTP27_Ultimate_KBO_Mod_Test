@@ -243,7 +243,7 @@ int kbo_apply_foreign_reserve_demand_floor(uintptr_t player_ptr, const char* sou
     static LONG log_count = 0;
     LONG slot = InterlockedIncrement(&log_count);
     if (slot <= 240) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO foreign reserve demand floor applied: source=%s player=%u holder_team=%u old_demand=%d floor=%d score=%d index=%d asian_quota=%d today=%u",
             source != NULL ? source : "",
             *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
@@ -310,7 +310,7 @@ void kbo_restore_foreign_fa_demand_salary_ladder(const char* source)
     static LONG restore_log_count = 0;
     LONG slot = InterlockedIncrement(&restore_log_count);
     if (slot <= 80) {
-        append_logf(
+        kbo_log_runtimef(
             "KBO foreign FA demand baseline restored source=%s financials=%p restored=%d",
             source != NULL ? source : "",
             (void*)financials,
