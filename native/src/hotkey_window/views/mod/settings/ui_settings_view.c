@@ -84,6 +84,8 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
     int quality_cap_enabled = kbo_get_foreign_fa_quality_cap_enabled_setting();
     int asian_quota_salary_limit = kbo_get_asian_quota_salary_limit();
     int asian_games_no_gold_odds = kbo_get_asian_games_no_gold_odds_denominator();
+    int32_t independent_foreign_cash_cost = kbo_get_independent_acquisition_foreign_cash_cost();
+    int32_t independent_domestic_cash_cost = kbo_get_independent_acquisition_domestic_cash_cost();
     kbo_window_text_appendf(
         buffer,
         "</div></details></div><div class='settingRow'><label class='settingLabel' for='foreignFaQualityCapSelect'>");
@@ -118,6 +120,38 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MIN,
         KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MAX,
         asian_games_no_gold_odds);
+
+    kbo_window_text_appendf(
+        buffer,
+        "<div class='settingsDivider'></div><h2 class='cardTitle'>");
+    kbo_html_append_escaped(buffer, kbo_hub_text("2\xea\xb5\xb0 \xeb\x8f\x85\xeb\xa6\xbd \xea\xb5\xac\xeb\x8b\xa8 \xec\x98\x81\xec\x9e\x85 \xec\x9d\xb4\xec\xa0\x81\xeb\xa3\x8c", "INDEPENDENT CLUB ACQUISITION FEES"));
+    kbo_window_text_appendf(buffer, "</h2>");
+
+    kbo_window_text_appendf(
+        buffer,
+        "<div class='settingRow'><label class='settingLabel' for='independentForeignCashCost'>");
+    kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98", "Foreign player"));
+    kbo_window_text_appendf(
+        buffer,
+        "</label><input id='independentForeignCashCost' class='ootpSelect salaryInput' type='text' inputmode='numeric' pattern='[0-9]*' data-min='%d' data-max='%d' data-step='10000' value='%d' "
+        "onchange=\"location.href='kbo://settings/independent-acquisition-foreign-cash-cost/'+this.value\" "
+        "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
+        KBO_INDEPENDENT_ACQUISITION_CASH_COST_MIN,
+        KBO_INDEPENDENT_ACQUISITION_CASH_COST_MAX,
+        independent_foreign_cash_cost);
+
+    kbo_window_text_appendf(
+        buffer,
+        "<div class='settingRow'><label class='settingLabel' for='independentDomesticCashCost'>");
+    kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\x82\xb4\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98", "Domestic player"));
+    kbo_window_text_appendf(
+        buffer,
+        "</label><input id='independentDomesticCashCost' class='ootpSelect salaryInput' type='text' inputmode='numeric' pattern='[0-9]*' data-min='%d' data-max='%d' data-step='10000' value='%d' "
+        "onchange=\"location.href='kbo://settings/independent-acquisition-domestic-cash-cost/'+this.value\" "
+        "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
+        KBO_INDEPENDENT_ACQUISITION_CASH_COST_MIN,
+        KBO_INDEPENDENT_ACQUISITION_CASH_COST_MAX,
+        independent_domestic_cash_cost);
 
     kbo_window_text_appendf(
         buffer,

@@ -93,6 +93,56 @@ int kbo_set_allow_all_ui_team_actions_setting(int enabled)
     return kbo_write_localappdata_json_int_value(KBO_ALLOW_ALL_UI_TEAM_ACTIONS_KEY, enabled ? 1 : 0);
 }
 
+#define KBO_INDEPENDENT_ACQUISITION_FOREIGN_CASH_COST_KEY "independent_acquisition_foreign_cash_cost"
+#define KBO_INDEPENDENT_ACQUISITION_DOMESTIC_CASH_COST_KEY "independent_acquisition_domestic_cash_cost"
+
+int32_t kbo_clamp_independent_acquisition_cash_cost(int32_t value)
+{
+    if (value < KBO_INDEPENDENT_ACQUISITION_CASH_COST_MIN) {
+        return KBO_INDEPENDENT_ACQUISITION_CASH_COST_MIN;
+    }
+    if (value > KBO_INDEPENDENT_ACQUISITION_CASH_COST_MAX) {
+        return KBO_INDEPENDENT_ACQUISITION_CASH_COST_MAX;
+    }
+    return value;
+}
+
+int32_t kbo_get_independent_acquisition_foreign_cash_cost(void)
+{
+    int value = kbo_economic_default_independent_acquisition_foreign_cash_cost();
+    if (!kbo_read_localappdata_json_int_value(
+            KBO_INDEPENDENT_ACQUISITION_FOREIGN_CASH_COST_KEY,
+            &value)) {
+        value = kbo_economic_default_independent_acquisition_foreign_cash_cost();
+    }
+    return kbo_clamp_independent_acquisition_cash_cost(value);
+}
+
+int32_t kbo_get_independent_acquisition_domestic_cash_cost(void)
+{
+    int value = kbo_economic_default_independent_acquisition_domestic_cash_cost();
+    if (!kbo_read_localappdata_json_int_value(
+            KBO_INDEPENDENT_ACQUISITION_DOMESTIC_CASH_COST_KEY,
+            &value)) {
+        value = kbo_economic_default_independent_acquisition_domestic_cash_cost();
+    }
+    return kbo_clamp_independent_acquisition_cash_cost(value);
+}
+
+int kbo_set_independent_acquisition_foreign_cash_cost(int32_t value)
+{
+    return kbo_write_localappdata_json_int_value(
+        KBO_INDEPENDENT_ACQUISITION_FOREIGN_CASH_COST_KEY,
+        kbo_clamp_independent_acquisition_cash_cost(value));
+}
+
+int kbo_set_independent_acquisition_domestic_cash_cost(int32_t value)
+{
+    return kbo_write_localappdata_json_int_value(
+        KBO_INDEPENDENT_ACQUISITION_DOMESTIC_CASH_COST_KEY,
+        kbo_clamp_independent_acquisition_cash_cost(value));
+}
+
 int kbo_fix_enabled(void)
 {
     /* The DLL is purpose-injected by KBOLauncher, so it is enabled by default.

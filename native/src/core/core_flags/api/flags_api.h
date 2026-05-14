@@ -29,6 +29,14 @@ int kbo_clamp_asian_games_no_gold_odds_denominator(int value);
 int kbo_get_asian_games_no_gold_odds_denominator(void);
 int kbo_set_asian_games_no_gold_odds_denominator(int value);
 
+#define KBO_INDEPENDENT_ACQUISITION_CASH_COST_MIN 0
+#define KBO_INDEPENDENT_ACQUISITION_CASH_COST_MAX 2000000000
+int32_t kbo_clamp_independent_acquisition_cash_cost(int32_t value);
+int32_t kbo_get_independent_acquisition_foreign_cash_cost(void);
+int32_t kbo_get_independent_acquisition_domestic_cash_cost(void);
+int kbo_set_independent_acquisition_foreign_cash_cost(int32_t value);
+int kbo_set_independent_acquisition_domestic_cash_cost(int32_t value);
+
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT 5
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_STARTER 0
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_BULLPEN 1

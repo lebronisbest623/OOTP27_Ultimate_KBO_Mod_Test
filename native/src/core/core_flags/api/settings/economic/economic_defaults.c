@@ -143,3 +143,13 @@ int kbo_economic_default_asian_games_no_gold_odds_denominator(void)
 {
     return (int)kbo_economic_default_int("asian_games_no_gold_odds_denominator", 7);
 }
+
+int32_t kbo_economic_default_independent_acquisition_foreign_cash_cost(void)
+{
+    return kbo_economic_default_int("independent_acquisition_foreign_cash_cost", 0);
+}
+
+int32_t kbo_economic_default_independent_acquisition_domestic_cash_cost(void)
+{
+    return kbo_economic_default_int("independent_acquisition_domestic_cash_cost", 0);
+}
