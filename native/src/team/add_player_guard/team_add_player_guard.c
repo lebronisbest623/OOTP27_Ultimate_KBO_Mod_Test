@@ -51,7 +51,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     uint32_t team_id = team_readable
         ? *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET)
         : 0u;
-    int is_military_team = team_id != 0u && kbo_team_id_is_military_service_team(team_id);
+    int is_military_team = team_readable && kbo_team_ptr_is_military_service_team(team);
     int amateur_generation_call = kbo_amateur_generation_team_add_caller(caller_rva);
 
     if (!kbo_team_add_original_args_readable(team_ptr, player_ptr)) {

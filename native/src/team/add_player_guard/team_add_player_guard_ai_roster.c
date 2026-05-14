@@ -9,6 +9,8 @@
 #include "../../core/logging/core_log.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../military_service/players/guards/military_team_add_guard.h"
+#include "../../military_service/players/team_policy/military_service_team_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../lookup/team_lookup.h"
 #include "ai_roster/internal/team_add_player_guard_ai_roster_internal.h"
@@ -280,6 +282,32 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
                 &release_pressure_score,
                 &release_pressure_threshold);
     }
+
+    if (slot_team_id != 0u && player_id != 0u) {
+        uint8_t* slot_team = find_kbo_team_by_numeric_id_any_league(slot_team_id, 1);
+        if (slot_team != NULL
+                && kbo_team_ptr_is_military_service_team(slot_team)
+                && kbo_military_team_add_player_should_block((uintptr_t)slot_team, player_ptr)) {
+            static volatile LONG military_ai_apply_block_log_count = 0;
+            LONG military_slot = InterlockedIncrement(&military_ai_apply_block_log_count);
+            if (military_slot <= 300) {
+                append_logf(
+                    "KBO military AI roster apply blocked: context=%p slot_index=%d target_slot=%d roster_code=%d slot_team=%u player=%u player_current=%u player_active=%u player_league=%u before_slot_player=%u",
+                    (void*)context_ptr,
+                    slot_index,
+                    target_slot,
+                    roster_code,
+                    slot_team_id,
+                    player_id,
+                    player_plausible ? *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) : 0u,
+                    player_plausible ? *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) : 0u,
+                    player_plausible ? *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) : 0u,
+                    before_slot_player_id);
+            }
+            return;
+        }
+    }
+
     if (original != NULL
             && slot_block_ptr != 0u
             && target_slot >= 0
