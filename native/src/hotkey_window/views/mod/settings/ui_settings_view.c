@@ -1,5 +1,17 @@
 #include "../info/ui_mod_info_views_internal.h"
 
+static void kbo_webview_append_settings_section_start(KboWindowTextBuffer* buffer, const char* title_ko, const char* title_en)
+{
+    kbo_window_text_appendf(buffer, "<div class='settingsSection'><div class='settingsSectionHead'><h3>");
+    kbo_html_append_escaped(buffer, kbo_hub_text(title_ko, title_en));
+    kbo_window_text_appendf(buffer, "</h3></div><div class='settingsRows'>");
+}
+
+static void kbo_webview_append_settings_section_end(KboWindowTextBuffer* buffer)
+{
+    kbo_window_text_appendf(buffer, "</div></div>");
+}
+
 void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
 {
     if (buffer == NULL) {
@@ -55,12 +67,12 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
     kbo_window_text_appendf(
         buffer,
         "<div class='rights settingsGrid'>"
-        "<section class='card modCard settingsCard'><h2 class='cardTitle'>");
+        "<section class='card modCard settingsCard leagueSettingsCard'><h2 class='cardTitle'>");
     kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\xa6\xac\xea\xb7\xb8 \xec\x84\xa4\xec\xa0\x95", "LEAGUE SETTINGS"));
+    kbo_window_text_appendf(buffer, "</h2>");
 
-    kbo_window_text_appendf(
-        buffer,
-        "</h2><div class='settingRow'><label class='settingLabel' for='intlFaMultiplierSelect'>");
+    kbo_webview_append_settings_section_start(buffer, "\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98 \xec\x9a\xb4\xec\x98\x81", "FOREIGN PLAYER RULES");
+    kbo_window_text_appendf(buffer, "<div class='settingRow'><label class='settingLabel' for='intlFaMultiplierSelect'>");
     kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 FA \xec\x83\x9d\xec\x84\xb1", "International FA pool"));
     char current_choice_label[32] = {0};
     snprintf(current_choice_label, sizeof(current_choice_label), "%dx", multiplier);
@@ -80,15 +92,15 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         snprintf(label, sizeof(label), "%dx", value);
         kbo_webview_append_ootp_choice_option(buffer, href, label, value == multiplier);
     }
+    kbo_webview_end_ootp_choice(buffer);
+    kbo_window_text_appendf(buffer, "</div>");
 
     int quality_cap_enabled = kbo_get_foreign_fa_quality_cap_enabled_setting();
     int asian_quota_salary_limit = kbo_get_asian_quota_salary_limit();
     int asian_games_no_gold_odds = kbo_get_asian_games_no_gold_odds_denominator();
     int32_t independent_foreign_cash_cost = kbo_get_independent_acquisition_foreign_cash_cost();
     int32_t independent_domestic_cash_cost = kbo_get_independent_acquisition_domestic_cash_cost();
-    kbo_window_text_appendf(
-        buffer,
-        "</div></details></div><div class='settingRow'><label class='settingLabel' for='foreignFaQualityCapSelect'>");
+    kbo_window_text_appendf(buffer, "<div class='settingRow'><label class='settingLabel' for='foreignFaQualityCapSelect'>");
     kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x83\x9d\xec\x84\xb1 \xed\x92\x88\xec\xa7\x88 \xec\xba\xa1", "Foreign FA quality cap"));
     kbo_window_text_appendf(buffer, "</label>");
     kbo_webview_begin_ootp_choice(buffer, "foreignFaQualityCapSelect", quality_cap_enabled ? "ON" : "OFF");
@@ -121,11 +133,8 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MAX,
         asian_games_no_gold_odds);
 
-    kbo_window_text_appendf(
-        buffer,
-        "<div class='settingsDivider'></div><h2 class='cardTitle'>");
-    kbo_html_append_escaped(buffer, kbo_hub_text("2\xea\xb5\xb0 \xeb\x8f\x85\xeb\xa6\xbd \xea\xb5\xac\xeb\x8b\xa8 \xec\x98\x81\xec\x9e\x85 \xec\x9d\xb4\xec\xa0\x81\xeb\xa3\x8c", "INDEPENDENT CLUB ACQUISITION FEES"));
-    kbo_window_text_appendf(buffer, "</h2>");
+    kbo_webview_append_settings_section_end(buffer);
+    kbo_webview_append_settings_section_start(buffer, "2\xea\xb5\xb0 \xeb\x8f\x85\xeb\xa6\xbd \xea\xb5\xac\xeb\x8b\xa8 \xec\x98\x81\xec\x9e\x85", "INDEPENDENT CLUB ACQUISITION");
 
     kbo_window_text_appendf(
         buffer,
@@ -153,11 +162,8 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         KBO_INDEPENDENT_ACQUISITION_CASH_COST_MAX,
         independent_domestic_cash_cost);
 
-    kbo_window_text_appendf(
-        buffer,
-        "<div class='settingsDivider'></div><h2 class='cardTitle'>");
-    kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\xb9\x84\xec\x95\x84\xec\x8b\x9c\xec\x95\x84 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xed\x92\x88\xec\xa7\x88 \xec\xba\xa1", "NON-ASIAN QUALITY CAPS"));
-    kbo_window_text_appendf(buffer, "</h2>");
+    kbo_webview_append_settings_section_end(buffer);
+    kbo_webview_append_settings_section_start(buffer, "\xeb\xb9\x84\xec\x95\x84\xec\x8b\x9c\xec\x95\x84 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xed\x92\x88\xec\xa7\x88 \xec\xba\xa1", "NON-ASIAN QUALITY CAPS");
 
     for (int i = 0; i < KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT; i++) {
         int current = kbo_get_foreign_fa_non_asian_quality_cap_value(i);
@@ -177,11 +183,8 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
             i);
     }
 
-    kbo_window_text_appendf(
-        buffer,
-        "<div class='settingsDivider'></div><h2 class='cardTitle'>");
-    kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x97\xb0\xeb\xb4\x89 \xeb\xb2\xa0\xec\x9d\xb4\xec\x8a\xa4\xeb\x9d\xbc\xec\x9d\xb8", "FOREIGN PLAYER SALARY BASELINE"));
-    kbo_window_text_appendf(buffer, "</h2>");
+    kbo_webview_append_settings_section_end(buffer);
+    kbo_webview_append_settings_section_start(buffer, "\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x97\xb0\xeb\xb4\x89 \xeb\xb2\xa0\xec\x9d\xb4\xec\x8a\xa4\xeb\x9d\xbc\xec\x9d\xb8", "FOREIGN PLAYER SALARY BASELINE");
 
     for (int i = 0; i < 9; i++) {
         int current = kbo_get_foreign_fa_demand_baseline_value(i);
@@ -200,9 +203,8 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
             i);
     }
 
-    kbo_window_text_appendf(buffer, "<div class='settingsDivider'></div><h2 class='cardTitle'>");
-    kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x84\xec\xbf\xbc\xed\x84\xb0 \xec\x97\xb0\xeb\xb4\x89 \xeb\xb2\xa0\xec\x9d\xb4\xec\x8a\xa4\xeb\x9d\xbc\xec\x9d\xb8", "ASIAN QUOTA SALARY BASELINE"));
-    kbo_window_text_appendf(buffer, "</h2>");
+    kbo_webview_append_settings_section_end(buffer);
+    kbo_webview_append_settings_section_start(buffer, "\xec\x95\x84\xec\x8b\x9c\xec\x95\x84\xec\xbf\xbc\xed\x84\xb0 \xec\x97\xb0\xeb\xb4\x89 \xeb\xb2\xa0\xec\x9d\xb4\xec\x8a\xa4\xeb\x9d\xbc\xec\x9d\xb8", "ASIAN QUOTA SALARY BASELINE");
 
     for (int i = 0; i < 9; i++) {
         int current = kbo_get_asian_quota_fa_demand_baseline_value(i);
@@ -221,5 +223,6 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
             i);
     }
 
+    kbo_webview_append_settings_section_end(buffer);
     kbo_window_text_appendf(buffer, "</section></div>");
 }
