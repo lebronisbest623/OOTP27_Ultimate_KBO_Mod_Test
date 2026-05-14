@@ -2,11 +2,9 @@
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
-#include "../../../core/core_flags/localappdata/localappdata_reader.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../runtime_memory/runtime_memory.h"
@@ -28,60 +26,6 @@ static volatile LONG g_kbo_military_service_team_count = 0;
 static volatile LONG g_kbo_military_policy_loaded_state = 0;
 static volatile LONG g_kbo_military_policy_refresh_tick = 0;
 
-static int kbo_military_service_read_json_sangmu_team_id(uint32_t* out_value)
-{
-    if (out_value == NULL) {
-        return 0;
-    }
-    int value = 0;
-    if (kbo_read_localappdata_named_json_int_value("kbo_team_policy.json", "sangmu_team_id", &value)
-            && value > 0
-            && value <= 1000000) {
-        *out_value = (uint32_t)value;
-        return 1;
-    }
-    return 0;
-}
-
-static int kbo_military_service_read_legacy_team_id_file(uint32_t* out_value, char* out_path, size_t out_path_size)
-{
-    if (out_value != NULL) {
-        *out_value = 0u;
-    }
-    if (out_path != NULL && out_path_size > 0u) {
-        out_path[0] = '\0';
-    }
-    if (out_value == NULL) {
-        return 0;
-    }
-
-    char path[MAX_PATH] = {0};
-    if (!kbo_get_global_data_file("kbo_sangmu_team_id.txt", path, sizeof(path))) {
-        return 0;
-    }
-    FILE* file = fopen(path, "rb");
-    if (file == NULL) {
-        return 0;
-    }
-
-    char buffer[64] = {0};
-    size_t read = fread(buffer, 1, sizeof(buffer) - 1u, file);
-    fclose(file);
-    buffer[read] = '\0';
-
-    unsigned long value = strtoul(buffer, NULL, 10);
-    if (value == 0ul || value > 1000000ul) {
-        append_logf("KBO military service team legacy id ignored value=%s source=%s", buffer, path);
-        return 0;
-    }
-
-    *out_value = (uint32_t)value;
-    if (out_path != NULL && out_path_size > 0u) {
-        snprintf(out_path, out_path_size, "%s", path);
-    }
-    return 1;
-}
-
 static int kbo_military_service_add_team_csv_id(const char* team_csv_id)
 {
     if (team_csv_id == NULL || team_csv_id[0] == '\0') {
@@ -102,24 +46,6 @@ static int kbo_military_service_add_team_csv_id(const char* team_csv_id)
     KboMilitaryServiceTeamPolicyEntry* entry = &g_kbo_military_service_teams[count];
     snprintf(entry->team_csv_id, sizeof(entry->team_csv_id), "%s", team_csv_id);
     InterlockedExchange(&entry->team_id, 0);
-    InterlockedExchange(&g_kbo_military_service_team_count, count + 1);
-    return 1;
-}
-
-static int kbo_military_service_add_legacy_team_id(uint32_t team_id, const char* source)
-{
-    if (team_id == 0u) {
-        return 0;
-    }
-
-    LONG count = InterlockedCompareExchange(&g_kbo_military_service_team_count, 0, 0);
-    if (count >= KBO_MILITARY_SERVICE_TEAM_MAX) {
-        return 0;
-    }
-
-    KboMilitaryServiceTeamPolicyEntry* entry = &g_kbo_military_service_teams[count];
-    snprintf(entry->team_csv_id, sizeof(entry->team_csv_id), "%s", source != NULL ? source : "legacy");
-    InterlockedExchange(&entry->team_id, (LONG)team_id);
     InterlockedExchange(&g_kbo_military_service_team_count, count + 1);
     return 1;
 }
@@ -156,32 +82,6 @@ static int kbo_military_service_load_team_csv_policy(void)
     return loaded_rows;
 }
 
-static void kbo_military_service_load_legacy_policy(void)
-{
-    uint32_t team_id = 0u;
-    const char* source = NULL;
-    if (kbo_military_service_read_json_sangmu_team_id(&team_id)) {
-        source = "kbo_team_policy.json";
-    }
-
-    char legacy_path[MAX_PATH] = {0};
-    uint32_t legacy_file_team_id = 0u;
-    if (kbo_military_service_read_legacy_team_id_file(
-            &legacy_file_team_id,
-            legacy_path,
-            sizeof(legacy_path))) {
-        team_id = legacy_file_team_id;
-        source = legacy_path;
-    }
-
-    if (team_id != 0u) {
-        kbo_military_service_add_legacy_team_id(team_id, "legacy");
-        append_logf("KBO military service team legacy policy loaded team=%u source=%s", team_id, source != NULL ? source : "");
-    } else {
-        append_log_line("KBO military service team policy has no enabled teams");
-    }
-}
-
 static void kbo_military_service_resolve_team_ids(int force)
 {
     LONG count = InterlockedCompareExchange(&g_kbo_military_service_team_count, 0, 0);
@@ -199,8 +99,7 @@ static void kbo_military_service_resolve_team_ids(int force)
     for (LONG i = 0; i < count; i++) {
         KboMilitaryServiceTeamPolicyEntry* entry = &g_kbo_military_service_teams[i];
         if (InterlockedCompareExchange(&entry->team_id, 0, 0) != 0
-                || entry->team_csv_id[0] == '\0'
-                || _stricmp(entry->team_csv_id, "legacy") == 0) {
+                || entry->team_csv_id[0] == '\0') {
             continue;
         }
 
@@ -235,7 +134,7 @@ void kbo_load_military_service_team_policy_override_once(void)
     }
 
     if (kbo_military_service_load_team_csv_policy() < 0) {
-        kbo_military_service_load_legacy_policy();
+        append_logf("KBO military service team policy file missing; no teams enabled file=%s", KBO_MILITARY_SERVICE_TEAM_POLICY_FILE);
     }
     kbo_military_service_resolve_team_ids(1);
     InterlockedExchange(&g_kbo_military_policy_loaded_state, 2);

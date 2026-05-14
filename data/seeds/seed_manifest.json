@@ -97,7 +97,6 @@
       "id": "runtime",
       "label": "Runtime",
       "files": [
-        { "path": "kbo_team_policy.json", "source": "runtime/kbo_team_policy.json", "label": "KBO team policy", "kind": "policy" },
         { "path": "runtime_tuning_policy.json", "source": "runtime/runtime_tuning_policy.json", "label": "Runtime tuning policy", "kind": "policy" }
       ]
     },
