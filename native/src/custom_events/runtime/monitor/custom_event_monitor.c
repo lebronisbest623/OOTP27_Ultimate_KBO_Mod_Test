@@ -12,6 +12,7 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../schedules/independent/independent_team_acquisition_schedule.h"
+#include "../calendar/custom_event_calendar_due.h"
 
 static volatile LONG64 g_kbo_custom_event_schedule_deferred_log_ms = 0;
 static volatile LONG64 g_kbo_custom_event_scan_deferred_log_ms = 0;
@@ -47,24 +48,17 @@ void kbo_custom_event_monitor_tick(
     }
 
     if (last_scheduled_yyyymmdd != NULL && today_yyyymmdd != *last_scheduled_yyyymmdd) {
-        int foreign_schedule = kbo_schedule_foreign_priority_custom_events(source);
-        int asian_schedule = kbo_schedule_asian_games_custom_events(source);
-        int cbt_schedule = kbo_schedule_cbt_custom_events(source);
-        int independent_schedule = kbo_schedule_independent_team_acquisition_custom_events(source);
-        if (foreign_schedule >= 0 && asian_schedule >= 0 && cbt_schedule >= 0 && independent_schedule >= 0) {
+        int due_result = kbo_process_custom_events_due_through(today_yyyymmdd, source);
+        if (due_result >= 0) {
             *last_scheduled_yyyymmdd = today_yyyymmdd;
-            if (last_scanned_yyyymmdd != NULL
-                    && (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0 || independent_schedule > 0)) {
+            if (last_scanned_yyyymmdd != NULL && due_result > 0) {
                 *last_scanned_yyyymmdd = 0u;
             }
         } else if (kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_schedule_deferred_log_ms)) {
             kbo_log_runtimef(
-                "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d cbt=%d independent=%d",
+                "KBO custom event schedule deferred reason=state_not_ready today=%u due_result=%d",
                 today_yyyymmdd,
-                foreign_schedule,
-                asian_schedule,
-                cbt_schedule,
-                independent_schedule);
+                due_result);
         }
     }
     int triggered = scan_kbo_custom_events_once(source);

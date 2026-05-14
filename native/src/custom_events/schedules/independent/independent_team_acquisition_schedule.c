@@ -18,8 +18,11 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/classification/team_classification.h"
 #include "../../runtime/catalog/custom_event_catalog.h"
+#include "../../runtime/ledger/custom_event_ledger.h"
 #include "../../runtime/lookup/custom_event_lookup.h"
+#include "../../runtime/markers/custom_event_markers.h"
 #include "../../runtime/names/custom_event_names.h"
+#include "../../runtime/runner/custom_event_runner.h"
 #include "../../runtime/state/custom_event_state.h"
 
 static uint32_t kbo_independent_team_acquisition_add_months(
@@ -130,6 +133,55 @@ static int kbo_independent_team_acquisition_resolve_start_date(
     return 0;
 }
 
+static int kbo_process_due_independent_team_acquisition_open_event(
+    uint32_t today,
+    uint32_t league_id,
+    uint32_t open_date,
+    const char* title,
+    const char* source)
+{
+    if (today == 0u || open_date == 0u || today < open_date) {
+        return 0;
+    }
+    if (kbo_custom_event_processed_marker_exists_for_kind(
+            open_date,
+            KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN)
+            || kbo_custom_event_ledger_completed(
+                league_id,
+                open_date,
+                KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN)) {
+        return 0;
+    }
+
+    int result = kbo_run_custom_event_by_kind(
+        0,
+        league_id,
+        open_date,
+        KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN,
+        title,
+        source);
+    if (result > 0) {
+        if (result == KBO_CUSTOM_EVENT_RUN_ALREADY_COMPLETED) {
+            return 0;
+        }
+        kbo_log_runtimef(
+            "KBO independent futures acquisition due event handled source=%s event_date=%u today=%u result=%d",
+            source != NULL ? source : "",
+            open_date,
+            today,
+            result);
+        return 1;
+    }
+
+    kbo_log_runtimef(
+        "KBO independent futures acquisition due event deferred source=%s event_date=%u today=%u result=%d",
+        source != NULL ? source : "",
+        open_date,
+        today,
+        result);
+    return -1;
+}
+
 int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
 {
     uint32_t today = 0u;
@@ -197,6 +249,8 @@ int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
         : 2u;
 
     int created = 0;
+    int direct_processed = 0;
+    int direct_deferred = 0;
     int ready = 0;
     int failed = 0;
     for (int i = 0; i < league_count; i++) {
@@ -233,6 +287,18 @@ int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
                 season_start,
                 offset_months);
             continue;
+        }
+
+        int direct_result = kbo_process_due_independent_team_acquisition_open_event(
+            today,
+            event_league_id,
+            open_date,
+            title,
+            source);
+        if (direct_result > 0) {
+            direct_processed = 1;
+        } else if (direct_result < 0) {
+            direct_deferred = 1;
         }
 
         int exists = kbo_custom_event_exists_by_kind_for_date(
@@ -286,5 +352,8 @@ int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
     if (ready <= 0 && failed > 0) {
         return -1;
     }
-    return created;
+    if (direct_deferred) {
+        return -1;
+    }
+    return created || direct_processed;
 }

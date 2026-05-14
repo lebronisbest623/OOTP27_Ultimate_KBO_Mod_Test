@@ -1,4 +1,5 @@
 #include "../internal/foreign_roster_audit_internal.h"
+#include "../../../custom_events/runtime/monitor/custom_event_monitor.h"
 #include "../../../team/add_player_guard/team_add_player_guard_ai_roster.h"
 #include "../../../team/independent_acquisition/independent_acquisition_ai.h"
 #include "../../injury/api/foreign_injury.h"
@@ -13,6 +14,9 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
     kbo_log_runtime_line("foreign roster daily audit thread started");
 
     uint32_t last_audit_date = 0u;
+    uint32_t last_custom_event_scheduled_date = 0u;
+    uint32_t last_custom_event_scanned_date = 0u;
+    uint32_t last_custom_event_fa_comp_date = 0u;
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->foreign_roster_daily_audit_sleep_ms)) {
             break;
@@ -32,6 +36,11 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
         kbo_sync_active_foreign_waiver_rights_to_memory(
             "foreign_roster_daily_date_change",
             today);
+        kbo_custom_event_monitor_tick(
+            &last_custom_event_scheduled_date,
+            &last_custom_event_scanned_date,
+            &last_custom_event_fa_comp_date,
+            "foreign_roster_daily_date_change");
         kbo_run_foreign_ai_roster_daily_callup("foreign_roster_daily_date_change");
         kbo_run_independent_team_acquisition_ai("foreign_roster_daily_date_change");
         kbo_foreign_injury_replacement_scan_once("foreign_roster_daily_date_change");
