@@ -1,0 +1,14 @@
+{
+  "foreign_waiver.results.title": "외국인 보류권 창구가 마감됐습니다",
+  "foreign_waiver.results.title.variants": 2,
+  "foreign_waiver.results.title.v1": "외국인 보류권 창구가 마감됐습니다",
+  "foreign_waiver.results.title.v2": "KBO 구단들이 외국인 보류권 선택을 마쳤습니다",
+  "foreign_waiver.results.body_with_breakdown": "외국인 선수 보류권 결정 기간이 끝났습니다. 각 구단이 붙잡을 권리와 포기할 권리를 가르면서 오프시즌 협상 구도도 윤곽을 드러냈습니다.\n\n이번 마감에서 보류는 {retained}건, 포기는 {skipped}건으로 집계됐습니다. AI 구단은 보류 {ai_retained}건과 포기 {ai_skipped}건, 유저 구단은 보류 {user_retained}건과 포기 {user_skipped}건을 기록했습니다.\n\n현재 활성 보류권은 {active_rights}건입니다. 보류된 선수는 로스터에 남아 있지 않아도 5년 동안 원 구단의 독점 협상권 대상이 됩니다.",
+  "foreign_waiver.results.body_with_breakdown.variants": 2,
+  "foreign_waiver.results.body_with_breakdown.v1": "외국인 선수 보류권 결정 기간이 끝났습니다. 각 구단이 붙잡을 권리와 포기할 권리를 가르면서 오프시즌 협상 구도도 윤곽을 드러냈습니다.\n\n이번 마감에서 보류는 {retained}건, 포기는 {skipped}건으로 집계됐습니다. AI 구단은 보류 {ai_retained}건과 포기 {ai_skipped}건, 유저 구단은 보류 {user_retained}건과 포기 {user_skipped}건을 기록했습니다.\n\n현재 활성 보류권은 {active_rights}건입니다. 보류된 선수는 로스터에 남아 있지 않아도 5년 동안 원 구단의 독점 협상권 대상이 됩니다.",
+  "foreign_waiver.results.body_with_breakdown.v2": "KBO 외국인 보류권 창구가 닫혔습니다. 조용한 절차처럼 보이지만, 다음 외국인 시장에서 어느 구단이 먼저 말을 걸 수 있는지를 정하는 중요한 장부입니다.\n\n장부에는 보류 {retained}건, 포기 {skipped}건이 남았습니다. AI 구단은 {ai_retained}건을 보류하고 {ai_skipped}건을 넘겼으며, 유저 구단은 {user_retained}건 보류와 {user_skipped}건 포기를 선택했습니다.\n\n마감 뒤 활성 보류권은 {active_rights}건입니다. 각 기록은 5년 독점 협상권으로 유지됩니다.",
+  "foreign_waiver.results.body_without_breakdown": "KBO 외국인 선수 보류권 창구가 종료됐습니다. 이번 마감에는 구단별 세부 결정 내역이 함께 붙지 않았습니다.\n\n그래도 활성 테이블에는 {active_rights}건의 보류 기록이 남아 있습니다. 해당 선수들이 다시 KBO 시장에 들어올 경우, 원 구단은 5년 동안 우선적인 협상 권리를 가집니다.",
+  "foreign_waiver.results.body_without_breakdown.variants": 2,
+  "foreign_waiver.results.body_without_breakdown.v1": "KBO 외국인 선수 보류권 창구가 종료됐습니다. 이번 마감에는 구단별 세부 결정 내역이 함께 붙지 않았습니다.\n\n그래도 활성 테이블에는 {active_rights}건의 보류 기록이 남아 있습니다. 해당 선수들이 다시 KBO 시장에 들어올 경우, 원 구단은 5년 동안 우선적인 협상 권리를 가집니다.",
+  "foreign_waiver.results.body_without_breakdown.v2": "외국인 보류권 창구가 닫혔습니다. 전체 결정 장부는 붙지 않았지만, 리그 파일에는 여전히 중요한 숫자가 남았습니다.\n\n활성 보류권은 {active_rights}건입니다. 보류 기간 동안 해당 선수들의 KBO 복귀 협상은 원 구단의 권리 안에서 먼저 움직입니다."
+}

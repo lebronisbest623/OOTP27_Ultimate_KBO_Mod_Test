@@ -1,6 +1,6 @@
 #include "../internal/cbt_internal.h"
 
-#include <stdarg.h>
+#include "../../core/news/templates/core_news_templates.h"
 
 static void kbo_cbt_format_usd(char* out, size_t out_size, int32_t value)
 {
@@ -83,21 +83,6 @@ void kbo_cbt_copy_team_name(uint32_t team_id, char* out, size_t out_size)
     snprintf(out, out_size, "Team #%u", team_id);
 }
 
-static void kbo_cbt_appendf(char* out, size_t out_size, const char* fmt, ...)
-{
-    if (out == NULL || out_size == 0 || fmt == NULL) {
-        return;
-    }
-    size_t len = strlen(out);
-    if (len + 1u >= out_size) {
-        return;
-    }
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(out + len, out_size - len, fmt, args);
-    va_end(args);
-}
-
 void kbo_cbt_insert_violation_news_v2(
     uint32_t league_id,
     uint32_t year,
@@ -112,39 +97,68 @@ void kbo_cbt_insert_violation_news_v2(
 
     const char* team_name = rec->team_name[0] != '\0' ? rec->team_name : "Team";
 
-    char title[256] = {0};
-    snprintf(title, sizeof(title),
-        "[KBO CBT] %s exceeds %u cap",
-        team_name,
-        rec->season);
-
     int draft_penalty = (int)rec->consecutive_count >= (int)rules->draft_penalty_min_consecutive;
+    char season_text[16] = {0};
+    char payroll_text[32] = {0};
+    char threshold_text[32] = {0};
+    char overage_text[32] = {0};
+    char tax_rate_text[16] = {0};
+    char tax_amount_text[32] = {0};
+    char consecutive_text[16] = {0};
+    char draft_penalty_stages_text[16] = {0};
+    snprintf(season_text, sizeof(season_text), "%u", rec->season);
+    snprintf(payroll_text, sizeof(payroll_text), "%d", rec->payroll);
+    snprintf(threshold_text, sizeof(threshold_text), "%d", rec->threshold);
+    snprintf(overage_text, sizeof(overage_text), "%d", rec->overage);
+    snprintf(tax_rate_text, sizeof(tax_rate_text), "%u", rec->tax_rate_pct);
+    snprintf(tax_amount_text, sizeof(tax_amount_text), "%d", rec->tax_amount);
+    snprintf(consecutive_text, sizeof(consecutive_text), "%u", rec->consecutive_count);
+    snprintf(draft_penalty_stages_text, sizeof(draft_penalty_stages_text), "%u", rules->draft_penalty_stages);
 
+    char title[256] = {0};
     char penalty_text[192] = {0};
     if (draft_penalty) {
-        snprintf(penalty_text, sizeof(penalty_text),
-            "\n\nDraft penalty: amateur assignment priority is lowered by %u stages.",
-            rules->draft_penalty_stages);
+        KboNewsTemplateVar penalty_vars[] = {
+            { "draft_penalty_stages", draft_penalty_stages_text },
+        };
+        kbo_news_template_render_key(
+            "cbt.violation.draft_penalty",
+            penalty_vars,
+            (int)(sizeof(penalty_vars) / sizeof(penalty_vars[0])),
+            penalty_text,
+            sizeof(penalty_text),
+            "cbt_violation");
     }
 
+    KboNewsTemplateVar vars[] = {
+        { "team_name", team_name },
+        { "season", season_text },
+        { "payroll", payroll_text },
+        { "threshold", threshold_text },
+        { "overage", overage_text },
+        { "tax_rate_pct", tax_rate_text },
+        { "tax_amount", tax_amount_text },
+        { "consecutive_count", consecutive_text },
+        { "draft_penalty_text", penalty_text },
+    };
     char body[1024] = {0};
-    snprintf(body, sizeof(body),
-        "%s exceeded the KBO competitive balance tax threshold for the %u season.\n\n"
-        "Payroll: %d\n"
-        "Threshold: %d\n"
-        "Overage: %d\n"
-        "Tax rate: %u%%\n"
-        "Tax due: %d\n"
-        "Consecutive overage seasons: %u%s",
-        team_name,
-        rec->season,
-        rec->payroll,
-        rec->threshold,
-        rec->overage,
-        rec->tax_rate_pct,
-        rec->tax_amount,
-        rec->consecutive_count,
-        penalty_text);
+    if (!kbo_news_template_render_key(
+            "cbt.violation.title",
+            vars,
+            (int)(sizeof(vars) / sizeof(vars[0])),
+            title,
+            sizeof(title),
+            "cbt_violation")
+            || !kbo_news_template_render_key(
+                "cbt.violation.body",
+                vars,
+                (int)(sizeof(vars) / sizeof(vars[0])),
+                body,
+                sizeof(body),
+                "cbt_violation")) {
+        append_logf("KBO CBT violation news skipped season=%u team=%u reason=template_unavailable", rec->season, rec->team_id);
+        return;
+    }
 
     insert_kbo_league_news_sql(year, month, day, league_id, 2u, title, body, "cbt_violation");
     insert_kbo_league_news_table_sql(year, month, day, league_id, title, body, "cbt_violation");
@@ -188,33 +202,64 @@ void kbo_cbt_insert_opening_day_summary_news(
     kbo_cbt_format_usd(total_tax_text, sizeof(total_tax_text), total_tax);
 
     char title[256] = {0};
-    snprintf(title, sizeof(title), "[KBO CBT] %u Competitive Balance Tax Review", season);
-
     char body[4096] = {0};
-    kbo_cbt_appendf(
-        body,
-        sizeof(body),
-        "On Opening Day, the KBO finalized its %u competitive balance tax review using the opening-day salary snapshot.\n\n"
-        "Threshold: %s\n"
-        "Payroll basis: top %u domestic salaries per club\n"
-        "Clubs reviewed: %d\n"
-        "Clubs over threshold: %d\n"
-        "Total tax due: %s",
-        season,
-        threshold_text,
-        rules->top_player_count,
-        team_count > 0 ? team_count : reviewed,
-        violations,
-        total_tax_text);
+    char season_text[16] = {0};
+    char top_player_count_text[16] = {0};
+    char clubs_reviewed_text[16] = {0};
+    char violations_text[16] = {0};
+    snprintf(season_text, sizeof(season_text), "%u", season);
+    snprintf(top_player_count_text, sizeof(top_player_count_text), "%u", rules->top_player_count);
+    snprintf(clubs_reviewed_text, sizeof(clubs_reviewed_text), "%d", team_count > 0 ? team_count : reviewed);
+    snprintf(violations_text, sizeof(violations_text), "%d", violations);
+
+    KboNewsTemplateVar summary_vars[] = {
+        { "season", season_text },
+        { "threshold_text", threshold_text },
+        { "top_player_count", top_player_count_text },
+        { "clubs_reviewed", clubs_reviewed_text },
+        { "violations", violations_text },
+        { "total_tax_text", total_tax_text },
+    };
+    if (!kbo_news_template_render_key(
+            "cbt.summary.title",
+            summary_vars,
+            (int)(sizeof(summary_vars) / sizeof(summary_vars[0])),
+            title,
+            sizeof(title),
+            "cbt_summary")
+            || !kbo_news_template_render_key(
+                "cbt.summary.intro",
+                summary_vars,
+                (int)(sizeof(summary_vars) / sizeof(summary_vars[0])),
+                body,
+                sizeof(body),
+                "cbt_summary")) {
+        append_logf("KBO CBT opening-day news skipped season=%u reason=template_unavailable", season);
+        return;
+    }
 
     if (violations <= 0) {
-        kbo_cbt_appendf(
-            body,
-            sizeof(body),
-            "\n\nNo clubs exceeded the threshold. No competitive balance tax is due for the %u season.",
-            season);
+        char no_violations[512] = {0};
+        if (!kbo_news_template_render_key(
+                "cbt.summary.no_violations",
+                summary_vars,
+                (int)(sizeof(summary_vars) / sizeof(summary_vars[0])),
+                no_violations,
+                sizeof(no_violations),
+                "cbt_summary")) {
+            append_logf("KBO CBT opening-day news skipped season=%u reason=no_violations_template_unavailable", season);
+            return;
+        }
+        kbo_news_text_append(body, sizeof(body), no_violations);
     } else {
-        kbo_cbt_appendf(body, sizeof(body), "\n\nOver-threshold clubs:\n");
+        char header[128] = {0};
+        char line_template[384] = {0};
+        if (!kbo_news_template_load("cbt.summary.violations_header", header, sizeof(header), NULL, 0u, "cbt_summary")
+                || !kbo_news_template_load("cbt.summary.violation_line", line_template, sizeof(line_template), NULL, 0u, "cbt_summary")) {
+            append_logf("KBO CBT opening-day news skipped season=%u reason=violation_list_template_unavailable", season);
+            return;
+        }
+        kbo_news_text_append(body, sizeof(body), header);
         for (int i = 0; i < record_count; i++) {
             const KboCbtRecord* rec = &records[i];
             if (rec->season != season || rec->overage <= 0) {
@@ -231,28 +276,52 @@ void kbo_cbt_insert_opening_day_summary_news(
             char payroll_text[32] = {0};
             char overage_text[32] = {0};
             char tax_text[32] = {0};
+            char tax_rate_text[16] = {0};
+            char consecutive_text[16] = {0};
             kbo_cbt_format_usd(payroll_text, sizeof(payroll_text), rec->payroll);
             kbo_cbt_format_usd(overage_text, sizeof(overage_text), rec->overage);
             kbo_cbt_format_usd(tax_text, sizeof(tax_text), rec->tax_amount);
-            kbo_cbt_appendf(
-                body,
-                sizeof(body),
-                "- %s: payroll %s, overage %s, tax %s (%u%%, streak %u)\n",
-                team_name,
-                payroll_text,
-                overage_text,
-                tax_text,
-                rec->tax_rate_pct,
-                rec->consecutive_count);
+            snprintf(tax_rate_text, sizeof(tax_rate_text), "%u", rec->tax_rate_pct);
+            snprintf(consecutive_text, sizeof(consecutive_text), "%u", rec->consecutive_count);
+            KboNewsTemplateVar line_vars[] = {
+                { "team_name", team_name },
+                { "payroll_text", payroll_text },
+                { "overage_text", overage_text },
+                { "tax_text", tax_text },
+                { "tax_rate_pct", tax_rate_text },
+                { "consecutive_count", consecutive_text },
+            };
+            char rendered_line[512] = {0};
+            kbo_news_template_render(
+                line_template,
+                line_vars,
+                (int)(sizeof(line_vars) / sizeof(line_vars[0])),
+                rendered_line,
+                sizeof(rendered_line));
+            kbo_news_text_append(body, sizeof(body), rendered_line);
         }
 
         if (rules->draft_penalty_min_consecutive > 0u) {
-            kbo_cbt_appendf(
-                body,
-                sizeof(body),
-                "\nClubs with at least %u consecutive over-threshold seasons also receive a %u-stage amateur assignment priority penalty.",
-                rules->draft_penalty_min_consecutive,
-                rules->draft_penalty_stages);
+            char min_consecutive_text[16] = {0};
+            char stages_text[16] = {0};
+            char penalty[384] = {0};
+            snprintf(min_consecutive_text, sizeof(min_consecutive_text), "%u", rules->draft_penalty_min_consecutive);
+            snprintf(stages_text, sizeof(stages_text), "%u", rules->draft_penalty_stages);
+            KboNewsTemplateVar penalty_vars[] = {
+                { "draft_penalty_min_consecutive", min_consecutive_text },
+                { "draft_penalty_stages", stages_text },
+            };
+            if (!kbo_news_template_render_key(
+                    "cbt.summary.draft_penalty",
+                    penalty_vars,
+                    (int)(sizeof(penalty_vars) / sizeof(penalty_vars[0])),
+                    penalty,
+                    sizeof(penalty),
+                    "cbt_summary")) {
+                append_logf("KBO CBT opening-day news skipped season=%u reason=draft_penalty_template_unavailable", season);
+                return;
+            }
+            kbo_news_text_append(body, sizeof(body), penalty);
         }
     }
 

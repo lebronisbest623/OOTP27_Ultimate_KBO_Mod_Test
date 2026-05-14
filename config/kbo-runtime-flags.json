@@ -67,6 +67,17 @@
       }
     },
     {
+      "key": "disable_kbo_foreign_ai_offer_candidate_priority_hook",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Foreign AI offer priority",
+        "enabledValue": 0,
+        "defaultEnabled": true
+      }
+    },
+    {
       "key": "disable_kbo_custom_foreign_policy",
       "defaultValue": null,
       "importLegacy": true,
@@ -251,6 +262,23 @@
       }
     },
     {
+      "key": "enable_foreign_ai_controller",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "User",
+      "ui": {
+        "label": "Foreign AI Controller (Experimental)",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
+      "key": "disable_foreign_ai_controller",
+      "defaultValue": null,
+      "importLegacy": true,
+      "lifecycle": "Recovery"
+    },
+    {
       "key": "enable_foreign_waiver_event_probe",
       "defaultValue": null,
       "importLegacy": true,
@@ -389,7 +417,7 @@
     },
     {
       "key": "enable_launcher_injection",
-      "defaultValue": null,
+      "defaultValue": true,
       "importLegacy": true,
       "lifecycle": "User"
     },

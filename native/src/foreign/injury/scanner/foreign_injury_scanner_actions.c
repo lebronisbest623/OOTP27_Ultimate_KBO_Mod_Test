@@ -1,4 +1,5 @@
 #include "foreign_injury_scanner_internal.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 
 int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryReplacement* rec, const char* source)
 {
@@ -68,7 +69,6 @@ static void kbo_foreign_injury_clear_replacement_contract_for_market(uint8_t* pl
         return;
     }
 
-    player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET] = 0u;
     if (memory_range_readable(player + OOTP27_PLAYER_CONTRACT_STATUS_OFFSET, sizeof(uint32_t))) {
         *(uint32_t*)(player + OOTP27_PLAYER_CONTRACT_STATUS_OFFSET) = 1u;
     }
@@ -117,6 +117,8 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
 
     uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
     uint32_t release_league_id = 0u;
+    uint32_t current_team_league_id = 0u;
+    int current_non_kbo_assignment = 0;
 
     if (current_team_id == 0u
             && active_team_id == 0u
@@ -129,10 +131,22 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
         return 0;
     }
 
+    if (current_team_id != 0u && current_team_id != team_id) {
+        uint8_t* current_team = find_kbo_team_by_numeric_id_any_league(current_team_id, 1);
+        if (current_team != NULL && memory_range_readable(current_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            current_team_league_id = *(uint32_t*)(current_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+            uint32_t kbo_league_id = kbo_resolve_kbo_league_id();
+            current_non_kbo_assignment = kbo_league_id != 0u
+                && current_team_league_id != 0u
+                && current_team_league_id != kbo_league_id;
+        }
+    }
+
     if (current_team_id != 0u
             && current_team_id != team_id
             && active_team_id != team_id
-            && original_team_id != team_id) {
+            && original_team_id != team_id
+            && !current_non_kbo_assignment) {
         return 0;
     }
 
@@ -150,11 +164,12 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
     if (current_team_id == team_id
             || active_team_id == team_id
             || original_team_id == team_id
+            || current_non_kbo_assignment
             || (current_team_id == 0u && current_league_id != release_league_id)) {
         *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) = 0u;
         *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) = release_league_id;
     }
-    if (active_team_id == team_id || current_team_id == team_id || original_team_id == team_id) {
+    if (active_team_id == team_id || current_team_id == team_id || original_team_id == team_id || current_non_kbo_assignment) {
         *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = 0u;
     }
     if (*(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) == team_id) {
@@ -179,7 +194,7 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
     player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 0u;
 
     append_logf(
-        "foreign injury replacement: released replacement source=%s team=%u player=%u removed_arrays=%d before_current=%u before_active=%u before_original=%u before_league=%u release_league=%u before_original_league=%u before_default=%u old_status41=%u old_contract_level=%u old_contract_status=%u market=1",
+        "foreign injury replacement: released replacement source=%s team=%u player=%u removed_arrays=%d before_current=%u before_active=%u before_original=%u before_league=%u current_team_league=%u release_league=%u before_original_league=%u before_default=%u old_status41=%u old_contract_level=%u old_contract_status=%u non_kbo_repair=%d market=1",
         source != NULL ? source : "",
         team_id,
         player_id,
@@ -188,11 +203,13 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
         active_team_id,
         original_team_id,
         current_league_id,
+        current_team_league_id,
         release_league_id,
         original_league_id,
         default_team_id,
         (uint32_t)old_status_flags,
         (uint32_t)old_contract_level,
-        old_contract_status);
+        old_contract_status,
+        current_non_kbo_assignment);
     return 1;
 }

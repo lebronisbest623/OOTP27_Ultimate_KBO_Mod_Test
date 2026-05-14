@@ -9,6 +9,7 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
     if (selected_mod_subview == KBO_HUB_MOD_SUBVIEW_SETTINGS) {
         int profiler_enabled = kbo_get_profiler_enabled_setting();
         int allow_all_team_actions = kbo_get_allow_all_ui_team_actions_setting();
+        int custom_news_language = kbo_get_custom_news_language_setting();
         kbo_window_text_appendf(
             buffer,
             "<div class='rights settingsGrid'>"
@@ -27,6 +28,27 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
             buffer, "kbo://mod/settings/lang/ko", "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4", kbo_hub_language() == KBO_HUB_LANG_KO);
         kbo_webview_append_ootp_choice_option(
             buffer, "kbo://mod/settings/lang/en", "English", kbo_hub_language() == KBO_HUB_LANG_EN);
+        kbo_webview_end_ootp_choice(buffer);
+        kbo_window_text_appendf(buffer, "</div>");
+        kbo_window_text_appendf(
+            buffer,
+            "<div class='settingRow'><label class='settingLabel' for='customNewsLanguageSelect'>");
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xec\xbb\xa4\xec\x8a\xa4\xed\x85\x80 \xeb\x89\xb4\xec\x8a\xa4 \xec\x96\xb8\xec\x96\xb4", "Custom news language"));
+        kbo_window_text_appendf(buffer, "</label>");
+        kbo_webview_begin_ootp_choice(
+            buffer,
+            "customNewsLanguageSelect",
+            custom_news_language == KBO_CUSTOM_NEWS_LANGUAGE_EN ? "English" : "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4");
+        kbo_webview_append_ootp_choice_option(
+            buffer,
+            "kbo://mod/settings/custom-news-language/ko",
+            "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4",
+            custom_news_language == KBO_CUSTOM_NEWS_LANGUAGE_KO);
+        kbo_webview_append_ootp_choice_option(
+            buffer,
+            "kbo://mod/settings/custom-news-language/en",
+            "English",
+            custom_news_language == KBO_CUSTOM_NEWS_LANGUAGE_EN);
         kbo_webview_end_ootp_choice(buffer);
         kbo_window_text_appendf(buffer, "</div>");
         kbo_window_text_appendf(

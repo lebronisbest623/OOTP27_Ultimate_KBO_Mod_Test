@@ -18,6 +18,15 @@ int kbo_news_template_load(
     size_t source_path_size,
     const char* source);
 
+int kbo_news_template_load_for_language(
+    const char* language_dir,
+    const char* key,
+    char* out,
+    size_t out_size,
+    char* source_path,
+    size_t source_path_size,
+    const char* source);
+
 int kbo_news_template_render(
     const char* tmpl,
     const KboNewsTemplateVar* vars,

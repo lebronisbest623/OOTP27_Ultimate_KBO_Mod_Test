@@ -121,6 +121,28 @@ static int32_t kbo_captain_candidate_score(KboCaptainSelectionRow* row)
     return score;
 }
 
+static int kbo_captain_candidate_should_replace(
+    const KboCaptainSelectionRow* current,
+    const KboCaptainSelectionRow* candidate)
+{
+    if (current == NULL || current->player_id == 0u) {
+        return 1;
+    }
+    if (candidate == NULL || candidate->player_id == 0u) {
+        return 0;
+    }
+    if (candidate->seeded != current->seeded) {
+        return candidate->seeded != 0u;
+    }
+    if (candidate->seeded && candidate->seed_priority != current->seed_priority) {
+        return candidate->seed_priority > current->seed_priority;
+    }
+    if (candidate->score != current->score) {
+        return candidate->score > current->score;
+    }
+    return candidate->player_id < current->player_id;
+}
+
 static void kbo_captain_copy_team_name(uint32_t team_id, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0) {
@@ -215,6 +237,7 @@ int kbo_captain_select_for_preseason(
     }
 
     uint32_t team_ids[KBO_CAPTAIN_MAX_TEAMS] = {0};
+    uint8_t* team_ptrs[KBO_CAPTAIN_MAX_TEAMS] = {0};
     int scanned_teams = 0;
     int unreadable_teams = 0;
     int team_count = collect_kbo_league_team_ids(
@@ -236,6 +259,7 @@ int kbo_captain_select_for_preseason(
         team_count = max_rows;
     }
 
+    kbo_ensure_captain_seeds_loaded();
     for (int i = 0; i < team_count; i++) {
         memset(&rows[i], 0, sizeof(rows[i]));
         rows[i].date = date;
@@ -243,6 +267,7 @@ int kbo_captain_select_for_preseason(
         rows[i].league_id = league_id;
         rows[i].team_id = team_ids[i];
         rows[i].score = -2147483647;
+        team_ptrs[i] = find_kbo_team_by_numeric_id_any_league(team_ids[i], 0);
         kbo_captain_copy_team_name(team_ids[i], rows[i].team_name, sizeof(rows[i].team_name));
         snprintf(rows[i].reason, sizeof(rows[i].reason), "no_eligible_candidate");
     }
@@ -299,9 +324,24 @@ int kbo_captain_select_for_preseason(
         scanned_players++;
         KboCaptainSelectionRow candidate;
         kbo_captain_fill_player_row(&candidate, player, date, season, league_id, team_id);
-        if (rows[team_index].player_id == 0u || candidate.score > rows[team_index].score
-                || (candidate.score == rows[team_index].score
-                    && candidate.player_id < rows[team_index].player_id)) {
+        KboCaptainSeed seed;
+        if (kbo_find_captain_seed_for_player(
+                season,
+                league_id,
+                team_id,
+                team_ptrs[team_index],
+                player,
+                &seed)) {
+            candidate.seeded = 1u;
+            candidate.seed_priority = seed.priority;
+            snprintf(candidate.seed_source, sizeof(candidate.seed_source), "%s", seed.source);
+            snprintf(
+                candidate.reason,
+                sizeof(candidate.reason),
+                "seed:%s",
+                seed.player_key[0] != '\0' ? seed.player_key : "player_id");
+        }
+        if (kbo_captain_candidate_should_replace(&rows[team_index], &candidate)) {
             rows[team_index] = candidate;
         }
     }

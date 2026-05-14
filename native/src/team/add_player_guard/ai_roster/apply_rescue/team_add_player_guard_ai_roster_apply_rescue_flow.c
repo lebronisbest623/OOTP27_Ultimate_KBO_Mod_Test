@@ -12,22 +12,35 @@
 #include "../../team_add_player_guard.h"
 #include "../internal/team_add_player_guard_ai_roster_internal.h"
 
-static volatile LONG g_kbo_ai_roster_foreign_apply_rescue_disabled_cached = -1;
+static volatile LONG g_kbo_ai_roster_foreign_apply_rescue_move_enabled_cached = -1;
 
 static int kbo_ai_roster_foreign_apply_rescue_enabled(void)
 {
-    LONG disabled = g_kbo_ai_roster_foreign_apply_rescue_disabled_cached;
-    if (disabled < 0) {
-        disabled = read_kbo_localappdata_flag_file("disable_ai_roster_foreign_apply_rescue.txt") ? 1 : 0;
-        InterlockedCompareExchange(&g_kbo_ai_roster_foreign_apply_rescue_disabled_cached, disabled, -1);
-        disabled = g_kbo_ai_roster_foreign_apply_rescue_disabled_cached;
+    LONG enabled = g_kbo_ai_roster_foreign_apply_rescue_move_enabled_cached;
+    if (enabled < 0) {
+        int explicit_enable = read_kbo_localappdata_flag_file("enable_ai_roster_foreign_apply_rescue_move.txt") ? 1 : 0;
+        int disabled = read_kbo_localappdata_flag_file("disable_ai_roster_foreign_apply_rescue.txt")
+            || read_kbo_localappdata_flag_file("disable_ai_roster_foreign_apply_rescue_move.txt");
+        LONG computed = (explicit_enable && !disabled) ? 1 : 0;
+        if (InterlockedCompareExchange(
+                &g_kbo_ai_roster_foreign_apply_rescue_move_enabled_cached,
+                computed,
+                -1) == -1) {
+            append_logf(
+                "ootp ai roster foreign apply rescue move mode enabled=%ld explicit=%d disabled=%d",
+                computed,
+                explicit_enable,
+                disabled ? 1 : 0);
+        }
+        enabled = g_kbo_ai_roster_foreign_apply_rescue_move_enabled_cached;
     }
-    return kbo_custom_foreign_policy_enabled() && disabled != 1;
+    return kbo_custom_foreign_policy_enabled() && enabled == 1;
 }
 
 static int kbo_ai_roster_foreign_apply_rescue_team_add_enabled(void)
 {
     return kbo_ai_roster_foreign_apply_rescue_enabled()
+        && read_kbo_localappdata_flag_file("enable_ai_roster_foreign_apply_rescue_team_add.txt")
         && !read_kbo_localappdata_flag_file("disable_ai_roster_foreign_apply_rescue_team_add.txt");
 }
 

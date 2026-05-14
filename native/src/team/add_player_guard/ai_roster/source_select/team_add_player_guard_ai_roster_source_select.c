@@ -275,6 +275,7 @@ uintptr_t kbo_ai_roster_choose_source_select_rescue_candidate(
     }
 
     if (!kbo_custom_foreign_policy_enabled()
+            || !read_kbo_localappdata_flag_file("enable_ai_roster_foreign_source_select_rescue.txt")
             || read_kbo_localappdata_flag_file("disable_ai_roster_foreign_source_select_rescue.txt")
             || source_vector_ptr == 0u
             || source_count <= 0) {
@@ -351,6 +352,25 @@ uintptr_t kbo_ai_roster_choose_source_select_rescue_candidate(
     if (best_ptr == 0u) {
         return 0u;
     }
+
+    static volatile LONG recent_lock = 0;
+    static uint32_t recent_player_id = 0u;
+    static DWORD recent_tick = 0u;
+    DWORD now = GetTickCount();
+    while (InterlockedCompareExchange(&recent_lock, 1, 0) != 0) {
+        Sleep(0);
+    }
+    DWORD recent_age_ms = now - recent_tick;
+    if (best_summary.player_id != 0u
+            && best_summary.player_id == recent_player_id
+            && recent_age_ms <= 5000u) {
+        recent_tick = now;
+        InterlockedExchange(&recent_lock, 0);
+        return 0u;
+    }
+    recent_player_id = best_summary.player_id;
+    recent_tick = now;
+    InterlockedExchange(&recent_lock, 0);
 
     if (out_source_index != NULL) {
         *out_source_index = best_index;

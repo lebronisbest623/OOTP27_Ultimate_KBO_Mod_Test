@@ -113,7 +113,7 @@ public sealed class KboFlagsTests : IDisposable
         using var doc = JsonDocument.Parse(File.ReadAllText(ConfigPath));
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
         Assert.True(flags["enable_foreign_waiver_ai"]);
-        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
     }
 
     [Fact]
@@ -164,6 +164,7 @@ public sealed class KboFlagsTests : IDisposable
         Assert.True(flags["enable_experimental_runtime_hooks"]);
         Assert.True(flags["enable_foreign_waiver_ai"]);
         Assert.True(flags["enable_foreign_waiver_background_scanner"]);
+        Assert.True(flags["enable_launcher_injection"]);
         Assert.False(flags["enable_foreign_ai_roster_management"]);
         Assert.False(flags["enable_single_division_allstar_runtime_patches"]);
         Assert.False(flags["enable_single_division_allstar_settings_patch"]);
@@ -258,29 +259,29 @@ public sealed class KboFlagsTests : IDisposable
     {
         Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));
         Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
-        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
 
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, "{ nope");
 
         Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));
         Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
-        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
     }
 
     [Fact]
-    public void ReadKboFlagDefaultEnabled_EnableLauncherInjectionMissing_ReturnsFalse()
+    public void ReadKboFlagDefaultEnabled_EnableLauncherInjectionMissing_ReturnsTrue()
     {
-        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
     }
 
     [Fact]
-    public void ReadKboFlagDefaultEnabled_EnableLauncherInjectionMalformedConfig_ReturnsFalse()
+    public void ReadKboFlagDefaultEnabled_EnableLauncherInjectionMalformedConfig_ReturnsTrue()
     {
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, "{ nope");
 
-        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
     }
 
     [Fact]
@@ -302,12 +303,14 @@ public sealed class KboFlagsTests : IDisposable
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, """
         {
-          "enable_foreign_waiver_ai": true
+          "enable_foreign_waiver_ai": true,
+          "enable_launcher_injection": false
         }
         """);
 
         Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_foreign_waiver_ai.txt"));
         Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "missing_flag.txt"));
+        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
     }
 
     [Theory]

@@ -19,10 +19,13 @@
 #include "../../core/teams/core_team_collect.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../runtime_memory/runtime_memory.h"
+#include "../../team/assignment/org_query/team_org_assignment_query.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_name_cache.h"
 #include "../../team/names/team_string.h"
 #include "../api/captain_selection.h"
+#include "../season/captain_season.h"
+#include "../seed/captain_seed_parse.h"
 
 #define KBO_CAPTAIN_MAX_TEAMS 64
 
@@ -42,6 +45,7 @@ typedef struct KboCaptainSelectionRow {
     int32_t salary;
     int32_t value_score;
     int32_t score;
+    int32_t seed_priority;
     int16_t overall_value;
     int16_t talent_value;
     int16_t ratings_value;
@@ -50,14 +54,25 @@ typedef struct KboCaptainSelectionRow {
     uint8_t dfa;
     uint8_t restricted;
     uint8_t injured;
+    uint8_t seeded;
+    char seed_source[24];
     char reason[96];
 } KboCaptainSelectionRow;
 
 extern volatile LONG g_kbo_captain_preseason_thread_started;
 extern volatile LONG g_kbo_captain_last_attempted_season;
+extern KboCaptainSeed g_kbo_captain_seeds[KBO_CAPTAIN_SEED_MAX];
+extern int g_kbo_captain_seed_count;
+extern volatile LONG g_kbo_captain_seed_lock;
+extern volatile LONG g_kbo_captain_seed_loaded;
+extern char g_kbo_captain_seed_loaded_key[MAX_PATH * 5];
 
 int kbo_captain_selection_csv_path(uint32_t season, char* out, size_t out_size);
 int kbo_captain_selection_csv_exists(uint32_t season);
+int kbo_captain_load_selection_csv(
+    uint32_t season,
+    KboCaptainSelectionRow* rows,
+    int max_rows);
 int kbo_captain_write_selection_csv(
     const KboCaptainSelectionRow* rows,
     int row_count,
@@ -72,5 +87,32 @@ int kbo_captain_select_for_preseason(
     int max_rows,
     int* out_selected_count);
 DWORD WINAPI kbo_captain_preseason_selection_thread(LPVOID parameter);
+void kbo_lock_captain_seeds(void);
+void kbo_unlock_captain_seeds(void);
+int kbo_get_save_captain_seed_path(char* out, size_t out_size);
+int kbo_get_global_captain_seed_path(char* out, size_t out_size);
+int kbo_import_captain_seed_file_locked(const char* path, const char* source);
+void kbo_ensure_captain_seeds_loaded(void);
+int kbo_find_captain_seed_for_player(
+    uint32_t season,
+    uint32_t league_id,
+    uint32_t team_id,
+    uint8_t* team,
+    uint8_t* player,
+    KboCaptainSeed* out_seed);
+int kbo_emit_captain_initial_selection_news(
+    uint32_t date,
+    uint32_t season,
+    uint32_t league_id,
+    const KboCaptainSelectionRow* rows,
+    int row_count,
+    const char* source);
+int kbo_emit_captain_replacement_news(
+    uint32_t date,
+    uint32_t season,
+    uint32_t league_id,
+    const KboCaptainSelectionRow* old_row,
+    const KboCaptainSelectionRow* new_row,
+    const char* source);
 
 #endif

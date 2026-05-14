@@ -13,6 +13,40 @@ int kbo_no_minor_contract_signability_floor(int signability)
     return signability;
 }
 
+static int kbo_foreign_reserve_holder_signability(int original_signability)
+{
+    int adjusted = original_signability != 0 ? original_signability : 4;
+    adjusted = kbo_no_minor_contract_signability_floor(adjusted);
+    if (adjusted > 0 && adjusted < 4) {
+        adjusted = 4;
+    }
+    return adjusted;
+}
+
+static int kbo_foreign_reserve_high_value_retention_visible_to_ai(
+    uint8_t* player,
+    int32_t* out_score,
+    int32_t* out_threshold)
+{
+    int32_t score = 0;
+    int32_t threshold = 0;
+    if (out_score != NULL) { *out_score = score; }
+    if (out_threshold != NULL) { *out_threshold = threshold; }
+
+    if (!read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")
+            || player == NULL
+            || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
+            || !kbo_player_is_foreign_for_kbo_rights(player)) {
+        return 0;
+    }
+
+    score = kbo_foreign_waiver_value_score(player);
+    threshold = kbo_get_foreign_waiver_value_threshold_for_player(player);
+    if (out_score != NULL) { *out_score = score; }
+    if (out_threshold != NULL) { *out_threshold = threshold; }
+    return score >= threshold;
+}
+
 int kbo_enforce_foreign_waiver_signability(
     uintptr_t player_ptr,
     int32_t requesting_team_id,
@@ -61,6 +95,51 @@ int kbo_enforce_foreign_waiver_signability(
             kbo_sync_active_foreign_waiver_right_to_memory(player, player_id, holder_team_id, today);
 
             if (requesting_team_id <= 0) {
+                int32_t score = 0;
+                int32_t threshold = 0;
+                int holder_visible = kbo_foreign_reserve_high_value_retention_visible_to_ai(
+                    player,
+                    &score,
+                    &threshold);
+                if (holder_visible) {
+                    int adjusted = kbo_foreign_reserve_holder_signability(original_signability);
+                    kbo_record_recent_foreign_offer_allow(player_id, holder_team_id, today);
+                    static LONG generic_visible_log_count = 0;
+                    LONG visible_slot = InterlockedIncrement(&generic_visible_log_count);
+                    if (visible_slot <= 200) {
+                        uint32_t current_team_id = 0u;
+                        uint32_t active_team_id = 0u;
+                        uint32_t original_team_id = 0u;
+                        uint32_t default_team_id = 0u;
+                        uint32_t current_league_id = 0u;
+                        if (memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+                            current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+                            active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+                            original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
+                            current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+                            if (memory_range_readable(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+                                default_team_id = *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET);
+                            }
+                        }
+                        append_logf(
+                            "foreign reserve signability: holder-visible generic request player=%u holder_team=%u original=%d adjusted=%d today=%u caller_rva=0x%llx current=%u active=%u original_team=%u default_team=%u league=%u score=%d threshold=%d",
+                            player_id,
+                            holder_team_id,
+                            original_signability,
+                            adjusted,
+                            today,
+                            (unsigned long long)caller_rva,
+                            current_team_id,
+                            active_team_id,
+                            original_team_id,
+                            default_team_id,
+                            current_league_id,
+                            score,
+                            threshold);
+                    }
+                    return adjusted;
+                }
+
                 static LONG generic_block_log_count = 0;
                 LONG slot = InterlockedIncrement(&generic_block_log_count);
                 if (slot <= 200) {
@@ -79,7 +158,7 @@ int kbo_enforce_foreign_waiver_signability(
                         }
                     }
                     append_logf(
-                        "foreign reserve signability: blocked generic request player=%u holder_team=%u original=%d forced=0 today=%u caller_rva=0x%llx current=%u active=%u original_team=%u default_team=%u league=%u score=%d",
+                        "foreign reserve signability: blocked generic request player=%u holder_team=%u original=%d forced=0 today=%u caller_rva=0x%llx current=%u active=%u original_team=%u default_team=%u league=%u score=%d threshold=%d",
                         player_id,
                         holder_team_id,
                         original_signability,
@@ -90,7 +169,8 @@ int kbo_enforce_foreign_waiver_signability(
                         original_team_id,
                         default_team_id,
                         current_league_id,
-                        kbo_foreign_waiver_value_score(player));
+                        score,
+                        threshold);
                 }
                 return 0; /* OOTP signability enum: 0 = Impossible. */
             }
@@ -137,16 +217,19 @@ int kbo_enforce_foreign_waiver_signability(
                 kbo_record_recent_foreign_offer_allow(player_id, team_id, today);
                 static LONG allow_log_count = 0;
                 LONG slot = InterlockedIncrement(&allow_log_count);
-                if (slot <= 40) {
+                int adjusted = kbo_foreign_reserve_holder_signability(original_signability);
+                if (slot <= 80) {
                     append_logf(
-                        "foreign reserve signability: holder allowed player=%u team=%u original=%d today=%u caller_rva=0x%llx",
+                        "foreign reserve signability: holder adjusted player=%u team=%u original=%d adjusted=%d today=%u caller_rva=0x%llx score=%d",
                         player_id,
                         team_id,
                         original_signability,
+                        adjusted,
                         today,
-                        (unsigned long long)caller_rva);
+                        (unsigned long long)caller_rva,
+                        kbo_foreign_waiver_value_score(player));
                 }
-                return original_signability;
+                return adjusted;
             }
 
             static LONG block_log_count = 0;

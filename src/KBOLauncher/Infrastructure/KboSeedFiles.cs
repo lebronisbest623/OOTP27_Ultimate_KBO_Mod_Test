@@ -65,6 +65,19 @@ internal static class KboSeedFiles
         ]);
     }
 
+    public static void EnsureBundledKboDataDirectory(string directoryName, string label)
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localDir = Path.Combine(local, "OOTP-KBO");
+        EnsureBundledKboDataDirectory(localDir, directoryName, label,
+        [
+            Path.Combine(AppContext.BaseDirectory, "data", "seeds", directoryName),
+            Path.Combine(Environment.CurrentDirectory, "data", "seeds", directoryName),
+            Path.Combine(AppContext.BaseDirectory, directoryName),
+            Path.Combine(Environment.CurrentDirectory, directoryName)
+        ]);
+    }
+
     public static void RemoveRetiredBundledKboDataFileIfUnchanged(string fileName, string label)
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -143,6 +156,60 @@ internal static class KboSeedFiles
         }
 
         Console.WriteLine($"{label}: bundled seed not found for {fileName}");
+    }
+
+    internal static void EnsureBundledKboDataDirectory(
+        string localDir,
+        string directoryName,
+        string label,
+        IReadOnlyList<string> candidates)
+    {
+        var localPath = Path.Combine(localDir, directoryName);
+
+        Directory.CreateDirectory(localDir);
+
+        foreach (var candidate in candidates)
+        {
+            if (!Directory.Exists(candidate))
+            {
+                continue;
+            }
+
+            try
+            {
+                var copied = 0;
+                foreach (var sourcePath in Directory.EnumerateFiles(candidate, "*", SearchOption.AllDirectories))
+                {
+                    var relative = Path.GetRelativePath(candidate, sourcePath);
+                    var targetPath = Path.Combine(localPath, relative);
+                    Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+
+                    var shouldCopy = !File.Exists(targetPath)
+                        || File.GetLastWriteTimeUtc(sourcePath) > File.GetLastWriteTimeUtc(targetPath)
+                        || new FileInfo(sourcePath).Length != new FileInfo(targetPath).Length;
+                    if (!shouldCopy)
+                    {
+                        continue;
+                    }
+
+                    File.Copy(sourcePath, targetPath, overwrite: true);
+                    copied++;
+                }
+
+                if (copied > 0)
+                {
+                    Console.WriteLine($"{label}: seeded {copied} file(s) under {localPath}");
+                }
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to seed {directoryName} from {candidate}: {ex.Message}");
+                return;
+            }
+        }
+
+        Console.WriteLine($"{label}: bundled seed directory not found for {directoryName}");
     }
 
     public static void EnsureKboScheduleAllstarGameLines(string? ootpExePath)

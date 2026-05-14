@@ -16,6 +16,13 @@
 static int kbo_fa_role_bucket(uint8_t role);
 static int kbo_fa_team_role_count(uint32_t team_id, int role_bucket);
 
+static int kbo_fa_player_vector_readable(uintptr_t player_vector, int32_t player_count)
+{
+    return player_vector != 0 && player_count > 0 && player_count <= 200000
+        && (SIZE_T)player_count <= ((SIZE_T)-1 / sizeof(uintptr_t))
+        && memory_range_readable((void*)player_vector, (SIZE_T)player_count * sizeof(uintptr_t));
+}
+
 static int kbo_fa_protected_candidate_compare_desc(const void* left, const void* right)
 {
     const KboFaProtectedCandidate* a = (const KboFaProtectedCandidate*)left;
@@ -158,13 +165,16 @@ static int kbo_fa_team_role_count(uint32_t team_id, int role_bucket)
 
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
-    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)
+            || !kbo_fa_player_vector_readable(player_vector, player_count)) {
         return 0;
     }
 
     int count = 0;
     for (int32_t i = 0; i < player_count; i++) {
-        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        uintptr_t slot = player_vector + ((uintptr_t)i * sizeof(uintptr_t));
+        if (!memory_range_readable((void*)slot, sizeof(uintptr_t))) { break; }
+        uintptr_t player_ptr = *(uintptr_t*)slot;
         if (!kbo_player_pointer_plausible(player_ptr)) {
             continue;
         }
@@ -319,14 +329,17 @@ int kbo_build_fa_compensation_protected_candidates(
 
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
-    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
+    if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)
+            || !kbo_fa_player_vector_readable(player_vector, player_count)) {
         return 0;
     }
 
     int count = 0;
     int auto_count = 0;
     for (int32_t i = 0; i < player_count && count < max_candidates; i++) {
-        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        uintptr_t slot = player_vector + ((uintptr_t)i * sizeof(uintptr_t));
+        if (!memory_range_readable((void*)slot, sizeof(uintptr_t))) { break; }
+        uintptr_t player_ptr = *(uintptr_t*)slot;
         if (!kbo_player_pointer_plausible(player_ptr)) {
             continue;
         }

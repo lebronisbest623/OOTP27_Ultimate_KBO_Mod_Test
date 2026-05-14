@@ -14,6 +14,7 @@
 #include "../../files/message_body/core_message_body_file.h"
 #include "../escape/core_sql_escape.h"
 #include "../../dates/core_text_date.h"
+#include "../../text/ootp_text_encoding.h"
 
 KboSqlite3ExecFn kbo_get_sqlite3_exec_fn(void)
 {
@@ -153,10 +154,18 @@ int insert_kbo_league_news_sql(
     char escaped_title[512] = {0};
     char escaped_body[8192] = {0};
     char news_date[32] = {0};
-    if (!kbo_sql_escape_literal(escaped_title, sizeof(escaped_title), title)
-            || !kbo_sql_escape_literal(escaped_body, sizeof(escaped_body), body != NULL ? body : "")
+    const char* body_text = body != NULL ? body : "";
+    char* internal_title = kbo_alloc_ootp_internal_text(title);
+    char* internal_body = kbo_alloc_ootp_internal_text(body_text);
+    const char* title_for_ootp = internal_title != NULL ? internal_title : title;
+    const char* body_for_ootp = internal_body != NULL ? internal_body : body_text;
+    int uses_internal_encoding = internal_title != NULL || internal_body != NULL;
+    if (!kbo_sql_escape_literal_preserve_ootp_controls(escaped_title, sizeof(escaped_title), title_for_ootp)
+            || !kbo_sql_escape_literal_preserve_ootp_controls(escaped_body, sizeof(escaped_body), body_for_ootp)
             || !kbo_format_history_date(news_date, sizeof(news_date), year, month, day)) {
         append_logf("league news sql skipped source=%s title=%s reason=escape_or_date_failed", log_source, log_title);
+        kbo_free_ootp_internal_text(internal_title);
+        kbo_free_ootp_internal_text(internal_body);
         return 0;
     }
 
@@ -193,7 +202,7 @@ int insert_kbo_league_news_sql(
         body_file = write_kbo_message_body_file(message_id, title, body, source);
     }
     append_logf(
-        "league news sql insert source=%s title=%s date=%s league_id=%u type=%u message_id=%u delete_result=%d insert_result=%d body_file=%d db=%p",
+        "league news sql insert source=%s title=%s date=%s league_id=%u type=%u message_id=%u delete_result=%d insert_result=%d body_file=%d db=%p encoding=%s",
         source != NULL ? source : "",
         title,
         news_date,
@@ -203,7 +212,10 @@ int insert_kbo_league_news_sql(
         delete_result,
         insert_result,
         body_file,
-        (void*)database);
+        (void*)database,
+        uses_internal_encoding ? "ootp-internal" : "raw");
+    kbo_free_ootp_internal_text(internal_title);
+    kbo_free_ootp_internal_text(internal_body);
 
     return insert_result != 0;
 }
@@ -249,10 +261,18 @@ int insert_kbo_league_news_table_sql(
     char escaped_title[512] = {0};
     char escaped_body[7600] = {0};
     char news_date[16] = {0};
-    if (!kbo_sql_escape_literal(escaped_title, sizeof(escaped_title), title)
-            || !kbo_sql_escape_literal(escaped_body, sizeof(escaped_body), body != NULL ? body : "")
+    const char* body_text = body != NULL ? body : "";
+    char* internal_title = kbo_alloc_ootp_internal_text(title);
+    char* internal_body = kbo_alloc_ootp_internal_text(body_text);
+    const char* title_for_ootp = internal_title != NULL ? internal_title : title;
+    const char* body_for_ootp = internal_body != NULL ? internal_body : body_text;
+    int uses_internal_encoding = internal_title != NULL || internal_body != NULL;
+    if (!kbo_sql_escape_literal_preserve_ootp_controls(escaped_title, sizeof(escaped_title), title_for_ootp)
+            || !kbo_sql_escape_literal_preserve_ootp_controls(escaped_body, sizeof(escaped_body), body_for_ootp)
             || !kbo_format_history_date(news_date, sizeof(news_date), year, month, day)) {
         append_logf("league_news table sql skipped source=%s title=%s reason=escape_or_date_failed", log_source, log_title);
+        kbo_free_ootp_internal_text(internal_title);
+        kbo_free_ootp_internal_text(internal_body);
         return 0;
     }
 
@@ -292,7 +312,7 @@ int insert_kbo_league_news_table_sql(
     int delete_result = sqlite_exec((void*)database, delete_sql, NULL, NULL, NULL) == 0 ? 1 : 0;
     int insert_result = sqlite_exec((void*)database, insert_sql, NULL, NULL, NULL) == 0 ? 1 : 0;
     append_logf(
-        "league_news table sql insert source=%s title=%s date=%s league_id=%u create=%d delete=%d insert=%d db=%p exec=%p",
+        "league_news table sql insert source=%s title=%s date=%s league_id=%u create=%d delete=%d insert=%d db=%p exec=%p encoding=%s",
         source != NULL ? source : "",
         title,
         news_date,
@@ -301,6 +321,9 @@ int insert_kbo_league_news_table_sql(
         delete_result,
         insert_result,
         (void*)database,
-        (void*)sqlite_exec);
+        (void*)sqlite_exec,
+        uses_internal_encoding ? "ootp-internal" : "raw");
+    kbo_free_ootp_internal_text(internal_title);
+    kbo_free_ootp_internal_text(internal_body);
     return insert_result != 0;
 }

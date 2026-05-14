@@ -10,6 +10,7 @@
 #include "../../files/save_paths/core_save_paths.h"
 #include "../../dates/core_text_date.h"
 #include "../../core_flags/api/flags_api.h"
+#include "../../text/ootp_text_encoding.h"
 #include "../../../runtime_memory/runtime_memory.h"
 
 /* Core native news object construction helpers. */
@@ -109,6 +110,21 @@ int create_kbo_real_add_news(
     ctor(news);
     ensure_strings(news);
 
+    char original_title[512] = {0};
+    char original_body[8192] = {0};
+    snprintf(original_title, sizeof(original_title), "%s", title);
+    snprintf(original_body, sizeof(original_body), "%s", body != NULL ? body : "");
+    const char* title_for_ootp = title;
+    const char* body_for_ootp = body != NULL ? body : "";
+    char* internal_title = kbo_alloc_ootp_internal_text(title_for_ootp);
+    char* internal_body = kbo_alloc_ootp_internal_text(body_for_ootp);
+    if (internal_title != NULL) {
+        title_for_ootp = internal_title;
+    }
+    if (internal_body != NULL) {
+        body_for_ootp = internal_body;
+    }
+
     *(uint32_t*)(news + OOTP27_NEWS_LEAGUE_ID_OFFSET) = league_id;
     *(uint32_t*)(news + OOTP27_NEWS_CATEGORY_OFFSET) = 3u;
     *(uint32_t*)(news + OOTP27_NEWS_FLAGS_54_OFFSET) = 0u;
@@ -126,8 +142,8 @@ int create_kbo_real_add_news(
     *(uint32_t*)(news + OOTP27_NEWS_VISIBLE_OFFSET) = 0x00000001u;
     *(uint32_t*)(news + OOTP27_MESSAGE_OBJECT_ID_OFFSET) = 0u;
 
-    int title_ok = assign_kbo_news_pointer_string(news, 0x90u, title);
-    int body_ok = assign_kbo_news_pointer_string(news, 0x98u, body != NULL ? body : "");
+    int title_ok = assign_kbo_news_pointer_string(news, 0x90u, title_for_ootp);
+    int body_ok = assign_kbo_news_pointer_string(news, 0x98u, body_for_ootp);
     uint32_t result = real_add((void*)manager, news, 0);
     uint32_t message_id = kbo_read_news_u32(news, OOTP27_MESSAGE_OBJECT_ID_OFFSET);
     if (message_id == 0 && result != 0) {
@@ -135,13 +151,15 @@ int create_kbo_real_add_news(
     }
     int body_file_ok = 0;
     if (result != 0 && message_id != 0) {
-        body_file_ok = write_kbo_message_body_file(message_id, title, body, source);
+        body_file_ok = write_kbo_message_body_file(message_id, original_title, original_body, source);
     }
+    int source_mutated = strcmp(title, original_title) != 0
+        || strcmp(body != NULL ? body : "", original_body) != 0;
 
     append_logf(
-        "league news real_add create source=%s title=%s date=%04u-%02u-%02u league_id=%u type=%u manager=%p object=%p result=%u id8c=%u title_ok=%d body_ok=%d body_file=%d",
+        "league news real_add create source=%s title=%s date=%04u-%02u-%02u league_id=%u type=%u manager=%p object=%p result=%u id8c=%u title_ok=%d body_ok=%d body_file=%d source_mutated=%d title_encoding=%s body_encoding=%s",
         source != NULL ? source : "",
-        title,
+        original_title,
         year,
         month,
         day,
@@ -153,6 +171,15 @@ int create_kbo_real_add_news(
         message_id,
         title_ok,
         body_ok,
-        body_file_ok);
+        body_file_ok,
+        source_mutated,
+        internal_title != NULL ? "ootp-internal" : "raw",
+        internal_body != NULL ? "ootp-internal" : "raw");
+    if (internal_title != NULL) {
+        kbo_free_ootp_internal_text(internal_title);
+    }
+    if (internal_body != NULL) {
+        kbo_free_ootp_internal_text(internal_body);
+    }
     return result != 0;
 }

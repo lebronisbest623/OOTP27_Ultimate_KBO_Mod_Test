@@ -7,3 +7,4 @@
     if (strcmp(key, "enable_foreign_ai_roster_management") == 0) {
         return "enable_foreign_ai_roster_research_hooks";
     }
+

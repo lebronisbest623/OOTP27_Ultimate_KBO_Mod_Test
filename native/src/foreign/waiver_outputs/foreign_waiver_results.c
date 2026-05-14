@@ -7,6 +7,7 @@
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/news/live/core_live_news.h"
+#include "../../core/news/templates/core_news_templates.h"
 #include "../../core/logging/core_log.h"
 #include "../common/csv/foreign_csv_parse.h"
 #include "foreign_waiver_announcements.h"
@@ -17,7 +18,7 @@
 
 static uint32_t g_kbo_foreign_waiver_last_result_announcement = 0;
 
-static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint32_t today_yyyymmdd)
+static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint32_t today_yyyymmdd, const char* source)
 {
     if (out == NULL || out_size == 0u) {
         return 0;
@@ -164,26 +165,38 @@ static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint
         }
     }
 
-    if (decision_breakdown_available) {
-        snprintf(
-            out,
-            out_size,
-            "The 20-day KBO foreign player reserve-rights decision period has ended. Decisions recorded: retain=%d, skip=%d. AI clubs: retain=%d, skip=%d. User club: retain=%d, skip=%d. Active stored reserve-right records: %d. Retained players are protected by five-year exclusive negotiation rights.",
-            retained,
-            skipped,
-            ai_retained,
-            ai_skipped,
-            user_retained,
-            user_skipped,
-            active_rights);
-    } else {
-        snprintf(
-            out,
-            out_size,
-            "The 20-day KBO foreign player reserve-rights decision period has ended. Active retained reserve-right records: %d. No decision breakdown was available for this close date, so AI/user retain counts were not reported. Retained players are protected by five-year exclusive negotiation rights.",
-            active_rights);
-    }
-    return 1;
+    char retained_text[16] = {0};
+    char skipped_text[16] = {0};
+    char ai_retained_text[16] = {0};
+    char ai_skipped_text[16] = {0};
+    char user_retained_text[16] = {0};
+    char user_skipped_text[16] = {0};
+    char active_rights_text[16] = {0};
+    snprintf(retained_text, sizeof(retained_text), "%d", retained);
+    snprintf(skipped_text, sizeof(skipped_text), "%d", skipped);
+    snprintf(ai_retained_text, sizeof(ai_retained_text), "%d", ai_retained);
+    snprintf(ai_skipped_text, sizeof(ai_skipped_text), "%d", ai_skipped);
+    snprintf(user_retained_text, sizeof(user_retained_text), "%d", user_retained);
+    snprintf(user_skipped_text, sizeof(user_skipped_text), "%d", user_skipped);
+    snprintf(active_rights_text, sizeof(active_rights_text), "%d", active_rights);
+    KboNewsTemplateVar vars[] = {
+        { "retained", retained_text },
+        { "skipped", skipped_text },
+        { "ai_retained", ai_retained_text },
+        { "ai_skipped", ai_skipped_text },
+        { "user_retained", user_retained_text },
+        { "user_skipped", user_skipped_text },
+        { "active_rights", active_rights_text },
+    };
+    return kbo_news_template_render_key(
+        decision_breakdown_available
+            ? "foreign_waiver.results.body_with_breakdown"
+            : "foreign_waiver.results.body_without_breakdown",
+        vars,
+        (int)(sizeof(vars) / sizeof(vars[0])),
+        out,
+        out_size,
+        source);
 }
 
 int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* source)
@@ -203,7 +216,22 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
 
     char body[1024] = {0};
     kbo_load_foreign_waiver_rights();
-    kbo_build_foreign_waiver_result_body(body, sizeof(body), event_yyyymmdd);
+    if (!kbo_build_foreign_waiver_result_body(body, sizeof(body), event_yyyymmdd, source)) {
+        append_logf(
+            "foreign reserve rights: result announcement skipped source=%s date=%u reason=body_template_unavailable",
+            source != NULL ? source : "",
+            event_yyyymmdd);
+        return 0;
+    }
+
+    char title[160] = {0};
+    if (!kbo_news_template_render_key("foreign_waiver.results.title", NULL, 0, title, sizeof(title), source)) {
+        append_logf(
+            "foreign reserve rights: result announcement skipped source=%s date=%u reason=title_template_unavailable",
+            source != NULL ? source : "",
+            event_yyyymmdd);
+        return 0;
+    }
 
     int created = create_kbo_native_live_news_with_body(
         event_yyyymmdd / 10000u,
@@ -211,7 +239,7 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
         event_yyyymmdd % 100u,
         league_id,
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-        "[KBO] Foreign Player Reserve Rights Results",
+        title,
         body);
     kbo_record_foreign_waiver_announcement(event_yyyymmdd);
     kbo_record_foreign_waiver_announcement_body(event_yyyymmdd, source, body);

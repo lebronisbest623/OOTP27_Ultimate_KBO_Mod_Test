@@ -24,6 +24,8 @@ uintptr_t g_kbo_processed_event_ptrs[256] = {0};
 LONG g_kbo_processed_event_count = 0;
 
 const char g_kbo_default_event_source[] = "custom_event_monitor";
+
+/* Legacy titles remain for old saves and missing-template recovery. New event titles come from news_templates/{ko,en}/custom_events.json. */
 const char g_kbo_foreign_priority_open_event_title[] =
     "[KBO] Foreign Player Priority Negotiation Begins";
 const char g_kbo_foreign_priority_close_event_title[] =

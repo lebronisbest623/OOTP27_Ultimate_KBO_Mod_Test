@@ -1339,3 +1339,33 @@ Next validation:
 - Advance one day and inspect for:
   `ootp ai roster foreign source-select rescue`,
   `ootp ai roster foreign apply rescue team-add`, and the roster audit.
+
+## 2026-05-14 AI FA offer candidate selection hook
+
+Retained-player FA priority was not reliable when only the earlier FA status
+candidate insertion hook fired. In the failing 2027 March/April cycle, player
+263 was visible to the holder and blocked from other teams, but the actual AI
+offer-build probe only reached other candidate players.
+
+The better target is the AI FA offer loop after it loads a candidate pointer:
+
+```asm
+140aa9731  movq -0x20(%rbp), %rax
+140aa9735  movq (%rax,%r12,8), %r12
+140aa9741  movq %r12, -0x60(%rbp)
+140aa9745  cmpb $0x0, 0x41(%r12)
+140aa974b  je 0x140aaa16b
+```
+
+Patching at `0x00AA9741` is earlier than the offer-builder probe at
+`0x00AAA2CC`. If `r12` is replaced here, the same replacement player flows
+through the native existing-offer lookup, offer build, final gate, and attach
+paths. This avoids the unsafe case where the offer builder sees one player but
+later attach/final-gate code still uses the original candidate.
+
+Follow-up: the hook is now limited to the loaded candidate pointer before the
+native offer-builder path and is enabled with enhanced foreign AI unless
+`disable_kbo_foreign_ai_offer_candidate_priority_hook.txt` is present. It does
+not write contracts or player state; it only swaps a non-best candidate pointer
+to the holder's highest-value active retained foreign player when the replacement
+is teamless and still has active reserve rights.

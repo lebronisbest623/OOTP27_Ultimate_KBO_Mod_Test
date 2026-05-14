@@ -1,5 +1,7 @@
 #include "../internal/foreign_injury_internal.h"
 
+#include "../../../core/news/templates/core_news_templates.h"
+
 int kbo_persist_foreign_injury_replacements_locked(void)
 {
     char path[MAX_PATH] = {0};
@@ -256,6 +258,16 @@ void kbo_emit_foreign_injury_replacement_news(
 
     char title[128] = {0};
     char body[1024] = {0};
+    char team_link[96] = {0};
+    char injured_player_link[144] = {0};
+    char replacement_player_link[144] = {0};
+    char days_left_text[16] = {0};
+    snprintf(team_link, sizeof(team_link), "<Team #%u:team#%u>", rec->team_id, rec->team_id);
+    snprintf(injured_player_link, sizeof(injured_player_link), "<%s:player#%u>", player_name, rec->injured_player_id);
+    snprintf(days_left_text, sizeof(days_left_text), "%d", days_left > 0 ? days_left : 0);
+
+    const char* title_key = "foreign_injury.open.title";
+    const char* body_key = "foreign_injury.open.body";
     if (phase != NULL && strcmp(phase, "closed") == 0) {
         char replacement_name[96] = {0};
         uint8_t* replacement = kbo_find_player_by_id(rec->replacement_player_id, NULL, NULL);
@@ -265,50 +277,47 @@ void kbo_emit_foreign_injury_replacement_news(
         if (replacement_name[0] == '\0' && rec->replacement_player_id != 0u) {
             snprintf(replacement_name, sizeof(replacement_name), "Player #%u", rec->replacement_player_id);
         }
-        snprintf(title, sizeof(title), "[KBO] Foreign Injury Replacement Window Closed");
         if (rec->replacement_player_id != 0u) {
-            snprintf(
-                body,
-                sizeof(body),
-                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> has returned to the club's top roster.\n\nThe temporary replacement <%s:player#%u> has been removed from the club's active foreign-player slot.",
-                rec->team_id,
-                rec->team_id,
-                player_name,
-                rec->injured_player_id,
-                replacement_name,
-                rec->replacement_player_id);
+            snprintf(replacement_player_link, sizeof(replacement_player_link), "<%s:player#%u>", replacement_name, rec->replacement_player_id);
+            title_key = "foreign_injury.closed_with_replacement.title";
+            body_key = "foreign_injury.closed_with_replacement.body";
         } else {
-            snprintf(
-                body,
-                sizeof(body),
-                "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has closed because <%s:player#%u> has returned to the club's top roster.\n\nNo linked replacement player was found in the active slot record.",
-                rec->team_id,
-                rec->team_id,
-                player_name,
-                rec->injured_player_id);
+            title_key = "foreign_injury.closed_without_replacement.title";
+            body_key = "foreign_injury.closed_without_replacement.body";
         }
     } else if (phase != NULL && strcmp(phase, "pending") == 0) {
-        snprintf(title, sizeof(title), "[KBO] Foreign Injury Replacement Decision Required");
-        snprintf(
-            body,
-            sizeof(body),
-            "The temporary foreign-player injury replacement window for <Team #%u:team#%u> has moved to a decision stage because <%s:player#%u> is no longer listed as unavailable.\n\nThe club must now close the temporary window or convert the replacement into a regular foreign-player slot under the KBO roster limit.",
+        title_key = "foreign_injury.pending.title";
+        body_key = "foreign_injury.pending.body";
+    }
+
+    KboNewsTemplateVar vars[] = {
+        { "team_link", team_link },
+        { "injured_player_link", injured_player_link },
+        { "replacement_player_link", replacement_player_link },
+        { "days_left", days_left_text },
+        { "slot_label", kbo_foreign_injury_slot_label(rec->slot_type) },
+    };
+    if (!kbo_news_template_render_key(
+            title_key,
+            vars,
+            (int)(sizeof(vars) / sizeof(vars[0])),
+            title,
+            sizeof(title),
+            phase != NULL ? phase : "foreign_injury")
+            || !kbo_news_template_render_key(
+                body_key,
+                vars,
+                (int)(sizeof(vars) / sizeof(vars[0])),
+                body,
+                sizeof(body),
+                phase != NULL ? phase : "foreign_injury")) {
+        append_logf(
+            "foreign injury replacement: news skipped phase=%s team=%u injured=%u league=%u reason=template_unavailable",
+            phase != NULL ? phase : "open",
             rec->team_id,
-            rec->team_id,
-            player_name,
-            rec->injured_player_id);
-    } else {
-        snprintf(title, sizeof(title), "[KBO] Foreign Injury Replacement Window Opened");
-        snprintf(
-            body,
-            sizeof(body),
-            "The KBO approved a temporary foreign-player injury replacement window for <Team #%u:team#%u> after <%s:player#%u> was diagnosed with an injury expected to keep him out for %d days.\n\nThe club may carry one additional %s foreign player while the injured player remains unavailable.",
-            rec->team_id,
-            rec->team_id,
-            player_name,
             rec->injured_player_id,
-            days_left > 0 ? days_left : 0,
-            kbo_foreign_injury_slot_label(rec->slot_type));
+            rec->league_id);
+        return;
     }
 
     int created = create_kbo_native_live_news_with_body(

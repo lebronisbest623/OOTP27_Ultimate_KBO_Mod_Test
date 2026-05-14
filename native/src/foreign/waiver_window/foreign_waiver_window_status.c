@@ -54,6 +54,33 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
 
     uint32_t season_end_yyyymmdd = kbo_detect_offseason_starts_event(today_yyyymmdd, configured_league_id);
     if (season_end_yyyymmdd == 0u) {
+        uint32_t recovered_marker = g_kbo_foreign_waiver_last_seen_yyyymmdd;
+        if (recovered_marker != 0u && recovered_marker <= today_yyyymmdd) {
+            uint32_t recovered_serial = kbo_date_serial(
+                recovered_marker / 10000u,
+                (recovered_marker / 100u) % 100u,
+                recovered_marker % 100u);
+            uint32_t recovered_end = kbo_add_days_yyyymmdd(recovered_marker, 20u);
+            if (recovered_serial != 0u
+                    && recovered_end != 0u
+                    && today_serial >= recovered_serial
+                    && today_serial < recovered_serial + 20u) {
+                g_kbo_foreign_waiver_window_start_serial = recovered_serial;
+                g_kbo_foreign_waiver_window_end_serial = recovered_serial + 20u;
+                g_kbo_foreign_waiver_start_event_date = recovered_marker;
+                g_kbo_foreign_waiver_close_event_end_date = recovered_end;
+                kbo_write_foreign_waiver_window(recovered_marker, recovered_end, "recovered_recent_offseason_marker");
+                append_logf(
+                    "foreign waiver auto: recovered missing Offseason starts marker start=%u end=%u today=%u prev_marker=%u",
+                    recovered_marker,
+                    recovered_end,
+                    today_yyyymmdd,
+                    g_kbo_foreign_waiver_last_seen_yyyymmdd);
+                last_checked_result = 1u;
+                KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.recovered_marker");
+                return 1;
+            }
+        }
         static uint32_t last_logged_no_marker_today = 0u;
         if (last_logged_no_marker_today != today_yyyymmdd) {
             last_logged_no_marker_today = today_yyyymmdd;
@@ -86,17 +113,30 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.invalid_marker_serial");
         return 0;
     }
+    uint32_t window_end_yyyymmdd = kbo_add_days_yyyymmdd(season_end_yyyymmdd, 20u);
+    if (window_end_yyyymmdd == 0u) {
+        append_logf(
+            "foreign waiver auto: invalid Offseason starts window end season_end=%u today=%u",
+            season_end_yyyymmdd,
+            today_yyyymmdd);
+        last_checked_result = 2u;
+        KBO_PROFILE_END(profile_foreign_waiver_advance, "foreign_waiver.advance.invalid_window_end");
+        return 0;
+    }
     if (today_serial >= season_end_serial + 20u) {
         static uint32_t last_stale_marker = 0u;
         g_kbo_foreign_waiver_last_seen_yyyymmdd = season_end_yyyymmdd;
         if (last_stale_marker != season_end_yyyymmdd) {
             last_stale_marker = season_end_yyyymmdd;
-            kbo_write_foreign_waiver_window(season_end_yyyymmdd, season_end_yyyymmdd, "stale_offseason_marker");
+            kbo_write_foreign_waiver_window(season_end_yyyymmdd, window_end_yyyymmdd, "stale_offseason_marker_preserve_window");
+            g_kbo_foreign_waiver_window_start_serial = season_end_serial;
+            g_kbo_foreign_waiver_window_end_serial = season_end_serial + 20u;
             g_kbo_foreign_waiver_start_event_date = season_end_yyyymmdd;
-            g_kbo_foreign_waiver_close_event_end_date = season_end_yyyymmdd;
+            g_kbo_foreign_waiver_close_event_end_date = window_end_yyyymmdd;
             append_logf(
-                "foreign waiver auto: skipped stale season-end marker season_end=%u today=%u reason=window_already_elapsed",
+                "foreign waiver auto: skipped stale season-end marker season_end=%u end=%u today=%u reason=window_already_elapsed",
                 season_end_yyyymmdd,
+                window_end_yyyymmdd,
                 today_yyyymmdd);
         }
         last_checked_result = 2u;
@@ -104,12 +144,18 @@ int kbo_advance_foreign_waiver_window(uint32_t today_yyyymmdd, uint32_t today_se
         return 0;
     }
     if (g_kbo_foreign_waiver_last_seen_yyyymmdd == season_end_yyyymmdd) {
+        kbo_write_foreign_waiver_window(season_end_yyyymmdd, window_end_yyyymmdd, "already_opened_restore_window");
+        g_kbo_foreign_waiver_window_start_serial = season_end_serial;
+        g_kbo_foreign_waiver_window_end_serial = season_end_serial + 20u;
+        g_kbo_foreign_waiver_start_event_date = season_end_yyyymmdd;
+        g_kbo_foreign_waiver_close_event_end_date = window_end_yyyymmdd;
         static uint32_t last_logged_already_marker = 0u;
         if (last_logged_already_marker != season_end_yyyymmdd) {
             last_logged_already_marker = season_end_yyyymmdd;
             append_logf(
-                "foreign waiver auto: already opened for marker=%u today=%u",
+                "foreign waiver auto: already opened for marker=%u end=%u today=%u",
                 season_end_yyyymmdd,
+                window_end_yyyymmdd,
                 today_yyyymmdd);
         }
         last_checked_result = 2u;
@@ -339,26 +385,3 @@ int kbo_get_foreign_waiver_window_status_text(char* out, size_t out_size)
         end_text);
     return 1;
 }
-
-int kbo_current_foreign_waiver_window_dates(uint32_t* out_start, uint32_t* out_end)
-{
-    if (out_start != NULL) { *out_start = 0u; }
-    if (out_end != NULL) { *out_end = 0u; }
-
-    uint32_t start = 0u;
-    uint32_t end = 0u;
-    if (kbo_read_foreign_waiver_window(&start, &end)) {
-        if (out_start != NULL) { *out_start = start; }
-        if (out_end != NULL) { *out_end = end; }
-        return start != 0u && end != 0u;
-    }
-
-    if (g_kbo_foreign_waiver_start_event_date != 0u && g_kbo_foreign_waiver_close_event_end_date != 0u) {
-        if (out_start != NULL) { *out_start = g_kbo_foreign_waiver_start_event_date; }
-        if (out_end != NULL) { *out_end = g_kbo_foreign_waiver_close_event_end_date; }
-        return 1;
-    }
-
-    return 0;
-}
-

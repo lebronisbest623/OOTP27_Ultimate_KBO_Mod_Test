@@ -18,6 +18,7 @@ internal static partial class LauncherApp
         EnsureBundledKboDataFile("asian_games_schedule_seed.csv", "Asian Games schedule seed");
         EnsureBundledKboDataFile("asian_games_projected_hosts.csv", "Asian Games projected host seed");
         EnsureBundledKboDataFile("allstar_teams.csv", "All-Star team affiliation seed");
+        EnsureBundledKboDataFile("captain_seed.csv", "Captain seed");
         EnsureBundledKboDataFile("cbt_player_team_seasons_seed.csv", "CBT player team seasons seed");
         EnsureBundledKboDataFile("cbt_rules.json", "CBT rules");
         EnsureBundledKboDataFile("fa_rules.json", "FA rules");
@@ -26,6 +27,7 @@ internal static partial class LauncherApp
         EnsureBundledKboDataFile("college_reputation_seed.csv", "College reputation seed");
         EnsureBundledKboDataFile("high_school_reputation_seed.csv", "High-school reputation seed");
         EnsureBundledKboDataFile("military_service_seed.csv", "Military service seed");
+        EnsureBundledKboDataDirectory("news_templates", "News templates");
         EnsureKboScheduleAllstarGameLines(exePath);
         ImportLegacyKboFlagFilesIfMissing();
         EnsureDefaultKboRuntimeFlags();
@@ -72,7 +74,7 @@ internal static partial class LauncherApp
         LogLauncherBuild(logPath);
         if (isDefaultRun && options.DllPath is null)
         {
-            Log(logPath, "default_injection=disabled reason=missing_dll_or_explicit_flag");
+            Log(logPath, "default_injection=disabled reason=explicit_flag");
         }
 
         Console.WriteLine($"OOTP: {exePath}");
@@ -80,7 +82,7 @@ internal static partial class LauncherApp
         Console.WriteLine($"Log: {logPath}");
         if (isDefaultRun && options.DllPath is null)
         {
-            Console.WriteLine("KBOFix injection is disabled for safe startup.");
+            Console.WriteLine("KBOFix injection is disabled by enable_launcher_injection=false.");
             Console.WriteLine($"To re-enable launcher injection, set enable_launcher_injection=true in: {GetKboFlagConfigPath()}");
         }
 

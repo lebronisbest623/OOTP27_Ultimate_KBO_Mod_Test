@@ -1,0 +1,16 @@
+{
+  "military.selection.title": "Sangmu names {entry_count} KBO player{entry_count_plural} for service",
+  "military.selection.title.variants": 3,
+  "military.selection.title.v1": "Sangmu names {entry_count} KBO player{entry_count_plural} for service",
+  "military.selection.title.v2": "{entry_count} KBO player{entry_count_plural} headed to Sangmu duty",
+  "military.selection.title.v3": "Club roster gaps set as Sangmu selects {entry_count} KBO player{entry_count_plural}",
+  "military.selection.intro": "Sangmu has released its latest intake list, selecting {entry_count} player{entry_count_plural} from the KBO pool. Those players will step away from their clubs and into service-club duty, giving teams a clearer view of absences and return dates.\n\nThe selected players are:",
+  "military.selection.intro.variants": 2,
+  "military.selection.intro.v1": "Sangmu has released its latest intake list, selecting {entry_count} player{entry_count_plural} from the KBO pool. Those players will step away from their clubs and into service-club duty, giving teams a clearer view of absences and return dates.\n\nThe selected players are:",
+  "military.selection.intro.v2": "The speculation has turned into a list. Sangmu selected {entry_count} KBO player{entry_count_plural} from this service pool, shifting them from club planning into military-team assignments.\n\nThe intake is:",
+  "military.selection.line": "{index}. {player_link}{team_separator}{team_link}\n",
+  "military.selection.outro": "\nThe announcement is not only a subtraction from depth charts. For some clubs it removes a useful player now, but it also gives the return date a shape. The rights stay with the original teams, and the planning moves from uncertainty to calendar math.",
+  "military.selection.outro.variants": 2,
+  "military.selection.outro.v1": "\nThe announcement is not only a subtraction from depth charts. For some clubs it removes a useful player now, but it also gives the return date a shape. The rights stay with the original teams, and the planning moves from uncertainty to calendar math.",
+  "military.selection.outro.v2": "\nSangmu selections force clubs to live in two timelines at once: covering the present roster hole and protecting the value of a player expected back later. That quiet roster strategy sits behind every service assignment."
+}

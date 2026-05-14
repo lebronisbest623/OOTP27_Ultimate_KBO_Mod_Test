@@ -1,0 +1,14 @@
+# season,league_id,team_id,team_code,captain_player_id,captain_player_key,captain_name,priority,status,comment
+# Use season=0 and league_id=0 as wildcards. Use either team_id or team_code, and either captain_player_id or captain_player_key.
+# Compact form is also accepted: team_id_or_code,captain_player_id_or_key,captain_name,priority,status,comment
+season,league_id,team_id,team_code,captain_player_id,captain_player_key,captain_name,priority,status,comment
+2026,0,0,LG,,park--000hae,Park Hae-min,1000,active,2026 KBO captain seed
+2026,0,0,HH,,chae--000weu,Chae Eun-seong,1000,active,2026 KBO captain seed
+2026,0,0,SSG,,kim---002gwa,Kim Gwang-hyeon,1000,active,2026 KBO captain seed
+2026,0,0,SAM,,koo---001ja-,Koo Ja-uk,1000,active,2026 KBO captain seed
+2026,0,0,NC,,park--004min,Park Min-u,1000,active,2026 KBO captain seed
+2026,0,0,kt,,jang--001sun,Jang Seong-u,1000,active,2026 KBO captain seed
+2026,0,0,LOT,,jun---000jun,Jeon Jun-u,1000,active,2026 KBO captain seed
+2026,0,0,KIA,,na----000sun,Na Seong-beom,1000,active,2026 KBO captain seed
+2026,0,0,DOO,,yang--000ui-,Yang Ui-ji,1000,active,2026 KBO captain seed
+2026,0,0,KIW,,lim---001ji-,Lim Ji-yeol,1000,active,2026 KBO captain seed

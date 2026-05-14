@@ -18,6 +18,22 @@ int kbo_webview_handle_mod_settings_command(const char* cmd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "mod/settings/custom-news-language/", 34) == 0) {
+        const char* lang = cmd + 34;
+        int language = ascii_equals_ignore_case(lang, "en") || ascii_equals_ignore_case(lang, "english")
+            ? KBO_CUSTOM_NEWS_LANGUAGE_EN
+            : KBO_CUSTOM_NEWS_LANGUAGE_KO;
+        if (kbo_set_custom_news_language_setting(language)) {
+            append_logf("mod settings webview: custom news language=%s", language == KBO_CUSTOM_NEWS_LANGUAGE_EN ? "en" : "ko");
+        } else {
+            append_logf("mod settings webview: failed to write custom news language=%s", language == KBO_CUSTOM_NEWS_LANGUAGE_EN ? "en" : "ko");
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "mod/settings/profiler/", 22) == 0) {
         const char* value = cmd + 22;
         int enabled = ascii_equals_ignore_case(value, "on")

@@ -14,7 +14,7 @@ This is an unofficial fan-made launcher/mod for Out of the Park Baseball 27. It 
 
 This project injects a native DLL into a running OOTP27 process and patches game memory/runtime behavior. Because of that, OOTP updates, unsupported builds, local machine differences, antivirus/security policy, or unexpected save state may cause crashes, broken behavior, save corruption, or data loss.
 
-Back up important saves before using this project. The launcher includes safety guards such as verified-build checks, roster marker checks, and disabled-by-default injection, but those safeguards cannot guarantee safety in every environment. Use this project at your own risk.
+Back up important saves before using this project. The launcher includes safety guards such as verified-build checks and roster marker checks, but those safeguards cannot guarantee safety in every environment. Use this project at your own risk.
 
 Before commercial use, redistribution, inclusion in another project, or public release packaging, verify the licenses for bundled fonts, images, seed data, OOTP-related files, and any other included assets.
 
@@ -117,7 +117,7 @@ Build outputs:
 KBOLauncher.exe
 ```
 
-By default, the launcher starts OOTP without injecting KBOFix. To enable launcher-controlled injection, set the JSON flag in:
+By default, the launcher starts OOTP and injects the bundled KBOFix DLL. To disable launcher-controlled injection, set the JSON flag in:
 
 ```text
 %LOCALAPPDATA%\OOTP-KBO\kbo_flags.json
@@ -125,7 +125,7 @@ By default, the launcher starts OOTP without injecting KBOFix. To enable launche
 
 ```json
 {
-  "enable_launcher_injection": true
+  "enable_launcher_injection": false
 }
 ```
 
@@ -184,7 +184,7 @@ Runtime flags live in one JSON file:
 
 | Setting | Default | Description |
 |---|---:|---|
-| `enable_launcher_injection` | off | Enable automatic launcher injection |
+| `enable_launcher_injection` | on | Enable automatic launcher injection |
 | `enable_foreign_waiver_ai` | on | Enable AI reserve-right decisions |
 | `enable_single_division_allstar_events` | off | Enable single-division All-Star support |
 | `disable_kbo_competitive_balance_tax` | off | Disable CBT processing and draft penalties |

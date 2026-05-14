@@ -7,10 +7,108 @@
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
+#include "../../../build_verify/build_verify.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../patch_helpers/patch_helpers.h"
 #include "../../../bootstrap/abi/hook_entrypoints.h"
 #include "../../../hook_stubs/foreign/ai_status/hook_stubs_foreign_ai_status.h"
+#include "../../../hook_stubs/military/hook_stubs_military.h"
+
+typedef uint8_t* (*KboAiFaStatusCandidateInsertStubBuilder)(void* continuation);
+
+static uint8_t* kbo_ai_fa_status_resolve_insert_site(
+    HMODULE exe,
+    uint32_t rva,
+    const uint8_t* expected,
+    size_t expected_size,
+    const uint8_t* context,
+    size_t context_size,
+    size_t context_offset,
+    const char* label)
+{
+    uint8_t* target = (uint8_t*)kbo_resolve_build_specific_rva_ptr(exe, rva);
+    if (memory_range_readable(target, 12) && is_rax_absolute_jump_patch(target)) {
+        append_logf("%s already installed target=%p", label, target);
+        return target;
+    }
+    if (memory_range_readable(target, expected_size) && memcmp(target, expected, expected_size) == 0) {
+        append_logf("%s resolved by rva target=%p rva=0x%08X", label, target, rva);
+        return target;
+    }
+    if (context != NULL && context_size != 0) {
+        return resolve_patch_target_by_rva_or_context_pattern(
+            exe,
+            rva,
+            expected,
+            expected_size,
+            context,
+            context_size,
+            context_offset,
+            label);
+    }
+    return resolve_patch_target_by_rva_or_pattern(exe, rva, expected, expected_size, label);
+}
+
+static int kbo_install_ai_fa_status_candidate_insert_site(
+    HMODULE exe,
+    uint32_t rva,
+    const uint8_t* expected,
+    size_t expected_size,
+    const uint8_t* context,
+    size_t context_size,
+    size_t context_offset,
+    const char* label,
+    KboAiFaStatusCandidateInsertStubBuilder build_stub)
+{
+    uint8_t* target = kbo_ai_fa_status_resolve_insert_site(
+        exe,
+        rva,
+        expected,
+        expected_size,
+        context,
+        context_size,
+        context_offset,
+        label);
+    if (target == NULL) { return 0; }
+    if (is_rax_absolute_jump_patch(target)) {
+        return 1;
+    }
+
+    uint8_t* stub = build_stub(target + expected_size);
+    if (stub == NULL) {
+        append_logf("failed to allocate %s stub", label);
+        return 0;
+    }
+
+    uint8_t patch[16] = {
+        0x48, 0xB8,                                     /* mov rax, stub */
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xE0,                                     /* jmp rax */
+        0x90, 0x90, 0x90, 0x90
+    };
+    write_u64(&patch[2], (uint64_t)(uintptr_t)stub);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, expected_size, PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for %s error=%lu", label, GetLastError());
+        return 0;
+    }
+
+    memcpy(target, patch, expected_size);
+    FlushInstructionCache(GetCurrentProcess(), target, expected_size);
+
+    DWORD ignored = 0;
+    VirtualProtect(target, expected_size, old_protect, &ignored);
+
+    append_logf(
+        "installed %s target=%p rva=0x%llx stub=%p wrapper=%p",
+        label,
+        target,
+        (unsigned long long)((uintptr_t)target - (uintptr_t)exe),
+        stub,
+        &ootp_kbo_ai_fa_status_candidate_insert_wrapper);
+    return 1;
+}
 
 int install_kbo_ai_fa_status_candidate_insert_patch(void)
 {
@@ -27,6 +125,13 @@ int install_kbo_ai_fa_status_candidate_insert_patch(void)
         return 0;
     }
 
+    const uint8_t primary_expected[16] = {
+        0x48, 0x63, 0xC2,                               /* movsxd rax,edx */
+        0x48, 0x8B, 0x4D, 0xC8,                         /* mov rcx,[rbp-0x38] */
+        0x48, 0x89, 0x1C, 0xC1,                         /* mov [rcx+rax*8],rbx */
+        0xFF, 0xC2,                                     /* inc edx */
+        0x89, 0x55, 0xD4                                /* mov [rbp-0x2c],edx */
+    };
     const uint8_t expected[12] = {
         0x48, 0x63, 0xC1,                               /* movsxd rax,ecx */
         0x4D, 0x89, 0x3C, 0xC6,                         /* mov [r14+rax*8],r15 */
@@ -41,8 +146,25 @@ int install_kbo_ai_fa_status_candidate_insert_patch(void)
         0x75, 0xC8, 0x48, 0x63, 0xC1, 0x4D, 0x89, 0x3C,
         0xC6, 0xFF, 0xC1, 0x89, 0x4D, 0xD4, 0xEB, 0x07
     };
+    const uint8_t direct_expected[16] = {
+        0x4C, 0x8B, 0x75, 0xC8,                         /* mov r14,[rbp-0x38] */
+        0x48, 0x63, 0xC1,                               /* movsxd rax,ecx */
+        0x4D, 0x89, 0x3C, 0xC6,                         /* mov [r14+rax*8],r15 */
+        0xFF, 0xC1,                                     /* inc ecx */
+        0x89, 0x4D, 0xD4                                /* mov [rbp-0x2c],ecx */
+    };
 
-    uint8_t* target = resolve_patch_target_by_rva_or_context_pattern(
+    int primary_ok = kbo_install_ai_fa_status_candidate_insert_site(
+        exe,
+        OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_PRIMARY_RVA,
+        primary_expected,
+        sizeof(primary_expected),
+        NULL,
+        0,
+        0,
+        "KBO AI FA status candidate primary insert patch",
+        build_kbo_ai_fa_status_candidate_insert_primary_stub);
+    int expansion_ok = kbo_install_ai_fa_status_candidate_insert_site(
         exe,
         OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_RVA,
         expected,
@@ -50,42 +172,223 @@ int install_kbo_ai_fa_status_candidate_insert_patch(void)
         context,
         sizeof(context),
         16u,
-        "KBO AI FA status candidate insert patch");
+        "KBO AI FA status candidate expansion insert patch",
+        build_kbo_ai_fa_status_candidate_insert_stub);
+    int direct_ok = kbo_install_ai_fa_status_candidate_insert_site(
+        exe,
+        OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_DIRECT_RVA,
+        direct_expected,
+        sizeof(direct_expected),
+        NULL,
+        0,
+        0,
+        "KBO AI FA status candidate direct insert patch",
+        build_kbo_ai_fa_status_candidate_insert_direct_stub);
+    return primary_ok && expansion_ok && direct_ok;
+}
+
+static int kbo_install_foreign_ai_offer_build_probe_patch(HMODULE exe)
+{
+    const size_t patch_len = 20;
+    const uint8_t expected[20] = {
+        0xC6, 0x44, 0x24, 0x20, 0x00,                   /* mov byte ptr [rsp+0x20],0 */
+        0x4C, 0x8D, 0x4D, 0x99,                         /* lea r9,[rbp-0x67] */
+        0x45, 0x33, 0xC0,                               /* xor r8d,r8d */
+        0x49, 0x8B, 0xCC,                               /* mov rcx,r12 */
+        0xE8, 0xE0, 0x94, 0xDA, 0xFF                    /* call offer builder */
+    };
+
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(
+        exe,
+        OOTP27_AI_FA_OFFER_BUILD_PREP_RVA,
+        expected,
+        sizeof(expected),
+        "KBO foreign AI offer build probe patch");
     if (target == NULL) { return 0; }
     if (is_rax_absolute_jump_patch(target)) {
-        append_logf("KBO AI FA status candidate insert patch already installed target=%p", target);
+        append_logf("KBO foreign AI offer build probe patch already installed target=%p", target);
         return 1;
     }
 
-    uint8_t* stub = build_kbo_ai_fa_status_candidate_insert_stub(target + sizeof(expected));
+    uint8_t* stub = build_kbo_foreign_ai_offer_build_probe_stub(target + patch_len);
     if (stub == NULL) {
-        append_log_line("failed to allocate KBO AI FA status candidate insert stub");
+        append_log_line("failed to allocate KBO foreign AI offer build probe stub");
         return 0;
     }
 
-    uint8_t patch[12] = {
+    uint8_t patch[20] = {
         0x48, 0xB8,                                     /* mov rax, stub */
         0,0,0,0,0,0,0,0,
-        0xFF, 0xE0                                      /* jmp rax */
+        0xFF, 0xE0,                                     /* jmp rax */
+        0x90, 0x90, 0x90, 0x90,
+        0x90, 0x90, 0x90, 0x90
     };
     write_u64(&patch[2], (uint64_t)(uintptr_t)stub);
 
     DWORD old_protect = 0;
     if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
-        append_logf("VirtualProtect failed for KBO AI FA status candidate insert patch error=%lu", GetLastError());
+        append_logf("VirtualProtect failed for KBO foreign AI offer build probe patch error=%lu", GetLastError());
         return 0;
     }
-
     memcpy(target, patch, sizeof(patch));
     FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
-
     DWORD ignored = 0;
     VirtualProtect(target, sizeof(patch), old_protect, &ignored);
 
     append_logf(
-        "installed KBO AI FA status candidate insert patch target=%p stub=%p wrapper=%p",
+        "installed KBO foreign AI offer build probe patch target=%p rva=0x%llx stub=%p wrapper=%p",
         target,
+        (unsigned long long)((uintptr_t)target - (uintptr_t)exe),
         stub,
-        &ootp_kbo_ai_fa_status_candidate_insert_wrapper);
+        &ootp_kbo_foreign_ai_offer_build_probe_wrapper);
     return 1;
+}
+
+static int kbo_install_foreign_ai_offer_final_gate_probe_patch(HMODULE exe)
+{
+    const size_t patch_len = 19;
+    const uint8_t expected[19] = {
+        0x49, 0x8B, 0xD4,                               /* mov rdx,r12 */
+        0x49, 0x8B, 0xCD,                               /* mov rcx,r13 */
+        0xE8, 0xCD, 0x77, 0x00, 0x00,                   /* call final gate */
+        0x84, 0xC0,                                     /* test al,al */
+        0x0F, 0x84, 0x8F, 0xEF, 0xFF, 0xFF              /* je failure */
+    };
+
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(
+        exe,
+        OOTP27_AI_FA_OFFER_FINAL_GATE_RVA,
+        expected,
+        sizeof(expected),
+        "KBO foreign AI offer final gate probe patch");
+    if (target == NULL) { return 0; }
+    if (is_rax_absolute_jump_patch(target)) {
+        append_logf("KBO foreign AI offer final gate probe patch already installed target=%p", target);
+        return 1;
+    }
+
+    uintptr_t failure_delta =
+        (uintptr_t)OOTP27_AI_FA_OFFER_FINAL_GATE_RVA
+        - (uintptr_t)OOTP27_AI_FA_OFFER_FINAL_GATE_FAILURE_RVA;
+    uint8_t* failure = target - failure_delta;
+    uint8_t* stub = build_kbo_foreign_ai_offer_final_gate_probe_stub(target + patch_len, failure);
+    if (stub == NULL) {
+        append_log_line("failed to allocate KBO foreign AI offer final gate probe stub");
+        return 0;
+    }
+
+    uint8_t patch[19] = {
+        0x48, 0xB8,                                     /* mov rax, stub */
+        0,0,0,0,0,0,0,0,
+        0xFF, 0xE0,                                     /* jmp rax */
+        0x90, 0x90, 0x90, 0x90,
+        0x90, 0x90, 0x90
+    };
+    write_u64(&patch[2], (uint64_t)(uintptr_t)stub);
+
+    DWORD old_protect = 0;
+    if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+        append_logf("VirtualProtect failed for KBO foreign AI offer final gate probe patch error=%lu", GetLastError());
+        return 0;
+    }
+    memcpy(target, patch, sizeof(patch));
+    FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+    DWORD ignored = 0;
+    VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+
+    append_logf(
+        "installed KBO foreign AI offer final gate probe patch target=%p rva=0x%llx stub=%p wrapper=%p",
+        target,
+        (unsigned long long)((uintptr_t)target - (uintptr_t)exe),
+        stub,
+        &ootp_kbo_foreign_ai_offer_final_gate_probe_wrapper);
+    return 1;
+}
+
+int install_kbo_foreign_ai_offer_attach_probe_patch(void)
+{
+    HMODULE exe = GetModuleHandleA(NULL);
+    if (exe == NULL) {
+        append_log_line("GetModuleHandleA(NULL) failed for KBO foreign AI offer attach probe patch");
+        return 0;
+    }
+
+    char host[MAX_PATH] = {0};
+    GetModuleFileNameA(exe, host, (DWORD)sizeof(host));
+    if (strstr(host, "ootp27.exe") == NULL && strstr(host, "OOTP27.EXE") == NULL) {
+        append_logf("host is not ootp27.exe, skipping KBO foreign AI offer attach probe patch host=%s", host);
+        return 0;
+    }
+
+    const size_t stolen_len = 16;
+    const uint8_t expected[16] = {
+        0x48, 0x89, 0x5C, 0x24, 0x18,                   /* mov [rsp+0x18],rbx */
+        0x55,                                           /* push rbp */
+        0x56,                                           /* push rsi */
+        0x57,                                           /* push rdi */
+        0x41, 0x54,                                     /* push r12 */
+        0x41, 0x55,                                     /* push r13 */
+        0x41, 0x56,                                     /* push r14 */
+        0x41, 0x57                                      /* push r15 */
+    };
+
+    int attach_ok = 0;
+    uint8_t* target = resolve_patch_target_by_rva_or_pattern(
+        exe,
+        OOTP27_PLAYER_CONTRACT_OFFER_ATTACH_RVA,
+        expected,
+        sizeof(expected),
+        "KBO foreign AI offer attach probe patch");
+    if (target == NULL) { return 0; }
+
+    if (is_rax_absolute_jump_patch(target)) {
+        append_logf("KBO foreign AI offer attach probe patch already installed target=%p", target);
+        attach_ok = 1;
+    } else {
+
+        uint8_t* trampoline = build_kbo_military_service_entry_trampoline(target, stolen_len);
+        if (trampoline == NULL) {
+            append_log_line("failed to allocate KBO foreign AI offer attach probe trampoline");
+            return 0;
+        }
+
+        uint8_t* stub = build_kbo_foreign_ai_offer_attach_probe_detour_stub(trampoline);
+        if (stub == NULL) {
+            append_log_line("failed to allocate KBO foreign AI offer attach probe detour stub");
+            return 0;
+        }
+
+        uint8_t patch[16] = {
+            0x48, 0xB8,                                     /* mov rax, stub */
+            0,0,0,0,0,0,0,0,
+            0xFF, 0xE0,                                     /* jmp rax */
+            0x90, 0x90, 0x90, 0x90
+        };
+        write_u64(&patch[2], (uint64_t)(uintptr_t)stub);
+
+        DWORD old_protect = 0;
+        if (!VirtualProtect(target, sizeof(patch), PAGE_EXECUTE_READWRITE, &old_protect)) {
+            append_logf("VirtualProtect failed for KBO foreign AI offer attach probe patch error=%lu", GetLastError());
+            return 0;
+        }
+
+        memcpy(target, patch, sizeof(patch));
+        FlushInstructionCache(GetCurrentProcess(), target, sizeof(patch));
+
+        DWORD ignored = 0;
+        VirtualProtect(target, sizeof(patch), old_protect, &ignored);
+
+        append_logf(
+            "installed KBO foreign AI offer attach probe patch target=%p rva=0x%llx stub=%p trampoline=%p wrapper=%p",
+            target,
+            (unsigned long long)((uintptr_t)target - (uintptr_t)exe),
+            stub,
+            trampoline,
+            &ootp_kbo_foreign_ai_offer_attach_probe_wrapper);
+        attach_ok = 1;
+    }
+
+    int build_ok = kbo_install_foreign_ai_offer_build_probe_patch(exe);
+    int gate_ok = kbo_install_foreign_ai_offer_final_gate_probe_patch(exe);
+    return attach_ok && build_ok && gate_ok;
 }

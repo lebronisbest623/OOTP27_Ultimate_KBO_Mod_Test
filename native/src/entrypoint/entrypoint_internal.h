@@ -23,6 +23,7 @@
 #include "../fa_salary_snapshot/threads/salary_snapshot_thread.h"
 #include "../foreign/waiver_core/api/foreign_waiver_core.h"
 #include "../foreign/common/policy/foreign_waiver_policy.h"
+#include "../foreign/controller/foreign_ai_controller.h"
 #include "../foreign/injury/api/foreign_injury.h"
 #include "../foreign/intl_established_fa_postscan/api/intl_established_fa_postscan.h"
 #include "../foreign/roster_audit/api/foreign_roster_audit.h"

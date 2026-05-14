@@ -1,4 +1,6 @@
 #include "../internal/foreign_quota_internal.h"
+#include "../../rights/query/foreign_waiver_rights_query.h"
+#include "foreign_quota_retention_opportunity_probe.h"
 
 uint32_t kbo_custom_foreign_policy_extra_slots_for_candidate(
     uint32_t team_id,
@@ -113,7 +115,11 @@ int kbo_custom_foreign_policy_team_allows_candidate(
     uint32_t asian_after = asian_count;
     uint32_t non_asian_after = non_asian_count;
     int already_in_org = kbo_player_current_assignment_matches_team_or_affiliate(candidate, team_id);
-    if (!already_in_org && !candidate_pending) {
+    int retained_by_team = today != 0u
+        && candidate_id != 0u
+        && kbo_has_active_foreign_waiver_right(team_id, candidate_id, today);
+    int counts_as_existing_candidate = already_in_org || retained_by_team;
+    if (!counts_as_existing_candidate && !candidate_pending) {
         if (kbo_player_is_asian_quota_candidate(candidate)) {
             asian_after++;
         } else {
@@ -139,7 +145,26 @@ int kbo_custom_foreign_policy_team_allows_candidate(
     if (out_slot_type != NULL) { *out_slot_type = slot_type; }
     if (out_injured_player_id != NULL) { *out_injured_player_id = injured_player_id; }
 
-    int allowed = already_in_org || effective_after <= effective_limit;
+    int allowed = counts_as_existing_candidate || effective_after <= effective_limit;
+    int opportunity_block = kbo_retention_opportunity_probe_should_block(
+        team_id,
+        candidate,
+        today,
+        asian_count,
+        non_asian_count,
+        pending_asian_count,
+        pending_non_asian_count,
+        asian_after,
+        non_asian_after,
+        effective_before,
+        effective_after,
+        effective_limit,
+        candidate_pending,
+        counts_as_existing_candidate,
+        allowed);
+    if (allowed && opportunity_block) {
+        allowed = 0;
+    }
     KBO_PROFILE_END(profile_custom_candidate, allowed
         ? "foreign_policy.candidate.allowed"
         : "foreign_policy.candidate.blocked");
@@ -205,6 +230,26 @@ int kbo_custom_foreign_policy_team_allows_final_signing(
     if (already_in_org) {
         return 1;
     }
-    return effective_after <= effective_limit;
+
+    uint32_t today = 0u;
+    kbo_get_foreign_waiver_current_yyyymmdd(&today);
+    int allowed = effective_after <= effective_limit;
+    int opportunity_block = kbo_retention_opportunity_probe_should_block(
+        team_id,
+        candidate,
+        today,
+        asian_count,
+        non_asian_count,
+        0u,
+        0u,
+        asian_after,
+        non_asian_after,
+        effective_before,
+        effective_after,
+        effective_limit,
+        0,
+        already_in_org,
+        allowed);
+    return allowed && !opportunity_block;
 }
 

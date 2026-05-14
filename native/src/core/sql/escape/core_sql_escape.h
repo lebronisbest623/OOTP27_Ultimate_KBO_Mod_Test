@@ -4,5 +4,6 @@
 #include <stddef.h>
 
 int kbo_sql_escape_literal(char* out, size_t out_size, const char* in);
+int kbo_sql_escape_literal_preserve_ootp_controls(char* out, size_t out_size, const char* in);
 
 #endif

@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_FOREIGN_CONTROLLER_FOREIGN_AI_CONTROLLER_H_
+#define KBOFIX_SRC_FOREIGN_CONTROLLER_FOREIGN_AI_CONTROLLER_H_
+
+int kbo_foreign_ai_controller_enabled(void);
+
+#endif

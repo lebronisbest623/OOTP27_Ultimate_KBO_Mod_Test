@@ -1,0 +1,18 @@
+{
+  "fa_compensation.player_selected.title": "{selected_name}, FA 보상선수로 이적했습니다",
+  "fa_compensation.player_selected.title.variants": 2,
+  "fa_compensation.player_selected.title.v1": "{selected_name}, FA 보상선수로 이적했습니다",
+  "fa_compensation.player_selected.title.v2": "FA 보상 절차가 {selected_name} 지명으로 끝났습니다",
+  "fa_compensation.player_selected.body": "{fa_player_link}의 FA 이적에 따른 보상 절차가 마무리됐습니다. 원 소속 구단 {original_team_link}는 {signing_team_link}의 보호명단 밖 지명 가능 선수 중 {selected_player_link}를 선택했습니다. 적용 등급은 {grade}입니다.\n\n보상 패키지는 {cash_text}와 선수 1명입니다. FA를 영입한 구단에는 계약의 최종 비용이 붙었고, 선수를 내준 구단에는 전력 공백을 메울 새 카드가 생겼습니다.",
+  "fa_compensation.player_selected.body.variants": 2,
+  "fa_compensation.player_selected.body.v1": "{fa_player_link}의 FA 이적에 따른 보상 절차가 마무리됐습니다. 원 소속 구단 {original_team_link}는 {signing_team_link}의 보호명단 밖 지명 가능 선수 중 {selected_player_link}를 선택했습니다. 적용 등급은 {grade}입니다.\n\n보상 패키지는 {cash_text}와 선수 1명입니다. FA를 영입한 구단에는 계약의 최종 비용이 붙었고, 선수를 내준 구단에는 전력 공백을 메울 새 카드가 생겼습니다.",
+  "fa_compensation.player_selected.body.v2": "{original_team_link}가 FA 보상 선택을 제출했습니다. {fa_player_link}의 등급 {grade} FA 이적에 따라 {signing_team_link}의 지명 가능 풀에서 {selected_player_link}를 데려오는 결정입니다.\n\nKBO 보상 기록에는 {cash_text}와 선수 지명이 함께 남습니다. 한쪽은 FA를 얻었고, 다른 한쪽은 보호명단 싸움의 결과물을 받아들였습니다.",
+  "fa_compensation.history.selected": "[G]{fa_player_name}의 KBO FA 보상 절차에서 보상선수로 지명됐습니다. Team #{signing_team_id}에서 Team #{original_team_id}로 권리가 이전됐고, 현금 보상 {cash_text}가 기록됐습니다.",
+  "fa_compensation.history.selected.variants": 2,
+  "fa_compensation.history.selected.v1": "[G]{fa_player_name}의 KBO FA 보상 절차에서 보상선수로 지명됐습니다. Team #{signing_team_id}에서 Team #{original_team_id}로 권리가 이전됐고, 현금 보상 {cash_text}가 기록됐습니다.",
+  "fa_compensation.history.selected.v2": "[G]{fa_player_name} 관련 KBO FA 보상 지명으로 Team #{original_team_id}가 Team #{signing_team_id}로부터 권리를 넘겨받았습니다. 현금 보상 {cash_text}가 함께 기록됐습니다.",
+  "fa_compensation.history.transfer": "[G]{fa_player_name}의 KBO FA 보상선수로 Team #{original_team_id}에 합류했습니다.",
+  "fa_compensation.history.transfer.variants": 2,
+  "fa_compensation.history.transfer.v1": "[G]{fa_player_name}의 KBO FA 보상선수로 Team #{original_team_id}에 합류했습니다.",
+  "fa_compensation.history.transfer.v2": "[G]{fa_player_name} 관련 KBO FA 보상 절차에 따라 Team #{original_team_id}로 이동했습니다."
+}

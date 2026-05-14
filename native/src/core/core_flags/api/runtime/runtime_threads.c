@@ -4,6 +4,7 @@
 #include "../../../logging/core_log.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <windows.h>
 
 static volatile LONG g_kbo_runtime_threads_stop_requested = 0;
@@ -17,6 +18,16 @@ typedef struct KboRuntimeThreadEntry {
 } KboRuntimeThreadEntry;
 
 static KboRuntimeThreadEntry g_kbo_runtime_threads[KBO_RUNTIME_THREAD_MAX];
+
+static int kbo_should_log_runtime_thread_registration(const char* label)
+{
+    if (label != NULL && strcmp(label, "foreign FA demand restore timer") == 0) {
+        static LONG foreign_demand_timer_log_count = 0;
+        LONG slot = InterlockedIncrement(&foreign_demand_timer_log_count);
+        return slot <= 3;
+    }
+    return 1;
+}
 
 static void kbo_lock_runtime_thread_registry(void)
 {
@@ -57,7 +68,9 @@ void kbo_register_runtime_thread(HANDLE thread, const char* label)
             g_kbo_runtime_threads[i].handle = thread;
             snprintf(g_kbo_runtime_threads[i].label, sizeof(g_kbo_runtime_threads[i].label), "%s", thread_label);
             kbo_unlock_runtime_thread_registry();
-            append_logf("registered KBO runtime thread label=\"%s\" handle=%p", thread_label, thread);
+            if (kbo_should_log_runtime_thread_registration(thread_label)) {
+                append_logf("registered KBO runtime thread label=\"%s\" handle=%p", thread_label, thread);
+            }
             return;
         }
     }

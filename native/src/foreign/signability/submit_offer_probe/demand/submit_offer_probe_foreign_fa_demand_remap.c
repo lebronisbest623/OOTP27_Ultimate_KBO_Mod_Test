@@ -110,13 +110,162 @@ int32_t kbo_foreign_fa_remap_demand_from_salary_ladder(int32_t demand, uint8_t* 
     return (int32_t)mapped;
 }
 
+static int kbo_foreign_reserve_demand_index_for_score(int32_t score)
+{
+    if (score >= 140000) { return 8; }
+    if (score >= 120000) { return 7; }
+    if (score >= 100000) { return 6; }
+    if (score >= 85000) { return 5; }
+    if (score >= 70000) { return 4; }
+    if (score >= 55000) { return 3; }
+    if (score >= 40000) { return 2; }
+    if (score >= 25000) { return 1; }
+    return 0;
+}
+
+static int32_t kbo_foreign_reserve_demand_floor_from_index(int index, int asian_quota)
+{
+    int32_t base = kbo_get_foreign_fa_demand_baseline_value_for_player(index, asian_quota);
+    int32_t floor = kbo_get_foreign_fa_demand_baseline_value_for_player(0, asian_quota);
+    int64_t discounted = ((int64_t)base * 85) / 100;
+    if (discounted < floor) {
+        discounted = floor;
+    }
+    if (discounted > INT32_MAX) {
+        discounted = INT32_MAX;
+    }
+    return (int32_t)discounted;
+}
+
+static int kbo_foreign_reserve_demand_asian_quota(uint8_t* player, int index)
+{
+    if (player == NULL
+            || !memory_range_readable(player + OOTP27_PLAYER_NATION_ID_OFFSET, sizeof(uint32_t))) {
+        return 0;
+    }
+    if (!kbo_nation_is_asian_quota_candidate(*(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET))) {
+        return 0;
+    }
+
+    int32_t asian_floor = kbo_foreign_reserve_demand_floor_from_index(index, 1);
+    int32_t asian_limit = kbo_get_asian_quota_salary_limit();
+    return asian_floor > 0 && asian_limit > 0 && asian_floor <= asian_limit;
+}
+
+int32_t kbo_foreign_reserve_demand_floor_for_player(
+    uint8_t* player,
+    uint32_t today,
+    uint32_t* out_holder_team_id,
+    int32_t* out_score,
+    int* out_index,
+    int* out_asian_quota)
+{
+    if (out_holder_team_id != NULL) { *out_holder_team_id = 0u; }
+    if (out_score != NULL) { *out_score = 0; }
+    if (out_index != NULL) { *out_index = 0; }
+    if (out_asian_quota != NULL) { *out_asian_quota = 0; }
+
+    if (!kbo_foreign_waiver_ai_enabled()
+            || player == NULL
+            || today == 0u
+            || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    uint32_t holder_team_id = 0u;
+    if (player_id == 0u
+            || player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET] != 0u
+            || !kbo_player_is_foreign_for_kbo_rights(player)
+            || !kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)
+            || holder_team_id == 0u) {
+        return 0;
+    }
+
+    int32_t score = kbo_foreign_waiver_value_score(player);
+    if (score < kbo_get_foreign_waiver_value_threshold_for_player(player)) {
+        return 0;
+    }
+
+    int index = kbo_foreign_reserve_demand_index_for_score(score);
+    int asian_quota = kbo_foreign_reserve_demand_asian_quota(player, index);
+    int32_t floor = kbo_foreign_reserve_demand_floor_from_index(index, asian_quota);
+    if (floor <= 0) {
+        return 0;
+    }
+
+    if (out_holder_team_id != NULL) { *out_holder_team_id = holder_team_id; }
+    if (out_score != NULL) { *out_score = score; }
+    if (out_index != NULL) { *out_index = index; }
+    if (out_asian_quota != NULL) { *out_asian_quota = asian_quota; }
+    return floor;
+}
+
+int kbo_apply_foreign_reserve_demand_floor(uintptr_t player_ptr, const char* source)
+{
+    if (player_ptr == 0 || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    uint32_t today = 0u;
+    if (!kbo_get_foreign_waiver_current_yyyymmdd(&today) || today == 0u) {
+        return 0;
+    }
+
+    uint8_t* player = (uint8_t*)player_ptr;
+    uint32_t holder_team_id = 0u;
+    int32_t score = 0;
+    int index = 0;
+    int asian_quota = 0;
+    int32_t demand_floor = kbo_foreign_reserve_demand_floor_for_player(
+        player,
+        today,
+        &holder_team_id,
+        &score,
+        &index,
+        &asian_quota);
+    if (demand_floor <= 0
+            || !memory_range_readable(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET, sizeof(int32_t))) {
+        return 0;
+    }
+
+    int32_t old_demand = *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET);
+    if (old_demand >= demand_floor) {
+        return 0;
+    }
+
+    if (!kbo_write_i32(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET, demand_floor)) {
+        return 0;
+    }
+
+    static LONG log_count = 0;
+    LONG slot = InterlockedIncrement(&log_count);
+    if (slot <= 240) {
+        append_logf(
+            "KBO foreign reserve demand floor applied: source=%s player=%u holder_team=%u old_demand=%d floor=%d score=%d index=%d asian_quota=%d today=%u",
+            source != NULL ? source : "",
+            *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET),
+            holder_team_id,
+            old_demand,
+            demand_floor,
+            score,
+            index,
+            asian_quota,
+            today);
+    }
+    return 1;
+}
+
 DWORD WINAPI kbo_foreign_fa_demand_restore_timer_thread(void* param)
 {
     (void)param;
-    if (!kbo_runtime_sleep_should_continue(750)) {
-        return 0;
+    if (kbo_runtime_sleep_should_continue(750)) {
+        kbo_restore_foreign_fa_demand_salary_ladder("offer_build_timer");
     }
-    kbo_restore_foreign_fa_demand_salary_ladder("offer_build_timer");
+    InterlockedExchange(&g_kbo_foreign_fa_demand_restore_timer_pending, 0);
+    if (InterlockedCompareExchange(&g_kbo_foreign_fa_demand_ladder_snapshot.active, 0, 0) != 0) {
+        kbo_schedule_foreign_fa_demand_restore_timer();
+    }
     return 0;
 }
 
@@ -171,9 +320,15 @@ void kbo_restore_foreign_fa_demand_salary_ladder(const char* source)
 
 void kbo_schedule_foreign_fa_demand_restore_timer(void)
 {
+    if (InterlockedCompareExchange(&g_kbo_foreign_fa_demand_restore_timer_pending, 1, 0) != 0) {
+        return;
+    }
+
     HANDLE thread = CreateThread(NULL, 0, kbo_foreign_fa_demand_restore_timer_thread, NULL, 0, NULL);
     if (thread != NULL) {
         kbo_register_runtime_thread(thread, "foreign FA demand restore timer");
+    } else {
+        InterlockedExchange(&g_kbo_foreign_fa_demand_restore_timer_pending, 0);
     }
 }
 

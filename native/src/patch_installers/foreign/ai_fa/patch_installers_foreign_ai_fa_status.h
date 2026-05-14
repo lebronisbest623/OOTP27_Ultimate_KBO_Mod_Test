@@ -6,5 +6,7 @@
 #include <windows.h>
 
 int install_kbo_ai_fa_status_candidate_insert_patch(void);
+int install_kbo_foreign_ai_offer_candidate_priority_patch(void);
+int install_kbo_foreign_ai_offer_attach_probe_patch(void);
 
 #endif

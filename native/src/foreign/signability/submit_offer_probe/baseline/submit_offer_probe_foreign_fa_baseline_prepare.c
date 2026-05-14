@@ -1,5 +1,47 @@
 #include "../internal/submit_offer_probe_internal.h"
 
+static int kbo_foreign_fa_player_has_active_reserve_right(
+    uint8_t* player,
+    uint32_t* out_holder_team_id,
+    uint32_t* out_today)
+{
+    if (out_holder_team_id != NULL) { *out_holder_team_id = 0u; }
+    if (out_today != NULL) { *out_today = 0u; }
+    if (!kbo_foreign_waiver_ai_enabled()
+            || player == NULL
+            || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    uint32_t today = 0u;
+    uint32_t holder_team_id = 0u;
+    if (player_id == 0u
+            || !kbo_get_foreign_waiver_current_yyyymmdd(&today)
+            || !kbo_find_active_foreign_waiver_holder(player_id, today, &holder_team_id)
+            || holder_team_id == 0u) {
+        return 0;
+    }
+
+    if (out_holder_team_id != NULL) { *out_holder_team_id = holder_team_id; }
+    if (out_today != NULL) { *out_today = today; }
+    return 1;
+}
+
+static int32_t kbo_foreign_fa_reserve_right_baseline_value(int index, int asian_quota)
+{
+    int32_t base = kbo_get_foreign_fa_demand_baseline_value_for_player(index, asian_quota);
+    int32_t floor = kbo_get_foreign_fa_demand_baseline_value_for_player(0, asian_quota);
+    int64_t discounted = ((int64_t)base * 85) / 100;
+    if (discounted < floor) {
+        discounted = floor;
+    }
+    if (discounted > INT32_MAX) {
+        discounted = INT32_MAX;
+    }
+    return (int32_t)discounted;
+}
+
 __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     uintptr_t financials_ptr,
     uintptr_t player_ptr,
@@ -22,6 +64,12 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
         return;
     }
     int asian_quota = kbo_player_is_asian_quota_candidate(player);
+    uint32_t reserve_holder_team_id = 0u;
+    uint32_t reserve_today = 0u;
+    int reserve_right = kbo_foreign_fa_player_has_active_reserve_right(
+        player,
+        &reserve_holder_team_id,
+        &reserve_today);
 
     uint8_t* financials = (uint8_t*)financials_ptr;
     for (int i = 0; i < 9; i++) {
@@ -34,7 +82,9 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     for (int i = 0; i < 9; i++) {
         patched += kbo_write_i32(
             financials + KBO_FINANCIALS_SALARY_LADDER_OFFSETS[i],
-            kbo_get_foreign_fa_demand_baseline_value_for_player(i, asian_quota));
+            reserve_right
+                ? kbo_foreign_fa_reserve_right_baseline_value(i, asian_quota)
+                : kbo_get_foreign_fa_demand_baseline_value_for_player(i, asian_quota));
     }
 
     if (patched == 9) {
@@ -47,16 +97,21 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     LONG slot = InterlockedIncrement(&prepare_log_count);
     if (slot <= 120) {
         append_logf(
-            "KBO foreign FA demand baseline prepared source=0x%x player=%u asian_quota=%d financials=%p patched=%d original_superstar=%d foreign_superstar=%d",
+            "KBO foreign FA demand baseline prepared source=0x%x player=%u asian_quota=%d reserve_right=%d holder_team=%u today=%u financials=%p patched=%d original_superstar=%d foreign_superstar=%d",
             source_rva,
             memory_range_readable(player + OOTP27_PLAYER_ID_OFFSET, sizeof(uint32_t))
                 ? *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET)
                 : 0u,
             asian_quota,
+            reserve_right,
+            reserve_holder_team_id,
+            reserve_today,
             (void*)financials,
             patched,
             g_kbo_foreign_fa_demand_ladder_snapshot.values[8],
-            kbo_get_foreign_fa_demand_baseline_value_for_player(8, asian_quota));
+            reserve_right
+                ? kbo_foreign_fa_reserve_right_baseline_value(8, asian_quota)
+                : kbo_get_foreign_fa_demand_baseline_value_for_player(8, asian_quota));
     }
 }
 

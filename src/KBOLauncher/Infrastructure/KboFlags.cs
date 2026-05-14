@@ -151,12 +151,6 @@ internal static partial class KboFlags
     internal static bool ReadKboFlagDefaultEnabled(string configPath, string fileName)
     {
         var key = CanonicalRuntimeFlagKey(NormalizeKboFlagKey(fileName));
-        if (key.Equals("enable_launcher_injection", StringComparison.OrdinalIgnoreCase))
-        {
-            return ReadKboFlagConfig(configPath).TryGetValue(key, out var launcherInjectionEnabled)
-                && launcherInjectionEnabled;
-        }
-
         return !ReadKboFlagConfig(configPath).TryGetValue(key, out var enabled)
             || enabled;
     }

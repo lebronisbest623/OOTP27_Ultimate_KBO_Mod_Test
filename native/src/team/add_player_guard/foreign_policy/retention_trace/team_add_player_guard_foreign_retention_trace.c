@@ -6,6 +6,7 @@
 #include "../../../../core/logging/core_log.h"
 #include "../../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../../../foreign/retention_guard/foreign_retention_guard.h"
 #include "../../../../foreign/rights/query/foreign_waiver_rights_query.h"
 #include "../../../../runtime_memory/runtime_memory.h"
 #include "../../../lookup/team_lookup.h"
@@ -46,12 +47,6 @@ void kbo_team_add_log_foreign_retention_result(
         return;
     }
 
-    static volatile LONG retention_result_log_count = 0;
-    LONG slot = InterlockedIncrement(&retention_result_log_count);
-    if (slot > 200) {
-        return;
-    }
-
     uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
     uint32_t after_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
     uint32_t after_active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
@@ -59,24 +54,68 @@ void kbo_team_add_log_foreign_retention_result(
     if (memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))) {
         after_original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
     }
+    uint32_t contract_status = memory_range_readable(player + OOTP27_PLAYER_CONTRACT_STATUS_OFFSET, sizeof(uint32_t))
+        ? *(uint32_t*)(player + OOTP27_PLAYER_CONTRACT_STATUS_OFFSET)
+        : 0u;
+    uint32_t contract_start_year = memory_range_readable(player + OOTP27_PLAYER_CONTRACT_START_YEAR_OFFSET, sizeof(uint32_t))
+        ? *(uint32_t*)(player + OOTP27_PLAYER_CONTRACT_START_YEAR_OFFSET)
+        : 0u;
+    int32_t salary_y1 = memory_range_readable(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET, sizeof(int32_t))
+        ? *(int32_t*)(player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET)
+        : 0;
+    int32_t contract_years[OOTP27_PLAYER_CONTRACT_SALARY_YEARS] = {0};
+    if (memory_range_readable(
+            player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET,
+            OOTP27_PLAYER_CONTRACT_SALARY_YEARS * sizeof(int32_t))) {
+        for (uint32_t year = 0u; year < OOTP27_PLAYER_CONTRACT_SALARY_YEARS; year++) {
+            contract_years[year] = *(int32_t*)(
+                player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET + (year * sizeof(int32_t)));
+        }
+    }
     int score = kbo_foreign_waiver_value_score(player);
     const char* label = team_id == holder_team_id
         ? "holder_team_add"
         : "non_holder_team_add";
-    append_logf(
-        "foreign retention re-signing: %s result=%u team=%u holder_team=%u player=%u today=%u before_current=%u before_active=%u before_original=%u after_current=%u after_active=%u after_original=%u score=%d caller_rva=0x%x",
-        label,
-        result,
-        team_id,
-        holder_team_id,
-        player_id,
-        today,
-        before_current_team_id,
-        before_active_team_id,
-        before_original_team_id,
-        after_current_team_id,
-        after_active_team_id,
-        after_original_team_id,
-        score,
-        caller_rva);
+    if (result != 0u
+            && team_id == holder_team_id
+            && before_current_team_id == 0u
+            && before_active_team_id == 0u
+            && after_current_team_id == team_id
+            && after_active_team_id == team_id) {
+        uint32_t league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+        kbo_foreign_retention_guard_record_team_add(
+            player_id,
+            team_id,
+            league_id,
+            today,
+            contract_status,
+            contract_start_year,
+            contract_years,
+            OOTP27_PLAYER_CONTRACT_SALARY_YEARS);
+    }
+
+    static volatile LONG retention_result_log_count = 0;
+    LONG slot = InterlockedIncrement(&retention_result_log_count);
+    if (slot <= 200) {
+        append_logf(
+            "foreign retention re-signing: %s result=%u team=%u holder_team=%u player=%u today=%u before_current=%u before_active=%u before_original=%u after_current=%u after_active=%u after_original=%u contract_level=%u contract_status=%u contract_start_year=%u salary_y1=%d score=%d caller_rva=0x%x",
+            label,
+            result,
+            team_id,
+            holder_team_id,
+            player_id,
+            today,
+            before_current_team_id,
+            before_active_team_id,
+            before_original_team_id,
+            after_current_team_id,
+            after_active_team_id,
+            after_original_team_id,
+            (uint32_t)player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET],
+            contract_status,
+            contract_start_year,
+            salary_y1,
+            score,
+            caller_rva);
+    }
 }

@@ -49,7 +49,7 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
 int kbo_webview_weekday_for_yyyymmdd(uint32_t yyyymmdd);
 const char* kbo_webview_asian_games_schedule_status(
     uint32_t event_date,
-    const char* event_title,
+    KboCustomEventKind event_kind,
     uint32_t fired_date,
     uint32_t today,
     int event_exists,
@@ -58,7 +58,7 @@ const char* kbo_webview_asian_games_schedule_status(
 void kbo_webview_append_asian_games_schedule_row(
     KboWindowTextBuffer* buffer,
     uint32_t event_date,
-    const char* event_title,
+    KboCustomEventKind event_kind,
     const char* event_label,
     const char* action_text,
     const char* impact_text,

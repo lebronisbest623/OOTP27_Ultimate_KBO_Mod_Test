@@ -10,9 +10,12 @@
 
 #include "../src/core/dates/core_text_date.h"
 #include "../src/core/core_flags/json/json_bool_parser.h"
+#include "../src/core/news/templates/core_news_templates.h"
 #include "../src/core/sql/escape/core_sql_escape.h"
 #include "../src/foreign/common/csv/foreign_csv_parse.h"
 #include "../src/foreign/replacement_seed/parse/foreign_replacement_seed_parse.h"
+#include "../src/captain/season/captain_season.h"
+#include "../src/captain/seed/captain_seed_parse.h"
 #include "../src/patch_helpers/patch_helpers.h"
 
 int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
@@ -151,6 +154,29 @@ static void test_json_flags_parser(void)
 
     assert(!kbo_find_flag_value_in_json("{ nope", 6u, "enable_foreign_waiver_ai", NULL, &value));
     printf("test_json_flags_parser: PASS\n");
+}
+
+static void test_news_template_render(void)
+{
+    KboNewsTemplateVar vars[] = {
+        { "season", "2027" },
+        { "team_link", "<Doosan Bears:team#1>" },
+        { "player_link", "<Yang Ui-ji:player#10>" },
+    };
+    char out[256] = {0};
+
+    assert(kbo_news_template_render(
+        "KBO captains for {season}: {team_link} named {player_link}.",
+        vars,
+        (int)(sizeof(vars) / sizeof(vars[0])),
+        out,
+        sizeof(out)));
+    assert(strcmp(out, "KBO captains for 2027: <Doosan Bears:team#1> named <Yang Ui-ji:player#10>.") == 0);
+
+    assert(kbo_news_template_render("{missing} stays visible", vars, 1, out, sizeof(out)));
+    assert(strcmp(out, "{missing} stays visible") == 0);
+
+    printf("test_news_template_render: PASS\n");
 }
 
 static void test_date_serial(void)
@@ -416,6 +442,77 @@ static void test_foreign_replacement_seed_parse(void)
     assert(strcmp(seed.key, "abc") == 0);
     assert(seed.slot_type == 0u);
     printf("test_foreign_replacement_seed_parse: PASS\n");
+}
+
+static void test_captain_seed_parse(void)
+{
+    KboCaptainSeed seed;
+    uint32_t u32 = 0u;
+    int32_t i32 = 0;
+
+    char token[] = "  \" LG \"\r\n";
+    kbo_captain_trim_csv_token_in_place(token);
+    assert(strcmp(token, "LG") == 0);
+    assert(kbo_captain_parse_u32_full_token("4294967295", &u32));
+    assert(u32 == 0xffffffffu);
+    assert(!kbo_captain_parse_u32_full_token("4294967296", &u32));
+    assert(kbo_captain_parse_i32_full_token("-25", &i32));
+    assert(i32 == -25);
+
+    assert(!kbo_parse_captain_seed_line(NULL, &seed));
+    assert(!kbo_parse_captain_seed_line("# comment", &seed));
+    assert(!kbo_parse_captain_seed_line("season,league_id,team_id,team_code,captain_player_id,captain_player_key", &seed));
+
+    assert(kbo_parse_captain_seed_line("2026,100,0,LG,12345,,Hong Captain,250,active,comment", &seed));
+    assert(seed.season == 2026u);
+    assert(seed.league_id == 100u);
+    assert(seed.team_id == 0u);
+    assert(strcmp(seed.team_code, "LG") == 0);
+    assert(seed.player_id == 12345u);
+    assert(seed.player_key[0] == '\0');
+    assert(strcmp(seed.player_name, "Hong Captain") == 0);
+    assert(seed.priority == 250);
+    assert(seed.active == 1u);
+
+    assert(kbo_parse_captain_seed_line("2026,0,0,LG,,park--000hae,Park Hae-min,1000,active,2026 KBO captain seed", &seed));
+    assert(seed.season == 2026u);
+    assert(seed.league_id == 0u);
+    assert(strcmp(seed.team_code, "LG") == 0);
+    assert(seed.player_id == 0u);
+    assert(strcmp(seed.player_key, "park--000hae") == 0);
+    assert(strcmp(seed.player_name, "Park Hae-min") == 0);
+    assert(seed.priority == 1000);
+    assert(seed.active == 1u);
+
+    assert(kbo_parse_captain_seed_line("SSG, park--001sun, Park Sung-han, 50, disabled", &seed));
+    assert(seed.season == 0u);
+    assert(seed.league_id == 0u);
+    assert(seed.team_id == 0u);
+    assert(strcmp(seed.team_code, "SSG") == 0);
+    assert(seed.player_id == 0u);
+    assert(strcmp(seed.player_key, "park--001sun") == 0);
+    assert(seed.priority == 50);
+    assert(seed.active == 0u);
+
+    assert(kbo_parse_captain_seed_line("10, 99999", &seed));
+    assert(seed.team_id == 10u);
+    assert(seed.player_id == 99999u);
+    assert(seed.priority == 100);
+    printf("test_captain_seed_parse: PASS\n");
+}
+
+static void test_captain_effective_season(void)
+{
+    assert(kbo_captain_effective_season(20270310u, 2026u) == 2027u);
+    assert(kbo_captain_calendar_season_recovery_active(20270310u, 2026u, 0u));
+    assert(!kbo_captain_calendar_season_recovery_active(20270310u, 2026u, 2u));
+    assert(!kbo_captain_calendar_season_recovery_active(20270310u, 2026u, 3u));
+    assert(kbo_captain_effective_season(20270310u, 2027u) == 2027u);
+    assert(!kbo_captain_calendar_season_recovery_active(20270310u, 2027u, 0u));
+    assert(kbo_captain_effective_season(20261201u, 2026u) == 2026u);
+    assert(kbo_captain_effective_season(20270310u, 0u) == 2027u);
+    assert(kbo_captain_effective_season(20271310u, 2026u) == 2026u);
+    printf("test_captain_effective_season: PASS\n");
 }
 
 static void test_foreign_csv_parse(void)
@@ -1222,6 +1319,7 @@ int main(void)
 {
     test_core_text_and_sql_helpers();
     test_json_flags_parser();
+    test_news_template_render();
     test_date_serial();
     test_foreign_waiver_date_helpers();
     test_military_csv_parse();
@@ -1229,6 +1327,8 @@ int main(void)
     test_military_seed_line_parse();
     test_allstar_csv_parse();
     test_foreign_replacement_seed_parse();
+    test_captain_seed_parse();
+    test_captain_effective_season();
     test_foreign_csv_parse();
     test_masked_pattern_matching();
     test_patch_bytes_writers();
@@ -1252,6 +1352,15 @@ int main(void)
 void append_logf(const char* fmt, ...)
 {
     (void)fmt;
+}
+
+int kbo_get_save_scoped_data_file(const char* file_name, char* out, size_t out_size)
+{
+    (void)file_name;
+    if (out != NULL && out_size > 0u) {
+        out[0] = '\0';
+    }
+    return 0;
 }
 
 int memory_range_readable(const void* ptr, size_t size)

@@ -102,11 +102,11 @@ dotnet build .\OOTP27-KBO-Launcher.sln
 KBOLauncher.exe
 ```
 
-DLL 주입 없이 OOTP를 시작한다. 주입을 활성화하려면 `%LOCALAPPDATA%\OOTP-KBO\kbo_flags.json`에 단일 JSON 플래그 설정을 사용한다.
+기본 실행은 같은 폴더의 `KBOFix.dll`을 자동으로 주입한다. 자동 주입을 끄려면 `%LOCALAPPDATA%\OOTP-KBO\kbo_flags.json`에 단일 JSON 플래그 설정을 사용한다.
 
 ```json
 {
-  "enable_launcher_injection": true
+  "enable_launcher_injection": false
 }
 ```
 
@@ -129,7 +129,7 @@ KBOLauncher.exe --ootp "D:\Steam\steamapps\common\Out of the Park Baseball 27\oo
 
 | 설정 | 기본값 | 설명 |
 |---|---|---|
-| `enable_launcher_injection` | off | 런처 자동 주입 활성화 |
+| `enable_launcher_injection` | on | 런처 자동 주입 활성화 |
 | `enable_foreign_waiver_ai` | on | AI 보류권 자동 결정 |
 | `enable_single_division_allstar_events` | on | 단일 디비전 올스타전 |
 | `kbo_league_id.txt` | 100 | KBO 리그 ID 오버라이드 |

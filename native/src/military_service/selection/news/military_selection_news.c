@@ -7,6 +7,7 @@
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/news/live/core_live_news.h"
+#include "../../../core/news/templates/core_news_templates.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../../team/lookup/team_lookup.h"
@@ -129,49 +130,75 @@ int kbo_emit_military_selection_news(
     }
 
     char title[160] = {0};
-    snprintf(
-        title,
-        sizeof(title),
-        "Sangmu Selects %d Player%s for Military Service",
-        entry_count,
-        entry_count == 1 ? "" : "s");
-
     char body[8192] = {0};
-    int len = snprintf(
-        body,
-        sizeof(body),
-        "Sangmu completed its annual military-service selection, adding %d player%s from the offseason military-service pool. The group will report to the service club while their original KBO clubs retain their rights until the scheduled return date.\n\nSelected players:\n",
-        entry_count,
-        entry_count == 1 ? "" : "s");
-    if (len < 0) {
-        body[0] = '\0';
+    char entry_count_text[16] = {0};
+    snprintf(entry_count_text, sizeof(entry_count_text), "%d", entry_count);
+    KboNewsTemplateVar summary_vars[] = {
+        { "entry_count", entry_count_text },
+        { "entry_count_plural", entry_count == 1 ? "" : "s" },
+    };
+    if (!kbo_news_template_render_key(
+            "military.selection.title",
+            summary_vars,
+            (int)(sizeof(summary_vars) / sizeof(summary_vars[0])),
+            title,
+            sizeof(title),
+            source)
+            || !kbo_news_template_render_key(
+                "military.selection.intro",
+                summary_vars,
+                (int)(sizeof(summary_vars) / sizeof(summary_vars[0])),
+                body,
+                sizeof(body),
+                source)) {
+        append_logf(
+            "KBO military selection news skipped source=%s date=%u reason=template_unavailable count=%d",
+            source != NULL ? source : "",
+            event_yyyymmdd,
+            entry_count);
+        return 0;
     }
     size_t used = strlen(body);
+
+    char line_template[256] = {0};
+    if (!kbo_news_template_load("military.selection.line", line_template, sizeof(line_template), NULL, 0u, source)) {
+        append_logf(
+            "KBO military selection news skipped source=%s date=%u reason=line_template_unavailable count=%d",
+            source != NULL ? source : "",
+            event_yyyymmdd,
+            entry_count);
+        return 0;
+    }
 
     for (int i = 0; i < entry_count && used + 180u < sizeof(body); i++) {
         char player_link[96] = {0};
         char team_link[128] = {0};
+        char index_text[16] = {0};
         kbo_military_copy_player_link(entries[i].player_id, entries[i].player_ptr, player_link, sizeof(player_link));
         kbo_military_copy_team_link(entries[i].original_team_id, team_link, sizeof(team_link));
-        len = snprintf(
-            body + used,
-            sizeof(body) - used,
-            "%d. %s%s%s\n",
-            i + 1,
-            player_link[0] != '\0' ? player_link : "Selected player",
-            team_link[0] != '\0' ? ", " : "",
-            team_link);
-        if (len <= 0) {
-            break;
-        }
-        used += (size_t)len;
+        snprintf(index_text, sizeof(index_text), "%d", i + 1);
+        KboNewsTemplateVar line_vars[] = {
+            { "index", index_text },
+            { "player_link", player_link[0] != '\0' ? player_link : "Selected player" },
+            { "team_separator", team_link[0] != '\0' ? ", " : "" },
+            { "team_link", team_link },
+        };
+        char rendered_line[256] = {0};
+        kbo_news_template_render(
+            line_template,
+            line_vars,
+            (int)(sizeof(line_vars) / sizeof(line_vars[0])),
+            rendered_line,
+            sizeof(rendered_line));
+        kbo_news_text_append(body, sizeof(body), rendered_line);
+        used = strlen(body);
     }
 
     if (used + 220u < sizeof(body)) {
-        snprintf(
-            body + used,
-            sizeof(body) - used,
-            "\nThe selections were made from players newly marked for military service after the season, with player value and service-club roster space considered before the final list was posted.");
+        char outro[384] = {0};
+        if (kbo_news_template_render_key("military.selection.outro", NULL, 0, outro, sizeof(outro), source)) {
+            kbo_news_text_append(body, sizeof(body), outro);
+        }
     }
 
     int created = create_kbo_native_live_news_with_body(

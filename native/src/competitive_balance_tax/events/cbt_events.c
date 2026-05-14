@@ -56,14 +56,25 @@ int kbo_schedule_cbt_custom_events(const char* source)
 
     int deadline_past = deadline < today;
     int announcement_past = announcement < today;
-    int deadline_exists = deadline_past || kbo_custom_event_exists_by_title_for_date(
+    char deadline_title[160] = {0};
+    char announcement_title[160] = {0};
+    if (!kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE, deadline_title, sizeof(deadline_title))
+            || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT, announcement_title, sizeof(announcement_title))) {
+        append_logf(
+            "KBO CBT event schedule skipped source=%s reason=title_unavailable season=%u",
+            source != NULL ? source : "",
+            year);
+        return -1;
+    }
+
+    int deadline_exists = deadline_past || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         deadline,
-        g_kbo_cbt_exception_deadline_event_title);
-    int announcement_exists = announcement_past || kbo_custom_event_exists_by_title_for_date(
+        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE);
+    int announcement_exists = announcement_past || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         announcement,
-        g_kbo_cbt_announcement_event_title);
+        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
 
     int created_deadline = 0;
     if (!deadline_exists) {
@@ -73,7 +84,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
             deadline % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-            g_kbo_cbt_exception_deadline_event_title,
+            deadline_title,
             0,
             source != NULL ? source : g_kbo_default_event_source);
     }
@@ -86,19 +97,19 @@ int kbo_schedule_cbt_custom_events(const char* source)
             announcement % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-            g_kbo_cbt_announcement_event_title,
+            announcement_title,
             0,
             source != NULL ? source : g_kbo_default_event_source);
     }
 
-    deadline_exists = deadline_past || created_deadline || kbo_custom_event_exists_by_title_for_date(
+    deadline_exists = deadline_past || created_deadline || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         deadline,
-        g_kbo_cbt_exception_deadline_event_title);
-    announcement_exists = announcement_past || created_announcement || kbo_custom_event_exists_by_title_for_date(
+        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE);
+    announcement_exists = announcement_past || created_announcement || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         announcement,
-        g_kbo_cbt_announcement_event_title);
+        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
 
     append_logf(
         "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d ready=%d",

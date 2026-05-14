@@ -48,10 +48,22 @@ static const char* kbo_news_template_file_for_key(const char* key)
     if (kbo_news_template_starts_with(key, "foreign_injury.")) {
         return "foreign_injury.json";
     }
+    if (kbo_news_template_starts_with(key, "custom_event.")) {
+        return "custom_events.json";
+    }
     return NULL;
 }
 
-static int kbo_news_template_save_split_path(const char* file_name, char* out, size_t out_size)
+static const char* kbo_news_template_normalize_language_dir(const char* language_dir)
+{
+    return language_dir != NULL && strcmp(language_dir, "en") == 0 ? "en" : "ko";
+}
+
+static int kbo_news_template_save_split_path_for_language(
+    const char* language_dir,
+    const char* file_name,
+    char* out,
+    size_t out_size)
 {
     if (file_name == NULL || out == NULL || out_size == 0u) {
         return 0;
@@ -62,9 +74,18 @@ static int kbo_news_template_save_split_path(const char* file_name, char* out, s
         sizeof(relative),
         "%s\\%s\\%s",
         KBO_NEWS_TEMPLATES_DIR,
-        kbo_custom_news_language_dir(),
+        kbo_news_template_normalize_language_dir(language_dir),
         file_name);
     return kbo_get_save_scoped_data_file(relative, out, out_size);
+}
+
+static int kbo_news_template_save_split_path(const char* file_name, char* out, size_t out_size)
+{
+    return kbo_news_template_save_split_path_for_language(
+        kbo_custom_news_language_dir(),
+        file_name,
+        out,
+        out_size);
 }
 
 static int kbo_news_template_global_file_path(const char* file_name, char* out, size_t out_size)
@@ -82,7 +103,11 @@ static int kbo_news_template_global_file_path(const char* file_name, char* out, 
     return out[0] != '\0';
 }
 
-static int kbo_news_template_global_split_path(const char* file_name, char* out, size_t out_size)
+static int kbo_news_template_global_split_path_for_language(
+    const char* language_dir,
+    const char* file_name,
+    char* out,
+    size_t out_size)
 {
     if (file_name == NULL || out == NULL || out_size == 0u) {
         return 0;
@@ -93,9 +118,18 @@ static int kbo_news_template_global_split_path(const char* file_name, char* out,
         sizeof(relative),
         "%s\\%s\\%s",
         KBO_NEWS_TEMPLATES_DIR,
-        kbo_custom_news_language_dir(),
+        kbo_news_template_normalize_language_dir(language_dir),
         file_name);
     return kbo_news_template_global_file_path(relative, out, out_size);
+}
+
+static int kbo_news_template_global_split_path(const char* file_name, char* out, size_t out_size)
+{
+    return kbo_news_template_global_split_path_for_language(
+        kbo_custom_news_language_dir(),
+        file_name,
+        out,
+        out_size);
 }
 
 static int kbo_news_template_try_load_from_existing_path(
@@ -418,7 +452,8 @@ static int kbo_news_template_try_load_int(const char* key, int* out_value)
     return 0;
 }
 
-int kbo_news_template_load(
+int kbo_news_template_load_for_language(
+    const char* language_dir,
     const char* key,
     char* out,
     size_t out_size,
@@ -439,9 +474,18 @@ int kbo_news_template_load(
     char global_split_path[MAX_PATH] = {0};
     int has_save_split_path = 0;
     int has_global_split_path = 0;
+    const char* normalized_language_dir = kbo_news_template_normalize_language_dir(language_dir);
     if (split_file != NULL) {
-        has_save_split_path = kbo_news_template_save_split_path(split_file, save_split_path, sizeof(save_split_path));
-        has_global_split_path = kbo_news_template_global_split_path(split_file, global_split_path, sizeof(global_split_path));
+        has_save_split_path = kbo_news_template_save_split_path_for_language(
+            normalized_language_dir,
+            split_file,
+            save_split_path,
+            sizeof(save_split_path));
+        has_global_split_path = kbo_news_template_global_split_path_for_language(
+            normalized_language_dir,
+            split_file,
+            global_split_path,
+            sizeof(global_split_path));
         if (has_save_split_path && kbo_news_template_file_exists(save_split_path)) {
             if (kbo_news_template_try_load_from_existing_path(
                     save_split_path,
@@ -480,10 +524,28 @@ int kbo_news_template_load(
         "KBO news template unavailable source=%s key=%s lang=%s save_split=%s global_split=%s",
         source != NULL ? source : "",
         key,
-        kbo_custom_news_language_dir(),
+        normalized_language_dir,
         has_save_split_path ? save_split_path : "",
         has_global_split_path ? global_split_path : "");
     return 0;
+}
+
+int kbo_news_template_load(
+    const char* key,
+    char* out,
+    size_t out_size,
+    char* source_path,
+    size_t source_path_size,
+    const char* source)
+{
+    return kbo_news_template_load_for_language(
+        kbo_custom_news_language_dir(),
+        key,
+        out,
+        out_size,
+        source_path,
+        source_path_size,
+        source);
 }
 
 static int kbo_news_template_token_equals(const char* token, size_t token_len, const char* expected)

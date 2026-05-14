@@ -1,0 +1,16 @@
+{
+  "military.selection.title": "상무 선발 명단이 발표됐습니다",
+  "military.selection.title.variants": 3,
+  "military.selection.title.v1": "상무 선발 명단이 발표됐습니다",
+  "military.selection.title.v2": "KBO 선수 {entry_count}명이 상무 복무 길에 오릅니다",
+  "military.selection.title.v3": "각 구단 전력 공백, 상무 선발 {entry_count}명으로 확정됐습니다",
+  "military.selection.intro": "상무 선발 명단이 발표됐습니다. KBO 소속 선수 {entry_count}명이 원 소속팀을 잠시 떠나 복무 구단 일정에 합류합니다. 각 구단은 이제 공백 기간과 복귀 시점을 더 구체적으로 계산할 수 있게 됐습니다.\n\n이번 선발자는 다음과 같습니다.",
+  "military.selection.intro.variants": 2,
+  "military.selection.intro.v1": "상무 선발 명단이 발표됐습니다. KBO 소속 선수 {entry_count}명이 원 소속팀을 잠시 떠나 복무 구단 일정에 합류합니다. 각 구단은 이제 공백 기간과 복귀 시점을 더 구체적으로 계산할 수 있게 됐습니다.\n\n이번 선발자는 다음과 같습니다.",
+  "military.selection.intro.v2": "추측으로 남아 있던 병역 일정이 명단으로 바뀌었습니다. 상무는 이번 차수에서 KBO 선수 {entry_count}명을 선발했고, 해당 선수들은 소속팀 전력 구상에서 복무 구단 계획으로 이동합니다.\n\n명단은 다음과 같습니다.",
+  "military.selection.line": "{index}. {player_link}{team_separator}{team_link}\n",
+  "military.selection.outro": "\n이번 발표는 단순한 이탈 명단이 아닙니다. 어떤 구단에는 당장의 전력 손실이지만, 동시에 복귀 날짜가 보이는 투자이기도 합니다. 권리는 원 소속팀에 남고, 프런트의 고민은 불확실성에서 달력 계산으로 넘어갑니다.",
+  "military.selection.outro.variants": 2,
+  "military.selection.outro.v1": "\n이번 발표는 단순한 이탈 명단이 아닙니다. 어떤 구단에는 당장의 전력 손실이지만, 동시에 복귀 날짜가 보이는 투자이기도 합니다. 권리는 원 소속팀에 남고, 프런트의 고민은 불확실성에서 달력 계산으로 넘어갑니다.",
+  "military.selection.outro.v2": "\n상무 선발은 구단에 두 개의 시간을 동시에 보게 만듭니다. 지금 비는 자리를 메우는 시간, 그리고 돌아올 선수를 기다리며 가치를 지키는 시간입니다. 병역 명단마다 조용한 로스터 전략이 숨어 있습니다."
+}

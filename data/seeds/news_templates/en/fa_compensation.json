@@ -1,0 +1,18 @@
+{
+  "fa_compensation.player_selected.title": "{selected_name} moves as FA compensation pick",
+  "fa_compensation.player_selected.title.variants": 2,
+  "fa_compensation.player_selected.title.v1": "{selected_name} moves as FA compensation pick",
+  "fa_compensation.player_selected.title.v2": "FA compensation closes with {selected_name} selection",
+  "fa_compensation.player_selected.body": "The compensation process tied to {fa_player_link}'s free-agent move is complete. {original_team_link} selected {selected_player_link} from outside {signing_team_link}'s protected list under Grade {grade} compensation rules.\n\nThe package is {cash_text} and one eligible player. For the signing club, the free-agent deal now carries its final cost. For the original club, a departure turns into a new roster asset.",
+  "fa_compensation.player_selected.body.variants": 2,
+  "fa_compensation.player_selected.body.v1": "The compensation process tied to {fa_player_link}'s free-agent move is complete. {original_team_link} selected {selected_player_link} from outside {signing_team_link}'s protected list under Grade {grade} compensation rules.\n\nThe package is {cash_text} and one eligible player. For the signing club, the free-agent deal now carries its final cost. For the original club, a departure turns into a new roster asset.",
+  "fa_compensation.player_selected.body.v2": "{original_team_link} has filed its FA compensation choice. After {fa_player_link}'s Grade {grade} move to {signing_team_link}, the club took {selected_player_link} from the eligible pool.\n\nThe KBO record pairs {cash_text} with the player selection. One club got the free agent, and the other received the result of the protected-list process.",
+  "fa_compensation.history.selected": "[G]Selected as the KBO FA compensation player for {fa_player_name}. Rights transferred from Team #{signing_team_id} to Team #{original_team_id}, with {cash_text} cash compensation recorded.",
+  "fa_compensation.history.selected.variants": 2,
+  "fa_compensation.history.selected.v1": "[G]Selected as the KBO FA compensation player for {fa_player_name}. Rights transferred from Team #{signing_team_id} to Team #{original_team_id}, with {cash_text} cash compensation recorded.",
+  "fa_compensation.history.selected.v2": "[G]Named in the KBO FA compensation process for {fa_player_name}. Team #{original_team_id} received rights from Team #{signing_team_id}, with {cash_text} cash compensation attached.",
+  "fa_compensation.history.transfer": "[G]Joined Team #{original_team_id} as the KBO FA compensation player for {fa_player_name}.",
+  "fa_compensation.history.transfer.variants": 2,
+  "fa_compensation.history.transfer.v1": "[G]Joined Team #{original_team_id} as the KBO FA compensation player for {fa_player_name}.",
+  "fa_compensation.history.transfer.v2": "[G]Moved to Team #{original_team_id} through the KBO FA compensation process for {fa_player_name}."
+}

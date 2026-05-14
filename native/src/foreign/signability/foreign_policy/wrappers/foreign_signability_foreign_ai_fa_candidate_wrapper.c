@@ -25,9 +25,6 @@ static int kbo_ai_fa_status_released_replacement_can_enter_market(uint8_t* playe
     if (*(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET) != 0u) {
         return 0;
     }
-    if (player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET] != 0u) {
-        return 0;
-    }
     return kbo_player_is_foreign_for_kbo_rights(player);
 }
 

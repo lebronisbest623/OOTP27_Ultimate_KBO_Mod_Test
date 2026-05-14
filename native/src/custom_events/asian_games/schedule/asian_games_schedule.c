@@ -68,18 +68,32 @@ int kbo_schedule_asian_games_custom_events(const char* source)
     int skipped_past_selection = selection_date < today;
     int skipped_past_departure = departure_date < today;
     int skipped_past_final = final_date < today;
-    int selection_exists = skipped_past_selection || kbo_custom_event_exists_by_title_for_date(
+    char selection_title[160] = {0};
+    char departure_title[160] = {0};
+    char final_title[160] = {0};
+    if (!kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION, selection_title, sizeof(selection_title))
+            || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE, departure_title, sizeof(departure_title))
+            || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL, final_title, sizeof(final_title))) {
+        append_logf(
+            "KBO Asian Games schedule skipped source=%s reason=title_unavailable year=%u today=%u",
+            source != NULL ? source : "",
+            year,
+            today);
+        return -1;
+    }
+
+    int selection_exists = skipped_past_selection || kbo_custom_event_exists_by_kind_for_date(
             league_id,
             selection_date,
-            g_kbo_asian_games_selection_event_title);
-    int departure_exists = skipped_past_departure || kbo_custom_event_exists_by_title_for_date(
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION);
+    int departure_exists = skipped_past_departure || kbo_custom_event_exists_by_kind_for_date(
             league_id,
             departure_date,
-            g_kbo_asian_games_departure_event_title);
-    int final_exists = skipped_past_final || kbo_custom_event_exists_by_title_for_date(
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE);
+    int final_exists = skipped_past_final || kbo_custom_event_exists_by_kind_for_date(
             league_id,
             final_date,
-            g_kbo_asian_games_final_event_title);
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL);
 
     if (year_was_marked_scheduled
             && selection_exists
@@ -105,7 +119,7 @@ int kbo_schedule_asian_games_custom_events(const char* source)
             selection_date % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-            g_kbo_asian_games_selection_event_title,
+            selection_title,
             0,
             source != NULL ? source : g_kbo_default_event_source);
     }
@@ -116,7 +130,7 @@ int kbo_schedule_asian_games_custom_events(const char* source)
             departure_date % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-            g_kbo_asian_games_departure_event_title,
+            departure_title,
             0,
             source != NULL ? source : g_kbo_default_event_source);
     }
@@ -127,23 +141,23 @@ int kbo_schedule_asian_games_custom_events(const char* source)
             final_date % 100u,
             league_id,
             OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-            g_kbo_asian_games_final_event_title,
+            final_title,
             0,
             source != NULL ? source : g_kbo_default_event_source);
     }
 
-    selection_exists = skipped_past_selection || created_selection || kbo_custom_event_exists_by_title_for_date(
+    selection_exists = skipped_past_selection || created_selection || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         selection_date,
-        g_kbo_asian_games_selection_event_title);
-    departure_exists = skipped_past_departure || created_departure || kbo_custom_event_exists_by_title_for_date(
+        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION);
+    departure_exists = skipped_past_departure || created_departure || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         departure_date,
-        g_kbo_asian_games_departure_event_title);
-    final_exists = skipped_past_final || created_final || kbo_custom_event_exists_by_title_for_date(
+        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE);
+    final_exists = skipped_past_final || created_final || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         final_date,
-        g_kbo_asian_games_final_event_title);
+        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL);
     if (selection_exists && departure_exists && final_exists) {
         g_kbo_asian_games_last_scheduled_year = year;
     }

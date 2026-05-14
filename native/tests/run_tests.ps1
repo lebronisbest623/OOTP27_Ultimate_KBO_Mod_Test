@@ -56,12 +56,16 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\foreign\common\csv\foreign_csv_parse.c") `
     (Join-Path $Root "src\foreign\common\dates\foreign_waiver_date.c") `
     (Join-Path $Root "src\foreign\replacement_seed\parse\foreign_replacement_seed_parse.c") `
+    (Join-Path $Root "src\captain\season\captain_season.c") `
+    (Join-Path $Root "src\captain\seed\captain_seed_parse.c") `
     (Join-Path $Root "src\military_service\calendar\military_service_date.c") `
     (Join-Path $Root "src\military_service\seed\parse\military_service_seed_parse.c") `
     (Join-Path $Root "src\core\dates\core_text_date.c") `
     (Join-Path $Root "src\core\sql\escape\core_sql_escape.c") `
     (Join-Path $Root "src\core\core_flags\keys\flag_key.c") `
     (Join-Path $Root "src\core\core_flags\json\json_bool_parser.c") `
+    (Join-Path $Root "src\core\news\templates\core_news_templates.c") `
+    (Join-Path $Root "src\core\core_flags\api\settings\custom_news_language.c") `
     (Join-Path $Root "src\core\core_flags\localappdata\localappdata_reader.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\foreign_demand_baselines.c") `
     (Join-Path $Root "src\patch_helpers\bytes\patch_bytes.c") `

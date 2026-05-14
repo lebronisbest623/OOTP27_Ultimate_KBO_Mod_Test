@@ -23,7 +23,7 @@ int kbo_webview_weekday_for_yyyymmdd(uint32_t yyyymmdd)
 
 const char* kbo_webview_asian_games_schedule_status(
     uint32_t event_date,
-    const char* event_title,
+    KboCustomEventKind event_kind,
     uint32_t fired_date,
     uint32_t today,
     int event_exists,
@@ -35,7 +35,7 @@ const char* kbo_webview_asian_games_schedule_status(
         return "TBD";
     }
     int processed = (fired_date == event_date)
-        || kbo_custom_event_processed_marker_exists(event_date, event_title);
+        || kbo_custom_event_processed_marker_exists_for_kind(event_date, event_kind);
     if (processed) {
         if (out_class != NULL) { *out_class = "roReady"; }
         return "Complete";
@@ -63,7 +63,7 @@ const char* kbo_webview_asian_games_schedule_status(
 void kbo_webview_append_asian_games_schedule_row(
     KboWindowTextBuffer* buffer,
     uint32_t event_date,
-    const char* event_title,
+    KboCustomEventKind event_kind,
     const char* event_label,
     const char* action_text,
     const char* impact_text,
@@ -73,12 +73,12 @@ void kbo_webview_append_asian_games_schedule_row(
     int auto_schedule)
 {
     int event_exists = league_id != 0u && event_date != 0u
-        ? kbo_custom_event_exists_by_title_for_date(league_id, event_date, event_title)
+        ? kbo_custom_event_exists_by_kind_for_date(league_id, event_date, event_kind)
         : 0;
     const char* status_class = "";
     const char* status = kbo_webview_asian_games_schedule_status(
         event_date,
-        event_title,
+        event_kind,
         fired_date,
         today,
         event_exists,
@@ -134,9 +134,9 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
     int auto_schedule = has_schedule ? kbo_asian_games_schedule_auto_events_enabled(&schedule) : 0;
 
     int completed = 0;
-    if (selection_date != 0u && kbo_custom_event_processed_marker_exists(selection_date, g_kbo_asian_games_selection_event_title)) { completed++; }
-    if (departure_date != 0u && kbo_custom_event_processed_marker_exists(departure_date, g_kbo_asian_games_departure_event_title)) { completed++; }
-    if (final_date != 0u && kbo_custom_event_processed_marker_exists(final_date, g_kbo_asian_games_final_event_title)) { completed++; }
+    if (selection_date != 0u && kbo_custom_event_processed_marker_exists_for_kind(selection_date, KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION)) { completed++; }
+    if (departure_date != 0u && kbo_custom_event_processed_marker_exists_for_kind(departure_date, KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE)) { completed++; }
+    if (final_date != 0u && kbo_custom_event_processed_marker_exists_for_kind(final_date, KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL)) { completed++; }
 
     char summary_text[256] = {0};
     if (schedule_year != 0u && kbo_asian_games_schedule_has_event_dates(&schedule)) {
@@ -188,7 +188,7 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
         kbo_webview_append_asian_games_schedule_row(
             buffer,
             selection_date,
-            g_kbo_asian_games_selection_event_title,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION,
             kbo_hub_text("\xeb\x8c\x80\xed\x91\x9c\xed\x8c\x80 \xeb\xb0\x9c\xed\x91\x9c", "Roster Selection"),
             kbo_hub_text("KBO \xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0 \xec\x84\xa0\xeb\xb0\x9c", "KBO announces the national-team roster"),
             kbo_hub_text("24\xeb\xaa\x85 \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0", "24-man roster"),
@@ -199,7 +199,7 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
         kbo_webview_append_asian_games_schedule_row(
             buffer,
             departure_date,
-            g_kbo_asian_games_departure_event_title,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE,
             kbo_hub_text("\xec\x84\xa0\xec\x88\x98\xeb\x8b\xa8 \xec\xb6\x9c\xea\xb5\xad", "Player Departure"),
             kbo_hub_text("\xec\x84\xa0\xeb\xb0\x9c \xec\x84\xa0\xec\x88\x98 \xea\xb5\xac\xeb\x8b\xa8 \xec\x9d\xb4\xed\x83\x88 \xeb\xb0\x8f \xeb\x8c\x80\xec\xb2\xb4 \xed\x99\x95\xec\x9d\xb8", "Selected players leave their clubs"),
             kbo_hub_text("\xec\xa0\x9c\xed\x95\x9c \xeb\xaa\x85\xeb\x8b\xa8", "Restricted-list window"),
@@ -210,7 +210,7 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
         kbo_webview_append_asian_games_schedule_row(
             buffer,
             final_date,
-            g_kbo_asian_games_final_event_title,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL,
             kbo_hub_text("\xea\xb2\xb0\xec\x8a\xb9 / \xeb\xb3\xb5\xea\xb7\x80", "Final / Return"),
             kbo_hub_text("\xeb\x8c\x80\xed\x9a\x8c \xec\xa2\x85\xeb\xa3\x8c \xed\x9b\x84 \xea\xb5\xac\xeb\x8b\xa8 \xeb\xb3\xb5\xea\xb7\x80 \xeb\xb0\x8f \xeb\xb3\x91\xec\x97\xad \xed\x98\x9c\xed\x83\x9d \xec\xb2\x98\xeb\xa6\xac", "Players return after the final"),
             kbo_hub_text("\xea\xb8\x88\xeb\xa9\x94\xeb\x8b\xac \xeb\xa9\xb4\xec\xa0\x9c", "Gold-medal exemption"),

@@ -244,25 +244,60 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
         read_kbo_localappdata_flag_file("disable_kbo_ai_fa_status_candidate_insert_hook.txt");
     int auto_enable_ai_fa_status_candidate_insert_hook_for_foreign_ai =
         read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt");
+    int auto_enable_ai_fa_status_candidate_insert_hook_for_foreign_controller =
+        kbo_foreign_ai_controller_enabled();
     int auto_enable_ai_fa_status_candidate_insert_hook =
         kbo_foreign_injury_replacement_enabled()
-        || auto_enable_ai_fa_status_candidate_insert_hook_for_foreign_ai;
+        || auto_enable_ai_fa_status_candidate_insert_hook_for_foreign_ai
+        || auto_enable_ai_fa_status_candidate_insert_hook_for_foreign_controller;
     int enable_ai_fa_status_candidate_insert_hook =
         !disable_ai_fa_status_candidate_insert_hook
         && (explicit_enable_ai_fa_status_candidate_insert_hook
             || auto_enable_ai_fa_status_candidate_insert_hook);
     append_logf(
-        "KBO FA market diagnostic flags: enable_ai_fa_status_candidate_insert_hook=%d explicit=%d auto_foreign_injury=%d auto_foreign_ai=%d disable=%d disable_intl_established_fa_generation_filter=%d",
+        "KBO FA market diagnostic flags: enable_ai_fa_status_candidate_insert_hook=%d explicit=%d auto_foreign_injury=%d auto_foreign_ai=%d auto_foreign_controller=%d disable=%d disable_intl_established_fa_generation_filter=%d",
         enable_ai_fa_status_candidate_insert_hook,
         explicit_enable_ai_fa_status_candidate_insert_hook,
         kbo_foreign_injury_replacement_enabled(),
         auto_enable_ai_fa_status_candidate_insert_hook_for_foreign_ai,
+        auto_enable_ai_fa_status_candidate_insert_hook_for_foreign_controller,
         disable_ai_fa_status_candidate_insert_hook,
         read_kbo_localappdata_flag_file("disable_intl_established_fa_generation_filter.txt"));
     if (enable_ai_fa_status_candidate_insert_hook) {
         install_kbo_ai_fa_status_candidate_insert_patch();
     } else {
-        append_log_line("KBO AI FA status candidate insert hook disabled: no explicit enable, no foreign injury/foreign AI auto-enable, or disable flag is set");
+        append_log_line("KBO AI FA status candidate insert hook disabled: no explicit enable, no foreign injury/foreign AI/controller auto-enable, or disable flag is set");
+    }
+    int explicit_enable_foreign_ai_offer_candidate_priority_hook =
+        read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_candidate_priority_hook.txt");
+    int disable_foreign_ai_offer_candidate_priority_hook =
+        read_kbo_localappdata_flag_file("disable_kbo_foreign_ai_offer_candidate_priority_hook.txt");
+    int auto_enable_foreign_ai_offer_candidate_priority_hook_for_foreign_ai =
+        read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt");
+    int auto_enable_foreign_ai_offer_candidate_priority_hook_for_foreign_controller =
+        kbo_foreign_ai_controller_enabled();
+    int enable_foreign_ai_offer_candidate_priority_hook =
+        !disable_foreign_ai_offer_candidate_priority_hook
+        && (explicit_enable_foreign_ai_offer_candidate_priority_hook
+            || auto_enable_foreign_ai_offer_candidate_priority_hook_for_foreign_ai
+            || auto_enable_foreign_ai_offer_candidate_priority_hook_for_foreign_controller);
+    append_logf(
+        "KBO foreign AI offer candidate priority flags: enable=%d explicit=%d auto_foreign_ai=%d auto_foreign_controller=%d disable=%d",
+        enable_foreign_ai_offer_candidate_priority_hook,
+        explicit_enable_foreign_ai_offer_candidate_priority_hook,
+        auto_enable_foreign_ai_offer_candidate_priority_hook_for_foreign_ai,
+        auto_enable_foreign_ai_offer_candidate_priority_hook_for_foreign_controller,
+        disable_foreign_ai_offer_candidate_priority_hook);
+    if (enable_foreign_ai_offer_candidate_priority_hook) {
+        install_kbo_foreign_ai_offer_candidate_priority_patch();
+    } else {
+        append_log_line("KBO foreign AI offer candidate priority hook disabled: no explicit/foreign-AI/controller auto-enable or disable flag is set");
+    }
+    if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_research_hooks.txt")
+            || read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_attach_probe.txt")) {
+        install_kbo_foreign_ai_offer_attach_probe_patch();
+    } else {
+        append_log_line("KBO foreign AI offer attach hook disabled: no research/probe flag is enabled");
     }
     if (kbo_no_minor_contract_patch_enabled()) {
         if (!kbo_opening_day_storyline_guard_active("no_minor_contract_patch_install", NULL, NULL)) {

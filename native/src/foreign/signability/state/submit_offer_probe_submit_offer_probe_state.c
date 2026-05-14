@@ -52,6 +52,7 @@ typedef struct KboForeignFaDemandRemapRecord {
 KboFinancialSalaryLadderSnapshot g_kbo_foreign_fa_demand_ladder_snapshot = {0};
 KboForeignFaDemandRemapRecord g_kbo_foreign_fa_demand_remap_records[512] = {0};
 volatile LONG g_kbo_foreign_fa_demand_remap_record_cursor = 0;
+volatile LONG g_kbo_foreign_fa_demand_restore_timer_pending = 0;
 
 const uint32_t KBO_FINANCIALS_SALARY_LADDER_OFFSETS[9] = {
     OOTP27_FINANCIALS_SALARY_LADDER_MINIMUM_OFFSET,

@@ -84,6 +84,28 @@ public sealed class KboSeedFilesTests : IDisposable
     }
 
     [Fact]
+    public void EnsureBundledKboDataDirectory_CopiesNestedFilesWhenMissingOrChanged()
+    {
+        var localDir = Path.Combine(tempDir, "local");
+        var candidate = Path.Combine(tempDir, "candidate", "news_templates");
+        var sourcePath = Path.Combine(candidate, "ko", "captain.json");
+        var localPath = Path.Combine(localDir, "news_templates", "ko", "captain.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(sourcePath)!);
+        File.WriteAllText(sourcePath, "{\"captain.summary.title\":\"A\"}");
+
+        global::KboSeedFiles.EnsureBundledKboDataDirectory(localDir, "news_templates", "News templates", [candidate]);
+
+        Assert.Equal("{\"captain.summary.title\":\"A\"}", File.ReadAllText(localPath));
+
+        File.WriteAllText(sourcePath, "{\"captain.summary.title\":\"B\"}");
+        File.SetLastWriteTimeUtc(sourcePath, File.GetLastWriteTimeUtc(localPath).AddMinutes(1));
+
+        global::KboSeedFiles.EnsureBundledKboDataDirectory(localDir, "news_templates", "News templates", [candidate]);
+
+        Assert.Equal("{\"captain.summary.title\":\"B\"}", File.ReadAllText(localPath));
+    }
+
+    [Fact]
     public void RemoveRetiredBundledKboDataFileIfUnchanged_RemovesOnlyOldForeignReplacementSeed()
     {
         var localDir = Path.Combine(tempDir, "local");

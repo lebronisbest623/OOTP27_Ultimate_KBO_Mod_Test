@@ -16,6 +16,23 @@
 #include "../core_league_context_parts/event_manager/event_manager.h"
 #include "../logging/core_log.h"
 #include "../dates/core_text_date.h"
+#include "../text/ootp_text_encoding.h"
+
+static int kbo_league_event_title_matches(const char* existing_title, const char* expected_title)
+{
+    if (existing_title == NULL || expected_title == NULL || existing_title[0] == '\0' || expected_title[0] == '\0') {
+        return 0;
+    }
+    if (strcmp(existing_title, expected_title) == 0 || ascii_equals_ignore_case(existing_title, expected_title)) {
+        return 1;
+    }
+
+    char* internal_title = kbo_alloc_ootp_internal_text(expected_title);
+    int matches = internal_title != NULL
+        && (strcmp(existing_title, internal_title) == 0 || ascii_equals_ignore_case(existing_title, internal_title));
+    kbo_free_ootp_internal_text(internal_title);
+    return matches;
+}
 
 static int kbo_league_event_exists(
     uintptr_t event_manager,
@@ -68,7 +85,7 @@ static int kbo_league_event_exists(
         if (!copy_ootp_string_object_text(event, OOTP27_LEAGUE_EVENT_NAME_STRING_OFFSET, existing_title, sizeof(existing_title))) {
             continue;
         }
-        if (ascii_equals_ignore_case(existing_title, title)) {
+        if (kbo_league_event_title_matches(existing_title, title)) {
             return 1;
         }
     }
@@ -132,12 +149,15 @@ int create_kbo_league_event(
     ootp_date[10] = (uint8_t)day;
     ootp_date[11] = (uint8_t)month;
 
+    char* internal_title = kbo_alloc_ootp_internal_text(title);
+    const char* title_for_ootp = internal_title != NULL ? internal_title : title;
+
     void* event = create_event(
         (void*)event_manager,
         ootp_date,
         event_type,
         league_id,
-        title,
+        title_for_ootp,
         aux_id);
 
     append_logf(
@@ -162,5 +182,6 @@ int create_kbo_league_event(
         league_id,
         event_type,
         kbo_league_event_exists(event_manager, year, month, day, league_id, event_type, title));
+    kbo_free_ootp_internal_text(internal_title);
     return event != NULL;
 }
