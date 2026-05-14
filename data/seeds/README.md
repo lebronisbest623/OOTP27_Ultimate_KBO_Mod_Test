@@ -16,9 +16,11 @@ Seed groups:
 - `asian_games`
 - `captain`
 - `competitive_balance_tax`
+- `custom_events`
 - `economy_and_fa`
 - `foreign_players`
 - `military_service`
+- `player_team_history`
 - `runtime`
 - `news_templates`
 - `ui_text`

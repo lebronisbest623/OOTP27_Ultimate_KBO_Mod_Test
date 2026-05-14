@@ -1,0 +1,30 @@
+{
+  "name": "foreign priority offseason 2026",
+  "kind": "custom_event.foreign_priority",
+  "inputs": {
+    "season": 2026,
+    "anchor_date": "2026-11-02"
+  },
+  "expected_events": [
+    {
+      "kind": "foreign_priority_open",
+      "date": "2026-11-02",
+      "title_key": "custom_event.foreign_priority.open.title"
+    },
+    {
+      "kind": "foreign_priority_close",
+      "date": "2026-11-22",
+      "title_key": "custom_event.foreign_priority.close.title"
+    },
+    {
+      "kind": "fa_declaration",
+      "date": "2026-11-09",
+      "title_key": "custom_event.fa.declaration.title"
+    },
+    {
+      "kind": "military_selection",
+      "date": "2026-12-02",
+      "title_key": "custom_event.military.selection.title"
+    }
+  ]
+}

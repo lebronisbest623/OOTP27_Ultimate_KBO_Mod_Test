@@ -1,0 +1,15 @@
+{
+  "name": "custom event offseason transition waits before october",
+  "kind": "custom_event.offseason_transition",
+  "inputs": {
+    "date": "2026-09-20",
+    "read_phase_available": true,
+    "had_previous_phase": true,
+    "previous_phase": 3,
+    "phase": 1,
+    "previous_phase_date": "2026-09-19"
+  },
+  "expected_transition": {
+    "action": "none"
+  }
+}

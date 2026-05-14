@@ -1,0 +1,24 @@
+{
+  "name": "captain calendar year recovery repairs existing csv",
+  "kind": "captain.maintenance_decision",
+  "inputs": {
+    "date": "2027-03-10",
+    "league_season": 2026,
+    "phase": 1,
+    "league_ptr_available": true,
+    "csv_exists": true,
+    "seed_available": false
+  },
+  "expected_maintenance": [
+    {
+      "action": "emit_initial_selection_news",
+      "season": 2027,
+      "reason": "csv_summary"
+    },
+    {
+      "action": "inseason_repair",
+      "season": 2027,
+      "reason": "calendar_year_recovery"
+    }
+  ]
+}

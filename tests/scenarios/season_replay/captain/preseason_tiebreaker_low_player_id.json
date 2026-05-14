@@ -1,0 +1,52 @@
+{
+  "name": "captain tie-breaker uses lower player id",
+  "kind": "captain.preseason_selection",
+  "inputs": {
+    "season": 2026,
+    "date": "2026-03-10",
+    "league_id": 100
+  },
+  "teams": [
+    {
+      "team_id": 3,
+      "code": "HAN",
+      "name": "Hanwha Eagles"
+    }
+  ],
+  "players": [
+    {
+      "player_id": 3001,
+      "name": "Tie Candidate A",
+      "team_id": 3,
+      "current_team_id": 3,
+      "active_team_id": 3,
+      "nation_id": 177,
+      "age": 31,
+      "salary": 100000,
+      "value_score": 10000,
+      "same_team_seasons": 2
+    },
+    {
+      "player_id": 3002,
+      "name": "Tie Candidate B",
+      "team_id": 3,
+      "current_team_id": 3,
+      "active_team_id": 3,
+      "nation_id": 177,
+      "age": 31,
+      "salary": 100000,
+      "value_score": 10000,
+      "same_team_seasons": 2
+    }
+  ],
+  "expected_captains": [
+    {
+      "team_id": 3,
+      "team_name": "Hanwha Eagles",
+      "player_id": 3001,
+      "player_name": "Tie Candidate A",
+      "score": 209100,
+      "reason": "heuristic:veteran_value_salary_domestic_team_tenure"
+    }
+  ]
+}

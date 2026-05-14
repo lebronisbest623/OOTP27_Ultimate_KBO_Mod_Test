@@ -39,6 +39,11 @@ static BOOL CALLBACK kbo_captain_selection_policy_init_once(PINIT_ONCE init_once
     p->foreign_penalty = kbo_captain_selection_policy_int("foreign_penalty", 180000, 0, 10000000);
     p->active_team_bonus = kbo_captain_selection_policy_int("active_team_bonus", 30000, 0, 10000000);
     p->current_team_bonus = kbo_captain_selection_policy_int("current_team_bonus", 15000, 0, 10000000);
+    p->same_team_min_seasons = kbo_captain_selection_policy_int("same_team_min_seasons", 2, 0, 30);
+    p->same_team_bonus_per_season = kbo_captain_selection_policy_int("same_team_bonus_per_season", 12000, 0, 10000000);
+    p->same_team_bonus_max = kbo_captain_selection_policy_int("same_team_bonus_max", 72000, 0, 10000000);
+    p->same_team_short_penalty = kbo_captain_selection_policy_int("same_team_short_penalty", 160000, 0, 10000000);
+    p->same_team_unknown_penalty = kbo_captain_selection_policy_int("same_team_unknown_penalty", 25000, 0, 10000000);
     p->dfa_penalty = kbo_captain_selection_policy_int("dfa_penalty", 140000, 0, 10000000);
     p->restricted_penalty = kbo_captain_selection_policy_int("restricted_penalty", 50000, 0, 10000000);
     p->injured_penalty = kbo_captain_selection_policy_int("injured_penalty", 12000, 0, 10000000);

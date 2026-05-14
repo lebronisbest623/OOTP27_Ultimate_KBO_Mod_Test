@@ -39,8 +39,14 @@
       "id": "competitive_balance_tax",
       "label": "Competitive balance tax",
       "files": [
-        { "path": "cbt_player_team_seasons_seed.csv", "source": "competitive_balance_tax/cbt_player_team_seasons_seed.csv", "label": "CBT player team seasons seed", "kind": "seed" },
         { "path": "cbt_rules.json", "source": "competitive_balance_tax/cbt_rules.json", "label": "CBT rules", "kind": "rules" }
+      ]
+    },
+    {
+      "id": "custom_events",
+      "label": "Custom events",
+      "files": [
+        { "path": "custom_event_catalog.json", "source": "custom_events/custom_event_catalog.json", "label": "Custom event catalog", "kind": "policy" }
       ]
     },
     {
@@ -70,6 +76,13 @@
       "files": [
         { "path": "military_service_policy.json", "source": "military_service/military_service_policy.json", "label": "Military service policy", "kind": "policy" },
         { "path": "military_service_seed.csv", "source": "military_service/military_service_seed.csv", "label": "Military service seed", "kind": "seed" }
+      ]
+    },
+    {
+      "id": "player_team_history",
+      "label": "Player team history",
+      "files": [
+        { "path": "player_team_seasons_seed.csv", "source": "player_team_history/player_team_seasons_seed.csv", "label": "Player team seasons seed", "kind": "seed" }
       ]
     },
     {

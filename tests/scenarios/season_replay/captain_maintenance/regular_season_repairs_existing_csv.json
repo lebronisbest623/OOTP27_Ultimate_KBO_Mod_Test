@@ -1,0 +1,24 @@
+{
+  "name": "captain regular season repairs existing csv",
+  "kind": "captain.maintenance_decision",
+  "inputs": {
+    "date": "2026-04-21",
+    "league_season": 2026,
+    "phase": 3,
+    "league_ptr_available": true,
+    "csv_exists": true,
+    "seed_available": false
+  },
+  "expected_maintenance": [
+    {
+      "action": "emit_initial_selection_news",
+      "season": 2026,
+      "reason": "csv_summary"
+    },
+    {
+      "action": "inseason_repair",
+      "season": 2026,
+      "reason": "regular_season_existing_csv"
+    }
+  ]
+}

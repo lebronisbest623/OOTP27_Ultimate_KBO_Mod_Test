@@ -1,0 +1,58 @@
+{
+  "name": "captain seed priority beats heuristic score",
+  "kind": "captain.preseason_selection",
+  "inputs": {
+    "season": 2026,
+    "date": "2026-03-10",
+    "league_id": 100
+  },
+  "teams": [
+    {
+      "team_id": 1,
+      "code": "DOO",
+      "name": "Doosan Bears"
+    }
+  ],
+  "players": [
+    {
+      "player_id": 1001,
+      "name": "Yang Ui-ji",
+      "team_id": 1,
+      "current_team_id": 1,
+      "active_team_id": 1,
+      "nation_id": 177,
+      "age": 39,
+      "salary": 600000,
+      "value_score": 90000,
+      "same_team_seasons": 8,
+      "seeded": true,
+      "seed_priority": 100,
+      "seed_source": "captain_seed.csv",
+      "seed_key": "yanguiji"
+    },
+    {
+      "player_id": 1002,
+      "name": "Higher Score Veteran",
+      "team_id": 1,
+      "current_team_id": 1,
+      "active_team_id": 1,
+      "nation_id": 177,
+      "age": 33,
+      "salary": 900000,
+      "value_score": 110000,
+      "same_team_seasons": 7
+    }
+  ],
+  "expected_captains": [
+    {
+      "team_id": 1,
+      "team_name": "Doosan Bears",
+      "player_id": 1001,
+      "player_name": "Yang Ui-ji",
+      "score": 319600,
+      "seeded": true,
+      "seed_priority": 100,
+      "reason": "seed:yanguiji"
+    }
+  ]
+}

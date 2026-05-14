@@ -1,0 +1,16 @@
+{
+  "name": "custom event offseason transition uses previous phase date",
+  "kind": "custom_event.offseason_transition",
+  "inputs": {
+    "date": "2026-11-02",
+    "read_phase_available": true,
+    "had_previous_phase": true,
+    "previous_phase": 4,
+    "phase": 1,
+    "previous_phase_date": "2026-11-01"
+  },
+  "expected_transition": {
+    "action": "schedule_foreign_priority",
+    "anchor_date": "2026-11-01"
+  }
+}

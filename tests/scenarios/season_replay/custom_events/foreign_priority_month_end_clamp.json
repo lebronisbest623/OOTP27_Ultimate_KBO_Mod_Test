@@ -1,0 +1,30 @@
+{
+  "name": "foreign priority month-end clamp",
+  "kind": "custom_event.foreign_priority",
+  "inputs": {
+    "season": 2026,
+    "anchor_date": "2026-01-31"
+  },
+  "expected_events": [
+    {
+      "kind": "foreign_priority_open",
+      "date": "2026-01-31",
+      "title_key": "custom_event.foreign_priority.open.title"
+    },
+    {
+      "kind": "foreign_priority_close",
+      "date": "2026-02-20",
+      "title_key": "custom_event.foreign_priority.close.title"
+    },
+    {
+      "kind": "fa_declaration",
+      "date": "2026-02-07",
+      "title_key": "custom_event.fa.declaration.title"
+    },
+    {
+      "kind": "military_selection",
+      "date": "2026-02-28",
+      "title_key": "custom_event.military.selection.title"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "name": "captain heuristic picks domestic veteran",
+  "kind": "captain.preseason_selection",
+  "inputs": {
+    "season": 2026,
+    "date": "2026-03-10",
+    "league_id": 100
+  },
+  "teams": [
+    {
+      "team_id": 2,
+      "code": "LG",
+      "name": "LG Twins"
+    }
+  ],
+  "players": [
+    {
+      "player_id": 2001,
+      "name": "Club Veteran",
+      "team_id": 2,
+      "current_team_id": 2,
+      "active_team_id": 2,
+      "nation_id": 177,
+      "age": 34,
+      "salary": 500000,
+      "value_score": 80000,
+      "same_team_seasons": 4
+    },
+    {
+      "player_id": 2002,
+      "name": "Imported Star",
+      "team_id": 2,
+      "current_team_id": 2,
+      "active_team_id": 2,
+      "nation_id": 840,
+      "age": 32,
+      "salary": 950000,
+      "value_score": 125000,
+      "same_team_seasons": 3
+    },
+    {
+      "player_id": 2003,
+      "name": "DFA Veteran",
+      "team_id": 2,
+      "current_team_id": 2,
+      "active_team_id": 2,
+      "nation_id": 177,
+      "age": 35,
+      "salary": 800000,
+      "value_score": 100000,
+      "same_team_seasons": 5,
+      "dfa": true
+    }
+  ],
+  "expected_captains": [
+    {
+      "team_id": 2,
+      "team_name": "LG Twins",
+      "player_id": 2001,
+      "player_name": "Club Veteran",
+      "score": 303500,
+      "reason": "heuristic:veteran_value_salary_domestic_team_tenure"
+    }
+  ]
+}

@@ -45,6 +45,7 @@ typedef struct KboCaptainSelectionRow {
     int32_t salary;
     int32_t value_score;
     int32_t score;
+    int32_t same_team_seasons;
     int32_t seed_priority;
     int16_t overall_value;
     int16_t talent_value;

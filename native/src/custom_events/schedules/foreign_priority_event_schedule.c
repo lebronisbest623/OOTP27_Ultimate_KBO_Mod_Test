@@ -14,6 +14,7 @@
 #include "../../foreign/common/policy/foreign_player_policy.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../foreign/waiver_window/state/foreign_waiver_window_state.h"
+#include "../runtime/catalog/custom_event_catalog.h"
 
 uint32_t kbo_recent_phase_transition_offseason_anchor(uint32_t league_id, uint32_t today_yyyymmdd)
 {
@@ -77,6 +78,18 @@ static uint32_t kbo_recent_foreign_waiver_marker_anchor(uint32_t today_yyyymmdd,
     return marker;
 }
 
+static uint32_t kbo_custom_event_add_months_yyyymmdd(uint32_t yyyymmdd, uint32_t months)
+{
+    uint32_t result = yyyymmdd;
+    for (uint32_t i = 0u; i < months; i++) {
+        result = kbo_add_one_month_yyyymmdd(result);
+        if (result == 0u) {
+            return 0u;
+        }
+    }
+    return result;
+}
+
 int kbo_schedule_foreign_priority_custom_events_at_anchor(
     const char* source,
     uint32_t today,
@@ -114,8 +127,13 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
     uint32_t close_date = kbo_add_days_yyyymmdd(
         anchor_date,
         (uint32_t)kbo_foreign_player_policy()->waiver_window_days);
-    uint32_t fa_declaration_date = kbo_add_days_yyyymmdd(anchor_date, 7u);
-    uint32_t military_selection_date = kbo_add_one_month_yyyymmdd(anchor_date);
+    const KboCustomEventSchedulePolicy* event_policy = kbo_custom_event_schedule_policy();
+    uint32_t fa_declaration_date = kbo_add_days_yyyymmdd(
+        anchor_date,
+        (uint32_t)event_policy->foreign_priority_fa_declaration_offset_days);
+    uint32_t military_selection_date = kbo_custom_event_add_months_yyyymmdd(
+        anchor_date,
+        (uint32_t)event_policy->foreign_priority_military_selection_offset_months);
     if (close_date == 0u || fa_declaration_date == 0u) {
         append_logf(
             "KBO custom event schedule skipped source=%s reason=derived_date_invalid season_end=%u anchor=%u close=%u fa_declaration=%u",

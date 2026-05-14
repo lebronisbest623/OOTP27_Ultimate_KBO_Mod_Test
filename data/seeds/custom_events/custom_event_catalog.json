@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "schedule.foreign_priority.fa_declaration_offset_days": 7,
+  "schedule.foreign_priority.military_selection_offset_months": 1,
+  "event.foreign_priority_open.title_key": "custom_event.foreign_priority.open.title",
+  "event.foreign_priority_close.title_key": "custom_event.foreign_priority.close.title",
+  "event.military_selection.title_key": "custom_event.military.selection.title",
+  "event.asian_games_selection.title_key": "custom_event.asian_games.selection.title",
+  "event.asian_games_departure.title_key": "custom_event.asian_games.departure.title",
+  "event.asian_games_final.title_key": "custom_event.asian_games.final.title",
+  "event.cbt_exception_deadline.title_key": "custom_event.cbt.exception_deadline.title",
+  "event.cbt_announcement.title_key": "custom_event.cbt.announcement.title",
+  "event.fa_declaration.title_key": "custom_event.fa.declaration.title",
+  "schedule": {
+    "foreign_priority": {
+      "fa_declaration_offset_days": 7,
+      "military_selection_offset_months": 1
+    }
+  },
+  "events": [
+    {
+      "kind": "foreign_priority_open",
+      "title_key": "custom_event.foreign_priority.open.title"
+    },
+    {
+      "kind": "foreign_priority_close",
+      "title_key": "custom_event.foreign_priority.close.title"
+    },
+    {
+      "kind": "military_selection",
+      "title_key": "custom_event.military.selection.title"
+    },
+    {
+      "kind": "asian_games_selection",
+      "title_key": "custom_event.asian_games.selection.title"
+    },
+    {
+      "kind": "asian_games_departure",
+      "title_key": "custom_event.asian_games.departure.title"
+    },
+    {
+      "kind": "asian_games_final",
+      "title_key": "custom_event.asian_games.final.title"
+    },
+    {
+      "kind": "cbt_exception_deadline",
+      "title_key": "custom_event.cbt.exception_deadline.title"
+    },
+    {
+      "kind": "cbt_announcement",
+      "title_key": "custom_event.cbt.announcement.title"
+    },
+    {
+      "kind": "fa_declaration",
+      "title_key": "custom_event.fa.declaration.title"
+    }
+  ]
+}

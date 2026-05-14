@@ -275,8 +275,8 @@ scanner logic inline.
 
 The custom-event subsystem uses the following internal grouping:
 
-- `runtime/`: event names, lookup, markers, scanner, dispatcher, monitor, and
-  shared custom-event declarations
+- `runtime/`: catalog loading, event names, lookup, markers, scanner,
+  dispatcher, monitor, and shared custom-event declarations
 - `asian_games/`: Asian Games state, schedule creation, roster store, and
   player evaluation
 - `asian_games_lifecycle/`: selection-result application, departure,
@@ -289,6 +289,9 @@ The custom-event subsystem uses the following internal grouping:
 - `diagnostics/`: custom-event-adjacent read-only diagnostics
 
 The root folder should not accumulate scanner, dispatcher, or domain behavior.
+Runtime event title keys and schedule offsets live in
+`data/seeds/custom_events/custom_event_catalog.json`; native code should read
+that catalog instead of adding new event constants inline.
 
 ### FA and Amateur Modules
 
@@ -449,6 +452,11 @@ powershell -ExecutionPolicy Bypass -File tools\check-native-architecture.ps1 -Wa
 ```
 
 CI runs managed build/test, native build, and native helper tests on Windows.
+Season replay scenarios live under `tests/scenarios/season_replay/` and are
+covered by `KBOLauncher.Tests/SeasonReplayHarnessTests.cs`. Current replay
+coverage includes foreign-priority custom event scheduling, preseason captain
+selection, custom-event offseason transition detection, captain maintenance
+trigger decisions, and in-season captain repair.
 
 ## Naming Rules
 

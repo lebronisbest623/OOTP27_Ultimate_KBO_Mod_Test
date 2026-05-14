@@ -1,0 +1,13 @@
+{
+  "name": "custom event offseason transition schedules pending anchor",
+  "kind": "custom_event.offseason_transition",
+  "inputs": {
+    "date": "2026-12-01",
+    "read_phase_available": false,
+    "pending_anchor_date": "2026-11-30"
+  },
+  "expected_transition": {
+    "action": "schedule_foreign_priority",
+    "anchor_date": "2026-11-30"
+  }
+}

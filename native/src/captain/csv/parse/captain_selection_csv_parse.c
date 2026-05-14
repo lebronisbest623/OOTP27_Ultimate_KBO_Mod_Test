@@ -126,13 +126,18 @@ int kbo_captain_parse_selection_csv_fields(
     if (count > 18 && kbo_captain_loaded_csv_parse_u32(fields[18], &parsed_u32)) { row.age = (uint16_t)parsed_u32; }
     if (count > 19 && kbo_captain_loaded_csv_parse_i32(fields[19], &parsed_i32)) { row.salary = parsed_i32; }
     if (count > 20 && kbo_captain_loaded_csv_parse_i32(fields[20], &parsed_i32)) { row.value_score = parsed_i32; }
-    if (count > 21 && kbo_captain_loaded_csv_parse_i32(fields[21], &parsed_i32)) { row.overall_value = (int16_t)parsed_i32; }
-    if (count > 22 && kbo_captain_loaded_csv_parse_i32(fields[22], &parsed_i32)) { row.talent_value = (int16_t)parsed_i32; }
-    if (count > 23 && kbo_captain_loaded_csv_parse_i32(fields[23], &parsed_i32)) { row.ratings_value = (int16_t)parsed_i32; }
-    if (count > 24 && kbo_captain_loaded_csv_parse_i32(fields[24], &parsed_i32)) { row.career_value = (int16_t)parsed_i32; }
-    if (count > 25 && kbo_captain_loaded_csv_parse_u32(fields[25], &parsed_u32)) { row.dfa = parsed_u32 != 0u ? 1u : 0u; }
-    if (count > 26 && kbo_captain_loaded_csv_parse_u32(fields[26], &parsed_u32)) { row.restricted = parsed_u32 != 0u ? 1u : 0u; }
-    if (count > 27 && kbo_captain_loaded_csv_parse_u32(fields[27], &parsed_u32)) { row.injured = parsed_u32 != 0u ? 1u : 0u; }
+    int detail_offset = 21;
+    if (count > 28) {
+        if (kbo_captain_loaded_csv_parse_i32(fields[21], &parsed_i32)) { row.same_team_seasons = parsed_i32; }
+        detail_offset = 22;
+    }
+    if (count > detail_offset && kbo_captain_loaded_csv_parse_i32(fields[detail_offset], &parsed_i32)) { row.overall_value = (int16_t)parsed_i32; }
+    if (count > detail_offset + 1 && kbo_captain_loaded_csv_parse_i32(fields[detail_offset + 1], &parsed_i32)) { row.talent_value = (int16_t)parsed_i32; }
+    if (count > detail_offset + 2 && kbo_captain_loaded_csv_parse_i32(fields[detail_offset + 2], &parsed_i32)) { row.ratings_value = (int16_t)parsed_i32; }
+    if (count > detail_offset + 3 && kbo_captain_loaded_csv_parse_i32(fields[detail_offset + 3], &parsed_i32)) { row.career_value = (int16_t)parsed_i32; }
+    if (count > detail_offset + 4 && kbo_captain_loaded_csv_parse_u32(fields[detail_offset + 4], &parsed_u32)) { row.dfa = parsed_u32 != 0u ? 1u : 0u; }
+    if (count > detail_offset + 5 && kbo_captain_loaded_csv_parse_u32(fields[detail_offset + 5], &parsed_u32)) { row.restricted = parsed_u32 != 0u ? 1u : 0u; }
+    if (count > detail_offset + 6 && kbo_captain_loaded_csv_parse_u32(fields[detail_offset + 6], &parsed_u32)) { row.injured = parsed_u32 != 0u ? 1u : 0u; }
 
     *out = row;
     return 1;

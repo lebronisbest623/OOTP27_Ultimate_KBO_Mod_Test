@@ -21,6 +21,11 @@ typedef struct KboCaptainSelectionPolicy {
     int32_t foreign_penalty;
     int32_t active_team_bonus;
     int32_t current_team_bonus;
+    int32_t same_team_min_seasons;
+    int32_t same_team_bonus_per_season;
+    int32_t same_team_bonus_max;
+    int32_t same_team_short_penalty;
+    int32_t same_team_unknown_penalty;
     int32_t dfa_penalty;
     int32_t restricted_penalty;
     int32_t injured_penalty;

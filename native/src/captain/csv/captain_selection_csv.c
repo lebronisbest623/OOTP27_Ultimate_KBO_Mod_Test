@@ -85,7 +85,7 @@ static int kbo_captain_write_header(HANDLE file)
     const char* header =
         "date,season,source,league_id,team_id,team_name,captain_player_id,captain_name,"
         "score,reason,seeded,seed_priority,seed_source,nation_id,domestic,current_team_id,active_team_id,current_league_id,"
-        "age,salary,value_score,overall_value,talent_value,ratings_value,career_value,"
+        "age,salary,value_score,same_team_seasons,overall_value,talent_value,ratings_value,career_value,"
         "dfa,restricted,injured\r\n";
     DWORD written = 0;
     return WriteFile(file, header, (DWORD)strlen(header), &written, NULL)
@@ -185,7 +185,7 @@ int kbo_captain_write_selection_csv(
         len = snprintf(
             text,
             sizeof(text),
-            ",%u,%u,%u,%u,%u,%u,%d,%d,%d,%d,%d,%d,%u,%u,%u\r\n",
+            ",%u,%u,%u,%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%u,%u,%u\r\n",
             row->nation_id,
             (uint32_t)row->domestic,
             row->current_team_id,
@@ -194,6 +194,7 @@ int kbo_captain_write_selection_csv(
             (uint32_t)row->age,
             row->salary,
             row->value_score,
+            row->same_team_seasons,
             (int)row->overall_value,
             (int)row->talent_value,
             (int)row->ratings_value,

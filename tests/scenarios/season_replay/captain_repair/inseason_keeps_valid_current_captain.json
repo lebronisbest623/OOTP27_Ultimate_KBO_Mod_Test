@@ -1,0 +1,51 @@
+{
+  "name": "captain in-season repair keeps valid current captain",
+  "kind": "captain.inseason_repair",
+  "inputs": {
+    "season": 2026,
+    "date": "2026-05-20",
+    "league_id": 100
+  },
+  "teams": [
+    {
+      "team_id": 5,
+      "code": "SSG",
+      "name": "SSG Landers"
+    }
+  ],
+  "current_captains": [
+    {
+      "team_id": 5,
+      "team_name": "SSG Landers",
+      "player_id": 5001,
+      "player_name": "Current Captain",
+      "score": 250000,
+      "reason": "seed:kimkwanghyun",
+      "still_with_team": true
+    }
+  ],
+  "players": [
+    {
+      "player_id": 5002,
+      "name": "Higher Score Candidate",
+      "team_id": 5,
+      "current_team_id": 5,
+      "active_team_id": 5,
+      "nation_id": 177,
+      "age": 33,
+      "salary": 1000000,
+      "value_score": 125000,
+      "same_team_seasons": 5
+    }
+  ],
+  "expected_captains": [
+    {
+      "team_id": 5,
+      "team_name": "SSG Landers",
+      "player_id": 5001,
+      "player_name": "Current Captain",
+      "score": 250000,
+      "reason": "seed:kimkwanghyun"
+    }
+  ]
+}

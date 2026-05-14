@@ -1,0 +1,51 @@
+{
+  "name": "captain in-season repair replaces departed captain",
+  "kind": "captain.inseason_repair",
+  "inputs": {
+    "season": 2026,
+    "date": "2026-05-20",
+    "league_id": 100
+  },
+  "teams": [
+    {
+      "team_id": 4,
+      "code": "KIA",
+      "name": "KIA Tigers"
+    }
+  ],
+  "current_captains": [
+    {
+      "team_id": 4,
+      "team_name": "KIA Tigers",
+      "player_id": 4001,
+      "player_name": "Departed Captain",
+      "score": 311000,
+      "reason": "seed:nasungbum",
+      "still_with_team": false
+    }
+  ],
+  "players": [
+    {
+      "player_id": 4002,
+      "name": "Next Club Leader",
+      "team_id": 4,
+      "current_team_id": 4,
+      "active_team_id": 4,
+      "nation_id": 177,
+      "age": 32,
+      "salary": 700000,
+      "value_score": 85000,
+      "same_team_seasons": 3
+    }
+  ],
+  "expected_captains": [
+    {
+      "team_id": 4,
+      "team_name": "KIA Tigers",
+      "player_id": 4002,
+      "player_name": "Next Club Leader",
+      "score": 296700,
+      "reason": "inseason_replacement:departed:4001"
+    }
+  ]
+}

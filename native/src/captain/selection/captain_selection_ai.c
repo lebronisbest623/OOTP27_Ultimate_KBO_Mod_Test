@@ -1,5 +1,6 @@
 #include "../internal/captain_selection_internal.h"
 #include "captain_selection_policy.h"
+#include "../../player_team_history/player_team_seasons.h"
 
 static uintptr_t* kbo_captain_copy_player_vector_snapshot(
     uintptr_t player_vector,
@@ -109,6 +110,23 @@ static int32_t kbo_captain_age_score(uint16_t age)
     return 0;
 }
 
+static int32_t kbo_captain_same_team_seasons_score(int32_t same_team_seasons)
+{
+    const KboCaptainSelectionPolicy* policy = kbo_captain_selection_policy();
+    if (same_team_seasons <= 0) {
+        return -policy->same_team_unknown_penalty;
+    }
+    if (same_team_seasons < policy->same_team_min_seasons) {
+        return -policy->same_team_short_penalty;
+    }
+
+    int32_t score = same_team_seasons * policy->same_team_bonus_per_season;
+    if (score > policy->same_team_bonus_max) {
+        score = policy->same_team_bonus_max;
+    }
+    return score;
+}
+
 static int32_t kbo_captain_candidate_score(KboCaptainSelectionRow* row)
 {
     const KboCaptainSelectionPolicy* policy = kbo_captain_selection_policy();
@@ -119,6 +137,7 @@ static int32_t kbo_captain_candidate_score(KboCaptainSelectionRow* row)
     score += row->domestic ? policy->domestic_bonus : -policy->foreign_penalty;
     score += row->active_team_id == row->team_id ? policy->active_team_bonus : 0;
     score += row->current_team_id == row->team_id ? policy->current_team_bonus : 0;
+    score += kbo_captain_same_team_seasons_score(row->same_team_seasons);
     score -= row->dfa ? policy->dfa_penalty : 0;
     score -= row->restricted ? policy->restricted_penalty : 0;
     score -= row->injured ? policy->injured_penalty : 0;
@@ -207,6 +226,7 @@ static void kbo_captain_fill_player_row(
     row->current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
     row->age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
     row->salary = kbo_captain_player_salary_for_season(player, season);
+    kbo_player_team_seasons_count_for_player(team_id, player, &row->same_team_seasons);
     row->overall_value = kbo_read_player_i16(player, OOTP27_PLAYER_OVERALL_VALUE_OFFSET);
     row->talent_value = kbo_read_player_i16(player, OOTP27_PLAYER_TALENT_VALUE_OFFSET);
     row->ratings_value = kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET);
@@ -222,7 +242,7 @@ static void kbo_captain_fill_player_row(
     if (row->player_name[0] == '\0' || strcmp(row->player_name, "Unknown player") == 0) {
         snprintf(row->player_name, sizeof(row->player_name), "Player #%u", row->player_id);
     }
-    snprintf(row->reason, sizeof(row->reason), "heuristic:veteran_value_salary_domestic");
+    snprintf(row->reason, sizeof(row->reason), "heuristic:veteran_value_salary_domestic_team_tenure");
 }
 
 int kbo_captain_select_for_preseason(

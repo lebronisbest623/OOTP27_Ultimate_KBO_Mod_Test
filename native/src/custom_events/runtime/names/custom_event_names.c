@@ -8,53 +8,11 @@
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/text/ootp_text_encoding.h"
+#include "../catalog/custom_event_catalog.h"
 
 #define KBO_CUSTOM_EVENT_TITLE_MAX 160u
+#define KBO_CUSTOM_EVENT_TITLE_KEY_MAX 128u
 #define KBO_CUSTOM_EVENT_LANGUAGE_COUNT 2u
-
-typedef struct KboCustomEventDefinition {
-    KboCustomEventKind kind;
-    const char* key;
-} KboCustomEventDefinition;
-
-static const KboCustomEventDefinition g_kbo_custom_event_definitions[] = {
-    {
-        KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_OPEN,
-        "custom_event.foreign_priority.open.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_CLOSE,
-        "custom_event.foreign_priority.close.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_MILITARY_SELECTION,
-        "custom_event.military.selection.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION,
-        "custom_event.asian_games.selection.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE,
-        "custom_event.asian_games.departure.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL,
-        "custom_event.asian_games.final.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE,
-        "custom_event.cbt.exception_deadline.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
-        "custom_event.cbt.announcement.title",
-    },
-    {
-        KBO_CUSTOM_EVENT_KIND_FA_DECLARATION,
-        "custom_event.fa.declaration.title",
-    },
-};
 
 const char* kbo_custom_event_kind_key(KboCustomEventKind kind)
 {
@@ -225,25 +183,26 @@ static BOOL CALLBACK kbo_custom_event_titles_init_once(
     (void)parameter;
     (void)context;
 
-    for (size_t i = 0u; i < sizeof(g_kbo_custom_event_definitions) / sizeof(g_kbo_custom_event_definitions[0]); i++) {
-        const KboCustomEventDefinition* definition = &g_kbo_custom_event_definitions[i];
-        if (definition->kind <= KBO_CUSTOM_EVENT_KIND_UNKNOWN || definition->kind >= KBO_CUSTOM_EVENT_KIND_COUNT) {
+    for (int kind_value = KBO_CUSTOM_EVENT_KIND_UNKNOWN + 1; kind_value < KBO_CUSTOM_EVENT_KIND_COUNT; kind_value++) {
+        KboCustomEventKind kind = (KboCustomEventKind)kind_value;
+        char title_key[KBO_CUSTOM_EVENT_TITLE_KEY_MAX] = {0};
+        if (!kbo_custom_event_catalog_title_key(kind, title_key, sizeof(title_key))) {
             continue;
         }
 
         for (int language_index = 0; language_index < (int)KBO_CUSTOM_EVENT_LANGUAGE_COUNT; language_index++) {
-            char* title = g_kbo_custom_event_titles[definition->kind][language_index];
+            char* title = g_kbo_custom_event_titles[kind][language_index];
             const char* language_dir = kbo_custom_event_language_dir_from_index(language_index);
             title[0] = '\0';
             if (!kbo_news_template_load_for_language(
                     language_dir,
-                    definition->key,
+                    title_key,
                     title,
                     KBO_CUSTOM_EVENT_TITLE_MAX,
                     NULL,
                     0u,
                     "custom_event_title")) {
-                snprintf(title, KBO_CUSTOM_EVENT_TITLE_MAX, "%s", definition->key);
+                snprintf(title, KBO_CUSTOM_EVENT_TITLE_MAX, "%s", title_key);
             }
         }
     }
@@ -315,11 +274,8 @@ KboCustomEventKind kbo_custom_event_kind_from_name(const char* name)
 
     kbo_custom_event_ensure_title_cache();
 
-    for (size_t i = 0u; i < sizeof(g_kbo_custom_event_definitions) / sizeof(g_kbo_custom_event_definitions[0]); i++) {
-        KboCustomEventKind kind = g_kbo_custom_event_definitions[i].kind;
-        if (kind <= KBO_CUSTOM_EVENT_KIND_UNKNOWN || kind >= KBO_CUSTOM_EVENT_KIND_COUNT) {
-            continue;
-        }
+    for (int kind_value = KBO_CUSTOM_EVENT_KIND_UNKNOWN + 1; kind_value < KBO_CUSTOM_EVENT_KIND_COUNT; kind_value++) {
+        KboCustomEventKind kind = (KboCustomEventKind)kind_value;
         for (int language_index = 0; language_index < (int)KBO_CUSTOM_EVENT_LANGUAGE_COUNT; language_index++) {
             if (kbo_custom_event_name_equals_title(name, g_kbo_custom_event_titles[kind][language_index])) {
                 return kind;

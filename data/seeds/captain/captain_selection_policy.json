@@ -16,6 +16,11 @@
   "foreign_penalty": 180000,
   "active_team_bonus": 30000,
   "current_team_bonus": 15000,
+  "same_team_min_seasons": 2,
+  "same_team_bonus_per_season": 12000,
+  "same_team_bonus_max": 72000,
+  "same_team_short_penalty": 160000,
+  "same_team_unknown_penalty": 25000,
   "dfa_penalty": 140000,
   "restricted_penalty": 50000,
   "injured_penalty": 12000

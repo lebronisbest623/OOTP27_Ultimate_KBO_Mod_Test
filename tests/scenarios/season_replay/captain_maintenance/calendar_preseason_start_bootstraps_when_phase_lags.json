@@ -1,0 +1,19 @@
+{
+  "name": "captain calendar preseason start bootstraps when phase lags",
+  "kind": "captain.maintenance_decision",
+  "inputs": {
+    "date": "2026-03-10",
+    "league_season": 2026,
+    "phase": 1,
+    "league_ptr_available": true,
+    "csv_exists": false,
+    "seed_available": false
+  },
+  "expected_maintenance": [
+    {
+      "action": "write_missing_selection_csv",
+      "season": 2026,
+      "reason": "calendar_preseason_start_missing_csv"
+    }
+  ]
+}
