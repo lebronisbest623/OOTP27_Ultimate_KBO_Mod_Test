@@ -112,6 +112,9 @@ void kbo_fa_market_apply_salary_snapshot_grade(
     KboFaMarketClassification* row,
     const KboFaSalarySnapshotGrade* salary_grades,
     int salary_grade_count,
+    const KboFaRequalificationRecord* requalification_records,
+    int requalification_count,
+    uint32_t current_year,
     const KboFaRules* rules);
 void kbo_fa_market_format_salary(int32_t salary, char* out, size_t out_size);
 const char* kbo_fa_market_display_grade(const char* grade);

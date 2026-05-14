@@ -23,9 +23,9 @@ typedef struct KboCaptainSeed {
     char source[KBO_CAPTAIN_SEED_SOURCE_BYTES];
 } KboCaptainSeed;
 
-void kbo_captain_trim_csv_token_in_place(char* text);
 int kbo_captain_parse_u32_full_token(const char* text, uint32_t* out);
 int kbo_captain_parse_i32_full_token(const char* text, int32_t* out);
+int kbo_parse_captain_seed_fields(char fields[][128], int field_count, KboCaptainSeed* out);
 int kbo_parse_captain_seed_line(const char* line, KboCaptainSeed* out);
 
 #endif

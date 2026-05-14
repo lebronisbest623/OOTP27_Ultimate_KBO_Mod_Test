@@ -4,6 +4,7 @@
 #include <string.h>
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/csv/core_csv.h"
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/dates/core_text_date.h"
@@ -16,59 +17,23 @@ int kbo_import_asian_games_schedule_seed_file_locked(const char* path, const cha
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        return 0;
-    }
-
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 131072u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int imported = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0') {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
+        return 0;
+    }
 
-            char line[512] = {0};
-            size_t line_len = (size_t)(next - cursor);
-            while (line_len > 0u && (cursor[line_len - 1u] == '\r' || cursor[line_len - 1u] == '\n')) {
-                line_len--;
-            }
-            if (line_len >= sizeof(line)) {
-                line_len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, line_len);
-
-            KboAsianGamesScheduleSeed seed;
-            if (kbo_parse_asian_games_schedule_seed_line(line, &seed)) {
-                kbo_add_asian_games_schedule_seed_locked(&seed);
-                imported++;
-            }
-
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[11][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 11);
+        KboAsianGamesScheduleSeed seed;
+        if (kbo_parse_asian_games_schedule_seed_fields(fields, field_count, &seed)) {
+            kbo_add_asian_games_schedule_seed_locked(&seed);
+            imported++;
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     if (imported > 0) {
         append_logf(
             "KBO Asian Games schedule seed import source=%s imported=%d path=%s",

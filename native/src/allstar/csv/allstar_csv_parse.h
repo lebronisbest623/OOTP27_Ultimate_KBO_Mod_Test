@@ -4,17 +4,22 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define KBO_ALLSTAR_CSV_MAX_COLUMNS 160
+#define KBO_ALLSTAR_CSV_FIELD_SIZE 256
+
 uint8_t kbo_parse_allstar_side(const char* text);
 
-void kbo_csv_find_allstar_team_columns(
-    const char* header,
+void kbo_csv_find_allstar_team_columns_from_fields(
+    char fields[][KBO_ALLSTAR_CSV_FIELD_SIZE],
+    int field_count,
     int* year_col,
     int* team_id_col,
     int* name_col,
     int* allstar_col);
 
-void kbo_csv_extract_allstar_team_fields(
-    const char* line,
+void kbo_csv_extract_allstar_team_fields_from_fields(
+    char fields[][KBO_ALLSTAR_CSV_FIELD_SIZE],
+    int field_count,
     int year_col,
     int team_id_col,
     int name_col,

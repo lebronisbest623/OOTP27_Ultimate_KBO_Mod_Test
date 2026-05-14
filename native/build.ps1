@@ -316,11 +316,15 @@ $NativeSources = @(
 $NativeSources += Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Filter "*.c" |
     Sort-Object FullName |
     ForEach-Object { $_.FullName }
+$NativeSources += Get-ChildItem -LiteralPath (Join-Path $Root "third_party\csv_fast_reader") -Filter "*.c" |
+    Sort-Object FullName |
+    ForEach-Object { $_.FullName }
 
 $DllPath = Join-Path $OutDir "KBOFix.dll"
 $NativeInputFiles = @()
 $NativeInputFiles += Get-Item -LiteralPath $NativeSources
 $NativeInputFiles += Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Include "*.h", "*.inc" -File
+$NativeInputFiles += Get-ChildItem -LiteralPath (Join-Path $Root "third_party") -Recurse -Include "*.h", "*.inc", "*.c" -File
 $NativeInputFiles += Get-Item -LiteralPath $WebView2Loader
 
 $InputsNewestThanDll = $true

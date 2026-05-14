@@ -1,0 +1,7 @@
+{
+  "fa_declaration.summary.title": "{season} FA 선언 명단 발표",
+  "fa_declaration.summary.body": "{season}시즌 FA 선언 창구가 마감됐다. 총 {declared_count}명이 FA 권리 행사를 선택했고, {deferred_count}명은 원소속팀에 남아 다음 기회를 보기로 했다.\n\nFA 선언 선수\n{declared_list}\n미신청/보류 선수\n{deferred_list}\n미신청 사유별로는 부진 시즌 뒤 재수를 선택한 선수 {retry_count}명, 시장 평가가 충분하지 않다고 판단한 선수 {no_market_count}명으로 분류됐다.",
+  "fa_declaration.summary.declared_line": "- {player_link} / Team #{team_id} / {grade} / 점수 {score}",
+  "fa_declaration.summary.deferred_line": "- {player_link} / Team #{team_id} / {grade} / {reason}",
+  "fa_declaration.summary.none": "- 해당 없음"
+}

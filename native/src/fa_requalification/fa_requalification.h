@@ -13,12 +13,19 @@ typedef struct KboFaRequalificationRecord {
     uint32_t original_team_id;
     uint32_t last_fa_year;
     uint32_t fa_count;
+    char last_fa_grade[12];
 } KboFaRequalificationRecord;
 
 #endif
 
 int kbo_load_fa_requalification_records(KboFaRequalificationRecord* records, int max_records);
 uint8_t* kbo_find_fa_requalification_player_by_id(uint32_t player_id);
+int kbo_record_fa_requalification_signing_with_grade(
+    uint32_t player_id,
+    uint32_t team_id,
+    uint32_t signing_year,
+    const char* grade,
+    const char* source);
 __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(
     uintptr_t player_ptr,
     uintptr_t team_ptr);

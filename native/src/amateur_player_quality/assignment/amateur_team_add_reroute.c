@@ -6,7 +6,6 @@ static volatile LONG g_kbo_amateur_reroute_verbose_cached = -1;
 static volatile LONG g_kbo_amateur_reroute_verbose_tick = 0;
 static volatile LONG g_kbo_amateur_reroute_debug_csv_cached = -1;
 static volatile LONG g_kbo_amateur_reroute_debug_csv_tick = 0;
-
 static int kbo_amateur_reroute_cached_bool_flag(
     const char* file_name,
     volatile LONG* cached_value,

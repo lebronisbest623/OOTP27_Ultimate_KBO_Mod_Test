@@ -1,4 +1,5 @@
 #include "../internal/foreign_replacement_seed_internal.h"
+#include "../../../core/csv/core_csv.h"
 #include "../../../team/names/team_string.h"
 
 static LONG g_kbo_foreign_replacement_seed_unresolved_log_count = 0;
@@ -247,59 +248,34 @@ int kbo_import_foreign_replacement_player_seed_file_locked(const char* path, con
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        return 0;
-    }
-
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 65536u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int imported = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0') {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
+        return 0;
+    }
 
-            char line[180] = {0};
-            size_t len = (size_t)(next - cursor);
-            while (len > 0u && (cursor[len - 1u] == '\r' || cursor[len - 1u] == '\n')) {
-                len--;
-            }
-            if (len >= sizeof(line)) {
-                len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, len);
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[3][80];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 3);
+        if (field_count <= 0 || fields[0][0] == '\0'
+                || _stricmp(fields[0], "replacement_player_key") == 0
+                || _stricmp(fields[0], "player_id") == 0) {
+            continue;
+        }
 
-            KboForeignReplacementPlayerSeed seed;
-            if (kbo_parse_foreign_replacement_player_seed_line(line, &seed)
-                    && kbo_add_foreign_replacement_player_seed_locked(&seed)) {
-                imported++;
-            }
-
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+        KboForeignReplacementPlayerSeed seed;
+        memset(&seed, 0, sizeof(seed));
+        snprintf(seed.key, sizeof(seed.key), "%s", fields[0]);
+        seed.slot_type = kbo_parse_foreign_replacement_seed_slot_type(field_count > 1 ? fields[1] : "");
+        if (fields[0][0] >= '0' && fields[0][0] <= '9') {
+            seed.player_id = (uint32_t)strtoul(fields[0], NULL, 10);
+        }
+        if (kbo_add_foreign_replacement_player_seed_locked(&seed)) {
+            imported++;
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     if (imported > 0) {
         append_logf(
             "foreign replacement player seed import source=%s imported=%d path=%s",

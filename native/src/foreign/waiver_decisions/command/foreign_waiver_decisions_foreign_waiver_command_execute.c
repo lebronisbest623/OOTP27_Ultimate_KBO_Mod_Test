@@ -6,10 +6,10 @@
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/csv/core_csv.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../team/lookup/team_lookup.h"
-#include "../../common/csv/foreign_csv_parse.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../../common/policy/foreign_waiver_policy.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
@@ -71,9 +71,11 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
         }
     }
 
-    uint32_t team_id = 0;
-    uint32_t player_id = 0;
-    if (!parse_u32_from_csv_field(&p, &team_id) || !parse_u32_from_csv_field(&p, &player_id)) {
+    char fields[3][64];
+    int field_count = kbo_csv_read_trimmed_line_fields(raw, (char*)fields, sizeof(fields[0]), 3);
+    uint32_t team_id = field_count > 1 ? kbo_csv_parse_u32_text(fields[1], 10) : 0u;
+    uint32_t player_id = field_count > 2 ? kbo_csv_parse_u32_text(fields[2], 10) : 0u;
+    if (team_id == 0u || player_id == 0u) {
         append_logf("foreign waiver command line %d malformed: %s", line_no, raw);
         return 0;
     }

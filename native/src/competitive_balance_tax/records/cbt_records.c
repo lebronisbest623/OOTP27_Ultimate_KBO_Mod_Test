@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "cbt_records.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
@@ -13,35 +14,6 @@
 static int kbo_cbt_records_path(char* out, size_t out_size)
 {
     return kbo_get_save_scoped_data_file("cbt_records.csv", out, out_size);
-}
-
-static void kbo_cbt_parse_record_line(const char* line, KboCbtRecord* rec)
-{
-    memset(rec, 0, sizeof(*rec));
-    char* p = (char*)line;
-
-    char field[128] = {0};
-    int fi = 0;
-    while (fi <= 9 && *p != '\0') {
-        if (!kbo_fa_salary_snapshot_parse_csv_field(&p, field, sizeof(field))) {
-            break;
-        }
-        switch (fi) {
-        case 0: rec->season            = (uint32_t)strtoul(field, NULL, 10); break;
-        case 1: rec->team_id           = (uint32_t)strtoul(field, NULL, 10); break;
-        case 2: rec->payroll           = (int32_t)strtol(field, NULL, 10); break;
-        case 3: rec->threshold         = (int32_t)strtol(field, NULL, 10); break;
-        case 4: rec->overage           = (int32_t)strtol(field, NULL, 10); break;
-        case 5: rec->tax_rate_pct      = (uint32_t)strtoul(field, NULL, 10); break;
-        case 6: rec->tax_amount        = (int32_t)strtol(field, NULL, 10); break;
-        case 7: rec->consecutive_count = (uint32_t)strtoul(field, NULL, 10); break;
-        case 8: rec->processed_date    = (uint32_t)strtoul(field, NULL, 10); break;
-        case 9:
-            snprintf(rec->team_name, sizeof(rec->team_name), "%s", field);
-            break;
-        }
-        fi++;
-    }
 }
 
 int kbo_cbt_load_records(KboCbtRecord* records, int max, char* path_out, size_t path_size)
@@ -62,56 +34,37 @@ int kbo_cbt_load_records(KboCbtRecord* records, int max, char* path_out, size_t 
         snprintf(path_out, path_size, "%s", path);
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 4u * 1024u * 1024u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* buf = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buf == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int count = 0;
-    if (ReadFile(file, buf, size, &read, NULL) && read > 0) {
-        buf[read] = '\0';
-        char* cursor = buf;
-        int header_skipped = 0;
-        while (*cursor != '\0' && count < max) {
-            char* next = strchr(cursor, '\n');
-            if (next != NULL) {
-                *next = '\0';
-            }
-            char* p = cursor;
-            while (*p == ' ' || *p == '\t' || *p == '\r') {
-                p++;
-            }
-            if (!header_skipped) {
-                header_skipped = 1;
-            } else if (*p >= '1' && *p <= '9') {
-                kbo_cbt_parse_record_line(p, &records[count]);
-                if (records[count].season > 0u && records[count].team_id > 0u) {
-                    count++;
-                }
-            }
-            if (next == NULL) {
-                break;
-            }
-            cursor = next + 1;
+    while (count < max && kbo_csv_reader_next_row(reader)) {
+        char fields[10][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 10);
+        if (field_count < 10 || fields[0][0] < '1' || fields[0][0] > '9') {
+            continue;
+        }
+
+        KboCbtRecord* rec = &records[count];
+        memset(rec, 0, sizeof(*rec));
+        rec->season            = (uint32_t)strtoul(fields[0], NULL, 10);
+        rec->team_id           = (uint32_t)strtoul(fields[1], NULL, 10);
+        rec->payroll           = (int32_t)strtol(fields[2], NULL, 10);
+        rec->threshold         = (int32_t)strtol(fields[3], NULL, 10);
+        rec->overage           = (int32_t)strtol(fields[4], NULL, 10);
+        rec->tax_rate_pct      = (uint32_t)strtoul(fields[5], NULL, 10);
+        rec->tax_amount        = (int32_t)strtol(fields[6], NULL, 10);
+        rec->consecutive_count = (uint32_t)strtoul(fields[7], NULL, 10);
+        rec->processed_date    = (uint32_t)strtoul(fields[8], NULL, 10);
+        snprintf(rec->team_name, sizeof(rec->team_name), "%s", fields[9]);
+        if (rec->season > 0u && rec->team_id > 0u) {
+            count++;
         }
     }
 
-    CloseHandle(file);
-    HeapFree(GetProcessHeap(), 0, buf);
+    kbo_csv_reader_close(reader);
     return count;
 }
 

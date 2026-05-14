@@ -288,12 +288,12 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         }
     }
 
-    KboForeignInjuryReplacement pending_news[16];
-    int pending_count = 0;
+    KboForeignInjuryReplacement closed_news[16];
+    int closed_count = 0;
     KboForeignInjuryReplacement active_news[16];
     int active_count = 0;
     int changed = 0;
-    memset(pending_news, 0, sizeof(pending_news));
+    memset(closed_news, 0, sizeof(closed_news));
     memset(active_news, 0, sizeof(active_news));
     kbo_lock_foreign_injury_replacements();
     for (int i = 0; i < g_kbo_foreign_injury_replacement_count; i++) {
@@ -301,7 +301,8 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         if (rec->status == KBO_FOREIGN_INJURY_STATUS_CLOSED) {
             continue;
         }
-        if (!kbo_foreign_injury_status_uses_slot(rec->status)) {
+        int uses_slot = kbo_foreign_injury_status_uses_slot(rec->status);
+        if (!uses_slot && rec->status != KBO_FOREIGN_INJURY_STATUS_PENDING) {
             continue;
         }
 
@@ -309,12 +310,15 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         if (injured == NULL || !memory_range_readable(injured, OOTP27_PLAYER_SCAN_BYTES)) {
             continue;
         }
-        kbo_foreign_injury_restore_active_replacement_player(rec, source);
-        if (rec->replacement_player_id == 0u) {
+        if (uses_slot) {
+            kbo_foreign_injury_restore_active_replacement_player(rec, source);
+        }
+        if (uses_slot && rec->replacement_player_id == 0u) {
             uint32_t replacement_player_id = kbo_foreign_injury_resolve_replacement_for_record(rec);
             if (replacement_player_id != 0u) {
                 rec->replacement_player_id = replacement_player_id;
                 rec->status = KBO_FOREIGN_INJURY_STATUS_ACTIVE;
+                uses_slot = 1;
                 if (active_count < (int)(sizeof(active_news) / sizeof(active_news[0]))) {
                     active_news[active_count++] = *rec;
                 }
@@ -351,10 +355,16 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         if (replacement_player_id != 0u) {
             rec->replacement_player_id = replacement_player_id;
         }
-        rec->status = KBO_FOREIGN_INJURY_STATUS_PENDING;
+        if (rec->replacement_player_id != 0u) {
+            kbo_foreign_injury_release_replacement_player(
+                rec->team_id,
+                rec->replacement_player_id,
+                source);
+        }
+        rec->status = KBO_FOREIGN_INJURY_STATUS_CLOSED;
         rec->converted = 0u;
-        if (pending_count < (int)(sizeof(pending_news) / sizeof(pending_news[0]))) {
-            pending_news[pending_count++] = *rec;
+        if (closed_count < (int)(sizeof(closed_news) / sizeof(closed_news[0]))) {
+            closed_news[closed_count++] = *rec;
         }
         changed = 1;
     }
@@ -373,26 +383,26 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             active_news[i].league_id);
     }
 
-    for (int i = 0; i < pending_count; i++) {
-        kbo_emit_foreign_injury_replacement_news(&pending_news[i], 0, "pending");
+    for (int i = 0; i < closed_count; i++) {
+        kbo_emit_foreign_injury_replacement_news(&closed_news[i], 0, "closed");
         append_logf(
-            "foreign injury replacement: pending source=%s team=%u injured=%u replacement=%u league=%u",
+            "foreign injury replacement: closed source=%s team=%u injured=%u replacement=%u league=%u",
             source != NULL ? source : "",
-            pending_news[i].team_id,
-            pending_news[i].injured_player_id,
-            pending_news[i].replacement_player_id,
-            pending_news[i].league_id);
+            closed_news[i].team_id,
+            closed_news[i].injured_player_id,
+            closed_news[i].replacement_player_id,
+            closed_news[i].league_id);
     }
 
-    if (opened > 0 || active_count > 0 || pending_count > 0) {
+    if (opened > 0 || active_count > 0 || closed_count > 0) {
         append_logf(
             "foreign injury replacement: scan source=%s scanned_foreign=%d opened=%d active=%d pending=%d closed=%d",
             source != NULL ? source : "",
             scanned,
             opened,
             active_count,
-            pending_count,
-            0);
+            0,
+            closed_count);
     }
 }
 

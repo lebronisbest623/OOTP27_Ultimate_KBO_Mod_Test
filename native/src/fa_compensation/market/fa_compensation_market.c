@@ -135,7 +135,14 @@ int kbo_fa_compensation_build_market_row(
         &history,
         current_year,
         today);
-    kbo_fa_market_apply_salary_snapshot_grade(row, salary_grades, salary_grade_count, rules);
+    kbo_fa_market_apply_salary_snapshot_grade(
+        row,
+        salary_grades,
+        salary_grade_count,
+        requal_records,
+        requal_count,
+        current_year,
+        rules);
 
     if (row->original_team_id == 0u && history_row.original_team_id != 0u) {
         row->original_team_id = history_row.original_team_id;

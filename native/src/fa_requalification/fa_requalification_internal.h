@@ -10,6 +10,7 @@
 #include "../bootstrap/abi/ootp_offsets.h"
 #include "../core/files/atomic/core_atomic_file.h"
 #include "../core/core_flags/api/flags_api.h"
+#include "../core/csv/core_csv.h"
 #include "../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../core/logging/core_log.h"
 #include "../core/files/save_paths/core_save_paths.h"
@@ -33,6 +34,7 @@ typedef struct KboFaRequalificationRecord {
     uint32_t original_team_id;
     uint32_t last_fa_year;
     uint32_t fa_count;
+    char last_fa_grade[12];
 } KboFaRequalificationRecord;
 #endif
 
@@ -52,6 +54,12 @@ void kbo_ensure_fa_requalification_template(void);
 int kbo_load_fa_requalification_records(KboFaRequalificationRecord* records, int max_records);
 int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* records, int count);
 int kbo_record_fa_requalification_signing(uint32_t player_id, uint32_t team_id, uint32_t signing_year, const char* source);
+int kbo_record_fa_requalification_signing_with_grade(
+    uint32_t player_id,
+    uint32_t team_id,
+    uint32_t signing_year,
+    const char* grade,
+    const char* source);
 int kbo_fa_requalification_team_ptr_is_kbo(
     uintptr_t team_ptr,
     uint32_t* out_team_id,

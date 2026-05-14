@@ -30,6 +30,27 @@ static void kbo_asian_games_u32_text(uint32_t value, char* out, size_t out_size)
     }
 }
 
+static const char* kbo_asian_games_news_role_label(uint8_t role, int use_korean)
+{
+    const char* bucket = kbo_asian_games_role_bucket_label(role);
+    if (!use_korean) {
+        return bucket;
+    }
+    if (strcmp(bucket, "P") == 0) {
+        return "\xed\x88\xac\xec\x88\x98";
+    }
+    if (strcmp(bucket, "C") == 0) {
+        return "\xed\x8f\xac\xec\x88\x98";
+    }
+    if (strcmp(bucket, "IF") == 0) {
+        return "\xeb\x82\xb4\xec\x95\xbc\xec\x88\x98";
+    }
+    if (strcmp(bucket, "OF") == 0) {
+        return "\xec\x99\xb8\xec\x95\xbc\xec\x88\x98";
+    }
+    return "\xec\x95\xbc\xec\x88\x98";
+}
+
 int kbo_asian_games_append_player_blurb(
     char* out,
     size_t out_size,
@@ -49,12 +70,12 @@ int kbo_asian_games_append_player_blurb(
     char team_link[128] = {0};
     kbo_copy_asian_games_team_link(entry->original_team_id, team_link, sizeof(team_link));
 
-    const char* bucket = kbo_asian_games_role_bucket_label(entry->role);
+    int use_korean = kbo_asian_games_news_uses_korean();
+    const char* bucket = kbo_asian_games_news_role_label(entry->role, use_korean);
     char role_suffix[64] = {0};
     if (bucket[0] != '\0') {
         snprintf(role_suffix, sizeof(role_suffix), " (%s)", bucket);
     }
-    int use_korean = kbo_asian_games_news_uses_korean();
     const char* separator = "";
     if (display_index != 0) {
         separator = use_korean ? ", " : (display_index == display_count - 1 ? " and " : ", ");
@@ -129,7 +150,7 @@ int kbo_asian_games_append_roster_line(
     KboNewsTemplateVar vars[] = {
         { "index", index_text },
         { "player_link", player_link },
-        { "role_bucket", kbo_asian_games_role_bucket_label(entry->role) },
+        { "role_bucket", kbo_asian_games_news_role_label(entry->role, use_korean) },
         { "team_link", team_link },
         { "wildcard_text", entry->wildcard
             ? (use_korean ? ", \xec\x99\x80\xec\x9d\xbc\xeb\x93\x9c\xec\xb9\xb4\xeb\x93\x9c" : ", wild card")
@@ -208,8 +229,8 @@ void kbo_build_asian_games_news_body(char* out, size_t out_size, const char* tem
     int is_final_gold = template_prefix != NULL && strcmp(template_prefix, "asian_games.final") == 0;
     int is_final_failure = template_prefix != NULL && strcmp(template_prefix, "asian_games.final.failure") == 0;
     int is_final = is_final_gold || is_final_failure;
-    int include_roster = is_selection;
-    int include_samples = include_roster;
+    int include_roster = 0;
+    int include_samples = is_selection;
 
     kbo_news_text_append(out, out_size, lead != NULL && lead[0] != '\0' ? lead : "");
     if (out[0] != '\0') {

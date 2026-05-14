@@ -4,26 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void kbo_captain_trim_csv_token_in_place(char* text)
-{
-    if (text == NULL) {
-        return;
-    }
-    char* start = text;
-    while (*start == ' ' || *start == '\t' || *start == '"') {
-        start++;
-    }
-    char* end = start + strlen(start);
-    while (end > start
-            && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r'
-                || end[-1] == '\n' || end[-1] == '"')) {
-        end--;
-    }
-    *end = '\0';
-    if (start != text) {
-        memmove(text, start, strlen(start) + 1u);
-    }
-}
+#include "../../core/csv/core_csv.h"
 
 int kbo_captain_parse_u32_full_token(const char* text, uint32_t* out)
 {
@@ -145,44 +126,18 @@ static void kbo_captain_parse_player_token(const char* text, uint32_t* out_playe
     }
 }
 
-int kbo_parse_captain_seed_line(const char* line, KboCaptainSeed* out)
+int kbo_parse_captain_seed_fields(char fields[][128], int field_count, KboCaptainSeed* out)
 {
-    if (line == NULL || out == NULL) {
+    if (fields == NULL || out == NULL) {
         return 0;
     }
     memset(out, 0, sizeof(*out));
     out->priority = 100;
     out->active = 1u;
 
-    char copy[512] = {0};
-    size_t len = strlen(line);
-    if (len >= sizeof(copy)) {
-        len = sizeof(copy) - 1u;
-    }
-    memcpy(copy, line, len);
-
-    char* p = copy;
-    while (*p == ' ' || *p == '\t') {
-        p++;
-    }
-    if (*p == '\0' || *p == '\r' || *p == '\n' || *p == '#' || *p == ';') {
-        return 0;
-    }
-
-    char* fields[10] = {0};
-    int field_count = 0;
-    fields[field_count++] = p;
-    for (char* q = p; *q != '\0' && field_count < 10; q++) {
-        if (*q == ',') {
-            *q = '\0';
-            fields[field_count++] = q + 1;
-        }
-    }
-    for (int i = 0; i < field_count; i++) {
-        kbo_captain_trim_csv_token_in_place(fields[i]);
-    }
-
-    if (fields[0] == NULL || fields[0][0] == '\0'
+    if (field_count <= 0 || fields[0][0] == '\0'
+            || fields[0][0] == '#'
+            || fields[0][0] == ';'
             || _stricmp(fields[0], "season") == 0
             || _stricmp(fields[0], "team_id") == 0
             || _stricmp(fields[0], "team_code") == 0) {
@@ -240,4 +195,30 @@ int kbo_parse_captain_seed_line(const char* line, KboCaptainSeed* out)
 
     return (out->team_id != 0u || out->team_code[0] != '\0')
         && (out->player_id != 0u || out->player_key[0] != '\0');
+}
+
+int kbo_parse_captain_seed_line(const char* line, KboCaptainSeed* out)
+{
+    if (line == NULL || out == NULL) {
+        return 0;
+    }
+
+    char copy[512] = {0};
+    size_t len = strlen(line);
+    if (len >= sizeof(copy)) {
+        len = sizeof(copy) - 1u;
+    }
+    memcpy(copy, line, len);
+
+    char* p = copy;
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    if (*p == '\0' || *p == '\r' || *p == '\n' || *p == '#' || *p == ';') {
+        return 0;
+    }
+
+    char fields[10][128];
+    int field_count = kbo_csv_read_trimmed_line_fields(p, (char*)fields, sizeof(fields[0]), 10);
+    return kbo_parse_captain_seed_fields(fields, field_count, out);
 }

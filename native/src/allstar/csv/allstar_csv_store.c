@@ -6,6 +6,7 @@
 
 #include "allstar_csv_parse.h"
 #include "../allstar_league_context/allstar_league_context.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 
 static int get_kbo_allstar_teams_csv_path(char* path, size_t path_size)
@@ -97,26 +98,37 @@ void load_allstar_team_rules_once(void)
         return;
     }
 
-    FILE* file = fopen(path, "rb");
-    if (file == NULL) {
-        append_logf("all-star team split load skipped: fopen failed path=%s", path);
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
+        append_logf("all-star team split load skipped: csv reader open failed path=%s", path);
         return;
     }
 
-    char line[8192] = {0};
-    if (fgets(line, sizeof(line), file) == NULL) {
-        fclose(file);
+    if (!kbo_csv_reader_next_row(reader)) {
+        kbo_csv_reader_close(reader);
         append_logf("all-star team split load failed: empty file path=%s", path);
         return;
     }
+    char fields[KBO_ALLSTAR_CSV_MAX_COLUMNS][KBO_ALLSTAR_CSV_FIELD_SIZE];
+    int field_count = kbo_csv_reader_read_trimmed_fields(
+        reader,
+        (char*)fields,
+        KBO_ALLSTAR_CSV_FIELD_SIZE,
+        KBO_ALLSTAR_CSV_MAX_COLUMNS);
 
     int year_col = -1;
     int team_id_col = -1;
     int name_col = -1;
     int allstar_col = -1;
-    kbo_csv_find_allstar_team_columns(line, &year_col, &team_id_col, &name_col, &allstar_col);
+    kbo_csv_find_allstar_team_columns_from_fields(
+        fields,
+        field_count,
+        &year_col,
+        &team_id_col,
+        &name_col,
+        &allstar_col);
     if (year_col < 0 || team_id_col < 0 || allstar_col < 0) {
-        fclose(file);
+        kbo_csv_reader_close(reader);
         append_logf(
             "all-star team split load skipped: all-star CSV missing columns year_col=%d team_id_col=%d name_col=%d allstar_col=%d path=%s",
             year_col,
@@ -130,14 +142,20 @@ void load_allstar_team_rules_once(void)
     int rows = 0;
     int loaded = 0;
     int invalid_side = 0;
-    while (fgets(line, sizeof(line), file) != NULL) {
+    while (kbo_csv_reader_next_row(reader)) {
+        field_count = kbo_csv_reader_read_trimmed_fields(
+            reader,
+            (char*)fields,
+            KBO_ALLSTAR_CSV_FIELD_SIZE,
+            KBO_ALLSTAR_CSV_MAX_COLUMNS);
         uint16_t year = 0;
         char team_id[16] = {0};
         char team_name[96] = {0};
         char current_city[64] = {0};
         uint8_t side = 0;
-        kbo_csv_extract_allstar_team_fields(
-            line,
+        kbo_csv_extract_allstar_team_fields_from_fields(
+            fields,
+            field_count,
             year_col,
             team_id_col,
             name_col,
@@ -166,7 +184,7 @@ void load_allstar_team_rules_once(void)
         }
     }
 
-    fclose(file);
+    kbo_csv_reader_close(reader);
     append_logf(
         "all-star team split load: rows=%d loaded=%d invalid_side=%d total=%d year_col=%d team_id_col=%d name_col=%d allstar_col=%d path=%s",
         rows,

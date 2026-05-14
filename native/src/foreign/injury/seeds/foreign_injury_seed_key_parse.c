@@ -1,23 +1,5 @@
 #include "../internal/foreign_injury_internal.h"
-
-static void kbo_foreign_injury_trim_token(char* text)
-{
-    if (text == NULL) {
-        return;
-    }
-    char* start = text;
-    while (*start == ' ' || *start == '\t' || *start == '"') {
-        start++;
-    }
-    char* end = start + strlen(start);
-    while (end > start && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' || end[-1] == '\n' || end[-1] == '"')) {
-        end--;
-    }
-    *end = '\0';
-    if (start != text) {
-        memmove(text, start, strlen(start) + 1u);
-    }
-}
+#include "../../../core/csv/core_csv.h"
 
 static int kbo_foreign_injury_token_is_u32(const char* text)
 {
@@ -66,34 +48,12 @@ static uint8_t kbo_foreign_injury_parse_status_token(const char* text)
     return 0u;
 }
 
-int kbo_parse_foreign_injury_replacement_key_seed_line(
-    const char* line,
+int kbo_parse_foreign_injury_replacement_key_seed_fields(
+    char tokens[][96],
+    int count,
     uint32_t today,
     KboForeignInjuryReplacement* out)
 {
-    char copy[256] = {0};
-    size_t len = strlen(line);
-    if (len >= sizeof(copy)) {
-        len = sizeof(copy) - 1u;
-    }
-    memcpy(copy, line, len);
-
-    char* tokens[9] = {0};
-    int count = 0;
-    char* cursor = copy;
-    while (count < 9 && cursor != NULL) {
-        tokens[count++] = cursor;
-        char* comma = strchr(cursor, ',');
-        if (comma == NULL) {
-            break;
-        }
-        *comma = '\0';
-        cursor = comma + 1;
-    }
-    for (int i = 0; i < count; i++) {
-        kbo_foreign_injury_trim_token(tokens[i]);
-    }
-
     if (count < 3
             || tokens[0][0] == '\0'
             || _stricmp(tokens[0], "team_id") == 0
@@ -127,4 +87,14 @@ int kbo_parse_foreign_injury_replacement_key_seed_line(
         out->status = out->replacement_player_id != 0u ? KBO_FOREIGN_INJURY_STATUS_ACTIVE : KBO_FOREIGN_INJURY_STATUS_OPEN;
     }
     return out->injured_player_id != 0u;
+}
+
+int kbo_parse_foreign_injury_replacement_key_seed_line(
+    const char* line,
+    uint32_t today,
+    KboForeignInjuryReplacement* out)
+{
+    char tokens[9][96];
+    int count = kbo_csv_read_trimmed_line_fields(line, (char*)tokens, sizeof(tokens[0]), 9);
+    return kbo_parse_foreign_injury_replacement_key_seed_fields(tokens, count, today, out);
 }

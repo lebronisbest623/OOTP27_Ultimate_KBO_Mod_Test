@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../../../core/dates/core_text_date.h"
+#include "../../../core/csv/core_csv.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/core_flags/api/flags_api.h"
 
@@ -40,72 +41,30 @@ static int kbo_import_asian_games_projected_hosts_file(
         return count;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return count;
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 65536u) {
-        CloseHandle(file);
-        return count;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return count;
-    }
-
-    DWORD read = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0' && count < capacity) {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
-
-            char line[256] = {0};
-            size_t line_len = (size_t)(next - cursor);
-            while (line_len > 0u && (cursor[line_len - 1u] == '\r' || cursor[line_len - 1u] == '\n')) {
-                line_len--;
-            }
-            if (line_len >= sizeof(line)) {
-                line_len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, line_len);
-
-            char* p = line;
-            while (*p == ' ' || *p == '\t') {
-                p++;
-            }
-            if (*p != '\0' && *p != '#' && *p != ';') {
-                const char* cell = p;
-                char city[48] = {0};
-                char country[48] = {0};
-                kbo_asian_games_schedule_read_cell(&cell, city, sizeof(city));
-                kbo_asian_games_schedule_read_cell(&cell, country, sizeof(country));
-                if (!ascii_equals_ignore_case(city, "city")
-                        && !ascii_equals_ignore_case(city, "host_city")
-                        && city[0] != '\0'
-                        && country[0] != '\0') {
-                    kbo_asian_games_schedule_copy_text(hosts[count].city, sizeof(hosts[count].city), city);
-                    kbo_asian_games_schedule_copy_text(hosts[count].country, sizeof(hosts[count].country), country);
-                    count++;
-                }
-            }
-
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+    while (count < capacity && kbo_csv_reader_next_row(reader)) {
+        char fields[2][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 2);
+        char* city = field_count > 0 ? fields[0] : "";
+        char* country = field_count > 1 ? fields[1] : "";
+        if (city[0] == '\0'
+                || city[0] == '#'
+                || city[0] == ';'
+                || country[0] == '\0'
+                || ascii_equals_ignore_case(city, "city")
+                || ascii_equals_ignore_case(city, "host_city")) {
+            continue;
         }
+        kbo_asian_games_schedule_copy_text(hosts[count].city, sizeof(hosts[count].city), city);
+        kbo_asian_games_schedule_copy_text(hosts[count].country, sizeof(hosts[count].country), country);
+        count++;
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     return count;
 }
 

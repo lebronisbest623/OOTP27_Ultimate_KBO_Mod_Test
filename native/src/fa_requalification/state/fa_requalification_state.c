@@ -12,6 +12,9 @@
 #include "../../core/logging/core_log.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../fa_compensation/history/fa_compensation_history.h"
+#include "../../fa_compensation/market/fa_compensation_market.h"
+#include "../../fa_market_classification/api/fa_market_classification.h"
+#include "../../fa_rules/fa_rules.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
@@ -36,6 +39,7 @@ typedef struct KboFaRequalificationRecord {
     uint32_t original_team_id;
     uint32_t last_fa_year;
     uint32_t fa_count;
+    char last_fa_grade[12];
 } KboFaRequalificationRecord;
 
 #endif
@@ -230,7 +234,25 @@ __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t pla
         return;
     }
 
-    kbo_record_fa_requalification_signing(player_id, team_id, signing_year, "fa_signing_success_post");
+    char last_fa_grade[12] = "UNKNOWN";
+    uint32_t today = 0u;
+    if (!kbo_get_current_yyyymmdd(&today)) {
+        today = signing_year * 10000u + 101u;
+    }
+    KboFaRules fa_rules;
+    kbo_fa_rules_load(&fa_rules);
+    KboFaMarketClassification row;
+    if (kbo_fa_compensation_build_market_row(player, &row, league_id, signing_year, today, &fa_rules)
+            && row.grade[0] != '\0') {
+        snprintf(last_fa_grade, sizeof(last_fa_grade), "%s", row.grade);
+    }
+
+    kbo_record_fa_requalification_signing_with_grade(
+        player_id,
+        team_id,
+        signing_year,
+        last_fa_grade,
+        "fa_signing_success_post");
 }
 
 

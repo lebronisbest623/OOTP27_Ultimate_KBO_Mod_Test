@@ -303,7 +303,14 @@ int kbo_collect_fa_market_classifications(
             history_case,
             current_year,
             today);
-        kbo_fa_market_apply_salary_snapshot_grade(&rows[i], salary_grades, salary_grade_count, &fa_rules);
+        kbo_fa_market_apply_salary_snapshot_grade(
+            &rows[i],
+            salary_grades,
+            salary_grade_count,
+            records,
+            requalification_count,
+            current_year,
+            &fa_rules);
     }
 
     if (row_count > 1) {

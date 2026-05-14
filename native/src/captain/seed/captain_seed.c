@@ -1,4 +1,5 @@
 #include "../internal/captain_selection_internal.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/sync/spin_lock.h"
 
 static int kbo_captain_seed_source_rank(const char* source)
@@ -101,30 +102,17 @@ static int kbo_add_captain_seed_locked(const KboCaptainSeed* seed)
     return 1;
 }
 
-static int kbo_captain_seed_line_parse_failure_is_reportable(char* line)
+static int kbo_captain_seed_fields_parse_failure_is_reportable(char fields[][128], int field_count)
 {
-    if (line == NULL) {
+    if (fields == NULL || field_count <= 0) {
         return 0;
     }
-
-    char* check = line;
-    while (*check == ' ' || *check == '\t') {
-        check++;
-    }
-    if (*check == '\0' || *check == '#' || *check == ';') {
+    if (fields[0][0] == '\0' || fields[0][0] == '#' || fields[0][0] == ';') {
         return 0;
     }
-
-    char first_field[64] = {0};
-    size_t i = 0;
-    while (check[i] != '\0' && check[i] != ',' && i + 1u < sizeof(first_field)) {
-        first_field[i] = check[i];
-        i++;
-    }
-    kbo_captain_trim_csv_token_in_place(first_field);
-    return _stricmp(first_field, "season") != 0
-        && _stricmp(first_field, "team_id") != 0
-        && _stricmp(first_field, "team_code") != 0;
+    return _stricmp(fields[0], "season") != 0
+        && _stricmp(fields[0], "team_id") != 0
+        && _stricmp(fields[0], "team_code") != 0;
 }
 
 int kbo_import_captain_seed_file_locked(const char* path, const char* source)
@@ -133,65 +121,30 @@ int kbo_import_captain_seed_file_locked(const char* path, const char* source)
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 65536u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int imported = 0;
     int parse_failed = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0') {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[10][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 10);
 
-            char line[512] = {0};
-            size_t len = (size_t)(next - cursor);
-            while (len > 0u && (cursor[len - 1u] == '\r' || cursor[len - 1u] == '\n')) {
-                len--;
+        KboCaptainSeed seed;
+        if (kbo_parse_captain_seed_fields(fields, field_count, &seed)) {
+            seed.source_rank = (uint8_t)kbo_captain_seed_source_rank(source);
+            snprintf(seed.source, sizeof(seed.source), "%s", source != NULL ? source : "");
+            if (kbo_add_captain_seed_locked(&seed)) {
+                imported++;
             }
-            if (len >= sizeof(line)) {
-                len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, len);
-
-            KboCaptainSeed seed;
-            if (kbo_parse_captain_seed_line(line, &seed)) {
-                seed.source_rank = (uint8_t)kbo_captain_seed_source_rank(source);
-                snprintf(seed.source, sizeof(seed.source), "%s", source != NULL ? source : "");
-                if (kbo_add_captain_seed_locked(&seed)) {
-                    imported++;
-                }
-            } else if (kbo_captain_seed_line_parse_failure_is_reportable(line)) {
-                parse_failed++;
-            }
-
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+        } else if (kbo_captain_seed_fields_parse_failure_is_reportable(fields, field_count)) {
+            parse_failed++;
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     if (imported > 0 || parse_failed > 0) {
         append_logf(
             "KBO captain seed import source=%s imported=%d parse_failed=%d path=%s",

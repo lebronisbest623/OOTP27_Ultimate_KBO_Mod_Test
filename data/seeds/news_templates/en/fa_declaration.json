@@ -1,0 +1,7 @@
+{
+  "fa_declaration.summary.title": "{season} FA declaration list finalized",
+  "fa_declaration.summary.body": "The KBO FA declaration window for the {season} season has closed. {declared_count} player(s) filed for free agency, while {deferred_count} eligible player(s) stayed with their original clubs for now.\n\nDeclared FA players\n{declared_list}\nDeferred candidates\n{deferred_list}\nAmong the non-filers, {retry_count} were classified as retrying after a down year and {no_market_count} were classified as staying because the market was unlikely to meet their needs.",
+  "fa_declaration.summary.declared_line": "- {player_link} / Team #{team_id} / {grade} / score {score}",
+  "fa_declaration.summary.deferred_line": "- {player_link} / Team #{team_id} / {grade} / {reason}",
+  "fa_declaration.summary.none": "- None"
+}

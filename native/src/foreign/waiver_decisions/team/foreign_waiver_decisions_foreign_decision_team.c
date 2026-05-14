@@ -11,7 +11,6 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
-#include "../../common/csv/foreign_csv_parse.h"
 #include "../../waiver_core/api/foreign_waiver_core.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../api/foreign_waiver_decisions.h"

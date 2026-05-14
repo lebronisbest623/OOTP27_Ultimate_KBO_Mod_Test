@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../csv/amateur_reputation_csv.h"
 #include "../api/amateur_player_quality.h"
 #include "../assignment/policy/amateur_assignment_policy_values.h"
 #include "../../bootstrap/abi/ootp_offsets.h"

@@ -53,6 +53,7 @@ Write-Host "GCC: $Gcc"
     -o $TestExe `
     $TestSrc `
     (Join-Path $Root "src\allstar\csv\allstar_csv_parse.c") `
+    (Join-Path $Root "src\core\csv\core_csv.c") `
     (Join-Path $Root "src\foreign\common\csv\foreign_csv_parse.c") `
     (Join-Path $Root "src\foreign\common\dates\foreign_waiver_date.c") `
     (Join-Path $Root "src\foreign\replacement_seed\parse\foreign_replacement_seed_parse.c") `
@@ -65,7 +66,7 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\core\sql\escape\core_sql_escape.c") `
     (Join-Path $Root "src\core\core_flags\keys\flag_key.c") `
     (Join-Path $Root "src\core\core_flags\json\json_bool_parser.c") `
-    (Join-Path $Root "src\core\news\templates\core_news_templates.c") `
+    (Join-Path $Root "src\core\news\templates\render\core_news_template_render.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\custom_news_language.c") `
     (Join-Path $Root "src\core\core_flags\localappdata\localappdata_reader.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\economic_defaults.c") `
@@ -75,6 +76,7 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\fa_filing\fa_filing_parts\fa_filing_csv_parse.c") `
     (Join-Path $Root "src\fa_salary_snapshot\csv\salary_snapshot_csv_parse.c") `
     (Join-Path $Root "src\core\files\atomic\core_atomic_file.c") `
+    (Join-Path $Root "src\core\policy\core_policy.c") `
     (Join-Path $Root "src\military_service\players\loans\military_native_loan.c") `
     (Join-Path $Root "src\foreign\common\policy\foreign_player_policy.c") `
     (Join-Path $Root "src\foreign\common\player_eval\foreign_waiver_player_eval.c") `

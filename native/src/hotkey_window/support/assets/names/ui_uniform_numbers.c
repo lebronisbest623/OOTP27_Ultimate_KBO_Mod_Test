@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../../../core/csv/core_csv.h"
 #include "../../../../core/files/save_paths/core_save_paths.h"
 #include "../../../state/text/state_text_utils.h"
 #include "ui_uniform_numbers.h"
@@ -19,50 +20,6 @@ typedef struct KboHubUniformNumberEntry {
 static KboHubUniformNumberEntry g_kbo_hub_uniform_number_cache[KBO_HUB_UNIFORM_NUMBER_CACHE_CAP];
 static int g_kbo_hub_uniform_number_cache_count = 0;
 static char g_kbo_hub_uniform_number_cache_save_path[MAX_PATH] = {0};
-
-static int kbo_hub_csv_copy_field(const char* line, int target_index, char* out, size_t out_size)
-{
-    if (line == NULL || target_index < 0 || out == NULL || out_size == 0) {
-        return 0;
-    }
-    out[0] = '\0';
-
-    int field = 0;
-    int quoted = 0;
-    size_t len = 0;
-    for (const char* p = line; ; p++) {
-        char ch = *p;
-        int end = ch == '\0' || ch == '\r' || ch == '\n';
-        if (!end && ch == '"') {
-            if (quoted && p[1] == '"') {
-                if (field == target_index && len + 1 < out_size) {
-                    out[len++] = '"';
-                }
-                p++;
-            } else {
-                quoted = !quoted;
-            }
-            continue;
-        }
-        if (end || (ch == ',' && !quoted)) {
-            if (field == target_index) {
-                out[len] = '\0';
-                kbo_hub_trim_ascii(out);
-                return 1;
-            }
-            field++;
-            len = 0;
-            if (end) {
-                break;
-            }
-            continue;
-        }
-        if (field == target_index && len + 1 < out_size) {
-            out[len++] = ch;
-        }
-    }
-    return 0;
-}
 
 static void kbo_hub_uniform_number_cache_put(uint32_t player_id, const char* number)
 {
@@ -98,27 +55,25 @@ static void kbo_hub_load_uniform_numbers_from_csv(const char* path, int id_colum
         return;
     }
 
-    FILE* file = fopen(path, "rb");
-    if (file == NULL) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return;
     }
 
-    char line[8192];
-    while (fgets(line, sizeof(line), file) != NULL) {
-        const char* first = line;
-        while (*first == ' ' || *first == '\t') {
-            first++;
-        }
-        if (*first == '\0' || *first == '#' || *first == '/' || *first == ';') {
+    int max_column = id_column > number_column ? id_column : number_column;
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[16][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 16);
+        if (field_count <= max_column
+                || fields[0][0] == '\0'
+                || fields[0][0] == '#'
+                || fields[0][0] == '/'
+                || fields[0][0] == ';') {
             continue;
         }
 
-        char id_text[32] = {0};
-        char number_text[16] = {0};
-        if (!kbo_hub_csv_copy_field(line, id_column, id_text, sizeof(id_text))
-                || !kbo_hub_csv_copy_field(line, number_column, number_text, sizeof(number_text))) {
-            continue;
-        }
+        const char* id_text = fields[id_column];
+        const char* number_text = fields[number_column];
         if (id_text[0] < '0' || id_text[0] > '9') {
             continue;
         }
@@ -126,7 +81,7 @@ static void kbo_hub_load_uniform_numbers_from_csv(const char* path, int id_colum
         kbo_hub_uniform_number_cache_put(player_id, number_text);
     }
 
-    fclose(file);
+    kbo_csv_reader_close(reader);
 }
 
 static void kbo_hub_load_uniform_numbers_for_current_save(void)

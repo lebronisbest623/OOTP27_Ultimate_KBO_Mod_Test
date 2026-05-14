@@ -264,21 +264,25 @@ void kbo_emit_foreign_injury_replacement_news(
     char days_left_text[16] = {0};
     snprintf(team_link, sizeof(team_link), "<Team #%u:team#%u>", rec->team_id, rec->team_id);
     snprintf(injured_player_link, sizeof(injured_player_link), "<%s:player#%u>", player_name, rec->injured_player_id);
-    snprintf(days_left_text, sizeof(days_left_text), "%d", days_left > 0 ? days_left : 0);
-
-    const char* title_key = "foreign_injury.open.title";
-    const char* body_key = "foreign_injury.open.body";
-    if (phase != NULL && strcmp(phase, "closed") == 0) {
+    if (rec->replacement_player_id != 0u) {
         char replacement_name[96] = {0};
         uint8_t* replacement = kbo_find_player_by_id(rec->replacement_player_id, NULL, NULL);
         if (replacement != NULL) {
             kbo_copy_player_display_name(replacement, replacement_name, sizeof(replacement_name));
         }
-        if (replacement_name[0] == '\0' && rec->replacement_player_id != 0u) {
+        if (replacement_name[0] == '\0') {
             snprintf(replacement_name, sizeof(replacement_name), "Player #%u", rec->replacement_player_id);
         }
+        snprintf(replacement_player_link, sizeof(replacement_player_link), "<%s:player#%u>", replacement_name, rec->replacement_player_id);
+    } else {
+        snprintf(replacement_player_link, sizeof(replacement_player_link), "대체 외국인");
+    }
+    snprintf(days_left_text, sizeof(days_left_text), "%d", days_left > 0 ? days_left : 0);
+
+    const char* title_key = "foreign_injury.open.title";
+    const char* body_key = "foreign_injury.open.body";
+    if (phase != NULL && strcmp(phase, "closed") == 0) {
         if (rec->replacement_player_id != 0u) {
-            snprintf(replacement_player_link, sizeof(replacement_player_link), "<%s:player#%u>", replacement_name, rec->replacement_player_id);
             title_key = "foreign_injury.closed_with_replacement.title";
             body_key = "foreign_injury.closed_with_replacement.body";
         } else {

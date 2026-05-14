@@ -8,6 +8,7 @@
 #include <string.h>
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/dates/core_current_date.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
 #include "../../core/files/save_paths/core_save_paths.h"
@@ -150,6 +151,9 @@ void kbo_fa_market_apply_salary_snapshot_grade(
     KboFaMarketClassification* row,
     const KboFaSalarySnapshotGrade* salary_grades,
     int salary_grade_count,
+    const KboFaRequalificationRecord* requalification_records,
+    int requalification_count,
+    uint32_t current_year,
     const KboFaRules* rules);
 void kbo_fa_market_mark_history_case(KboFaMarketHistoryCase* history);
 int kbo_load_fa_market_history_cases(

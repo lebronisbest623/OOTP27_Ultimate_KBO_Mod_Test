@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../../core/logging/core_log.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../api/fa_market_classification.h"
 #include "fa_market_seed_cases.h"
@@ -44,61 +45,6 @@ static void kbo_fa_market_copy_token(const char* value, char* out, size_t out_si
         used--;
     }
     out[used] = '\0';
-}
-
-static int kbo_fa_market_parse_csv_field(char** cursor, char* out, size_t out_size)
-{
-    if (cursor == NULL || *cursor == NULL || out == NULL || out_size == 0) {
-        return 0;
-    }
-    out[0] = '\0';
-
-    char* p = *cursor;
-    while (*p == ' ' || *p == '\t' || *p == '\r') {
-        p++;
-    }
-
-    size_t used = 0;
-    if (*p == '"') {
-        p++;
-        while (*p != '\0') {
-            if (*p == '"') {
-                if (p[1] == '"') {
-                    if (used + 1u < out_size) {
-                        out[used++] = '"';
-                    }
-                    p += 2;
-                    continue;
-                }
-                p++;
-                break;
-            }
-            if (used + 1u < out_size) {
-                out[used++] = *p;
-            }
-            p++;
-        }
-        while (*p != '\0' && *p != ',' && *p != '\n') {
-            p++;
-        }
-    } else {
-        while (*p != '\0' && *p != ',' && *p != '\n') {
-            if (used + 1u < out_size) {
-                out[used++] = *p;
-            }
-            p++;
-        }
-        while (used > 0u && (out[used - 1u] == ' ' || out[used - 1u] == '\t' || out[used - 1u] == '\r')) {
-            used--;
-        }
-    }
-
-    out[used] = '\0';
-    if (*p == ',') {
-        p++;
-    }
-    *cursor = p;
-    return 1;
 }
 
 static int kbo_fa_market_seed_case_allowed(const char* case_label)
@@ -189,76 +135,37 @@ int kbo_load_fa_market_seed_cases(KboFaMarketSeedCase* seeds, int max_seeds, cha
         snprintf(out_path, out_path_size, "%s", path);
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
-
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 1024u * 1024u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buffer == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
-    if (!ReadFile(file, buffer, size, &read, NULL)) {
-        HeapFree(GetProcessHeap(), 0, buffer);
-        CloseHandle(file);
-        return 0;
-    }
-    CloseHandle(file);
-    buffer[read] = '\0';
 
     int count = 0;
-    char* cursor = buffer;
-    while (*cursor != '\0' && count < max_seeds) {
-        char* next = strchr(cursor, '\n');
-        if (next != NULL) {
-            *next = '\0';
+    while (count < max_seeds && kbo_csv_reader_next_row(reader)) {
+        char fields[4][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 4);
+        if (field_count < 3
+                || fields[0][0] == '\0'
+                || fields[0][0] == '#'
+                || fields[0][0] == ';') {
+            continue;
         }
 
-        char* p = cursor;
-        while (*p == ' ' || *p == '\t' || *p == '\r') {
-            p++;
+        char* tail = NULL;
+        unsigned long player_id = strtoul(fields[0], &tail, 10);
+        if (tail != fields[0]
+                && player_id > 0ul
+                && player_id <= 0xfffffffful
+                && kbo_fa_market_seed_case_allowed(fields[1])) {
+            seeds[count].player_id = (uint32_t)player_id;
+            kbo_fa_market_copy_token(fields[1], seeds[count].case_label, sizeof(seeds[count].case_label));
+            kbo_fa_market_copy_token(fields[2][0] != '\0' ? fields[2] : "UNKNOWN", seeds[count].grade, sizeof(seeds[count].grade));
+            kbo_fa_market_copy_token(field_count > 3 ? fields[3] : "", seeds[count].note, sizeof(seeds[count].note));
+            count++;
         }
-        if (*p != '\0' && *p != '#' && *p != ';' && (*p < 'A' || *p > 'z')) {
-            char player_field[32] = {0};
-            char case_field[48] = {0};
-            char grade_field[12] = {0};
-            char note_field[128] = {0};
-            if (kbo_fa_market_parse_csv_field(&p, player_field, sizeof(player_field))
-                    && kbo_fa_market_parse_csv_field(&p, case_field, sizeof(case_field))
-                    && kbo_fa_market_parse_csv_field(&p, grade_field, sizeof(grade_field))) {
-                kbo_fa_market_parse_csv_field(&p, note_field, sizeof(note_field));
-
-                char* tail = NULL;
-                unsigned long player_id = strtoul(player_field, &tail, 10);
-                if (tail != player_field
-                        && player_id > 0ul
-                        && player_id <= 0xfffffffful
-                        && kbo_fa_market_seed_case_allowed(case_field)) {
-                    seeds[count].player_id = (uint32_t)player_id;
-                    kbo_fa_market_copy_token(case_field, seeds[count].case_label, sizeof(seeds[count].case_label));
-                    kbo_fa_market_copy_token(grade_field[0] != '\0' ? grade_field : "UNKNOWN", seeds[count].grade, sizeof(seeds[count].grade));
-                    kbo_fa_market_copy_token(note_field, seeds[count].note, sizeof(seeds[count].note));
-                    count++;
-                }
-            }
-        }
-
-        if (next == NULL) {
-            break;
-        }
-        cursor = next + 1;
     }
 
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
     return count;
 }
 

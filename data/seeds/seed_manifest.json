@@ -49,6 +49,7 @@
       "files": [
         { "path": "economic_defaults.json", "source": "economy_and_fa/economic_defaults.json", "label": "Economic defaults", "kind": "policy" },
         { "path": "fa_compensation_policy.json", "source": "economy_and_fa/fa_compensation_policy.json", "label": "FA compensation policy", "kind": "policy" },
+        { "path": "historical_fa_seed.csv", "source": "economy_and_fa/historical_fa_seed.csv", "label": "Historical FA signing seed", "kind": "seed" },
         { "path": "fa_market_policy.json", "source": "economy_and_fa/fa_market_policy.json", "label": "FA market policy", "kind": "policy" },
         { "path": "fa_requalification_policy.json", "source": "economy_and_fa/fa_requalification_policy.json", "label": "FA requalification policy", "kind": "policy" },
         { "path": "fa_rules.json", "source": "economy_and_fa/fa_rules.json", "label": "FA rules", "kind": "rules" }
@@ -88,6 +89,7 @@
         { "path": "news_templates/en/captain.json", "label": "News templates: Captain (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/competitive_balance_tax.json", "label": "News templates: CBT (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/custom_events.json", "label": "News templates: Custom events (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/fa_declaration.json", "label": "News templates: FA declaration (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/fa_compensation.json", "label": "News templates: FA compensation (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/foreign_injury.json", "label": "News templates: Foreign injury (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/foreign_waiver.json", "label": "News templates: Foreign waiver (English)", "kind": "news_template", "language": "en" },
@@ -96,6 +98,7 @@
         { "path": "news_templates/ko/captain.json", "label": "News templates: Captain (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/competitive_balance_tax.json", "label": "News templates: CBT (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/custom_events.json", "label": "News templates: Custom events (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/fa_declaration.json", "label": "News templates: FA declaration (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/fa_compensation.json", "label": "News templates: FA compensation (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/foreign_injury.json", "label": "News templates: Foreign injury (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/foreign_waiver.json", "label": "News templates: Foreign waiver (Korean)", "kind": "news_template", "language": "ko" },

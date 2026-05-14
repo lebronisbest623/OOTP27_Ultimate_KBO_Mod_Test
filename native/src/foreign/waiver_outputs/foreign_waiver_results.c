@@ -6,10 +6,10 @@
 
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/news/live/core_live_news.h"
 #include "../../core/news/templates/core_news_templates.h"
 #include "../../core/logging/core_log.h"
-#include "../common/csv/foreign_csv_parse.h"
 #include "foreign_waiver_announcements.h"
 #include "../common/paths/foreign_waiver_paths.h"
 #include "../common/policy/foreign_waiver_policy.h"
@@ -46,121 +46,55 @@ static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint
 
     char decision_path[MAX_PATH] = {0};
     if (get_kbo_foreign_waiver_decisions_path(decision_path, sizeof(decision_path))) {
-        HANDLE file = CreateFileA(decision_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (file != INVALID_HANDLE_VALUE) {
-            DWORD size = GetFileSize(file, NULL);
-            if (size != INVALID_FILE_SIZE && size > 0 && size < 262144u) {
-                char* input = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-                DWORD read = 0;
-                if (input != NULL && ReadFile(file, input, size, &read, NULL) && read > 0) {
-                    input[read] = '\0';
-                    char* cursor = input;
-                    while (*cursor != '\0') {
-                        char* next = strchr(cursor, '\n');
-                        if (next == NULL) {
-                            next = cursor + strlen(cursor);
-                        }
+        KboCsvReader* reader = kbo_csv_reader_open(decision_path);
+        if (reader != NULL) {
+            while (kbo_csv_reader_next_row(reader)) {
+                char fields[10][64];
+                int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 10);
+                if (field_count < 5 || fields[0][0] < '0' || fields[0][0] > '9') {
+                    continue;
+                }
 
-                        char line[256] = {0};
-                        size_t len = (size_t)(next - cursor);
-                        while (len > 0u && (cursor[len - 1u] == '\r' || cursor[len - 1u] == '\n')) {
-                            len--;
-                        }
-                        if (len >= sizeof(line)) {
-                            len = sizeof(line) - 1u;
-                        }
-                        memcpy(line, cursor, len);
-
-                        const char* p = line;
-                        uint32_t decision_date = 0u;
-                        uint32_t window_start = 0u;
-                        uint32_t window_end = 0u;
-                        if (line[0] >= '0' && line[0] <= '9'
-                                && parse_u32_from_csv_field(&p, &decision_date)
-                                && parse_u32_from_csv_field(&p, &window_start)
-                                && parse_u32_from_csv_field(&p, &window_end)
-                                && window_end == today_yyyymmdd) {
-                            char source_name[16] = {0};
-                            char action_name[16] = {0};
-                            while (*p == ',' || *p == ' ' || *p == '\t') { p++; }
-                            size_t si = 0u;
-                            while (*p != '\0' && *p != ',' && si + 1u < sizeof(source_name)) {
-                                source_name[si++] = *p++;
-                            }
-                            source_name[si] = '\0';
-                            if (*p == ',') { p++; }
-                            size_t ai = 0u;
-                            while (*p != '\0' && *p != ',' && ai + 1u < sizeof(action_name)) {
-                                action_name[ai++] = *p++;
-                            }
-                            action_name[ai] = '\0';
-
-                            if (_stricmp(action_name, "RETAIN") == 0) {
-                                retained++;
-                                decision_breakdown_available = 1;
-                                if (_stricmp(source_name, "ai") == 0) { ai_retained++; }
-                                else if (_stricmp(source_name, "user") == 0) { user_retained++; }
-                            } else if (_stricmp(action_name, "SKIP") == 0) {
-                                skipped++;
-                                decision_breakdown_available = 1;
-                                if (_stricmp(source_name, "ai") == 0) { ai_skipped++; }
-                                else if (_stricmp(source_name, "user") == 0) { user_skipped++; }
-                            }
-                        }
-
-                        if (*next == '\0') {
-                            break;
-                        }
-                        cursor = next + 1;
+                uint32_t window_end = kbo_csv_parse_u32_text(fields[2], 10);
+                if (window_end == today_yyyymmdd) {
+                    const char* source_name = fields[3];
+                    const char* action_name = fields[4];
+                    if (_stricmp(action_name, "RETAIN") == 0) {
+                        retained++;
+                        decision_breakdown_available = 1;
+                        if (_stricmp(source_name, "ai") == 0) { ai_retained++; }
+                        else if (_stricmp(source_name, "user") == 0) { user_retained++; }
+                    } else if (_stricmp(action_name, "SKIP") == 0) {
+                        skipped++;
+                        decision_breakdown_available = 1;
+                        if (_stricmp(source_name, "ai") == 0) { ai_skipped++; }
+                        else if (_stricmp(source_name, "user") == 0) { user_skipped++; }
                     }
                 }
-                if (input != NULL) {
-                    HeapFree(GetProcessHeap(), 0, input);
-                }
             }
-            CloseHandle(file);
+            kbo_csv_reader_close(reader);
         }
     }
 
     if (retained == 0 && skipped == 0) {
         char rights_path[MAX_PATH] = {0};
         if (kbo_get_foreign_waiver_rights_path(rights_path, sizeof(rights_path))) {
-            HANDLE file = CreateFileA(rights_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-            if (file != INVALID_HANDLE_VALUE) {
-                DWORD size = GetFileSize(file, NULL);
-                if (size != INVALID_FILE_SIZE && size > 0u && size < 65536u) {
-                    char input[65536] = {0};
-                    DWORD read = 0;
-                    if (ReadFile(file, input, size, &read, NULL) && read > 0u) {
-                        input[read] = '\0';
-                        const char* cursor = input;
-                        while (*cursor != '\0') {
-                            uint32_t player_id = 0u;
-                            uint32_t team_id = 0u;
-                            uint32_t league_id = 0u;
-                            uint32_t retained_on = 0u;
-                            uint32_t expires_on = 0u;
-                            const char* p = cursor;
-                            if (cursor[0] >= '0' && cursor[0] <= '9'
-                                    && parse_u32_from_csv_field(&p, &player_id)
-                                    && parse_u32_from_csv_field(&p, &team_id)
-                                    && parse_u32_from_csv_field(&p, &league_id)
-                                    && parse_u32_from_csv_field(&p, &retained_on)
-                                    && parse_u32_from_csv_field(&p, &expires_on)
-                                    && retained_on <= today_yyyymmdd
-                                    && expires_on >= today_yyyymmdd) {
-                                retained++;
-                            }
-                            while (*cursor != '\0' && *cursor != '\n') {
-                                cursor++;
-                            }
-                            if (*cursor == '\n') {
-                                cursor++;
-                            }
-                        }
+            KboCsvReader* reader = kbo_csv_reader_open(rights_path);
+            if (reader != NULL) {
+                while (kbo_csv_reader_next_row(reader)) {
+                    char fields[5][64];
+                    int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 5);
+                    if (field_count < 5 || fields[0][0] < '0' || fields[0][0] > '9') {
+                        continue;
+                    }
+
+                    uint32_t retained_on = kbo_csv_parse_u32_text(fields[3], 10);
+                    uint32_t expires_on = kbo_csv_parse_u32_text(fields[4], 10);
+                    if (retained_on <= today_yyyymmdd && expires_on >= today_yyyymmdd) {
+                        retained++;
                     }
                 }
-                CloseHandle(file);
+                kbo_csv_reader_close(reader);
             }
         }
     }

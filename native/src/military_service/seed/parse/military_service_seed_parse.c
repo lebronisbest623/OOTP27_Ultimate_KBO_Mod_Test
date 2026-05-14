@@ -5,30 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../../core/csv/core_csv.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../calendar/military_service_date.h"
 #include "military_service_seed_parse.h"
-
-void kbo_military_trim_csv_token_in_place(char* text)
-{
-    if (text == NULL) {
-        return;
-    }
-    char* start = text;
-    while (*start == ' ' || *start == '\t' || *start == '"') {
-        start++;
-    }
-    char* end = start + strlen(start);
-    while (end > start
-            && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r'
-                || end[-1] == '\n' || end[-1] == '"')) {
-        end--;
-    }
-    *end = '\0';
-    if (start != text) {
-        memmove(text, start, strlen(start) + 1u);
-    }
-}
 
 int kbo_military_ascii_is_seed_id_char(char ch)
 {
@@ -164,41 +144,16 @@ int32_t kbo_military_days_left_from_return_serial(uint32_t return_serial, uint32
     return diff > 32767u ? 32767 : (int32_t)diff;
 }
 
-int kbo_parse_military_service_seed_line(const char* line, KboMilitaryServiceSeed* out)
+int kbo_parse_military_service_seed_fields(char fields[][96], int field_count, KboMilitaryServiceSeed* out)
 {
-    if (line == NULL || out == NULL) {
+    if (fields == NULL || out == NULL) {
         return 0;
     }
     memset(out, 0, sizeof(*out));
 
-    char copy[240] = {0};
-    size_t len = strlen(line);
-    if (len >= sizeof(copy)) {
-        len = sizeof(copy) - 1u;
-    }
-    memcpy(copy, line, len);
-
-    char* p = copy;
-    while (*p == ' ' || *p == '\t') {
-        p++;
-    }
-    if (*p == '\0' || *p == '\r' || *p == '\n' || *p == '#' || *p == ';') {
-        return 0;
-    }
-
-    char* fields[8] = {0};
-    int field_count = 0;
-    fields[field_count++] = p;
-    for (char* q = p; *q != '\0' && field_count < 8; q++) {
-        if (*q == ',') {
-            *q = '\0';
-            fields[field_count++] = q + 1;
-        }
-    }
-    for (int i = 0; i < field_count; i++) {
-        kbo_military_trim_csv_token_in_place(fields[i]);
-    }
-    if (fields[0] == NULL || fields[0][0] == '\0'
+    if (field_count <= 0 || fields[0][0] == '\0'
+            || fields[0][0] == '#'
+            || fields[0][0] == ';'
             || _stricmp(fields[0], "source_key") == 0
             || _stricmp(fields[0], "player_id") == 0) {
         return 0;
@@ -259,4 +214,30 @@ int kbo_parse_military_service_seed_line(const char* line, KboMilitaryServiceSee
         out->service_total_days = KBO_MILITARY_SERVICE_DAYS;
     }
     return out->key[0] != '\0' || out->player_id != 0u;
+}
+
+int kbo_parse_military_service_seed_line(const char* line, KboMilitaryServiceSeed* out)
+{
+    if (line == NULL || out == NULL) {
+        return 0;
+    }
+
+    char copy[240] = {0};
+    size_t len = strlen(line);
+    if (len >= sizeof(copy)) {
+        len = sizeof(copy) - 1u;
+    }
+    memcpy(copy, line, len);
+
+    char* p = copy;
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    if (*p == '\0' || *p == '\r' || *p == '\n' || *p == '#' || *p == ';') {
+        return 0;
+    }
+
+    char fields[8][96];
+    int field_count = kbo_csv_read_trimmed_line_fields(p, (char*)fields, sizeof(fields[0]), 8);
+    return kbo_parse_military_service_seed_fields(fields, field_count, out);
 }

@@ -29,58 +29,6 @@ static void kbo_allstar_trim_cell(char* value)
     }
 }
 
-static void kbo_allstar_csv_read_cell(const char** cursor, char* out, size_t out_size)
-{
-    if (out == NULL || out_size == 0) {
-        return;
-    }
-    out[0] = '\0';
-    if (cursor == NULL || *cursor == NULL) {
-        return;
-    }
-
-    const char* p = *cursor;
-    size_t len = 0;
-    int quoted = 0;
-    if (*p == '"') {
-        quoted = 1;
-        p++;
-    }
-
-    while (*p != '\0') {
-        if (quoted) {
-            if (*p == '"') {
-                if (p[1] == '"') {
-                    if (len + 1 < out_size) {
-                        out[len++] = '"';
-                    }
-                    p += 2;
-                    continue;
-                }
-                p++;
-                if (*p == ',') {
-                    p++;
-                }
-                break;
-            }
-        } else if (*p == ',') {
-            p++;
-            break;
-        } else if (*p == '\r' || *p == '\n') {
-            break;
-        }
-
-        if (len + 1 < out_size) {
-            out[len++] = *p;
-        }
-        p++;
-    }
-
-    out[len] = '\0';
-    kbo_allstar_trim_cell(out);
-    *cursor = p;
-}
-
 static void kbo_allstar_copy_text(char* out, size_t out_size, const char* value)
 {
     if (out == NULL || out_size == 0) {
@@ -175,22 +123,25 @@ static void kbo_derive_current_city_from_team_name(const char* name, char* out, 
     kbo_allstar_trim_cell(out);
 }
 
-void kbo_csv_find_allstar_team_columns(
-    const char* header,
+void kbo_csv_find_allstar_team_columns_from_fields(
+    char fields[][KBO_ALLSTAR_CSV_FIELD_SIZE],
+    int field_count,
     int* year_col,
     int* team_id_col,
     int* name_col,
     int* allstar_col)
 {
-    const char* cursor = header;
-    char cell[256] = {0};
     *year_col = -1;
     *team_id_col = -1;
     *name_col = -1;
     *allstar_col = -1;
 
-    for (int col = 0; col < 160 && *cursor != '\0'; col++) {
-        kbo_allstar_csv_read_cell(&cursor, cell, sizeof(cell));
+    if (fields == NULL || field_count <= 0) {
+        return;
+    }
+
+    for (int col = 0; col < field_count && col < KBO_ALLSTAR_CSV_MAX_COLUMNS; col++) {
+        const char* cell = fields[col];
         if (*year_col < 0 && (
                 ascii_equals_ignore_case(cell, "yearID")
                 || ascii_equals_ignore_case(cell, "year")
@@ -211,8 +162,9 @@ void kbo_csv_find_allstar_team_columns(
     }
 }
 
-void kbo_csv_extract_allstar_team_fields(
-    const char* line,
+void kbo_csv_extract_allstar_team_fields_from_fields(
+    char fields[][KBO_ALLSTAR_CSV_FIELD_SIZE],
+    int field_count,
     int year_col,
     int team_id_col,
     int name_col,
@@ -226,8 +178,6 @@ void kbo_csv_extract_allstar_team_fields(
     size_t current_city_size,
     uint8_t* side)
 {
-    const char* cursor = line;
-    char cell[256] = {0};
     char name[128] = {0};
     *year = 0;
     *side = 0;
@@ -239,6 +189,9 @@ void kbo_csv_extract_allstar_team_fields(
     }
     if (current_city != NULL && current_city_size > 0) {
         current_city[0] = '\0';
+    }
+    if (fields == NULL || field_count <= 0) {
+        return;
     }
 
     int max_col = year_col;
@@ -252,8 +205,8 @@ void kbo_csv_extract_allstar_team_fields(
         max_col = allstar_col;
     }
 
-    for (int col = 0; col <= max_col && *cursor != '\0'; col++) {
-        kbo_allstar_csv_read_cell(&cursor, cell, sizeof(cell));
+    for (int col = 0; col <= max_col && col < field_count; col++) {
+        const char* cell = fields[col];
         if (col == year_col) {
             int parsed_year = atoi(cell);
             if (parsed_year >= 1800 && parsed_year <= 2200) {

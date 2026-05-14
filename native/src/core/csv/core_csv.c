@@ -1,5 +1,6 @@
 #include "core_csv.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -136,4 +137,74 @@ int kbo_csv_parse_u32_field(const char** cursor, uint32_t* out_value)
     *out_value = (uint32_t)value;
     *cursor = p;
     return 1;
+}
+
+static int kbo_csv_read_line_fields_internal(
+    const char* line,
+    char* fields,
+    size_t field_size,
+    int max_fields,
+    int trim)
+{
+    if (line == NULL || fields == NULL || field_size == 0u || max_fields <= 0) {
+        return 0;
+    }
+
+    memset(fields, 0, field_size * (size_t)max_fields);
+    const char* cursor = line;
+    int field_count = 0;
+    while (field_count < max_fields
+            && cursor != NULL
+            && *cursor != '\0'
+            && *cursor != '\r'
+            && *cursor != '\n') {
+        char* field = fields + ((size_t)field_count * field_size);
+        if (!kbo_csv_parse_const_field(&cursor, field, field_size)) {
+            break;
+        }
+        if (trim) {
+            kbo_csv_trim_token_in_place(field);
+        }
+        field_count++;
+    }
+    return field_count;
+}
+
+int kbo_csv_read_line_fields(const char* line, char* fields, size_t field_size, int max_fields)
+{
+    return kbo_csv_read_line_fields_internal(line, fields, field_size, max_fields, 0);
+}
+
+int kbo_csv_read_trimmed_line_fields(const char* line, char* fields, size_t field_size, int max_fields)
+{
+    return kbo_csv_read_line_fields_internal(line, fields, field_size, max_fields, 1);
+}
+
+int kbo_csv_copy_line_field(const char* line, int target_index, char* out, size_t out_size)
+{
+    if (out != NULL && out_size > 0u) {
+        out[0] = '\0';
+    }
+    if (line == NULL || target_index < 0 || out == NULL || out_size == 0u) {
+        return 0;
+    }
+
+    const char* cursor = line;
+    char field[512] = {0};
+    for (int index = 0; index <= target_index
+            && cursor != NULL
+            && *cursor != '\0'
+            && *cursor != '\r'
+            && *cursor != '\n';
+            index++) {
+        if (!kbo_csv_parse_const_field(&cursor, field, sizeof(field))) {
+            return 0;
+        }
+        if (index == target_index) {
+            kbo_csv_trim_token_in_place(field);
+            snprintf(out, out_size, "%s", field);
+            return 1;
+        }
+    }
+    return 0;
 }

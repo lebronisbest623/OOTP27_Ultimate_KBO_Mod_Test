@@ -1,48 +1,5 @@
 #include "../fa_compensation_decisions_internal.h"
-
-int kbo_fa_compensation_parse_csv_field(char** cursor, char* out, size_t out_size)
-{
-    if (cursor == NULL || *cursor == NULL || out == NULL || out_size == 0) {
-        return 0;
-    }
-    char* p = *cursor;
-    size_t used = 0;
-    int quoted = 0;
-    if (*p == '"') {
-        quoted = 1;
-        p++;
-    }
-    while (*p != '\0') {
-        if (quoted) {
-            if (*p == '"') {
-                if (p[1] == '"') {
-                    if (used + 1 < out_size) {
-                        out[used++] = '"';
-                    }
-                    p += 2;
-                    continue;
-                }
-                p++;
-                if (*p == ',') {
-                    p++;
-                }
-                break;
-            }
-        } else if (*p == ',') {
-            p++;
-            break;
-        } else if (*p == '\r' || *p == '\n') {
-            break;
-        }
-        if (used + 1 < out_size) {
-            out[used++] = *p;
-        }
-        p++;
-    }
-    out[used] = '\0';
-    *cursor = p;
-    return 1;
-}
+#include "../../../core/csv/core_csv.h"
 
 void kbo_fa_compensation_write_csv_text(HANDLE file, const char* text)
 {
@@ -75,82 +32,44 @@ int kbo_load_fa_compensation_protection_debug_rows(
     if (!kbo_get_fa_compensation_protection_debug_path(path, sizeof(path))) {
         return 0;
     }
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 2u * 1024u * 1024u) {
-        CloseHandle(file);
-        return 0;
-    }
-    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buffer == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-    DWORD read = 0;
-    if (!ReadFile(file, buffer, size, &read, NULL)) {
-        HeapFree(GetProcessHeap(), 0, buffer);
-        CloseHandle(file);
-        return 0;
-    }
-    CloseHandle(file);
-    buffer[read] = '\0';
 
     int count = 0;
-    char* cursor = buffer;
-    while (*cursor != '\0' && count < max_rows) {
-        char* next = strchr(cursor, '\n');
-        if (next != NULL) {
-            *next = '\0';
+    while (count < max_rows && kbo_csv_reader_next_row(reader)) {
+        char fields[16][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 16);
+        if (field_count < 16 || fields[0][0] < '0' || fields[0][0] > '9') {
+            continue;
         }
-        char* p = cursor;
-        while (*p == ' ' || *p == '\t' || *p == '\r') {
-            p++;
+
+        KboFaCompensationProtectionDebugRow* row = &rows[count];
+        row->fa_player_id = kbo_fa_compensation_parse_u32(fields[0]);
+        row->season = kbo_fa_compensation_parse_u32(fields[1]);
+        kbo_fa_compensation_copy_token(fields[2], row->grade, sizeof(row->grade));
+        row->original_team_id = kbo_fa_compensation_parse_u32(fields[3]);
+        row->signing_team_id = kbo_fa_compensation_parse_u32(fields[4]);
+        row->due_on_yyyymmdd = kbo_fa_compensation_parse_u32(fields[5]);
+        row->generated_on_yyyymmdd = kbo_fa_compensation_parse_u32(fields[6]);
+        kbo_fa_compensation_copy_token(fields[7], row->list_type, sizeof(row->list_type));
+        row->rank = kbo_fa_compensation_parse_u32(fields[8]);
+        row->player_id = kbo_fa_compensation_parse_u32(fields[9]);
+        kbo_fa_compensation_copy_token(fields[10], row->player_name, sizeof(row->player_name));
+        row->score = kbo_fa_compensation_parse_i32(fields[11]);
+        row->age = (uint16_t)kbo_fa_compensation_parse_u32(fields[12]);
+        row->role = (uint8_t)kbo_fa_compensation_parse_u32(fields[13]);
+        kbo_fa_compensation_copy_token(fields[14], row->reason, sizeof(row->reason));
+        kbo_fa_compensation_copy_token(fields[15], row->source, sizeof(row->source));
+        if (row->fa_player_id != 0u && row->player_id != 0u) {
+            count++;
+        } else {
+            memset(row, 0, sizeof(*row));
         }
-        if (*p >= '0' && *p <= '9') {
-            char fields[16][128];
-            memset(fields, 0, sizeof(fields));
-            int ok = 1;
-            for (int field_index = 0; field_index < 16; field_index++) {
-                if (!kbo_fa_compensation_parse_csv_field(&p, fields[field_index], sizeof(fields[field_index]))) {
-                    ok = 0;
-                    break;
-                }
-            }
-            if (ok) {
-                KboFaCompensationProtectionDebugRow* row = &rows[count];
-                row->fa_player_id = kbo_fa_compensation_parse_u32(fields[0]);
-                row->season = kbo_fa_compensation_parse_u32(fields[1]);
-                kbo_fa_compensation_copy_token(fields[2], row->grade, sizeof(row->grade));
-                row->original_team_id = kbo_fa_compensation_parse_u32(fields[3]);
-                row->signing_team_id = kbo_fa_compensation_parse_u32(fields[4]);
-                row->due_on_yyyymmdd = kbo_fa_compensation_parse_u32(fields[5]);
-                row->generated_on_yyyymmdd = kbo_fa_compensation_parse_u32(fields[6]);
-                kbo_fa_compensation_copy_token(fields[7], row->list_type, sizeof(row->list_type));
-                row->rank = kbo_fa_compensation_parse_u32(fields[8]);
-                row->player_id = kbo_fa_compensation_parse_u32(fields[9]);
-                kbo_fa_compensation_copy_token(fields[10], row->player_name, sizeof(row->player_name));
-                row->score = kbo_fa_compensation_parse_i32(fields[11]);
-                row->age = (uint16_t)kbo_fa_compensation_parse_u32(fields[12]);
-                row->role = (uint8_t)kbo_fa_compensation_parse_u32(fields[13]);
-                kbo_fa_compensation_copy_token(fields[14], row->reason, sizeof(row->reason));
-                kbo_fa_compensation_copy_token(fields[15], row->source, sizeof(row->source));
-                if (row->fa_player_id != 0u && row->player_id != 0u) {
-                    count++;
-                } else {
-                    memset(row, 0, sizeof(*row));
-                }
-            }
-        }
-        if (next == NULL) {
-            break;
-        }
-        cursor = next + 1;
     }
 
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
     return count;
 }
 

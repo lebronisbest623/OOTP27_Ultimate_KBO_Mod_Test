@@ -4,31 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../../core/csv/core_csv.h"
+
 int kbo_ascii_is_seed_id_char(char ch)
 {
     return (ch >= 'A' && ch <= 'Z')
         || (ch >= 'a' && ch <= 'z')
         || (ch >= '0' && ch <= '9')
         || ch == '_' || ch == '-';
-}
-
-void kbo_trim_csv_token_in_place(char* text)
-{
-    if (text == NULL) {
-        return;
-    }
-    char* start = text;
-    while (*start == ' ' || *start == '\t' || *start == '"') {
-        start++;
-    }
-    char* end = start + strlen(start);
-    while (end > start && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' || end[-1] == '\n' || end[-1] == '"')) {
-        end--;
-    }
-    *end = '\0';
-    if (start != text) {
-        memmove(text, start, strlen(start) + 1u);
-    }
 }
 
 uint8_t kbo_parse_foreign_replacement_seed_slot_type(const char* text)
@@ -75,22 +58,10 @@ int kbo_parse_foreign_replacement_player_seed_line(
         return 0;
     }
 
-    char* first = p;
-    char* comma = strchr(first, ',');
-    char* second = NULL;
-    if (comma != NULL) {
-        *comma = '\0';
-        second = comma + 1;
-        char* second_comma = strchr(second, ',');
-        if (second_comma != NULL) {
-            *second_comma = '\0';
-        }
-    }
-
-    kbo_trim_csv_token_in_place(first);
-    if (second != NULL) {
-        kbo_trim_csv_token_in_place(second);
-    }
+    char fields[3][80];
+    int field_count = kbo_csv_read_trimmed_line_fields(p, (char*)fields, sizeof(fields[0]), 3);
+    const char* first = field_count > 0 ? fields[0] : "";
+    const char* second = field_count > 1 ? fields[1] : "";
     if (first[0] == '\0' || _stricmp(first, "replacement_player_key") == 0 || _stricmp(first, "player_id") == 0) {
         return 0;
     }

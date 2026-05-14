@@ -20,7 +20,6 @@
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../../team/names/team_string.h"
-#include "../../common/csv/foreign_csv_parse.h"
 #include "../../common/events/foreign_priority_events.h"
 #include "../../common/config/foreign_waiver_config.h"
 #include "../api/foreign_waiver_core.h"

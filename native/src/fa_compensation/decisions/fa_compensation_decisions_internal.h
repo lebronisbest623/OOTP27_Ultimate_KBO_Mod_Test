@@ -9,8 +9,6 @@
 #include "fa_compensation_decisions.h"
 #include "../state/fa_compensation_paths_parse.h"
 
-
-int kbo_fa_compensation_parse_csv_field(char** cursor, char* out, size_t out_size);
 void kbo_fa_compensation_write_csv_text(HANDLE file, const char* text);
 int kbo_load_fa_compensation_protection_debug_rows(
     KboFaCompensationProtectionDebugRow* rows,

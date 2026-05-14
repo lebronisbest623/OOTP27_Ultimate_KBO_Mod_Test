@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../csv/amateur_reputation_csv.h"
 #include "../api/amateur_player_quality.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/dates/core_current_date.h"

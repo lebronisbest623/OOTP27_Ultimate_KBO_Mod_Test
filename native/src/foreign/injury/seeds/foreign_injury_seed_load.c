@@ -1,4 +1,5 @@
 #include "../internal/foreign_injury_internal.h"
+#include "../../../core/csv/core_csv.h"
 #include "../../../core/dates/core_text_date.h"
 
 static int kbo_foreign_injury_persisted_date_span_plausible(
@@ -62,108 +63,65 @@ int kbo_load_foreign_injury_replacements_locked(const char* path)
     }
     snprintf(g_kbo_foreign_injury_replacement_loaded_path, sizeof(g_kbo_foreign_injury_replacement_loaded_path), "%s", path);
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 262144u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int loaded = 0;
     int invalid_date_span = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0' && g_kbo_foreign_injury_replacement_count < KBO_FOREIGN_INJURY_REPLACEMENT_MAX) {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
+    while (g_kbo_foreign_injury_replacement_count < KBO_FOREIGN_INJURY_REPLACEMENT_MAX
+            && kbo_csv_reader_next_row(reader)) {
+        char fields[9][96];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 9);
+        if (field_count < 9 || fields[0][0] < '0' || fields[0][0] > '9') {
+            continue;
+        }
 
-            char line[256] = {0};
-            size_t len = (size_t)(next - cursor);
-            while (len > 0u && (cursor[len - 1u] == '\r' || cursor[len - 1u] == '\n')) {
-                len--;
-            }
-            if (len >= sizeof(line)) {
-                len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, len);
-
-            const char* p = line;
-            uint32_t team_id = 0u;
-            uint32_t league_id = 0u;
-            uint32_t injured_player_id = 0u;
-            uint32_t replacement_player_id = 0u;
-            uint32_t opened_on = 0u;
-            uint32_t expected_end = 0u;
-            uint32_t slot_type = 0u;
-            uint32_t status = 0u;
-            uint32_t converted = 0u;
-            if (line[0] >= '0' && line[0] <= '9'
-                    && parse_u32_from_csv_field(&p, &team_id)
-                    && parse_u32_from_csv_field(&p, &league_id)
-                    && parse_u32_from_csv_field(&p, &injured_player_id)
-                    && parse_u32_from_csv_field(&p, &replacement_player_id)
-                    && parse_u32_from_csv_field(&p, &opened_on)
-                    && parse_u32_from_csv_field(&p, &expected_end)
-                    && parse_u32_from_csv_field(&p, &slot_type)
-                    && parse_u32_from_csv_field(&p, &status)
-                    && parse_u32_from_csv_field(&p, &converted)
-                    && team_id != 0u
-                    && injured_player_id != 0u
-                    && slot_type >= KBO_FOREIGN_INJURY_SLOT_REGULAR
-                    && slot_type <= KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA
-                    && status >= KBO_FOREIGN_INJURY_STATUS_OPEN
-                    && status <= KBO_FOREIGN_INJURY_STATUS_CLOSED) {
-                if (!kbo_foreign_injury_persisted_date_span_plausible(opened_on, expected_end)) {
-                    invalid_date_span++;
-                    if (invalid_date_span <= 20) {
-                        append_logf(
-                            "foreign injury replacement: discarded persisted record with invalid date span team=%u injured=%u opened=%u expected_end=%u status=%u path=%s",
-                            team_id,
-                            injured_player_id,
-                            opened_on,
-                            expected_end,
-                            status,
-                            path);
-                    }
-                    goto next_line;
+        uint32_t team_id = kbo_csv_parse_u32_text(fields[0], 10);
+        uint32_t league_id = kbo_csv_parse_u32_text(fields[1], 10);
+        uint32_t injured_player_id = kbo_csv_parse_u32_text(fields[2], 10);
+        uint32_t replacement_player_id = kbo_csv_parse_u32_text(fields[3], 10);
+        uint32_t opened_on = kbo_csv_parse_u32_text(fields[4], 10);
+        uint32_t expected_end = kbo_csv_parse_u32_text(fields[5], 10);
+        uint32_t slot_type = kbo_csv_parse_u32_text(fields[6], 10);
+        uint32_t status = kbo_csv_parse_u32_text(fields[7], 10);
+        uint32_t converted = kbo_csv_parse_u32_text(fields[8], 10);
+        if (team_id != 0u
+                && injured_player_id != 0u
+                && slot_type >= KBO_FOREIGN_INJURY_SLOT_REGULAR
+                && slot_type <= KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA
+                && status >= KBO_FOREIGN_INJURY_STATUS_OPEN
+                && status <= KBO_FOREIGN_INJURY_STATUS_CLOSED) {
+            if (!kbo_foreign_injury_persisted_date_span_plausible(opened_on, expected_end)) {
+                invalid_date_span++;
+                if (invalid_date_span <= 20) {
+                    append_logf(
+                        "foreign injury replacement: discarded persisted record with invalid date span team=%u injured=%u opened=%u expected_end=%u status=%u path=%s",
+                        team_id,
+                        injured_player_id,
+                        opened_on,
+                        expected_end,
+                        status,
+                        path);
                 }
-                KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[g_kbo_foreign_injury_replacement_count++];
-                rec->team_id = team_id;
-                rec->league_id = league_id;
-                rec->injured_player_id = injured_player_id;
-                rec->replacement_player_id = replacement_player_id;
-                rec->opened_on_yyyymmdd = opened_on;
-                rec->expected_end_yyyymmdd = expected_end;
-                rec->slot_type = (uint8_t)slot_type;
-                rec->status = (uint8_t)status;
-                rec->converted = converted ? 1u : 0u;
-                loaded++;
+                continue;
             }
-
-next_line:
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+            KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[g_kbo_foreign_injury_replacement_count++];
+            rec->team_id = team_id;
+            rec->league_id = league_id;
+            rec->injured_player_id = injured_player_id;
+            rec->replacement_player_id = replacement_player_id;
+            rec->opened_on_yyyymmdd = opened_on;
+            rec->expected_end_yyyymmdd = expected_end;
+            rec->slot_type = (uint8_t)slot_type;
+            rec->status = (uint8_t)status;
+            rec->converted = converted ? 1u : 0u;
+            loaded++;
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     append_logf(
         "foreign injury replacement: loaded=%d invalid_date_span=%d path=%s",
         loaded,
@@ -172,77 +130,10 @@ next_line:
     return loaded;
 }
 
-int kbo_parse_foreign_injury_replacement_seed_line(
-    const char* line,
+static int kbo_finalize_foreign_injury_replacement_seed(
     uint32_t today,
     KboForeignInjuryReplacement* out)
 {
-    if (line == NULL || out == NULL) {
-        return 0;
-    }
-    memset(out, 0, sizeof(*out));
-
-    const char* p = line;
-    while (*p == ' ' || *p == '\t') {
-        p++;
-    }
-    if (*p == '\0' || *p == '\r' || *p == '\n' || *p == '#' || *p == ';') {
-        return 0;
-    }
-
-    if (kbo_parse_foreign_injury_replacement_key_seed_line(line, today, out)) {
-        goto resolve_context;
-    }
-
-    uint32_t values[9] = {0};
-    int count = 0;
-    while (count < 9) {
-        while (*p == ' ' || *p == '\t' || *p == ',') {
-            p++;
-        }
-        if (*p < '0' || *p > '9') {
-            break;
-        }
-        if (!parse_u32_from_csv_field(&p, &values[count])) {
-            break;
-        }
-        count++;
-        while (*p != '\0' && *p != ',' && *p != '\r' && *p != '\n') {
-            p++;
-        }
-        if (*p == '\0' || *p == '\r' || *p == '\n') {
-            break;
-        }
-    }
-
-    if (count < 3) {
-        return 0;
-    }
-
-    if (count >= 9) {
-        out->team_id = values[0];
-        out->league_id = values[1];
-        out->injured_player_id = values[2];
-        out->replacement_player_id = values[3];
-        out->opened_on_yyyymmdd = values[4];
-        out->expected_end_yyyymmdd = values[5];
-        out->slot_type = (uint8_t)values[6];
-        out->status = (uint8_t)values[7];
-        out->converted = values[8] ? 1u : 0u;
-    } else {
-        out->team_id = values[0];
-        out->injured_player_id = values[1];
-        out->replacement_player_id = values[2];
-        out->slot_type = (count >= 4) ? (uint8_t)values[3] : 0u;
-        out->status = (count >= 5) ? (uint8_t)values[4] : 0u;
-        out->opened_on_yyyymmdd = today;
-    }
-
-    if (out->injured_player_id == 0u) {
-        return 0;
-    }
-
-resolve_context:
     uint32_t injured_team_id = 0u;
     uint32_t injured_league_id = 0u;
     uint32_t replacement_team_id = 0u;
@@ -293,6 +184,91 @@ resolve_context:
     return out->team_id != 0u;
 }
 
+static int kbo_parse_foreign_injury_replacement_seed_fields(
+    char fields[][96],
+    int field_count,
+    uint32_t today,
+    KboForeignInjuryReplacement* out)
+{
+    if (fields == NULL || out == NULL) {
+        return 0;
+    }
+    memset(out, 0, sizeof(*out));
+
+    if (field_count <= 0
+            || fields[0][0] == '\0'
+            || fields[0][0] == '#'
+            || fields[0][0] == ';') {
+        return 0;
+    }
+
+    if (kbo_parse_foreign_injury_replacement_key_seed_fields(fields, field_count, today, out)) {
+        return kbo_finalize_foreign_injury_replacement_seed(today, out);
+    }
+
+    uint32_t values[9] = {0};
+    int count = 0;
+    while (count < 9 && count < field_count) {
+        if (fields[count][0] < '0' || fields[count][0] > '9') {
+            break;
+        }
+        values[count] = kbo_csv_parse_u32_text(fields[count], 10);
+        count++;
+    }
+
+    if (count < 3) {
+        return 0;
+    }
+
+    if (count >= 9) {
+        out->team_id = values[0];
+        out->league_id = values[1];
+        out->injured_player_id = values[2];
+        out->replacement_player_id = values[3];
+        out->opened_on_yyyymmdd = values[4];
+        out->expected_end_yyyymmdd = values[5];
+        out->slot_type = (uint8_t)values[6];
+        out->status = (uint8_t)values[7];
+        out->converted = values[8] ? 1u : 0u;
+    } else {
+        out->team_id = values[0];
+        out->injured_player_id = values[1];
+        out->replacement_player_id = values[2];
+        out->slot_type = (count >= 4) ? (uint8_t)values[3] : 0u;
+        out->status = (count >= 5) ? (uint8_t)values[4] : 0u;
+        out->opened_on_yyyymmdd = today;
+    }
+
+    if (out->injured_player_id == 0u) {
+        return 0;
+    }
+
+    return kbo_finalize_foreign_injury_replacement_seed(today, out);
+}
+
+int kbo_parse_foreign_injury_replacement_seed_line(
+    const char* line,
+    uint32_t today,
+    KboForeignInjuryReplacement* out)
+{
+    if (line == NULL || out == NULL) {
+        return 0;
+    }
+    memset(out, 0, sizeof(*out));
+
+    const char* p = line;
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    if (*p == '\0' || *p == '\r' || *p == '\n' || *p == '#' || *p == ';') {
+        return 0;
+    }
+
+    char fields[9][96];
+    int field_count = kbo_csv_read_trimmed_line_fields(p, (char*)fields, sizeof(fields[0]), 9);
+    return kbo_parse_foreign_injury_replacement_seed_fields(fields, field_count, today, out);
+}
+
 int kbo_import_foreign_injury_replacement_seed_file_locked(
     const char* path,
     uint32_t today,
@@ -302,73 +278,32 @@ int kbo_import_foreign_injury_replacement_seed_file_locked(
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 262144u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int imported = 0;
     int skipped = 0;
     int parse_failed = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0') {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[9][96];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 9);
 
-            char line[256] = {0};
-            size_t len = (size_t)(next - cursor);
-            while (len > 0u && (cursor[len - 1u] == '\r' || cursor[len - 1u] == '\n')) {
-                len--;
+        KboForeignInjuryReplacement rec;
+        if (kbo_parse_foreign_injury_replacement_seed_fields(fields, field_count, today, &rec)) {
+            if (kbo_find_foreign_injury_replacement_locked(rec.injured_player_id, 1) >= 0) {
+                skipped++;
+            } else if (g_kbo_foreign_injury_replacement_count < KBO_FOREIGN_INJURY_REPLACEMENT_MAX) {
+                g_kbo_foreign_injury_replacements[g_kbo_foreign_injury_replacement_count++] = rec;
+                imported++;
             }
-            if (len >= sizeof(line)) {
-                len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, len);
-
-            KboForeignInjuryReplacement rec;
-            if (kbo_parse_foreign_injury_replacement_seed_line(line, today, &rec)) {
-                if (kbo_find_foreign_injury_replacement_locked(rec.injured_player_id, 1) >= 0) {
-                    skipped++;
-                } else if (g_kbo_foreign_injury_replacement_count < KBO_FOREIGN_INJURY_REPLACEMENT_MAX) {
-                    g_kbo_foreign_injury_replacements[g_kbo_foreign_injury_replacement_count++] = rec;
-                    imported++;
-                }
-            } else {
-                char* check = line;
-                while (*check == ' ' || *check == '\t') {
-                    check++;
-                }
-                if (*check != '\0' && *check != '#') {
-                    parse_failed++;
-                }
-            }
-
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+        } else if (field_count > 0 && fields[0][0] != '\0' && fields[0][0] != '#') {
+            parse_failed++;
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     if (imported > 0 || skipped > 0 || parse_failed > 0) {
         append_logf(
             "foreign injury replacement: seed import source=%s imported=%d skipped=%d parse_failed=%d path=%s",

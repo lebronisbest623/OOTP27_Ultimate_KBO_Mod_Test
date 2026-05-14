@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../core/csv/core_csv.h"
 #include "../csv/salary_snapshot_csv_parse.h"
 #include "../paths/salary_snapshot_paths_dates.h"
 #include "../../fa_market_classification/policy/fa_market_policy.h"
@@ -15,11 +16,11 @@ static const char* kbo_fa_salary_snapshot_grade_for_ranks(uint32_t overall_rank,
     }
     const KboFaMarketPolicy* policy = kbo_fa_market_policy();
     if ((overall_rank != 0u && overall_rank <= (uint32_t)policy->salary_grade_a_overall_rank_max)
-            || (team_rank != 0u && team_rank <= (uint32_t)policy->salary_grade_a_team_rank_max)) {
+            && (team_rank != 0u && team_rank <= (uint32_t)policy->salary_grade_a_team_rank_max)) {
         return "A";
     }
     if ((overall_rank != 0u && overall_rank <= (uint32_t)policy->salary_grade_b_overall_rank_max)
-            || (team_rank != 0u && team_rank <= (uint32_t)policy->salary_grade_b_team_rank_max)) {
+            && (team_rank != 0u && team_rank <= (uint32_t)policy->salary_grade_b_team_rank_max)) {
         return "B";
     }
     return "C";
@@ -157,83 +158,43 @@ int kbo_fa_salary_snapshot_load_grade_rows(
         snprintf(out_path, out_path_size, "%s", path);
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
-
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 8u * 1024u * 1024u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buffer == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
-    if (!ReadFile(file, buffer, size, &read, NULL)) {
-        HeapFree(GetProcessHeap(), 0, buffer);
-        CloseHandle(file);
-        return 0;
-    }
-    CloseHandle(file);
-    buffer[read] = '\0';
 
     int count = 0;
-    char* cursor = buffer;
-    while (*cursor != '\0' && count < max_rows) {
-        char* next = strchr(cursor, '\n');
-        if (next != NULL) {
-            *next = '\0';
+    while (count < max_rows && kbo_csv_reader_next_row(reader)) {
+        char fields[35][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 35);
+        if (field_count < 22 || fields[0][0] < '0' || fields[0][0] > '9') {
+            continue;
         }
 
-        char* p = cursor;
-        while (*p == ' ' || *p == '\t' || *p == '\r') {
-            p++;
-        }
-        if (*p >= '0' && *p <= '9') {
-            KboFaSalarySnapshotGrade grade_row;
-            memset(&grade_row, 0, sizeof(grade_row));
-            for (int field_index = 0; field_index <= 34 && *p != '\0'; field_index++) {
-                char field[128] = {0};
-                if (!kbo_fa_salary_snapshot_parse_csv_field(&p, field, sizeof(field))) {
-                    break;
-                }
-
-                switch (field_index) {
-                case 0: grade_row.snapshot_date = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 1: grade_row.season = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 2: grade_row.opening_day = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 5: grade_row.player_id = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 6: snprintf(grade_row.player_name, sizeof(grade_row.player_name), "%s", field); break;
-                case 10: grade_row.ranking_team_id = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 16: grade_row.foreign_flag = kbo_fa_salary_snapshot_parse_u32(field) != 0u ? 1u : 0u; break;
-                case 17: grade_row.salary = kbo_fa_salary_snapshot_parse_i32(field); break;
-                case 18: grade_row.overall_rank = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 19: grade_row.overall_ordinal = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 20: grade_row.team_rank = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 21: grade_row.team_ordinal = kbo_fa_salary_snapshot_parse_u32(field); break;
-                case 34: snprintf(grade_row.player_key, sizeof(grade_row.player_key), "%s", field); break;
-                default: break;
-                }
-            }
-
-            if (grade_row.player_id != 0u && grade_row.season == season) {
-                rows[count++] = grade_row;
-            }
+        KboFaSalarySnapshotGrade grade_row;
+        memset(&grade_row, 0, sizeof(grade_row));
+        grade_row.snapshot_date = kbo_fa_salary_snapshot_parse_u32(fields[0]);
+        grade_row.season = kbo_fa_salary_snapshot_parse_u32(fields[1]);
+        grade_row.opening_day = kbo_fa_salary_snapshot_parse_u32(fields[2]);
+        grade_row.player_id = kbo_fa_salary_snapshot_parse_u32(fields[5]);
+        snprintf(grade_row.player_name, sizeof(grade_row.player_name), "%s", fields[6]);
+        grade_row.ranking_team_id = kbo_fa_salary_snapshot_parse_u32(fields[10]);
+        grade_row.foreign_flag = kbo_fa_salary_snapshot_parse_u32(fields[16]) != 0u ? 1u : 0u;
+        grade_row.salary = kbo_fa_salary_snapshot_parse_i32(fields[17]);
+        grade_row.overall_rank = kbo_fa_salary_snapshot_parse_u32(fields[18]);
+        grade_row.overall_ordinal = kbo_fa_salary_snapshot_parse_u32(fields[19]);
+        grade_row.team_rank = kbo_fa_salary_snapshot_parse_u32(fields[20]);
+        grade_row.team_ordinal = kbo_fa_salary_snapshot_parse_u32(fields[21]);
+        if (field_count > 34) {
+            snprintf(grade_row.player_key, sizeof(grade_row.player_key), "%s", fields[34]);
         }
 
-        if (next == NULL) {
-            break;
+        if (grade_row.player_id != 0u && grade_row.season == season) {
+            rows[count++] = grade_row;
         }
-        cursor = next + 1;
     }
 
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
     kbo_fa_salary_snapshot_assign_grade_overall_ranks(rows, count);
     kbo_fa_salary_snapshot_assign_grade_team_ranks(rows, count);
     for (int i = 0; i < count; i++) {

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "../../../../amateur_player_quality/api/amateur_player_quality.h"
+#include "../../../../core/csv/core_csv.h"
 #include "ui_reputation_view.h"
 #include "../../../support/text/buffer/ui_text_buffer.h"
 
@@ -129,53 +130,58 @@ static int kbo_hub_load_reputation_history_rows(
         return 0;
     }
 
-    char* buffer = NULL;
-    DWORD size = 0;
-    if (!kbo_read_amateur_reputation_seed_file(path, &buffer, &size) || buffer == NULL) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
 
     int row_count = 0;
     uint32_t years[64] = {0};
     int year_count = 0;
-    char* cursor = buffer;
-    while (cursor != NULL && *cursor != '\0') {
-        char* line = cursor;
-        char* newline = strpbrk(cursor, "\r\n");
-        if (newline != NULL) {
-            *newline = '\0';
-            cursor = newline + 1;
-            while (*cursor == '\r' || *cursor == '\n') {
-                cursor++;
-            }
-        } else {
-            cursor = NULL;
-        }
-
-        if (line[0] == '\0' || line[0] == '#' || strncmp(line, "year,", 5) == 0) {
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[12][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 12);
+        if (field_count <= 0
+                || fields[0][0] == '\0'
+                || fields[0][0] == '#'
+                || _stricmp(fields[0], "year") == 0) {
             continue;
         }
 
-        const char* cell_cursor = line;
-        char cell[128] = {0};
         KboHubReputationHistoryRow row;
         memset(&row, 0, sizeof(row));
-        for (int col = 0; col < 12; col++) {
-            kbo_amateur_reputation_read_cell(&cell_cursor, cell, sizeof(cell));
-            switch (col) {
-            case 0: row.year = kbo_amateur_reputation_parse_u32(cell); break;
-            case 1: row.league_id = kbo_amateur_reputation_parse_u32(cell); break;
-            case 2: row.team_id = kbo_amateur_reputation_parse_u32(cell); break;
-            case 3: row.old_reputation = (int32_t)strtol(cell, NULL, 10); break;
-            case 4: row.delta = (int32_t)strtol(cell, NULL, 10); break;
-            case 5: row.new_reputation = (int32_t)strtol(cell, NULL, 10); break;
-            case 6: row.wins = (int32_t)strtol(cell, NULL, 10); break;
-            case 7: row.losses = (int32_t)strtol(cell, NULL, 10); break;
-            case 8: row.ties = (int32_t)strtol(cell, NULL, 10); break;
-            case 9: row.score = (int32_t)strtol(cell, NULL, 10); break;
-            case 10: row.rank = (int32_t)strtol(cell, NULL, 10); break;
-            default: break;
-            }
+        if (field_count > 0) {
+            row.year = kbo_csv_parse_u32_text(fields[0], 10);
+        }
+        if (field_count > 1) {
+            row.league_id = kbo_csv_parse_u32_text(fields[1], 10);
+        }
+        if (field_count > 2) {
+            row.team_id = kbo_csv_parse_u32_text(fields[2], 10);
+        }
+        if (field_count > 3) {
+            row.old_reputation = (int32_t)strtol(fields[3], NULL, 10);
+        }
+        if (field_count > 4) {
+            row.delta = (int32_t)strtol(fields[4], NULL, 10);
+        }
+        if (field_count > 5) {
+            row.new_reputation = (int32_t)strtol(fields[5], NULL, 10);
+        }
+        if (field_count > 6) {
+            row.wins = (int32_t)strtol(fields[6], NULL, 10);
+        }
+        if (field_count > 7) {
+            row.losses = (int32_t)strtol(fields[7], NULL, 10);
+        }
+        if (field_count > 8) {
+            row.ties = (int32_t)strtol(fields[8], NULL, 10);
+        }
+        if (field_count > 9) {
+            row.score = (int32_t)strtol(fields[9], NULL, 10);
+        }
+        if (field_count > 10) {
+            row.rank = (int32_t)strtol(fields[10], NULL, 10);
         }
 
         if (row.league_id != league_id || row.year == 0u || row.team_id == 0u) {
@@ -195,7 +201,7 @@ static int kbo_hub_load_reputation_history_rows(
             years[year_count++] = row.year;
         }
     }
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
 
     for (int i = 0; i < year_count; i++) {
         for (int j = i + 1; j < year_count; j++) {

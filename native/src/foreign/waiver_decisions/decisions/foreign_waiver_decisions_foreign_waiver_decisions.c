@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../common/csv/foreign_csv_parse.h"
+#include "../../../core/csv/core_csv.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/paths/foreign_waiver_paths.h"
 #include "../../waiver_core/api/foreign_waiver_core.h"
@@ -100,77 +100,29 @@ int kbo_foreign_waiver_decision_exists(uint32_t window_end, uint32_t team_id, ui
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 262144u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int found = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0') {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[10][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 10);
+        if (field_count < 7 || fields[0][0] < '0' || fields[0][0] > '9') {
+            continue;
+        }
 
-            char line[256] = {0};
-            size_t len = (size_t)(next - cursor);
-            while (len > 0u && (cursor[len - 1u] == '\r' || cursor[len - 1u] == '\n')) {
-                len--;
-            }
-            if (len >= sizeof(line)) {
-                len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, len);
-
-            const char* p = line;
-            uint32_t decision_date = 0u;
-            uint32_t row_start = 0u;
-            uint32_t row_end = 0u;
-            uint32_t row_team = 0u;
-            uint32_t row_player = 0u;
-            if (line[0] >= '0' && line[0] <= '9'
-                    && parse_u32_from_csv_field(&p, &decision_date)
-                    && parse_u32_from_csv_field(&p, &row_start)
-                    && parse_u32_from_csv_field(&p, &row_end)) {
-                for (int comma = 0; comma < 3 && *p != '\0'; comma++) {
-                    while (*p != '\0' && *p != ',') { p++; }
-                    if (*p == ',') { p++; }
-                }
-                if (parse_u32_from_csv_field(&p, &row_team)
-                        && parse_u32_from_csv_field(&p, &row_player)
-                        && row_end == window_end
-                        && row_team == team_id
-                        && row_player == player_id) {
-                    found = 1;
-                    break;
-                }
-            }
-
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+        uint32_t row_end = kbo_csv_parse_u32_text(fields[2], 10);
+        uint32_t row_team = kbo_csv_parse_u32_text(fields[5], 10);
+        uint32_t row_player = kbo_csv_parse_u32_text(fields[6], 10);
+        if (row_end == window_end && row_team == team_id && row_player == player_id) {
+            found = 1;
+            break;
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     return found;
 }
 
@@ -193,86 +145,29 @@ int kbo_foreign_waiver_latest_decision_action(
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 262144u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
     int found = 0;
-    if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
-        raw[read] = '\0';
-        char* cursor = raw;
-        while (*cursor != '\0') {
-            char* next = strchr(cursor, '\n');
-            if (next == NULL) {
-                next = cursor + strlen(cursor);
-            }
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[10][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 10);
+        if (field_count < 7 || fields[0][0] < '0' || fields[0][0] > '9') {
+            continue;
+        }
 
-            char line[256] = {0};
-            size_t len = (size_t)(next - cursor);
-            while (len > 0u && (cursor[len - 1u] == '\r' || cursor[len - 1u] == '\n')) {
-                len--;
-            }
-            if (len >= sizeof(line)) {
-                len = sizeof(line) - 1u;
-            }
-            memcpy(line, cursor, len);
-
-            const char* p = line;
-            uint32_t decision_date = 0u;
-            uint32_t row_start = 0u;
-            uint32_t row_end = 0u;
-            if (line[0] >= '0' && line[0] <= '9'
-                    && parse_u32_from_csv_field(&p, &decision_date)
-                    && parse_u32_from_csv_field(&p, &row_start)
-                    && parse_u32_from_csv_field(&p, &row_end)
-                    && row_end == window_end) {
-                while (*p == ',' || *p == ' ' || *p == '\t') { p++; }
-                while (*p != '\0' && *p != ',') { p++; }
-                if (*p == ',') { p++; }
-
-                char action_name[16] = {0};
-                while (*p == ' ' || *p == '\t') { p++; }
-                size_t action_len = 0u;
-                while (*p != '\0' && *p != ',' && action_len + 1u < sizeof(action_name)) {
-                    action_name[action_len++] = *p++;
-                }
-                action_name[action_len] = '\0';
-                if (*p == ',') { p++; }
-
-                uint32_t row_team = 0u;
-                uint32_t row_player = 0u;
-                if (parse_u32_from_csv_field(&p, &row_team)
-                        && parse_u32_from_csv_field(&p, &row_player)
-                        && row_team == team_id
-                        && row_player == player_id) {
-                    snprintf(out_action, out_action_size, "%s", action_name);
-                    found = 1;
-                }
-            }
-
-            if (*next == '\0') {
-                break;
-            }
-            cursor = next + 1;
+        uint32_t row_end = kbo_csv_parse_u32_text(fields[2], 10);
+        uint32_t row_team = kbo_csv_parse_u32_text(fields[5], 10);
+        uint32_t row_player = kbo_csv_parse_u32_text(fields[6], 10);
+        if (row_end == window_end && row_team == team_id && row_player == player_id) {
+            snprintf(out_action, out_action_size, "%s", fields[4]);
+            found = 1;
         }
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
-    CloseHandle(file);
+    kbo_csv_reader_close(reader);
     return found;
 }
 

@@ -69,6 +69,7 @@ static void kbo_foreign_injury_clear_replacement_contract_for_market(uint8_t* pl
         return;
     }
 
+    player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET] = 0u;
     if (memory_range_readable(player + OOTP27_PLAYER_CONTRACT_STATUS_OFFSET, sizeof(uint32_t))) {
         *(uint32_t*)(player + OOTP27_PLAYER_CONTRACT_STATUS_OFFSET) = 1u;
     }

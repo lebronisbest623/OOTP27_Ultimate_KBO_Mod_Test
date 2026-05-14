@@ -78,7 +78,7 @@ void kbo_ensure_fa_requalification_template(void)
     }
 
     const char* header =
-        "player_id,original_team_id,last_fa_year,fa_count\r\n"
+        "player_id,original_team_id,last_fa_year,fa_count,last_fa_grade\r\n"
         "# KBO FA requalification: after any FA signing, restore team control until last_fa_year + configured team_control_years.\r\n";
     DWORD written = 0;
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
@@ -142,6 +142,7 @@ int kbo_load_fa_requalification_records(KboFaRequalificationRecord* records, int
                 uint32_t original_team_id = 0;
                 uint32_t last_fa_year = 0;
                 uint32_t fa_count = 0;
+                char last_fa_grade[12] = "UNKNOWN";
                 if (kbo_fa_parse_u32_csv_field(&p, &player_id)
                         && kbo_fa_parse_u32_csv_field(&p, &original_team_id)
                         && kbo_fa_parse_u32_csv_field(&p, &last_fa_year)
@@ -151,12 +152,17 @@ int kbo_load_fa_requalification_records(KboFaRequalificationRecord* records, int
                         && last_fa_year >= 1982u
                         && last_fa_year <= 2200u
                         && fa_count >= 1u) {
-                    records[count++] = (KboFaRequalificationRecord){
-                        player_id,
-                        original_team_id,
-                        last_fa_year,
-                        fa_count
-                    };
+                    char grade_field[24] = {0};
+                    if (kbo_csv_parse_const_field(&p, grade_field, sizeof(grade_field)) && grade_field[0] != '\0') {
+                        kbo_csv_trim_token_in_place(grade_field);
+                        snprintf(last_fa_grade, sizeof(last_fa_grade), "%s", grade_field);
+                    }
+                    records[count].player_id = player_id;
+                    records[count].original_team_id = original_team_id;
+                    records[count].last_fa_year = last_fa_year;
+                    records[count].fa_count = fa_count;
+                    snprintf(records[count].last_fa_grade, sizeof(records[count].last_fa_grade), "%s", last_fa_grade);
+                    count++;
                 }
             }
         }
@@ -199,7 +205,7 @@ int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* recor
     char line[256] = {0};
     DWORD written = 0;
     const char* header =
-        "player_id,original_team_id,last_fa_year,fa_count\r\n"
+        "player_id,original_team_id,last_fa_year,fa_count,last_fa_grade\r\n"
         "# KBO FA requalification: after any FA signing, restore team control until last_fa_year + configured team_control_years.\r\n";
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
 
@@ -210,11 +216,12 @@ int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* recor
         int len = snprintf(
             line,
             sizeof(line),
-            "%u,%u,%u,%u\r\n",
+            "%u,%u,%u,%u,%s\r\n",
             records[i].player_id,
             records[i].original_team_id,
             records[i].last_fa_year,
-            records[i].fa_count);
+            records[i].fa_count,
+            records[i].last_fa_grade[0] != '\0' ? records[i].last_fa_grade : "UNKNOWN");
         if (len > 0) {
             WriteFile(file, line, (DWORD)len, &written, NULL);
         }
@@ -227,7 +234,12 @@ int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* recor
     return 1;
 }
 
-int kbo_record_fa_requalification_signing(uint32_t player_id, uint32_t team_id, uint32_t signing_year, const char* source)
+int kbo_record_fa_requalification_signing_with_grade(
+    uint32_t player_id,
+    uint32_t team_id,
+    uint32_t signing_year,
+    const char* grade,
+    const char* source)
 {
     if (player_id == 0u || team_id == 0u || signing_year < 1982u || signing_year > 2200u) {
         return 0;
@@ -262,18 +274,19 @@ int kbo_record_fa_requalification_signing(uint32_t player_id, uint32_t team_id, 
         if (records[found].fa_count == 0u) {
             records[found].fa_count = 1u;
         }
+        snprintf(records[found].last_fa_grade, sizeof(records[found].last_fa_grade), "%s", grade != NULL && grade[0] != '\0' ? grade : "UNKNOWN");
     } else {
         if (count >= KBO_FA_REQUALIFICATION_MAX) {
             append_logf("KBO FA requalification signing record dropped source=%s player=%u team=%u reason=max_records", source != NULL ? source : "", player_id, team_id);
             kbo_unlock_fa_requalification_records();
             return 0;
         }
-        records[count++] = (KboFaRequalificationRecord){
-            player_id,
-            team_id,
-            signing_year,
-            1u
-        };
+        records[count].player_id = player_id;
+        records[count].original_team_id = team_id;
+        records[count].last_fa_year = signing_year;
+        records[count].fa_count = 1u;
+        snprintf(records[count].last_fa_grade, sizeof(records[count].last_fa_grade), "%s", grade != NULL && grade[0] != '\0' ? grade : "UNKNOWN");
+        count++;
     }
 
     int ok = kbo_write_fa_requalification_records(records, count);
@@ -288,6 +301,11 @@ int kbo_record_fa_requalification_signing(uint32_t player_id, uint32_t team_id, 
         ok);
     kbo_unlock_fa_requalification_records();
     return ok;
+}
+
+int kbo_record_fa_requalification_signing(uint32_t player_id, uint32_t team_id, uint32_t signing_year, const char* source)
+{
+    return kbo_record_fa_requalification_signing_with_grade(player_id, team_id, signing_year, "UNKNOWN", source);
 }
 
 int kbo_fa_requalification_team_ptr_is_kbo(

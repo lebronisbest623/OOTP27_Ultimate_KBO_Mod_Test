@@ -20,7 +20,6 @@ typedef struct KboForeignReplacementPlayerSeed {
 } KboForeignReplacementPlayerSeed;
 
 int kbo_ascii_is_seed_id_char(char ch);
-void kbo_trim_csv_token_in_place(char* text);
 uint8_t kbo_parse_foreign_replacement_seed_slot_type(const char* text);
 int kbo_parse_foreign_replacement_player_seed_line(
     const char* line,

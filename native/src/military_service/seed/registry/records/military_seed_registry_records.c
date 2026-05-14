@@ -1,4 +1,5 @@
 #include "../military_seed_registry_internal.h"
+#include "../../../../core/csv/core_csv.h"
 
 void kbo_lock_military_service_seeds(void)
 {
@@ -55,20 +56,21 @@ int kbo_load_military_service_seed_file_locked(const char* path)
     if (path == NULL || path[0] == '\0') {
         return 0;
     }
-    FILE* fp = fopen(path, "rb");
-    if (fp == NULL) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
     int loaded = 0;
-    char line[512];
-    while (fgets(line, sizeof(line), fp) != NULL) {
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[8][96];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 8);
         KboMilitaryServiceSeed seed;
-        if (kbo_parse_military_service_seed_line(line, &seed)
+        if (kbo_parse_military_service_seed_fields(fields, field_count, &seed)
                 && kbo_add_military_service_seed_locked(&seed)) {
             loaded++;
         }
     }
-    fclose(fp);
+    kbo_csv_reader_close(reader);
     if (loaded > 0) {
         append_logf("KBO military service seed loaded=%d path=%s", loaded, path);
     }

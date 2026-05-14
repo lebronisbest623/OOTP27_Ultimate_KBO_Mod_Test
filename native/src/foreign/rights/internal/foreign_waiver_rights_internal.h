@@ -13,7 +13,6 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
-#include "../../common/csv/foreign_csv_parse.h"
 #include "../../common/paths/foreign_waiver_paths.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../query/foreign_waiver_rights_query.h"

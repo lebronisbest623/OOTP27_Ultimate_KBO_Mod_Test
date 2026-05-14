@@ -76,9 +76,6 @@ void kbo_lock_amateur_reputation_seeds(void);
 void kbo_unlock_amateur_reputation_seeds(void);
 void kbo_ensure_amateur_reputation_seeds_loaded(void);
 int kbo_get_amateur_reputation_history_path(char* out, size_t out_size);
-int kbo_read_amateur_reputation_seed_file(const char* path, char** out_buffer, DWORD* out_size);
-void kbo_amateur_reputation_read_cell(const char** cursor, char* out, size_t out_size);
-uint32_t kbo_amateur_reputation_parse_u32(const char* text);
 
 void kbo_update_amateur_reputation_from_team_records(const char* source);
 uint32_t kbo_resolve_amateur_assignment_league_id_for_team_ptr(uint8_t* team);

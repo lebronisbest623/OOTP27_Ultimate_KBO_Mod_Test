@@ -20,7 +20,6 @@
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/names/team_name_cache.h"
-#include "../../common/csv/foreign_csv_parse.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../../common/policy/foreign_waiver_policy.h"
@@ -69,6 +68,11 @@ int kbo_parse_foreign_injury_replacement_seed_line(
     KboForeignInjuryReplacement* out);
 int kbo_parse_foreign_injury_replacement_key_seed_line(
     const char* line,
+    uint32_t today,
+    KboForeignInjuryReplacement* out);
+int kbo_parse_foreign_injury_replacement_key_seed_fields(
+    char fields[][96],
+    int field_count,
     uint32_t today,
     KboForeignInjuryReplacement* out);
 int kbo_import_foreign_injury_replacement_seed_file_locked(

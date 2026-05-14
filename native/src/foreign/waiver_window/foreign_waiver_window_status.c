@@ -6,6 +6,7 @@
 
 #include "../../bootstrap/profiling/profiler.h"
 #include "../../core/core_flags/api/flags_api.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/dates/core_text_date.h"
 #include "../../core/logging/core_log.h"
 #include "../common/dates/foreign_waiver_date.h"
@@ -215,28 +216,16 @@ int kbo_read_foreign_waiver_window(uint32_t* out_start, uint32_t* out_end)
         return 0;
     }
 
-    char* first = raw;
-    char* second = NULL;
-    while (*first == ' ' || *first == '\r' || *first == '\n' || *first == '\t') {
-        first++;
-    }
-    if (*first == '#') {
+    char fields[2][32];
+    int field_count = kbo_csv_read_trimmed_line_fields(raw, (char*)fields, sizeof(fields[0]), 2);
+    if (field_count < 2 || fields[0][0] == '#') {
         return 0;
-    }
-    char* sep = strchr(first, ',');
-    if (sep == NULL) {
-        return 0;
-    }
-    *sep = '\0';
-    second = sep + 1;
-    while (*second == ' ' || *second == '\r' || *second == '\n' || *second == '\t') {
-        second++;
     }
 
-    if (!kbo_parse_yyyymmdd(first, out_start)) {
+    if (!kbo_parse_yyyymmdd(fields[0], out_start)) {
         return 0;
     }
-    if (!kbo_parse_yyyymmdd(second, out_end)) {
+    if (!kbo_parse_yyyymmdd(fields[1], out_end)) {
         return 0;
     }
     return 1;
