@@ -11,6 +11,7 @@
 #include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../../team/independent_acquisition/independent_acquisition_ai.h"
 #include "../../schedules/independent/independent_team_acquisition_schedule.h"
 #include "../calendar/custom_event_calendar_due.h"
 
@@ -74,6 +75,8 @@ void kbo_custom_event_monitor_tick(
         kbo_process_due_fa_compensation_protected_lists(source);
         *last_fa_comp_yyyymmdd = today_yyyymmdd;
     }
+
+    kbo_run_independent_team_acquisition_ai(source);
 }
 
 DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)

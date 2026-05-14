@@ -25,6 +25,28 @@
 #include "../lookup/team_lookup.h"
 #include "independent_acquisition_window.h"
 
+static volatile LONG g_kbo_independent_acquisition_ai_last_run_date = 0;
+
+static int kbo_independent_acquisition_claim_daily_run(uint32_t today)
+{
+    if (today == 0u) {
+        return 0;
+    }
+
+    LONG last = InterlockedCompareExchange(
+        &g_kbo_independent_acquisition_ai_last_run_date,
+        0,
+        0);
+    if ((uint32_t)last == today) {
+        return 0;
+    }
+
+    return InterlockedCompareExchange(
+        &g_kbo_independent_acquisition_ai_last_run_date,
+        (LONG)today,
+        last) == last;
+}
+
 static int kbo_independent_acquisition_window_active(uint32_t today)
 {
     uint32_t open_date = kbo_independent_team_acquisition_window_open_date();
@@ -175,6 +197,10 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         KBO_INDEPENDENT_ACQUISITION_MAX_BUYERS,
         &scanned,
         &unreadable);
+    if (!kbo_independent_acquisition_claim_daily_run(today)) {
+        HeapFree(GetProcessHeap(), 0, snapshot);
+        return 0;
+    }
 
     int requested = 0;
     int refreshed_pending = 0;
