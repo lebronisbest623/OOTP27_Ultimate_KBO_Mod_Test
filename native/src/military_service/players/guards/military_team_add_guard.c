@@ -29,11 +29,6 @@ int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t play
 
     uint8_t* team = (uint8_t*)team_ptr;
     uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
-    if (!kbo_team_id_is_military_service_team(team_id)) {
-        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.non_military_team");
-        return 0;
-    }
-
     if (!kbo_player_pointer_plausible(player_ptr)) {
         static volatile LONG bad_player_log_count = 0;
         LONG slot = InterlockedIncrement(&bad_player_log_count);
@@ -60,6 +55,60 @@ int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t play
     int32_t days_left = kbo_military_days_left(player);
     uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
     uint32_t loan_team_id = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+    uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
+    uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+
+    if (!kbo_team_id_is_military_service_team(team_id)) {
+        int serving = active_index >= 0 || (military_active != 0u && days_left > 0);
+        if (serving) {
+            uint32_t original_team_id = 0u;
+            uint32_t original_league_id = 0u;
+            if (active_index >= 0) {
+                KboMilitaryActiveLoan* active = kbo_active_military_loan_at(active_index);
+                if (active != NULL) {
+                    original_team_id = active->original_team_id;
+                    original_league_id = active->original_league_id;
+                }
+            }
+            if (original_team_id == 0u) {
+                original_team_id = active_team_id != 0u
+                    ? active_team_id
+                    : *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
+            }
+
+            if (original_team_id == 0u || team_id != original_team_id) {
+                uint32_t today = kbo_military_policy_current_yyyymmdd();
+                kbo_record_recent_military_fa_block(player_id, team_id, today);
+
+                static volatile LONG service_block_log_count = 0;
+                LONG slot = InterlockedIncrement(&service_block_log_count);
+                if (slot <= 300) {
+                    append_logf(
+                        "KBO military team-add blocked active service transfer player=%u target_team=%u target_league=%u original_team=%u original_league=%u current_team=%u current_league=%u active_team=%u loan_team=%u days_left=%d military_active=%u active_index=%d today=%u",
+                        player_id,
+                        team_id,
+                        team_league_id,
+                        original_team_id,
+                        original_league_id,
+                        current_team_id,
+                        current_league_id,
+                        active_team_id,
+                        loan_team_id,
+                        days_left,
+                        (unsigned)military_active,
+                        active_index,
+                        today);
+                }
+                KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.blocked_active_service_transfer");
+                return 1;
+            }
+        }
+
+        KBO_PROFILE_END(profile_military_team_add_should_block, "military.team_add_should_block.non_military_team");
+        return 0;
+    }
 
     if (active_index >= 0
             || (military_active != 0u && days_left > 0)
@@ -68,10 +117,6 @@ int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t play
         return 0;
     }
 
-    uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-    uint32_t current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
-    uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-    uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
     uint32_t today = kbo_military_policy_current_yyyymmdd();
     kbo_record_recent_military_fa_block(player_id, team_id, today);
 

@@ -1,7 +1,10 @@
 #include "../internal/cbt_internal.h"
 
 #include "../../core/files/save_paths/core_save_paths.h"
+#include "../../core/news/ledger/core_news_ledger.h"
 #include "../../hotkey_window/api/hotkey_window_refresh.h"
+
+#define KBO_CBT_NEWS_LEDGER_DOMAIN "cbt"
 
 static int kbo_cbt_news_marker_path(char* out, size_t out_size)
 {
@@ -12,6 +15,9 @@ static int kbo_cbt_news_marker_exists(const char* key)
 {
     if (key == NULL || key[0] == '\0') {
         return 0;
+    }
+    if (kbo_custom_news_ledger_completed(KBO_CBT_NEWS_LEDGER_DOMAIN, key)) {
+        return 1;
     }
 
     char path[MAX_PATH] = {0};
@@ -67,6 +73,13 @@ static int kbo_cbt_news_marker_exists(const char* key)
 
     HeapFree(GetProcessHeap(), 0, buffer);
     CloseHandle(file);
+    if (exists) {
+        kbo_custom_news_ledger_record_completed(
+            KBO_CBT_NEWS_LEDGER_DOMAIN,
+            key,
+            "legacy_marker_backfill",
+            "cbt_news_marker_exists");
+    }
     return exists;
 }
 
@@ -107,7 +120,13 @@ static void kbo_cbt_news_persist_marker(const char* key, const char* source)
     int len = snprintf(line, sizeof(line), "%s\r\n", key);
     if (len > 0) {
         DWORD written = 0u;
-        WriteFile(file, line, (DWORD)len, &written, NULL);
+        if (WriteFile(file, line, (DWORD)len, &written, NULL) && written == (DWORD)len) {
+            kbo_custom_news_ledger_record_completed(
+                KBO_CBT_NEWS_LEDGER_DOMAIN,
+                key,
+                "legacy_marker_persist",
+                source);
+        }
     }
     CloseHandle(file);
 }

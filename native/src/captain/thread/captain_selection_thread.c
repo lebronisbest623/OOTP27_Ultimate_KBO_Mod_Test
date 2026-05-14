@@ -1,8 +1,6 @@
 #include "../internal/captain_selection_internal.h"
 #include "../../core/runtime_tuning/runtime_tuning_policy.h"
 
-#include "captain_selection_preseason.inc"
-
 int kbo_run_captain_preseason_selection_once(const char* source)
 {
     if (!kbo_fix_enabled()) {
@@ -53,10 +51,6 @@ int kbo_run_captain_preseason_selection_once(const char* source)
                 ? "captain_seed_startup"
                 : (calendar_preseason_start ? "captain_calendar_preseason_start" : "captain_preseason_phase2")));
 }
-
-#include "captain_selection_inseason_repair.inc"
-
-#include "captain_selection_maintenance.inc"
 
 DWORD WINAPI kbo_captain_preseason_selection_thread(LPVOID parameter)
 {

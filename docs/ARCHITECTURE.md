@@ -172,8 +172,10 @@ config/kbo-runtime-flags.json
 `tools/generate-runtime-flags.ps1` generates:
 
 - `src/KBOLauncher/Infrastructure/KboFlags.RuntimeDefinitions.cs`
-- `native/src/core/core_flags/keys/runtime_flag_aliases.generated.inc`
-- `native/src/hotkey_window/views/mod/runtime_flags/runtime_flags.generated.inc`
+- `native/src/core/core_flags/keys/runtime_flag_aliases.generated.h`
+- `native/src/core/core_flags/keys/runtime_flag_aliases.generated.c`
+- `native/src/hotkey_window/views/mod/runtime_flags/runtime_flags.generated.h`
+- `native/src/hotkey_window/views/mod/runtime_flags/runtime_flags.generated.c`
 
 `KBOLauncher.Tests/KboRuntimeFlagManifestTests.cs` verifies that the manifest,
 managed defaults/aliases, native legacy alias map, and native F2 UI flag table
@@ -413,6 +415,8 @@ next cleanup targets.
    `native/src/military_service/runtime/internal/military_service_internal.h`
    and
    `native/src/foreign/waiver_window/foreign_waiver_window_internal.h`.
+6. Source-fragment include files have been removed from native source. New
+   native work should stay in owned `.c/.h` modules, including generated tables.
 
 ## Migration Plan
 

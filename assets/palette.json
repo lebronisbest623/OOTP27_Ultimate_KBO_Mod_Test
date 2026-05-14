@@ -1,0 +1,35 @@
+{
+  "name": "OOTP 27 Ultimate KBO Mod",
+  "surface": {
+    "0": { "value": "#060810",  "note": "Deepest bg — window backdrop, gutters" },
+    "1": { "value": "#0d1a35",  "note": "Base bg — main panels, sidebars" },
+    "2": { "value": "#1a2e58",  "note": "Raised surface — cards, inputs" },
+    "3": { "value": "#243d72",  "note": "Overlay — modals, dropdowns" }
+  },
+  "brand": {
+    "dim":    { "value": "#7a0f2d",              "note": "Pressed / deep accent" },
+    "base":   { "value": "#c9184a",              "note": "KBO red — primary brand colour" },
+    "bright": { "value": "#e8204f",              "note": "Hover / active state" },
+    "glow":   { "value": "rgba(201,24,74,0.18)", "note": "Ambient glow, focus ring" }
+  },
+  "gold": {
+    "dim":    { "value": "#92600a", "note": "Pressed / deep gold" },
+    "base":   { "value": "#d4a017", "note": "Award / premium highlight" },
+    "bright": { "value": "#f0c040", "note": "Strong emphasis" }
+  },
+  "text": {
+    "strong": { "value": "#ffffff",               "note": "Headings, labels" },
+    "body":   { "value": "rgba(255,255,255,0.85)", "note": "Body copy" },
+    "muted":  { "value": "rgba(255,255,255,0.50)", "note": "Secondary / disabled" },
+    "hint":   { "value": "rgba(255,255,255,0.28)", "note": "Placeholder, caption" }
+  },
+  "border": {
+    "accent": { "value": "rgba(201,24,74,0.40)",  "note": "Brand-tinted divider" },
+    "subtle": { "value": "rgba(255,255,255,0.08)", "note": "Neutral structural line" }
+  },
+  "semantic": {
+    "success": { "value": "#22c55e", "note": "Positive / stat up" },
+    "warning": { "value": "#f59e0b", "note": "Caution" },
+    "danger":  { "value": "#ef4444", "note": "Error / critical" }
+  }
+}

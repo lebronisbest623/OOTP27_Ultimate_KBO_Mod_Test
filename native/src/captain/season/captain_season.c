@@ -71,7 +71,8 @@ int kbo_captain_calendar_preseason_window_active(
 
     uint32_t date_year = date_yyyymmdd / 10000u;
     uint32_t month_day = date_yyyymmdd % 10000u;
-    if (date_year != league_season) {
+    uint32_t effective_season = kbo_captain_effective_season(date_yyyymmdd, league_season);
+    if (date_year != effective_season) {
         return 0;
     }
 

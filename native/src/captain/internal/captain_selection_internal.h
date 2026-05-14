@@ -101,6 +101,13 @@ int kbo_find_captain_seed_for_player(
     uint8_t* team,
     uint8_t* player,
     KboCaptainSeed* out_seed);
+int kbo_captain_seed_matches_player(const KboCaptainSeed* seed, uint8_t* player);
+int kbo_find_best_captain_seed_for_team(
+    uint32_t season,
+    uint32_t league_id,
+    uint32_t team_id,
+    uint8_t* team,
+    KboCaptainSeed* out_seed);
 int kbo_emit_captain_initial_selection_news(
     uint32_t date,
     uint32_t season,
@@ -115,5 +122,56 @@ int kbo_emit_captain_replacement_news(
     const KboCaptainSelectionRow* old_row,
     const KboCaptainSelectionRow* new_row,
     const char* source);
+int kbo_captain_current_yyyymmdd(uint32_t* out_date);
+int kbo_captain_calendar_preseason_start_active(
+    uint32_t date,
+    uint32_t league_season,
+    uint8_t phase,
+    int calendar_preseason);
+void kbo_captain_log_phase_observed(
+    const char* source,
+    uint32_t date,
+    uint32_t league_id,
+    uintptr_t league_ptr,
+    uint32_t league_season,
+    uint32_t effective_season,
+    uint8_t phase,
+    int csv_exists,
+    int calendar_recovery,
+    int calendar_preseason);
+int kbo_captain_find_row_index_by_team(
+    const KboCaptainSelectionRow* rows,
+    int row_count,
+    uint32_t team_id);
+int kbo_captain_existing_row_still_with_team(const KboCaptainSelectionRow* row);
+int kbo_captain_current_rows_need_inseason_repair(
+    uint32_t league_id,
+    const KboCaptainSelectionRow* current_rows,
+    int current_count,
+    uint32_t* out_team_ids,
+    int* out_team_count,
+    int* out_missing_count,
+    int* out_departed_count);
+int kbo_captain_write_initial_selection(
+    uint32_t date,
+    uint32_t season,
+    uint32_t league_id,
+    const char* source);
+int kbo_captain_write_missing_selection_csv(
+    uint32_t date,
+    uint32_t season,
+    uint32_t league_id,
+    uint8_t phase,
+    const char* source);
+int kbo_captain_run_seed_startup_without_league_ptr(
+    uint32_t date,
+    uint32_t league_id,
+    const char* source);
+int kbo_run_captain_inseason_repair_once(
+    uint32_t date,
+    uint32_t season,
+    uint32_t league_id,
+    const char* source);
+int kbo_run_captain_selection_maintenance_once(const char* source);
 
 #endif

@@ -1,0 +1,35 @@
+/* OOTP 27 Ultimate KBO Mod — design tokens */
+/* Generated from palette.json — edit palette.json, not this file */
+:root {
+  /* Surface */
+  --surface-0: #060810;
+  --surface-1: #0d1a35;
+  --surface-2: #1a2e58;
+  --surface-3: #243d72;
+
+  /* Brand (KBO red) */
+  --brand-dim:    #7a0f2d;
+  --brand:        #c9184a;
+  --brand-bright: #e8204f;
+  --brand-glow:   rgba(201, 24, 74, 0.18);
+
+  /* Gold (awards / premium) */
+  --gold-dim:    #92600a;
+  --gold:        #d4a017;
+  --gold-bright: #f0c040;
+
+  /* Text */
+  --text-strong: #ffffff;
+  --text-body:   rgba(255, 255, 255, 0.85);
+  --text-muted:  rgba(255, 255, 255, 0.50);
+  --text-hint:   rgba(255, 255, 255, 0.28);
+
+  /* Border */
+  --border-accent: rgba(201, 24, 74, 0.40);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+
+  /* Semantic */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger:  #ef4444;
+}

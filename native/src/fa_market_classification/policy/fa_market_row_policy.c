@@ -1,4 +1,5 @@
 #include "../internal/fa_market_classification_internal.h"
+#include "fa_market_historical_requalification.h"
 
 int kbo_fa_market_row_is_undrafted_domestic(const KboFaMarketClassification* row)
 {
@@ -203,22 +204,6 @@ int kbo_fa_market_apply_age_grade_override(KboFaMarketClassification* row, const
     snprintf(row->fa_grade_flag, sizeof(row->fa_grade_flag), "AGE_%u_%s", rules->age_grade_min_age, rules->age_grade);
     return 1;
 }
-
-typedef struct KboHistoricalFaSeedRecord {
-    uint32_t season;
-    uint32_t fa_round;
-    char player_key[64];
-    char grade[12];
-} KboHistoricalFaSeedRecord;
-
-#define KBO_HISTORICAL_FA_SEED_MAX 1024
-
-static KboHistoricalFaSeedRecord g_kbo_historical_fa_seed[KBO_HISTORICAL_FA_SEED_MAX];
-static int g_kbo_historical_fa_seed_count = 0;
-static volatile LONG g_kbo_historical_fa_seed_loaded = 0;
-static volatile LONG g_kbo_historical_fa_seed_lock = 0;
-
-#include "fa_market_historical_requalification.inc"
 
 void kbo_fa_market_apply_salary_snapshot_grade(
     KboFaMarketClassification* row,

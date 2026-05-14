@@ -203,7 +203,6 @@ static int kbo_json_int_text_value(const char* text, size_t len, int* out_value)
     return 1;
 }
 
-#include "json_string_decode.inc"
 static int kbo_json_bool_token_value(const char* json, const jsmntok_t* token, int* out_value)
 {
     if (json == NULL || token == NULL || out_value == NULL || token->start < 0 || token->end < token->start) {

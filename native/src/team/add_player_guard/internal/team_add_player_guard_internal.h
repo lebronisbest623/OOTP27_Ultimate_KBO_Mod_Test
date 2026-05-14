@@ -18,6 +18,7 @@ int kbo_team_add_foreign_policy_should_block(
     uint32_t before_active_team_id,
     uint32_t before_original_team_id,
     uint32_t caller_rva);
+int kbo_team_add_known_foreign_market_minor_caller(uint32_t caller_rva);
 void kbo_team_add_normalize_foreign_retention_contract_success(
     uint32_t caller_rva,
     uintptr_t team_ptr,

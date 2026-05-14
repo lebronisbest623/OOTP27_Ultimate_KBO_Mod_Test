@@ -51,7 +51,7 @@ static int kbo_team_add_target_is_kbo_affiliate_league(
     return *(uint32_t*)(parent_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET) == kbo_league_id;
 }
 
-static int kbo_team_add_known_foreign_market_minor_caller(uint32_t caller_rva)
+int kbo_team_add_known_foreign_market_minor_caller(uint32_t caller_rva)
 {
     return caller_rva == 0x8515f3u
         || caller_rva == 0xaa638du
@@ -307,4 +307,3 @@ int kbo_team_add_foreign_policy_should_block(
     return 1;
 }
 
-#include "team_add_player_guard_foreign_normalize.inc"

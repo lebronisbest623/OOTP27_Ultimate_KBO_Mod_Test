@@ -256,26 +256,37 @@ void kbo_emit_foreign_injury_replacement_news(
         snprintf(player_name, sizeof(player_name), "Player #%u", rec->injured_player_id);
     }
 
-    char title[128] = {0};
-    char body[1024] = {0};
+    char title[180] = {0};
+    char body[2048] = {0};
     char team_link[96] = {0};
     char injured_player_link[144] = {0};
     char replacement_player_link[144] = {0};
+    char replacement_player_name[96] = {0};
     char days_left_text[16] = {0};
     snprintf(team_link, sizeof(team_link), "<Team #%u:team#%u>", rec->team_id, rec->team_id);
     snprintf(injured_player_link, sizeof(injured_player_link), "<%s:player#%u>", player_name, rec->injured_player_id);
     if (rec->replacement_player_id != 0u) {
-        char replacement_name[96] = {0};
         uint8_t* replacement = kbo_find_player_by_id(rec->replacement_player_id, NULL, NULL);
         if (replacement != NULL) {
-            kbo_copy_player_display_name(replacement, replacement_name, sizeof(replacement_name));
+            kbo_copy_player_display_name(replacement, replacement_player_name, sizeof(replacement_player_name));
         }
-        if (replacement_name[0] == '\0') {
-            snprintf(replacement_name, sizeof(replacement_name), "Player #%u", rec->replacement_player_id);
+        if (replacement_player_name[0] == '\0') {
+            snprintf(replacement_player_name, sizeof(replacement_player_name), "Player #%u", rec->replacement_player_id);
         }
-        snprintf(replacement_player_link, sizeof(replacement_player_link), "<%s:player#%u>", replacement_name, rec->replacement_player_id);
+        snprintf(replacement_player_link, sizeof(replacement_player_link), "<%s:player#%u>", replacement_player_name, rec->replacement_player_id);
     } else {
-        snprintf(replacement_player_link, sizeof(replacement_player_link), "대체 외국인");
+        const char* language_dir = kbo_custom_news_language_dir();
+        const int use_korean = language_dir == NULL || strcmp(language_dir, "en") != 0;
+        snprintf(
+            replacement_player_name,
+            sizeof(replacement_player_name),
+            "%s",
+            use_korean ? "\xeb\x8c\x80\xec\xb2\xb4 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8" : "the temporary replacement");
+        snprintf(
+            replacement_player_link,
+            sizeof(replacement_player_link),
+            "%s",
+            use_korean ? "\xeb\x8c\x80\xec\xb2\xb4 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8" : "the temporary replacement");
     }
     snprintf(days_left_text, sizeof(days_left_text), "%d", days_left > 0 ? days_left : 0);
 
@@ -296,7 +307,9 @@ void kbo_emit_foreign_injury_replacement_news(
 
     KboNewsTemplateVar vars[] = {
         { "team_link", team_link },
+        { "injured_player_name", player_name },
         { "injured_player_link", injured_player_link },
+        { "replacement_player_name", replacement_player_name },
         { "replacement_player_link", replacement_player_link },
         { "days_left", days_left_text },
         { "slot_label", kbo_foreign_injury_slot_label(rec->slot_type) },

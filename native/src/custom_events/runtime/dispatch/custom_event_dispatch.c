@@ -20,22 +20,31 @@ int kbo_dispatch_custom_event(
     uint32_t event_day,
     const char* source)
 {
-    int is_open_event = kbo_custom_event_name_is_open(name);
-    int is_close_event = kbo_custom_event_name_is_close(name);
-    int is_military_selection_event = kbo_custom_event_name_is_military_selection(name);
-    int is_asian_games_selection_event = kbo_custom_event_name_is_asian_games_selection(name);
-    int is_asian_games_departure_event = kbo_custom_event_name_is_asian_games_departure(name);
-    int is_asian_games_final_event = kbo_custom_event_name_is_asian_games_final(name);
-    int is_cbt_deadline_event = kbo_custom_event_name_is_cbt_exception_deadline(name);
-    int is_cbt_announcement_event = kbo_custom_event_name_is_cbt_announcement(name);
-    int is_fa_declaration_event = kbo_custom_event_name_is_fa_declaration(name);
+    return kbo_dispatch_custom_event_by_kind(
+        event_ptr,
+        kbo_custom_event_kind_from_name(name),
+        event_yyyymmdd,
+        event_year,
+        event_month,
+        event_day,
+        source);
+}
 
-    if (is_open_event) {
+int kbo_dispatch_custom_event_by_kind(
+    uintptr_t event_ptr,
+    KboCustomEventKind kind,
+    uint32_t event_yyyymmdd,
+    uint32_t event_year,
+    uint32_t event_month,
+    uint32_t event_day,
+    const char* source)
+{
+    if (kind == KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_OPEN) {
         if (g_kbo_foreign_priority_last_open_event_fired_date == event_yyyymmdd) {
             append_logf(
-                "KBO custom event skipped duplicate by date source=%s name=%s event_date=%04u-%02u-%02u",
+                "KBO custom event skipped duplicate by date source=%s kind=%s event_date=%04u-%02u-%02u",
                 source != NULL ? source : "",
-                name,
+                kbo_custom_event_kind_key(kind),
                 event_year,
                 event_month,
                 event_day);
@@ -52,12 +61,12 @@ int kbo_dispatch_custom_event(
         return opened;
     }
 
-    if (is_close_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_CLOSE) {
         if (g_kbo_foreign_priority_last_close_event_fired_date == event_yyyymmdd) {
             append_logf(
-                "KBO custom event skipped duplicate by date source=%s name=%s event_date=%04u-%02u-%02u",
+                "KBO custom event skipped duplicate by date source=%s kind=%s event_date=%04u-%02u-%02u",
                 source != NULL ? source : "",
-                name,
+                kbo_custom_event_kind_key(kind),
                 event_year,
                 event_month,
                 event_day);
@@ -79,32 +88,34 @@ int kbo_dispatch_custom_event(
         return announced;
     }
 
-    if (is_military_selection_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_MILITARY_SELECTION) {
+        char title[160] = {0};
+        kbo_custom_event_title_for_kind(kind, title, sizeof(title));
         return run_kbo_custom_military_event(
             event_ptr,
-            name,
+            title[0] != '\0' ? title : kbo_custom_event_kind_key(kind),
             event_year,
             event_month,
             event_day,
             source);
     }
 
-    if (is_asian_games_selection_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION) {
         return kbo_handle_asian_games_selection_event(event_yyyymmdd, source);
     }
-    if (is_asian_games_departure_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE) {
         return kbo_handle_asian_games_departure_event(event_yyyymmdd, source);
     }
-    if (is_asian_games_final_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL) {
         return kbo_handle_asian_games_final_event(event_yyyymmdd, source);
     }
-    if (is_cbt_deadline_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE) {
         return kbo_handle_cbt_deadline_event(event_yyyymmdd, source);
     }
-    if (is_cbt_announcement_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT) {
         return kbo_handle_cbt_announcement_event(event_yyyymmdd, source);
     }
-    if (is_fa_declaration_event) {
+    if (kind == KBO_CUSTOM_EVENT_KIND_FA_DECLARATION) {
         return kbo_handle_fa_declaration_event(event_yyyymmdd, source);
     }
 

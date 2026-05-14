@@ -312,4 +312,3 @@ int kbo_custom_event_exists_by_kind_for_date(
     return 0;
 }
 
-#include "custom_event_duplicate_prune.inc"

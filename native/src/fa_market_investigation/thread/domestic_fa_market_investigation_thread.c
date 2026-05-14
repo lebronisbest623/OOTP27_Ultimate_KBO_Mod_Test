@@ -16,19 +16,7 @@
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../runtime_memory/runtime_memory.h"
-
-#define KBO_DOMESTIC_FA_INVESTIGATION_MAX 256
-
-typedef struct KboDomesticFaInvestigationCandidate {
-    KboFaMarketClassification row;
-    int32_t value_score;
-    int32_t overall;
-    int32_t talent;
-    int32_t ratings;
-    int32_t career;
-    uint32_t market_days;
-    char blockers[160];
-} KboDomesticFaInvestigationCandidate;
+#include "domestic_fa_market_investigation_scan.h"
 
 static volatile LONG g_kbo_domestic_fa_market_investigation_started = 0;
 
@@ -36,8 +24,6 @@ static int kbo_domestic_fa_market_investigation_enabled(void)
 {
     return read_kbo_localappdata_flag_file("enable_kbo_domestic_fa_market_investigation.txt");
 }
-
-#include "domestic_fa_market_investigation_scan.inc"
 
 static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* source)
 {

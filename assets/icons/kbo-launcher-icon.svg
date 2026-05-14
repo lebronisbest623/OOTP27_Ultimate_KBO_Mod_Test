@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">KBO Launcher icon</title>
+  <desc id="desc">Minimal navy app icon with a clean K mark for the Ultimate KBO launcher.</desc>
+
+  <defs>
+    <radialGradient id="bg" cx="34%" cy="18%" r="94%">
+      <stop offset="0%" stop-color="#243d72"/>
+      <stop offset="52%" stop-color="#0d1a35"/>
+      <stop offset="100%" stop-color="#060810"/>
+    </radialGradient>
+
+    <linearGradient id="soft-light" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="48%" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#dce5f5"/>
+    </linearGradient>
+
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8204f"/>
+      <stop offset="100%" stop-color="#c9184a"/>
+    </linearGradient>
+
+    <filter id="app-shadow" x="-14%" y="-14%" width="128%" height="128%">
+      <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+
+    <filter id="mark-shadow" x="-16%" y="-16%" width="132%" height="132%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="none"/>
+
+  <g filter="url(#app-shadow)">
+    <rect x="96" y="96" width="832" height="832" rx="214" fill="url(#bg)"/>
+    <rect x="96" y="96" width="832" height="832" rx="214" fill="url(#soft-light)"/>
+  </g>
+
+  <g filter="url(#mark-shadow)" transform="translate(512 512) skewX(-7) translate(-512 -512)">
+    <path fill="#02050b" opacity="0.26" transform="translate(18 22)"
+          d="M332 232 H416 C448 232 474 258 474 290 V456 L636 266 C656 243 685 230 716 230 H830 L590 504 L858 794 H746 C713 794 681 780 659 756 L474 552 V734 C474 766 448 792 416 792 H332 C300 792 274 766 274 734 V290 C274 258 300 232 332 232 Z"/>
+
+    <path fill="url(#mark)"
+          d="M332 232 H416 C448 232 474 258 474 290 V456 L636 266 C656 243 685 230 716 230 H830 L590 504 L858 794 H746 C713 794 681 780 659 756 L474 552 V734 C474 766 448 792 416 792 H332 C300 792 274 766 274 734 V290 C274 258 300 232 332 232 Z"/>
+
+    <path fill="url(#accent)"
+          d="M628 626 L782 794 H746 C713 794 681 780 659 756 L574 662 Z"/>
+  </g>
+</svg>

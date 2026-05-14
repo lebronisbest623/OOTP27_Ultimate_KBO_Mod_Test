@@ -1,7 +1,15 @@
 {
-  "fa_declaration.summary.title": "{season} FA declaration list finalized",
-  "fa_declaration.summary.body": "The KBO FA declaration window for the {season} season has closed. {declared_count} player(s) filed for free agency, while {deferred_count} eligible player(s) stayed with their original clubs for now.\n\nDeclared FA players\n{declared_list}\nDeferred candidates\n{deferred_list}\nAmong the non-filers, {retry_count} were classified as retrying after a down year and {no_market_count} were classified as staying because the market was unlikely to meet their needs.",
-  "fa_declaration.summary.declared_line": "- {player_link} / Team #{team_id} / {grade} / score {score}",
-  "fa_declaration.summary.deferred_line": "- {player_link} / Team #{team_id} / {grade} / {reason}",
-  "fa_declaration.summary.none": "- None"
+  "fa_declaration.summary.title": "{season} KBO FA filing window closes",
+  "fa_declaration.summary.body": "The KBO FA filing window for the {season} season has closed. {declared_count} players chose to enter the market, while {deferred_count} eligible players stayed with their original clubs for now.\n\nThe first shape of the market will come from the top graded names, positional scarcity and how aggressively clubs want to replace production already on the roster.\n\nNotable FA filers\n{declared_list}\nNotable players who deferred\n{deferred_list}\nPlayers who deferred generally did so after weighing the market against the security of staying put.",
+  "fa_declaration.summary.declared_line": "- {player_link} ({team_link}, Grade {grade})",
+  "fa_declaration.summary.deferred_line": "- {player_link} ({team_link}, Grade {grade})",
+  "fa_declaration.summary.none": "- None",
+  "fa_declaration.retry.title": "{player_name} delays FA filing for another run",
+  "fa_declaration.retry.title.variants": 2,
+  "fa_declaration.retry.title.v1": "{player_name} delays FA filing for another run",
+  "fa_declaration.retry.title.v2": "{player_name} passes on KBO FA market for now",
+  "fa_declaration.retry.body": "{player_link} of {team_link} has decided not to file for free agency this time. The eligibility was there, but the player chose one more season to rebuild leverage before entering the market.\n\nThe Grade {grade} candidate stays with his original club for now. For the team, it preserves a familiar roster piece; for the player, the next FA window now depends on turning the coming season into a stronger platform.",
+  "fa_declaration.retry.body.variants": 2,
+  "fa_declaration.retry.body.v1": "{player_link} of {team_link} has decided not to file for free agency this time. The eligibility was there, but the player chose one more season to rebuild leverage before entering the market.\n\nThe Grade {grade} candidate stays with his original club for now. For the team, it preserves a familiar roster piece; for the player, the next FA window now depends on turning the coming season into a stronger platform.",
+  "fa_declaration.retry.body.v2": "{player_link} will not be part of the {season} KBO FA market. After weighing recent form and likely demand, he will remain with {team_link} and try to improve his position before filing.\n\nThe decision keeps him out of this year's FA class, but it also leaves the door open for a cleaner market entry later."
 }

@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "foreign_retention_guard_internal.h"
+#include "foreign_retention_guard_repair_helpers.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/logging/core_log.h"
@@ -14,10 +15,6 @@
 #include "../common/player_eval/foreign_waiver_player_eval.h"
 #include "../common/policy/foreign_waiver_policy.h"
 #include "../rights/query/foreign_waiver_rights_query.h"
-
-static volatile LONG g_kbo_foreign_retention_guard_repair_log_count = 0;
-
-#include "foreign_retention_guard_repair_helpers.inc"
 
 int kbo_foreign_retention_guard_restore_recorded_holder_signing(
     const char* source,

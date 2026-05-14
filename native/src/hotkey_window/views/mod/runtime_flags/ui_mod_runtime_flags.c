@@ -1,24 +1,12 @@
 #include "../info/ui_mod_info_views_internal.h"
-
-struct KboModRuntimeFlagSetting {
-    const char* key;
-    const char* label;
-    int enabled_value;
-    int default_enabled;
-    const char* companion_enable_key;
-    int category;
-};
-
-static const KboModRuntimeFlagSetting KBO_MOD_RUNTIME_FLAG_SETTINGS[] = {
-#include "runtime_flags.generated.inc"
-};
+#include "runtime_flags.generated.h"
 
 const KboModRuntimeFlagSetting* kbo_find_mod_runtime_flag_setting(const char* key)
 {
     if (key == NULL || key[0] == '\0') {
         return NULL;
     }
-    for (size_t i = 0; i < sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS) / sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS[0]); i++) {
+    for (size_t i = 0; i < KBO_MOD_RUNTIME_FLAG_SETTINGS_COUNT; i++) {
         if (strcmp(KBO_MOD_RUNTIME_FLAG_SETTINGS[i].key, key) == 0) {
             return &KBO_MOD_RUNTIME_FLAG_SETTINGS[i];
         }
@@ -93,7 +81,7 @@ void kbo_webview_append_mod_runtime_flag_group(
         kbo_html_append_escaped(buffer, help_text);
         kbo_window_text_appendf(buffer, "</p>");
     }
-    for (size_t i = 0; i < sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS) / sizeof(KBO_MOD_RUNTIME_FLAG_SETTINGS[0]); i++) {
+    for (size_t i = 0; i < KBO_MOD_RUNTIME_FLAG_SETTINGS_COUNT; i++) {
         if (KBO_MOD_RUNTIME_FLAG_SETTINGS[i].category == category) {
             kbo_webview_append_mod_runtime_flag_row(buffer, &KBO_MOD_RUNTIME_FLAG_SETTINGS[i]);
         }

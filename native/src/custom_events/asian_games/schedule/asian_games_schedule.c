@@ -14,6 +14,56 @@
 #include "../../../core/events/core_league_events.h"
 #include "../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../asian_games_schedule_seed/query/query_helpers.h"
+#include "../../runtime/ledger/custom_event_ledger.h"
+#include "../../runtime/runner/custom_event_runner.h"
+
+static int kbo_process_due_asian_games_custom_event(
+    uint32_t today,
+    uint32_t league_id,
+    uint32_t event_date,
+    KboCustomEventKind kind,
+    const char* title,
+    const char* source)
+{
+    if (event_date == 0u || today == 0u || today < event_date) {
+        return 0;
+    }
+    if (kbo_custom_event_processed_marker_exists_for_kind(event_date, kind)
+            || kbo_custom_event_ledger_completed(league_id, event_date, kind)) {
+        return 0;
+    }
+
+    int result = kbo_run_custom_event_by_kind(
+        0,
+        league_id,
+        event_date,
+        kind,
+        title,
+        source);
+
+    if (result > 0) {
+        if (result == KBO_CUSTOM_EVENT_RUN_ALREADY_COMPLETED) {
+            return 0;
+        }
+        append_logf(
+            "KBO Asian Games due event handled source=%s kind=%s event_date=%u today=%u result=%d",
+            source != NULL ? source : "",
+            kbo_custom_event_kind_key(kind),
+            event_date,
+            today,
+            result);
+        return 1;
+    }
+
+    append_logf(
+        "KBO Asian Games due event deferred source=%s kind=%s event_date=%u today=%u result=%d",
+        source != NULL ? source : "",
+        kbo_custom_event_kind_key(kind),
+        event_date,
+        today,
+        result);
+    return -1;
+}
 
 int kbo_schedule_asian_games_custom_events(const char* source)
 {
@@ -82,24 +132,88 @@ int kbo_schedule_asian_games_custom_events(const char* source)
         return -1;
     }
 
-    int selection_exists = skipped_past_selection || kbo_custom_event_exists_by_kind_for_date(
+    int selection_completed = kbo_custom_event_processed_marker_exists_for_kind(
+            selection_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION)
+        || kbo_custom_event_ledger_completed(
             league_id,
             selection_date,
             KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION);
-    int departure_exists = skipped_past_departure || kbo_custom_event_exists_by_kind_for_date(
+    int departure_completed = kbo_custom_event_processed_marker_exists_for_kind(
+            departure_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE)
+        || kbo_custom_event_ledger_completed(
             league_id,
             departure_date,
             KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE);
-    int final_exists = skipped_past_final || kbo_custom_event_exists_by_kind_for_date(
+    int final_completed = kbo_custom_event_processed_marker_exists_for_kind(
+            final_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL)
+        || kbo_custom_event_ledger_completed(
             league_id,
             final_date,
             KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL);
+
+    int selection_exists = skipped_past_selection || selection_completed || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            selection_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION);
+    int departure_exists = skipped_past_departure || departure_completed || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            departure_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE);
+    int final_exists = skipped_past_final || final_completed || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            final_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL);
+
+    int direct_processed = 0;
+    int direct_deferred = 0;
+    int direct_result = kbo_process_due_asian_games_custom_event(
+        today,
+        league_id,
+        selection_date,
+        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION,
+        selection_title,
+        source);
+    if (direct_result > 0) {
+        direct_processed = 1;
+        selection_exists = 1;
+    } else if (direct_result < 0) {
+        direct_deferred = 1;
+    }
+    direct_result = kbo_process_due_asian_games_custom_event(
+        today,
+        league_id,
+        departure_date,
+        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE,
+        departure_title,
+        source);
+    if (direct_result > 0) {
+        direct_processed = 1;
+        departure_exists = 1;
+    } else if (direct_result < 0) {
+        direct_deferred = 1;
+    }
+    direct_result = kbo_process_due_asian_games_custom_event(
+        today,
+        league_id,
+        final_date,
+        KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL,
+        final_title,
+        source);
+    if (direct_result > 0) {
+        direct_processed = 1;
+        final_exists = 1;
+    } else if (direct_result < 0) {
+        direct_deferred = 1;
+    }
 
     if (year_was_marked_scheduled
             && selection_exists
             && departure_exists
             && final_exists) {
-        return 0;
+        return direct_deferred ? -1 : direct_processed;
     }
     if (year_was_marked_scheduled) {
         append_logf(
@@ -146,15 +260,40 @@ int kbo_schedule_asian_games_custom_events(const char* source)
             source != NULL ? source : g_kbo_default_event_source);
     }
 
-    selection_exists = skipped_past_selection || created_selection || kbo_custom_event_exists_by_kind_for_date(
+    selection_completed = selection_completed
+        || kbo_custom_event_processed_marker_exists_for_kind(
+            selection_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION)
+        || kbo_custom_event_ledger_completed(
+            league_id,
+            selection_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION);
+    departure_completed = departure_completed
+        || kbo_custom_event_processed_marker_exists_for_kind(
+            departure_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE)
+        || kbo_custom_event_ledger_completed(
+            league_id,
+            departure_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE);
+    final_completed = final_completed
+        || kbo_custom_event_processed_marker_exists_for_kind(
+            final_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL)
+        || kbo_custom_event_ledger_completed(
+            league_id,
+            final_date,
+            KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL);
+
+    selection_exists = skipped_past_selection || selection_completed || created_selection || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         selection_date,
         KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION);
-    departure_exists = skipped_past_departure || created_departure || kbo_custom_event_exists_by_kind_for_date(
+    departure_exists = skipped_past_departure || departure_completed || created_departure || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         departure_date,
         KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE);
-    final_exists = skipped_past_final || created_final || kbo_custom_event_exists_by_kind_for_date(
+    final_exists = skipped_past_final || final_completed || created_final || kbo_custom_event_exists_by_kind_for_date(
         league_id,
         final_date,
         KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL);
@@ -179,5 +318,8 @@ int kbo_schedule_asian_games_custom_events(const char* source)
     if (!(selection_exists && departure_exists && final_exists)) {
         return -1;
     }
-    return created_selection || created_departure || created_final;
+    if (direct_deferred) {
+        return -1;
+    }
+    return created_selection || created_departure || created_final || direct_processed;
 }

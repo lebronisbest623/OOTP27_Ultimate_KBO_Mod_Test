@@ -159,6 +159,10 @@ int kbo_asian_games_replace_unavailable_players(uint32_t event_yyyymmdd, const c
     }
 
     int replacements = 0;
+    KboAsianGamesRosterEntry old_entries[KBO_ASIAN_GAMES_ROSTER_SIZE];
+    KboAsianGamesRosterEntry new_entries[KBO_ASIAN_GAMES_ROSTER_SIZE];
+    memset(old_entries, 0, sizeof(old_entries));
+    memset(new_entries, 0, sizeof(new_entries));
     for (LONG i = 0; i < roster_count; i++) {
         KboAsianGamesRosterEntry* entry = &g_kbo_asian_games_roster[i];
         if (entry->player_id == 0u || entry->departed != 0u) {
@@ -187,27 +191,36 @@ int kbo_asian_games_replace_unavailable_players(uint32_t event_yyyymmdd, const c
         }
 
         g_kbo_asian_games_roster[i] = new_entry;
+        if (replacements < KBO_ASIAN_GAMES_ROSTER_SIZE) {
+            old_entries[replacements] = old_entry;
+            new_entries[replacements] = new_entry;
+        }
         replacements++;
-    append_logf(
-        "KBO Asian Games injury replacement source=%s date=%u slot=%ld old_player=%u old_team=%u old_role=%u new_player=%u new_team=%u new_org=%u new_role=%u same_bucket=%d wildcard=%u score=%d",
-        source != NULL ? source : "",
-        event_yyyymmdd,
-        i + 1,
-        old_entry.player_id,
-        old_entry.original_team_id,
-        (uint32_t)old_entry.role,
-        new_entry.player_id,
-        new_entry.original_team_id,
-        new_org_id,
-        (uint32_t)new_entry.role,
-        kbo_asian_games_roles_same_bucket(new_entry.role, old_entry.role),
-        (uint32_t)new_entry.wildcard,
-        new_entry.score);
-        kbo_emit_asian_games_replacement_news(event_yyyymmdd, &old_entry, &new_entry, source);
+        append_logf(
+            "KBO Asian Games injury replacement source=%s date=%u slot=%ld old_player=%u old_team=%u old_role=%u new_player=%u new_team=%u new_org=%u new_role=%u same_bucket=%d wildcard=%u score=%d",
+            source != NULL ? source : "",
+            event_yyyymmdd,
+            i + 1,
+            old_entry.player_id,
+            old_entry.original_team_id,
+            (uint32_t)old_entry.role,
+            new_entry.player_id,
+            new_entry.original_team_id,
+            new_org_id,
+            (uint32_t)new_entry.role,
+            kbo_asian_games_roles_same_bucket(new_entry.role, old_entry.role),
+            (uint32_t)new_entry.wildcard,
+            new_entry.score);
     }
 
     if (replacements > 0) {
         kbo_save_asian_games_roster_csv(source);
+        kbo_emit_asian_games_replacement_news_batch(
+            event_yyyymmdd,
+            old_entries,
+            new_entries,
+            replacements,
+            source);
     }
     return replacements;
 }

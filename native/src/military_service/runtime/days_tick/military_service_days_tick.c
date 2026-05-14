@@ -30,8 +30,6 @@
 #include "military_service_days_tick_internal.h"
 #include "military_service_tick.h"
 
-#include "military_service_seed_bootstrap.inc"
-
 int kbo_tick_military_service_days(const char* source, int* out_seeded_assignments)
 {
     if (out_seeded_assignments != NULL) {
@@ -302,4 +300,3 @@ DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
     return 0;
 }
 
-#include "military_service_seed_bootstrap_thread.inc"

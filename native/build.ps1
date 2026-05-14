@@ -323,8 +323,8 @@ $NativeSources += Get-ChildItem -LiteralPath (Join-Path $Root "third_party\csv_f
 $DllPath = Join-Path $OutDir "KBOFix.dll"
 $NativeInputFiles = @()
 $NativeInputFiles += Get-Item -LiteralPath $NativeSources
-$NativeInputFiles += Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Include "*.h", "*.inc" -File
-$NativeInputFiles += Get-ChildItem -LiteralPath (Join-Path $Root "third_party") -Recurse -Include "*.h", "*.inc", "*.c" -File
+$NativeInputFiles += Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Include "*.h" -File
+$NativeInputFiles += Get-ChildItem -LiteralPath (Join-Path $Root "third_party") -Recurse -Include "*.h", "*.c" -File
 $NativeInputFiles += Get-Item -LiteralPath $WebView2Loader
 
 $InputsNewestThanDll = $true

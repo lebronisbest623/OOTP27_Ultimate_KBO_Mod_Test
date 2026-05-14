@@ -1,7 +1,15 @@
 {
-  "fa_declaration.summary.title": "{season} FA 선언 명단 발표",
-  "fa_declaration.summary.body": "{season}시즌 FA 선언 창구가 마감됐다. 총 {declared_count}명이 FA 권리 행사를 선택했고, {deferred_count}명은 원소속팀에 남아 다음 기회를 보기로 했다.\n\nFA 선언 선수\n{declared_list}\n미신청/보류 선수\n{deferred_list}\n미신청 사유별로는 부진 시즌 뒤 재수를 선택한 선수 {retry_count}명, 시장 평가가 충분하지 않다고 판단한 선수 {no_market_count}명으로 분류됐다.",
-  "fa_declaration.summary.declared_line": "- {player_link} / Team #{team_id} / {grade} / 점수 {score}",
-  "fa_declaration.summary.deferred_line": "- {player_link} / Team #{team_id} / {grade} / {reason}",
-  "fa_declaration.summary.none": "- 해당 없음"
+  "fa_declaration.summary.title": "{season}시즌 FA 신청 마감",
+  "fa_declaration.summary.body": "{season}시즌 FA 신청 창구가 마감됐습니다. 총 {declared_count}명이 시장에 나서기로 했고, {deferred_count}명은 원소속팀에 남아 다음 기회를 보기로 했습니다.\n\n올해 FA 시장은 상위 등급 선수들의 선택으로 초반 분위기가 갈릴 전망입니다. 구단들은 보상 등급과 포지션 수요, 기존 전력 공백을 함께 따져 협상 우선순위를 다시 짜게 됐습니다.\n\n주요 FA 신청 선수\n{declared_list}\n신청을 미룬 주요 선수\n{deferred_list}\n신청을 미룬 선수들은 대체로 시장 상황과 잔류 조건을 함께 따진 끝에 결정을 미뤘습니다.",
+  "fa_declaration.summary.declared_line": "- {player_link} ({team_link}, {grade}등급)",
+  "fa_declaration.summary.deferred_line": "- {player_link} ({team_link}, {grade}등급)",
+  "fa_declaration.summary.none": "- 해당 없음",
+  "fa_declaration.retry.title": "{player_name}, FA 신청 미루고 재도전 선택",
+  "fa_declaration.retry.title.variants": 2,
+  "fa_declaration.retry.title.v1": "{player_name}, FA 신청 미루고 재도전 선택",
+  "fa_declaration.retry.title.v2": "{player_name}, FA 권리 행사 다음 기회로",
+  "fa_declaration.retry.body": "{team_link}의 {player_link}가 이번 FA 신청을 미뤘습니다. FA 자격은 갖췄지만, 최근 흐름과 시장 분위기를 고려해 한 시즌 더 준비하는 쪽을 택했습니다.\n\n{grade}등급으로 분류된 {player_name}는 당장 시장에 나서기보다 원소속팀에 남아 반등을 먼저 노립니다. 이번 결정은 재계약 포기가 아니라 더 나은 타이밍을 기다리는 선택에 가깝습니다.",
+  "fa_declaration.retry.body.variants": 2,
+  "fa_declaration.retry.body.v1": "{team_link}의 {player_link}가 이번 FA 신청을 미뤘습니다. FA 자격은 갖췄지만, 최근 흐름과 시장 분위기를 고려해 한 시즌 더 준비하는 쪽을 택했습니다.\n\n{grade}등급으로 분류된 {player_name}는 당장 시장에 나서기보다 원소속팀에 남아 반등을 먼저 노립니다. 이번 결정은 재계약 포기가 아니라 더 나은 타이밍을 기다리는 선택에 가깝습니다.",
+  "fa_declaration.retry.body.v2": "{player_link}가 {season}시즌 FA 시장에 이름을 올리지 않기로 했습니다. 최근 성적과 시장 평가가 엇갈린 만큼, {team_link}에 남아 다음 신청 시점을 노리겠다는 판단입니다.\n\n구단 입장에서는 전력 이탈을 피했고, 선수에게는 가치를 다시 보여줄 시간이 생겼습니다. FA 재도전은 다음 시즌 성적에 따라 다시 계산될 전망입니다."
 }

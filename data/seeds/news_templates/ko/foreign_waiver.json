@@ -1,14 +1,14 @@
 {
-  "foreign_waiver.results.title": "외국인 보류권 정리가 마감됐습니다",
+  "foreign_waiver.results.title": "KBO 외국인 보류권 정리 마감",
   "foreign_waiver.results.title.variants": 2,
-  "foreign_waiver.results.title.v1": "외국인 보류권 정리가 마감됐습니다",
-  "foreign_waiver.results.title.v2": "KBO 구단들이 외국인 보류권 선택을 마쳤습니다",
-  "foreign_waiver.results.body_with_breakdown": "KBO 외국인 선수 보류권 창구가 마감됐습니다. 각 구단은 다시 협상 테이블에 앉힐 선수와 시장에 풀 선수를 가려냈습니다.\n\n최종 집계는 보류 {retained}건, 포기 {skipped}건입니다. 자동 운영 구단은 보류 {ai_retained}건과 포기 {ai_skipped}건, 직접 운영 구단은 보류 {user_retained}건과 포기 {user_skipped}건을 기록했습니다.\n\n마감 뒤 활성 보류권은 {active_rights}건입니다. 이 권리는 선수가 KBO 복귀를 타진할 때 원 구단이 먼저 협상할 수 있는 안전판으로 남습니다.",
+  "foreign_waiver.results.title.v1": "KBO 외국인 보류권 정리 마감",
+  "foreign_waiver.results.title.v2": "외국인 보류 명단, 구단 선택 마무리",
+  "foreign_waiver.results.body_with_breakdown": "KBO 외국인 선수 보류권 정리가 마감됐습니다. 구단들은 재계약 가능성을 남길 선수와 새 외국인 카드로 넘어갈 자리를 나눠 정리했습니다.\n\n이번 창구에서 보류 명단에 남은 선수는 {retained}명, 풀린 선수는 {skipped}명입니다. 보류된 선수는 KBO 복귀를 논의할 때 원 구단과 먼저 마주하게 됩니다.\n\n마감 기준 유효한 외국인 보류권은 {active_rights}건입니다. 당장 로스터 잔류를 뜻하지는 않지만, 다음 시장에서 각 구단의 협상 순서를 정하는 장부로 남습니다.",
   "foreign_waiver.results.body_with_breakdown.variants": 2,
-  "foreign_waiver.results.body_with_breakdown.v1": "KBO 외국인 선수 보류권 창구가 마감됐습니다. 각 구단은 다시 협상 테이블에 앉힐 선수와 시장에 풀 선수를 가려냈습니다.\n\n최종 집계는 보류 {retained}건, 포기 {skipped}건입니다. 자동 운영 구단은 보류 {ai_retained}건과 포기 {ai_skipped}건, 직접 운영 구단은 보류 {user_retained}건과 포기 {user_skipped}건을 기록했습니다.\n\n마감 뒤 활성 보류권은 {active_rights}건입니다. 이 권리는 선수가 KBO 복귀를 타진할 때 원 구단이 먼저 협상할 수 있는 안전판으로 남습니다.",
-  "foreign_waiver.results.body_with_breakdown.v2": "외국인 보류권 정리가 끝났습니다. 조용한 행정 절차처럼 보이지만, 다음 외국인 시장에서 누가 먼저 협상권을 쥐는지를 가르는 중요한 마감입니다.\n\n이번 창구에서는 보류 {retained}건, 포기 {skipped}건이 기록됐습니다. 자동 운영 구단은 {ai_retained}건을 보류하고 {ai_skipped}건을 포기했으며, 직접 운영 구단은 보류 {user_retained}건과 포기 {user_skipped}건을 선택했습니다.\n\n현재 활성 보류권은 {active_rights}건입니다. 각 기록은 향후 복귀 협상에서 원 구단의 우선권으로 작동합니다.",
-  "foreign_waiver.results.body_without_breakdown": "외국인 선수 보류권 정리가 마감됐습니다. 구단별 세부 내역은 붙지 않았지만, 리그 장부에는 활성 보류권 {active_rights}건이 남았습니다.\n\n보류권은 로스터 잔류와 별개입니다. 해당 선수가 다시 KBO 복귀를 노릴 경우 원 구단은 우선 협상권을 앞세워 시장 흐름을 조정할 수 있습니다.",
+  "foreign_waiver.results.body_with_breakdown.v1": "KBO 외국인 선수 보류권 정리가 마감됐습니다. 구단들은 재계약 가능성을 남길 선수와 새 외국인 카드로 넘어갈 자리를 나눠 정리했습니다.\n\n이번 창구에서 보류 명단에 남은 선수는 {retained}명, 풀린 선수는 {skipped}명입니다. 보류된 선수는 KBO 복귀를 논의할 때 원 구단과 먼저 마주하게 됩니다.\n\n마감 기준 유효한 외국인 보류권은 {active_rights}건입니다. 당장 로스터 잔류를 뜻하지는 않지만, 다음 시장에서 각 구단의 협상 순서를 정하는 장부로 남습니다.",
+  "foreign_waiver.results.body_with_breakdown.v2": "외국인 보류권 정리가 끝났습니다. 시즌 뒤 구단들은 다시 잡아둘 이름과 시장에 풀어둘 이름을 갈랐습니다.\n\n올해 보류된 선수는 {retained}명, 보류권이 풀린 선수는 {skipped}명입니다. 보류 명단에 남은 선수는 향후 KBO 복귀를 타진할 때 원 구단의 협상권 안에서 먼저 움직입니다.\n\n현재 유효한 외국인 보류권은 {active_rights}건입니다. 숫자는 작아 보여도 다음 외국인 시장의 선택지를 미리 묶어 두는 장치입니다.",
+  "foreign_waiver.results.body_without_breakdown": "KBO 외국인 선수 보류권 정리가 마감됐습니다. 세부 결정표는 공개되지 않았지만, 리그 장부에는 유효한 보류권 {active_rights}건이 남았습니다.\n\n보류권은 재계약 확정이 아니라 우선 협상권입니다. 해당 선수가 KBO 복귀를 타진하면 원 구단이 먼저 협상 테이블에 앉게 됩니다.",
   "foreign_waiver.results.body_without_breakdown.variants": 2,
-  "foreign_waiver.results.body_without_breakdown.v1": "외국인 선수 보류권 정리가 마감됐습니다. 구단별 세부 내역은 붙지 않았지만, 리그 장부에는 활성 보류권 {active_rights}건이 남았습니다.\n\n보류권은 로스터 잔류와 별개입니다. 해당 선수가 다시 KBO 복귀를 노릴 경우 원 구단은 우선 협상권을 앞세워 시장 흐름을 조정할 수 있습니다.",
-  "foreign_waiver.results.body_without_breakdown.v2": "KBO 외국인 보류권 창구가 닫혔습니다. 세부 결정표는 공개되지 않았지만, 활성 보류권은 {active_rights}건으로 집계됐습니다.\n\n이 숫자는 다음 협상 시장의 출발선입니다. 보류된 선수는 KBO 복귀를 논의할 때 원 구단과 먼저 마주하게 됩니다."
+  "foreign_waiver.results.body_without_breakdown.v1": "KBO 외국인 선수 보류권 정리가 마감됐습니다. 세부 결정표는 공개되지 않았지만, 리그 장부에는 유효한 보류권 {active_rights}건이 남았습니다.\n\n보류권은 재계약 확정이 아니라 우선 협상권입니다. 해당 선수가 KBO 복귀를 타진하면 원 구단이 먼저 협상 테이블에 앉게 됩니다.",
+  "foreign_waiver.results.body_without_breakdown.v2": "KBO 외국인 보류권 창구가 닫혔습니다. 공개된 세부 명단은 없지만, 마감 기준 유효한 보류권은 {active_rights}건입니다.\n\n이 권리는 다음 협상 시장의 출발선을 정합니다. 보류된 선수는 KBO 복귀를 논의할 때 원 구단과 먼저 마주하게 됩니다."
 }

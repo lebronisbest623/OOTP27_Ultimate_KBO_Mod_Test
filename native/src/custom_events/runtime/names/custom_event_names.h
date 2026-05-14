@@ -20,6 +20,8 @@ typedef enum KboCustomEventKind {
 } KboCustomEventKind;
 
 int kbo_custom_event_title_for_kind(KboCustomEventKind kind, char* out, size_t out_size);
+const char* kbo_custom_event_kind_key(KboCustomEventKind kind);
+KboCustomEventKind kbo_custom_event_kind_from_name(const char* name);
 int kbo_custom_event_name_equals_title(const char* name, const char* title);
 int kbo_custom_event_name_is_kind(const char* name, KboCustomEventKind kind);
 

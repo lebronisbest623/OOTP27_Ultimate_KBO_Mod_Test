@@ -14,7 +14,8 @@
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../../team/names/team_string.h"
-#include "../dispatch/custom_event_dispatch.h"
+#include "../ledger/custom_event_ledger.h"
+#include "../runner/custom_event_runner.h"
 
 int scan_kbo_custom_events_once(const char* source)
 {
@@ -38,6 +39,7 @@ int scan_kbo_custom_events_once(const char* source)
     }
 
     int triggered = 0;
+    int deferred = 0;
     for (int32_t i = 0; i < event_count; i++) {
         uintptr_t event_ptr = *(uintptr_t*)(event_vector + ((uintptr_t)i * sizeof(uintptr_t)));
         if (event_ptr == 0 || !memory_range_readable((void*)event_ptr, 0x48)) {
@@ -66,6 +68,10 @@ int scan_kbo_custom_events_once(const char* source)
         if (!kbo_custom_event_name_matches_local(name)) {
             continue;
         }
+        KboCustomEventKind kind = kbo_custom_event_kind_from_name(name);
+        if (kind == KBO_CUSTOM_EVENT_KIND_UNKNOWN) {
+            continue;
+        }
 
         uint32_t event_year = *(uint16_t*)(event + OOTP27_LEAGUE_EVENT_YEAR_OFFSET);
         uint32_t event_month = event[OOTP27_LEAGUE_EVENT_MONTH_OFFSET];
@@ -86,11 +92,15 @@ int scan_kbo_custom_events_once(const char* source)
         if (!due || event_over != 0 || kbo_custom_event_already_processed(event_ptr)) {
             continue;
         }
-        if (kbo_custom_event_processed_marker_exists(event_yyyymmdd, name)) {
+        if (kbo_custom_event_processed_marker_exists(event_yyyymmdd, name)
+                || kbo_custom_event_processed_marker_exists_for_kind(event_yyyymmdd, kind)
+                || kbo_custom_event_ledger_completed(configured_league_id, event_yyyymmdd, kind)) {
             kbo_mark_custom_event_processed(event_ptr);
+            kbo_persist_custom_event_processed_marker(event_yyyymmdd, name, source);
             append_logf(
-                "KBO custom event skipped processed marker source=%s name=%s event_date=%04u-%02u-%02u",
+                "KBO custom event skipped completed source=%s kind=%s name=%s event_date=%04u-%02u-%02u",
                 source != NULL ? source : "",
+                kbo_custom_event_kind_key(kind),
                 name,
                 event_year,
                 event_month,
@@ -98,21 +108,21 @@ int scan_kbo_custom_events_once(const char* source)
             continue;
         }
 
-        int action_result = kbo_dispatch_custom_event(
+        int action_result = kbo_run_custom_event_by_kind(
             event_ptr,
-            name,
+            configured_league_id,
             event_yyyymmdd,
-            event_year,
-            event_month,
-            event_day,
+            kind,
+            name,
             source);
         if (action_result < 0) {
             continue;
         }
+        if (action_result == 0) {
+            deferred++;
+        }
 
         if (action_result) {
-            kbo_mark_custom_event_processed(event_ptr);
-            kbo_persist_custom_event_processed_marker(event_yyyymmdd, name, source);
             triggered++;
         }
 
@@ -133,6 +143,20 @@ int scan_kbo_custom_events_once(const char* source)
         if (triggered > 0) {
             break;
         }
+    }
+
+    if (triggered == 0 && deferred > 0) {
+        append_logf(
+            "KBO custom event scan deferred source=%s current=%04u-%02u-%02u deferred=%d count=%d manager=%p vector=%p",
+            source != NULL ? source : "",
+            current_year,
+            current_month,
+            current_day,
+            deferred,
+            event_count,
+            (void*)event_manager,
+            (void*)event_vector);
+        return -1;
     }
 
     if (triggered > 0) {

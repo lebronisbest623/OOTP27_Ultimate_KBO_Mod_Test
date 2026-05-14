@@ -1,5 +1,6 @@
 #include "../common/custom_events_common.h"
 #include "custom_event_markers.h"
+#include "custom_event_marker_prune.h"
 #include <stdio.h>
 #include <string.h>
 #include "../../../bootstrap/abi/ootp_offsets.h"
@@ -15,7 +16,6 @@ int kbo_get_custom_event_processed_marker_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("custom_events_processed.txt", out, out_size);
 }
 
-#include "custom_event_marker_prune.inc"
 int kbo_custom_event_processed_marker_exists(uint32_t event_yyyymmdd, const char* name)
 {
     if (event_yyyymmdd == 0u || name == NULL || name[0] == '\0') {

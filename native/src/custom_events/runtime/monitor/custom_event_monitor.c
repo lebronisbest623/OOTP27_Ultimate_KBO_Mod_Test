@@ -40,6 +40,10 @@ void kbo_custom_event_monitor_tick(
         int cbt_schedule = kbo_schedule_cbt_custom_events(source);
         if (foreign_schedule >= 0 && asian_schedule >= 0 && cbt_schedule >= 0) {
             *last_scheduled_yyyymmdd = today_yyyymmdd;
+            if (last_scanned_yyyymmdd != NULL
+                    && (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0)) {
+                *last_scanned_yyyymmdd = 0u;
+            }
         } else {
             append_logf(
                 "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d cbt=%d",

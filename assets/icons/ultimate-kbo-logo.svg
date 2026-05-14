@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">OOTP27 Ultimate KBO Mod logo</title>
+  <desc id="desc">Original navy, red, gold, and white baseball emblem for the OOTP27 Ultimate KBO Mod.</desc>
+
+  <defs>
+    <radialGradient id="badge-bg" cx="42%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#2c4d83"/>
+      <stop offset="30%" stop-color="#162f5c"/>
+      <stop offset="68%" stop-color="#0b1831"/>
+      <stop offset="100%" stop-color="#03050c"/>
+    </radialGradient>
+
+    <radialGradient id="badge-gloss" cx="32%" cy="18%" r="62%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="42%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="ball-bg" cx="38%" cy="24%" r="82%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="42%" stop-color="#fbfcff"/>
+      <stop offset="73%" stop-color="#e1e5ec"/>
+      <stop offset="100%" stop-color="#aeb7c6"/>
+    </radialGradient>
+
+    <radialGradient id="ball-gloss" cx="35%" cy="22%" r="74%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.70"/>
+      <stop offset="44%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="78%" stop-color="#071126" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#071126" stop-opacity="0.18"/>
+    </radialGradient>
+
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff0a8"/>
+      <stop offset="24%" stop-color="#f6c54b"/>
+      <stop offset="52%" stop-color="#d4a017"/>
+      <stop offset="76%" stop-color="#a96f0b"/>
+      <stop offset="100%" stop-color="#684008"/>
+    </linearGradient>
+
+    <linearGradient id="red-slash" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e8204f"/>
+      <stop offset="58%" stop-color="#c9184a"/>
+      <stop offset="100%" stop-color="#7a0f2d"/>
+    </linearGradient>
+
+    <filter id="heavy-shadow" x="-18%" y="-18%" width="136%" height="136%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+
+    <filter id="type-shadow" x="-12%" y="-30%" width="124%" height="170%">
+      <feDropShadow dx="0" dy="12" stdDeviation="7" flood-color="#000000" flood-opacity="0.68"/>
+    </filter>
+
+    <symbol id="star" viewBox="-32 -32 64 64">
+      <path d="M0,-30 L8,-9 L30,-9 L12,4 L19,26 L0,13 L-19,26 L-12,4 L-30,-9 L-8,-9 Z"/>
+    </symbol>
+
+    <clipPath id="ball-clip" clipPathUnits="userSpaceOnUse">
+      <circle cx="512" cy="390" r="150"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" fill="none"/>
+
+  <g filter="url(#heavy-shadow)">
+    <circle cx="512" cy="512" r="468" fill="#061021"/>
+    <circle cx="512" cy="512" r="452" fill="url(#badge-bg)"/>
+    <circle cx="512" cy="512" r="452" fill="url(#badge-gloss)"/>
+    <circle cx="512" cy="512" r="436" fill="none" stroke="#ffffff" stroke-width="12"/>
+    <circle cx="512" cy="512" r="417" fill="none" stroke="url(#gold)" stroke-width="9"/>
+    <circle cx="512" cy="512" r="350" fill="none" stroke="#ffffff" stroke-width="6" opacity="0.9"/>
+
+    <path d="M512 124 L836 448 L512 832 L188 448 Z" fill="#0a1830" opacity="0.88"/>
+    <path d="M512 146 L814 448 L512 802 L210 448 Z" fill="none" stroke="#e8edf5" stroke-width="8"/>
+    <path d="M512 176 L780 448 L512 760 L244 448 Z" fill="none" stroke="#d4a017" stroke-width="5" opacity="0.9"/>
+    <path d="M512 118 L544 150 L512 182 L480 150 Z" fill="url(#gold)" stroke="#ffffff" stroke-width="8"/>
+
+    <g opacity="0.98" stroke="#ffffff" stroke-linejoin="round" paint-order="stroke fill">
+      <use href="#star" x="476" y="58" width="72" height="72" fill="url(#gold)" stroke-width="4.6"/>
+      <use href="#star" x="393" y="106" width="50" height="50" fill="url(#gold)" stroke-width="4"/>
+      <use href="#star" x="581" y="106" width="50" height="50" fill="url(#gold)" stroke-width="4"/>
+      <use href="#star" x="321" y="150" width="38" height="38" fill="url(#gold)" stroke-width="3.4"/>
+      <use href="#star" x="665" y="150" width="38" height="38" fill="url(#gold)" stroke-width="3.4"/>
+    </g>
+
+    <g opacity="0.96">
+      <circle cx="512" cy="390" r="153" fill="url(#ball-bg)" stroke="#e5e8ee" stroke-width="6"/>
+      <circle cx="512" cy="390" r="151" fill="url(#ball-gloss)"/>
+
+      <g clip-path="url(#ball-clip)">
+        <path d="M420 258 C369 322 365 454 420 522" fill="none" stroke="#c9184a" stroke-width="8" stroke-linecap="round"/>
+        <path d="M604 258 C655 322 659 454 604 522" fill="none" stroke="#c9184a" stroke-width="8" stroke-linecap="round"/>
+
+        <g stroke="#c9184a" stroke-width="6" stroke-linecap="round">
+          <path d="M399 298 L430 316"/>
+          <path d="M389 334 L425 348"/>
+          <path d="M386 374 L424 381"/>
+          <path d="M390 415 L426 409"/>
+          <path d="M402 456 L432 438"/>
+          <path d="M625 298 L594 316"/>
+          <path d="M635 334 L599 348"/>
+          <path d="M638 374 L600 381"/>
+          <path d="M634 415 L598 409"/>
+          <path d="M622 456 L592 438"/>
+        </g>
+      </g>
+    </g>
+
+    <path d="M52 588 L294 526 L554 510 L982 420 L952 464 L702 540 L956 486 L984 506 L668 624 L584 588 L258 676 L42 742 L122 676 L20 704 Z"
+          fill="url(#red-slash)" stroke="#061021" stroke-width="11" stroke-linejoin="round"/>
+    <path d="M126 626 C350 578 606 546 890 486" fill="none" stroke="#f02a54" stroke-width="8" stroke-linecap="round" opacity="0.95"/>
+    <path d="M700 594 C806 558 896 532 974 514" fill="none" stroke="#e8204f" stroke-width="5" stroke-linecap="round"/>
+
+    <path d="M232 730 L792 730 L838 788 L792 846 L232 846 L186 788 Z"
+          fill="#08142a" stroke="url(#gold)" stroke-width="7"/>
+    <path d="M280 830 L744 830 L512 942 Z" fill="#0a1830" stroke="url(#gold)" stroke-width="10"/>
+  </g>
+
+  <g filter="url(#type-shadow)" text-anchor="middle" font-family="Arial Black, Impact, Haettenschweiler, sans-serif">
+    <text x="512" y="555" font-size="138" font-style="italic" fill="#061021" stroke="#061021" stroke-width="26" paint-order="stroke">
+      Ultimate
+    </text>
+    <text x="512" y="555" font-size="138" font-style="italic" fill="#ffffff" stroke="#d3d8e1" stroke-width="5" paint-order="stroke">
+      Ultimate
+    </text>
+
+    <text x="512" y="706" font-size="168" font-style="italic" fill="#061021" stroke="#061021" stroke-width="28" paint-order="stroke">
+      KBO
+    </text>
+    <text x="512" y="706" font-size="168" font-style="italic" fill="#ffffff" stroke="#d4a017" stroke-width="6" paint-order="stroke">
+      KBO
+    </text>
+  </g>
+
+  <g text-anchor="middle" font-family="Arial Black, Impact, Haettenschweiler, sans-serif">
+    <text x="512" y="812" font-size="34" fill="#ffffff" letter-spacing="7">OOTP <tspan fill="#d4a017">27</tspan> MOD</text>
+  </g>
+</svg>

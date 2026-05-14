@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Quickstart folder logo</title>
+  <desc id="desc">A simple Windows-style folder icon representing a quickstart file.</desc>
+
+  <defs>
+    <linearGradient id="tab" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe889"/>
+      <stop offset="100%" stop-color="#e5a72a"/>
+    </linearGradient>
+
+    <linearGradient id="front" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd95f"/>
+      <stop offset="56%" stop-color="#f4b63a"/>
+      <stop offset="100%" stop-color="#d9911f"/>
+    </linearGradient>
+
+    <linearGradient id="inside" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f6bf43"/>
+      <stop offset="100%" stop-color="#d78f20"/>
+    </linearGradient>
+
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.36"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-12%" y="-12%" width="124%" height="130%">
+      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#14213d" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="none"/>
+
+  <g filter="url(#shadow)">
+    <path fill="url(#tab)"
+          d="M140 242 C140 207 168 180 203 180 H390 C414 180 436 193 448 214 L482 274 H821 C856 274 884 302 884 337 V380 H140 Z"/>
+
+    <path fill="url(#inside)"
+          d="M140 333 C140 298 168 270 203 270 H821 C856 270 884 298 884 333 V466 H140 Z"/>
+
+    <path fill="url(#front)"
+          d="M96 394 C96 357 126 328 163 328 H861 C901 328 931 364 924 404 L844 789 C838 821 810 844 777 844 H210 C177 844 149 821 143 789 L96 394 Z"/>
+
+    <path fill="url(#shine)"
+          d="M120 398 C126 374 149 356 175 356 H850 C877 356 899 379 895 406 L881 476 C679 430 369 441 123 524 Z"/>
+
+    <path fill="#ffffff" opacity="0.22"
+          d="M165 379 H850 C866 379 879 393 876 409 L867 455 C656 412 381 424 137 505 L124 410 C121 393 135 379 165 379 Z"/>
+
+    <path fill="none" stroke="#c9821f" stroke-width="22" stroke-linejoin="round" opacity="0.55"
+          d="M96 394 C96 357 126 328 163 328 H861 C901 328 931 364 924 404 L844 789 C838 821 810 844 777 844 H210 C177 844 149 821 143 789 L96 394 Z"/>
+
+    <path fill="#fff3c1" opacity="0.35"
+          d="M232 586 C404 540 619 534 784 569 C800 572 811 588 808 604 C804 621 788 631 772 628 C623 596 419 601 249 646 C233 650 217 640 213 624 C208 608 217 591 232 586 Z"/>
+  </g>
+</svg>

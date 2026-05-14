@@ -7,65 +7,31 @@
 #include <string.h>
 
 #include "fa_declaration.h"
+#include "fa_declaration_internal.h"
+#include "news/fa_declaration_news.h"
 #include "../bootstrap/abi/ootp_offsets.h"
 #include "../core/core_flags/api/flags_api.h"
 #include "../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../core/files/save_paths/core_save_paths.h"
 #include "../core/csv/core_csv.h"
 #include "../core/logging/core_log.h"
-#include "../core/news/live/core_live_news.h"
-#include "../core/news/templates/core_news_templates.h"
 #include "../fa_filing/fa_filing.h"
 #include "../fa_filing/fa_filing_parts/fa_filing_csv_write_helpers.h"
 #include "../fa_market_classification/api/fa_market_classification.h"
 #include "../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
+#include "../foreign/common/dates/foreign_waiver_date.h"
 #include "../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../runtime_memory/runtime_memory.h"
 #include "../team/lookup/team_lookup.h"
 #include "../team/names/team_name_cache.h"
 
-#define KBO_FA_DECLARATION_MAX 4096
-#define KBO_FA_DECLARATION_NEWS_DECLARED_LIMIT 8
-#define KBO_FA_DECLARATION_NEWS_DEFERRED_LIMIT 6
-
-typedef struct KboFaDeclarationCandidate {
-    uintptr_t player_ptr;
-    uint32_t player_id;
-    uint32_t declaration_date;
-    uint32_t season;
-    uint32_t team_id;
-    uint32_t league_id;
-    uint32_t nation_id;
-    uint16_t age;
-    uint8_t contract_level;
-    uint8_t dfa;
-    uint8_t retired_flag;
-    uint8_t declared;
-    uint8_t from_market;
-    int32_t salary;
-    int32_t fa_demand;
-    int32_t score;
-    int32_t threshold;
-    int16_t overall;
-    int16_t talent;
-    int16_t ratings;
-    int16_t career;
-    char player_name[96];
-    char case_label[48];
-    char grade[12];
-    char reason[192];
-    char decision_reason[160];
-} KboFaDeclarationCandidate;
-
-static int kbo_get_fa_declaration_csv_path(char* out, size_t out_size)
+int kbo_get_fa_declaration_csv_path(char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0u) {
         return 0;
     }
     return kbo_get_save_scoped_data_file("fa_declarations.csv", out, out_size);
 }
-
-#include "fa_declaration_repair.inc"
 
 int kbo_fa_declaration_find_latest_decision(
     uint32_t player_id,
@@ -114,14 +80,6 @@ int kbo_fa_declaration_find_latest_decision(
     kbo_csv_reader_close(reader);
     return found;
 }
-
-#include "fa_declaration_news.inc"
-
-#include "fa_declaration_decision.inc"
-
-#include "fa_declaration_collect.inc"
-
-#include "fa_declaration_csv.inc"
 
 int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
 {
@@ -335,6 +293,14 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         deferred,
         deferred_retry,
         deferred_no_market,
+        source != NULL ? source : "fa_declaration_event");
+    kbo_emit_fa_declaration_retry_news(
+        event_yyyymmdd,
+        season,
+        league_id,
+        candidates,
+        candidate_count,
+        deferred_retry,
         source != NULL ? source : "fa_declaration_event");
 
     HeapFree(GetProcessHeap(), 0, candidates);

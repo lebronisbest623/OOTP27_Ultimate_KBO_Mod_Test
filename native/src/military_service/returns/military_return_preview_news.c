@@ -10,6 +10,7 @@
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/news/ledger/core_news_ledger.h"
 #include "../../core/news/live/core_live_news.h"
 #include "../../core/news/templates/core_news_templates.h"
 #include "../../runtime_memory/runtime_memory.h"
@@ -22,22 +23,9 @@
 #include "../selection/events/policy/military_selection_policy.h"
 #include "../selection/news/military_selection_news.h"
 #include "military_return_preview_news.h"
-
-#define KBO_MILITARY_RETURN_PREVIEW_MAX 32
-#define KBO_MILITARY_RETURN_PREVIEW_LIST_MAX 10
-
-typedef struct KboMilitaryReturnPreviewEntry {
-    uint32_t player_id;
-    uint32_t original_team_id;
-    uint32_t return_yyyymmdd;
-    int32_t days_left;
-    int32_t score;
-    uintptr_t player_ptr;
-} KboMilitaryReturnPreviewEntry;
+#include "military_return_preview_news_helpers.h"
 
 static volatile LONG g_kbo_military_return_preview_last_checked_date = 0;
-
-#include "military_return_preview_news_helpers.inc"
 
 int kbo_emit_military_return_preview_news_if_due(uint32_t today_serial, const char* source)
 {

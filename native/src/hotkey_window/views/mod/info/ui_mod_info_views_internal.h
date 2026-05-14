@@ -23,6 +23,16 @@ enum {
     KBO_MOD_FLAG_DIAGNOSTIC = 2,
     KBO_MOD_FLAG_LEGACY = 3
 };
+
+struct KboModRuntimeFlagSetting {
+    const char* key;
+    const char* label;
+    int enabled_value;
+    int default_enabled;
+    const char* companion_enable_key;
+    int category;
+};
+
 void kbo_webview_append_mod_runtime_flag_group(KboWindowTextBuffer* buffer, int category, const char* title, const char* help_text);
 
 const KboModRuntimeFlagSetting* kbo_find_mod_runtime_flag_setting(const char* key);

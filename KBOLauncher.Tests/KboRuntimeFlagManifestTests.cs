@@ -43,8 +43,8 @@ public sealed class KboRuntimeFlagManifestTests
     public void RuntimeFlagManifest_MatchesGeneratedNativeDefinitions()
     {
         var manifest = ReadManifest();
-        var uiText = File.ReadAllText(RepoPath("native", "src", "hotkey_window", "views", "mod", "runtime_flags", "runtime_flags.generated.inc"));
-        var aliasText = File.ReadAllText(RepoPath("native", "src", "core", "core_flags", "keys", "runtime_flag_aliases.generated.inc"));
+        var uiText = File.ReadAllText(RepoPath("native", "src", "hotkey_window", "views", "mod", "runtime_flags", "runtime_flags.generated.c"));
+        var aliasText = File.ReadAllText(RepoPath("native", "src", "core", "core_flags", "keys", "runtime_flag_aliases.generated.c"));
 
         var generatedUiRows = Regex.Matches(
                 uiText,

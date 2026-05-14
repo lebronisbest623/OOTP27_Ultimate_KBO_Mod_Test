@@ -539,6 +539,10 @@ static void test_captain_effective_season(void)
     assert(kbo_captain_calendar_season_recovery_active(20270310u, 2026u, 0u));
     assert(!kbo_captain_calendar_season_recovery_active(20270310u, 2026u, 2u));
     assert(!kbo_captain_calendar_season_recovery_active(20270310u, 2026u, 3u));
+    assert(kbo_captain_calendar_preseason_window_active(20270310u, 2026u, 0u));
+    assert(kbo_captain_calendar_preseason_window_active(20270323u, 2026u, 0u));
+    assert(!kbo_captain_calendar_preseason_window_active(20270218u, 2026u, 0u));
+    assert(!kbo_captain_calendar_preseason_window_active(20270310u, 2026u, 2u));
     assert(kbo_captain_effective_season(20270310u, 2027u) == 2027u);
     assert(!kbo_captain_calendar_season_recovery_active(20270310u, 2027u, 0u));
     assert(kbo_captain_effective_season(20261201u, 2026u) == 2026u);
