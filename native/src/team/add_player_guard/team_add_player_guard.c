@@ -77,6 +77,16 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     }
 
     if (is_military_team && kbo_military_team_add_player_should_block(team_ptr, player_ptr)) {
+        if (player != NULL
+                && before_current_team_id == 0u
+                && before_active_team_id == 0u
+                && before_original_team_id != 0u) {
+            kbo_team_add_restore_source_team_after_blocked_foreign_purchase(
+                player,
+                before_original_team_id,
+                team_id,
+                caller_rva);
+        }
         kbo_log_foreign_team_add_trace(
             caller_rva,
             "military_blocked",
@@ -133,6 +143,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
                 team_id,
                 before_current_team_id,
                 before_active_team_id,
+                before_original_team_id,
                 caller_rva)) {
         if (player != NULL
                 && before_current_team_id == 0u
@@ -235,6 +246,15 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     }
     uint8_t result = original(effective_team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
     KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original.success" : "team_add_guard.original.rejected");
+    if (result != 0u) {
+        kbo_team_add_normalize_foreign_retention_contract_success(
+            caller_rva,
+            effective_team_ptr,
+            player_ptr,
+            before_current_team_id,
+            before_active_team_id,
+            before_original_team_id);
+    }
     kbo_log_foreign_team_add_trace(
         caller_rva,
         result != 0u ? (effective_team_ptr != team_ptr ? "rerouted_success" : "success") : (effective_team_ptr != team_ptr ? "rerouted_rejected" : "rejected"),

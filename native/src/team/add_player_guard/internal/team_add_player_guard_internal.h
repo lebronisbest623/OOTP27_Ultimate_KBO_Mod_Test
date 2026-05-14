@@ -16,7 +16,15 @@ int kbo_team_add_foreign_policy_should_block(
     uint32_t team_id,
     uint32_t before_current_team_id,
     uint32_t before_active_team_id,
+    uint32_t before_original_team_id,
     uint32_t caller_rva);
+void kbo_team_add_normalize_foreign_retention_contract_success(
+    uint32_t caller_rva,
+    uintptr_t team_ptr,
+    uintptr_t player_ptr,
+    uint32_t before_current_team_id,
+    uint32_t before_active_team_id,
+    uint32_t before_original_team_id);
 void kbo_log_foreign_team_add_trace(
     uint32_t caller_rva,
     const char* result_label,

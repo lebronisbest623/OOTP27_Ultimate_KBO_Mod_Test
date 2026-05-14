@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
@@ -12,8 +13,84 @@
 #include "../../../foreign/rights/query/foreign_waiver_rights_query.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../assignment/org_query/team_org_assignment_query.h"
+#include "../../assignment/roster_arrays/team_roster_arrays.h"
 #include "../../lookup/team_lookup.h"
 #include "../internal/team_add_player_guard_internal.h"
+
+static int kbo_team_add_target_is_kbo_affiliate_league(
+    uint8_t* team,
+    uint32_t kbo_league_id,
+    uint32_t* out_parent_team_id)
+{
+    if (out_parent_team_id != NULL) { *out_parent_team_id = 0u; }
+    if (team == NULL
+            || kbo_league_id == 0u
+            || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0;
+    }
+
+    uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+    if (team_league_id == 0u || team_league_id == kbo_league_id) {
+        return 0;
+    }
+
+    uint32_t parent_team_id = 0u;
+    if (memory_range_readable(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+        parent_team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET);
+    }
+    if (out_parent_team_id != NULL) { *out_parent_team_id = parent_team_id; }
+    if (parent_team_id == 0u) {
+        return 0;
+    }
+
+    uint8_t* parent_team = find_kbo_team_by_numeric_id_any_league(parent_team_id, 1);
+    if (parent_team == NULL || !memory_range_readable(parent_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0;
+    }
+
+    return *(uint32_t*)(parent_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET) == kbo_league_id;
+}
+
+static int kbo_team_add_known_foreign_market_minor_caller(uint32_t caller_rva)
+{
+    return caller_rva == 0x8515f3u
+        || caller_rva == 0xaa638du
+        || caller_rva == 0xa4a0cbu;
+}
+
+static uint32_t kbo_team_add_kbo_org_team_id(uint32_t team_id, uint32_t kbo_league_id)
+{
+    if (team_id == 0u || kbo_league_id == 0u) {
+        return 0u;
+    }
+
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
+    if (team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0u;
+    }
+
+    uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+    if (team_league_id == kbo_league_id) {
+        return team_id;
+    }
+
+    uint32_t parent_team_id = 0u;
+    if (memory_range_readable(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+        parent_team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET);
+    }
+    if (parent_team_id == 0u) {
+        return 0u;
+    }
+
+    uint8_t* parent_team = find_kbo_team_by_numeric_id_any_league(parent_team_id, 1);
+    if (parent_team == NULL || !memory_range_readable(parent_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0u;
+    }
+
+    return *(uint32_t*)(parent_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET) == kbo_league_id
+        ? parent_team_id
+        : 0u;
+}
 
 int kbo_team_add_foreign_policy_should_block(
     uintptr_t team_ptr,
@@ -21,6 +98,7 @@ int kbo_team_add_foreign_policy_should_block(
     uint32_t team_id,
     uint32_t before_current_team_id,
     uint32_t before_active_team_id,
+    uint32_t before_original_team_id,
     uint32_t caller_rva)
 {
     if (!kbo_fix_enabled()
@@ -40,6 +118,40 @@ int kbo_team_add_foreign_policy_should_block(
 
     if (kbo_player_current_assignment_matches_team_or_affiliate(player, team_id)) {
         return 0;
+    }
+
+    uint32_t team_league_id = *(uint32_t*)((uint8_t*)team_ptr + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+    uint32_t kbo_league_id = kbo_resolve_kbo_league_id();
+    uint32_t parent_team_id = 0u;
+    int non_kbo_league = team_league_id != 0u && kbo_league_id != 0u && team_league_id != kbo_league_id;
+    int kbo_affiliate_league = kbo_team_add_target_is_kbo_affiliate_league(
+        (uint8_t*)team_ptr,
+        kbo_league_id,
+        &parent_team_id);
+    if (before_current_team_id == 0u
+            && before_active_team_id == 0u
+            && non_kbo_league
+            && (kbo_affiliate_league || kbo_team_add_known_foreign_market_minor_caller(caller_rva))) {
+        static volatile LONG minor_market_block_log_count = 0;
+        LONG minor_slot = InterlockedIncrement(&minor_market_block_log_count);
+        if (minor_slot <= 200) {
+            uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+            append_logf(
+                "custom foreign policy minor-league market signing blocked player=%u team=%u parent_team=%u team_league=%u kbo_league=%u before_current=%u before_active=%u before_original=%u contract_level=%u affiliate=%d market_caller=%d caller_rva=0x%x",
+                player_id,
+                team_id,
+                parent_team_id,
+                team_league_id,
+                kbo_league_id,
+                before_current_team_id,
+                before_active_team_id,
+                before_original_team_id,
+                (uint32_t)player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET],
+                kbo_affiliate_league,
+                kbo_team_add_known_foreign_market_minor_caller(caller_rva),
+                caller_rva);
+        }
+        return 1;
     }
 
     uint32_t today = 0u;
@@ -120,6 +232,41 @@ int kbo_team_add_foreign_policy_should_block(
         }
     }
 
+    if (before_current_team_id == 0u
+            && before_active_team_id == 0u
+            && before_original_team_id != 0u
+            && team_league_id == kbo_league_id
+            && !read_kbo_localappdata_flag_file("disable_kbo_foreign_former_org_market_block.txt")) {
+        uint32_t source_org_team_id = kbo_team_add_kbo_org_team_id(before_original_team_id, kbo_league_id);
+        uint32_t target_org_team_id = kbo_team_add_kbo_org_team_id(team_id, kbo_league_id);
+        if (source_org_team_id != 0u
+                && target_org_team_id != 0u
+                && source_org_team_id != target_org_team_id) {
+            static volatile LONG former_org_block_log_count = 0;
+            LONG former_org_slot = InterlockedIncrement(&former_org_block_log_count);
+            if (former_org_slot <= 200) {
+                uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+                uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+                uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+                int score = kbo_foreign_waiver_value_score(player);
+                append_logf(
+                    "custom foreign policy former-org market signing blocked player=%u team=%u source_team=%u source_org=%u target_org=%u before_current=%u before_active=%u current=%u active=%u score=%d caller_rva=0x%x",
+                    player_id,
+                    team_id,
+                    before_original_team_id,
+                    source_org_team_id,
+                    target_org_team_id,
+                    before_current_team_id,
+                    before_active_team_id,
+                    current_team_id,
+                    active_team_id,
+                    score,
+                    caller_rva);
+            }
+            return 1;
+        }
+    }
+
     uint32_t effective_before = 0u;
     uint32_t effective_after = 0u;
     uint32_t effective_limit = KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT;
@@ -158,4 +305,138 @@ int kbo_team_add_foreign_policy_should_block(
             injured_player_id);
     }
     return 1;
+}
+
+void kbo_team_add_normalize_foreign_retention_contract_success(
+    uint32_t caller_rva,
+    uintptr_t team_ptr,
+    uintptr_t player_ptr,
+    uint32_t before_current_team_id,
+    uint32_t before_active_team_id,
+    uint32_t before_original_team_id)
+{
+    if (!kbo_fix_enabled()
+            || !kbo_custom_foreign_policy_enabled()
+            || !kbo_team_add_known_foreign_market_minor_caller(caller_rva)
+            || before_current_team_id != 0u
+            || before_active_team_id != 0u
+            || team_ptr == 0
+            || player_ptr == 0
+            || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)
+            || !kbo_player_pointer_plausible(player_ptr)
+            || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+        return;
+    }
+
+    uint8_t* team = (uint8_t*)team_ptr;
+    uint8_t* player = (uint8_t*)player_ptr;
+    if (!kbo_player_is_foreign_for_kbo_rights(player)) {
+        return;
+    }
+
+    uint32_t kbo_league_id = kbo_resolve_kbo_league_id();
+    uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
+    uint32_t team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET);
+    if (kbo_league_id == 0u || team_league_id != kbo_league_id || team_id == 0u) {
+        return;
+    }
+
+    uint32_t after_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t after_active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    if (after_current_team_id != team_id || after_active_team_id != team_id) {
+        return;
+    }
+
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    uint32_t old_original_team_id = memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))
+        ? *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET)
+        : 0u;
+    uint32_t old_default_team_id = memory_range_readable(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET, sizeof(uint32_t))
+        ? *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET)
+        : 0u;
+    uint8_t old_contract_level = player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET];
+    uint8_t old_restricted = player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET];
+    uint8_t old_secondary = player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET];
+    uint8_t old_dfa = player[OOTP27_PLAYER_DFA_FLAG_OFFSET];
+    int changed = 0;
+
+    if (old_contract_level != 1u) {
+        player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET] = 1u;
+        changed = 1;
+    }
+    if (player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] != 0u) {
+        player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = 0u;
+        changed = 1;
+    }
+    if (player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] != 0u) {
+        player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 0u;
+        changed = 1;
+    }
+    if (player[OOTP27_PLAYER_DFA_FLAG_OFFSET] != 0u) {
+        player[OOTP27_PLAYER_DFA_FLAG_OFFSET] = 0u;
+        changed = 1;
+    }
+    int removed_restricted = kbo_remove_player_id_from_team_fixed_array(
+        team,
+        OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET,
+        player_id);
+    if (removed_restricted > 0) {
+        changed = 1;
+    }
+    if (*(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) != team_league_id) {
+        *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) = team_league_id;
+        changed = 1;
+    }
+    if (*(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET) != team_league_id) {
+        *(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET) = team_league_id;
+        changed = 1;
+    }
+    if (old_original_team_id == 0u
+            && memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+        *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET) = team_id;
+        changed = 1;
+    }
+    if (old_default_team_id == 0u
+            && memory_range_readable(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET, sizeof(uint32_t))) {
+        *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET) = team_id;
+        changed = 1;
+    }
+    kbo_add_player_id_to_team_assignment_arrays(team, player_id);
+
+    if (!changed) {
+        return;
+    }
+
+    static volatile LONG normalize_log_count = 0;
+    LONG slot = InterlockedIncrement(&normalize_log_count);
+    if (slot <= 200) {
+        append_logf(
+            "foreign no-minor team-add cleanup applied player=%u team=%u league=%u caller_rva=0x%x before_current=%u before_active=%u before_original=%u old_original=%u old_default=%u after_current=%u after_active=%u after_original=%u after_default=%u old_contract_level=%u after_contract_level=%u old_restricted=%u old_secondary=%u old_dfa=%u after_restricted=%u after_secondary=%u after_dfa=%u removed_restricted=%d",
+            player_id,
+            team_id,
+            team_league_id,
+            caller_rva,
+            before_current_team_id,
+            before_active_team_id,
+            before_original_team_id,
+            old_original_team_id,
+            old_default_team_id,
+            after_current_team_id,
+            after_active_team_id,
+            memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))
+                ? *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET)
+                : 0u,
+            memory_range_readable(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET, sizeof(uint32_t))
+                ? *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET)
+                : 0u,
+            (uint32_t)old_contract_level,
+            (uint32_t)player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET],
+            (uint32_t)old_restricted,
+            (uint32_t)old_secondary,
+            (uint32_t)old_dfa,
+            (uint32_t)player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET],
+            (uint32_t)player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET],
+            (uint32_t)player[OOTP27_PLAYER_DFA_FLAG_OFFSET],
+            removed_restricted);
+    }
 }
