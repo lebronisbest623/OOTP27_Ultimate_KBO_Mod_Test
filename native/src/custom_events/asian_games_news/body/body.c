@@ -8,8 +8,21 @@
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/news/templates/core_news_templates.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../links/links.h"
+
+static const char* kbo_asian_games_plural(int value)
+{
+    return value == 1 ? "" : "s";
+}
+
+static void kbo_asian_games_u32_text(uint32_t value, char* out, size_t out_size)
+{
+    if (out != NULL && out_size > 0u) {
+        snprintf(out, out_size, "%u", value);
+    }
+}
 
 int kbo_asian_games_append_player_blurb(
     char* out,
@@ -31,24 +44,30 @@ int kbo_asian_games_append_player_blurb(
     kbo_copy_asian_games_team_link(entry->original_team_id, team_link, sizeof(team_link));
 
     const char* bucket = kbo_asian_games_role_bucket_label(entry->role);
-    int wrote = snprintf(
-        out + *used,
-        out_size - *used,
-        "%s%s%s%s",
-        display_index == 0 ? "" : (display_index == display_count - 1 ? " and " : ", "),
-        player_link,
-        team_link[0] != '\0' ? " of " : "",
-        team_link);
-    if (wrote <= 0) {
+    char role_suffix[64] = {0};
+    if (bucket[0] != '\0') {
+        snprintf(role_suffix, sizeof(role_suffix), " (%s)", bucket);
+    }
+
+    KboNewsTemplateVar vars[] = {
+        { "separator", display_index == 0 ? "" : (display_index == display_count - 1 ? " and " : ", ") },
+        { "player_link", player_link },
+        { "team_prefix", team_link[0] != '\0' ? " of " : "" },
+        { "team_link", team_link },
+        { "role_suffix", role_suffix },
+    };
+    char rendered[256] = {0};
+    if (!kbo_news_template_render_key(
+            "asian_games.player_blurb",
+            vars,
+            (int)(sizeof(vars) / sizeof(vars[0])),
+            rendered,
+            sizeof(rendered),
+            "asian_games_body")) {
         return 0;
     }
-    *used += (size_t)wrote;
-    if (*used < out_size - 1 && bucket[0] != '\0') {
-        wrote = snprintf(out + *used, out_size - *used, " (%s)", bucket);
-        if (wrote > 0) {
-            *used += (size_t)wrote;
-        }
-    }
+    kbo_news_text_append(out, out_size, rendered);
+    *used = strlen(out);
     return 1;
 }
 
@@ -74,26 +93,36 @@ int kbo_asian_games_append_roster_line(
 
     const char* status = "selected";
     if (entry->returned) {
-        status = entry->exempted ? "returned, exempt" : "returned";
+        status = entry->exempted ? "returned, exempt" : "returned, no exemption";
     } else if (entry->departed) {
         status = "on tournament leave";
     }
 
-    int wrote = snprintf(
-        out + *used,
-        out_size - *used,
-        "%02ld. %s, %s, %s%s, age %u, %s\n",
-        index + 1,
-        player_link,
-        kbo_asian_games_role_bucket_label(entry->role),
-        team_link,
-        entry->wildcard ? ", wild card" : "",
-        (uint32_t)entry->age,
-        status);
-    if (wrote <= 0) {
+    char index_text[16] = {0};
+    char age_text[16] = {0};
+    snprintf(index_text, sizeof(index_text), "%02ld", index + 1);
+    snprintf(age_text, sizeof(age_text), "%u", (uint32_t)entry->age);
+    KboNewsTemplateVar vars[] = {
+        { "index", index_text },
+        { "player_link", player_link },
+        { "role_bucket", kbo_asian_games_role_bucket_label(entry->role) },
+        { "team_link", team_link },
+        { "wildcard_text", entry->wildcard ? ", wild card" : "" },
+        { "age", age_text },
+        { "status", status },
+    };
+    char rendered[256] = {0};
+    if (!kbo_news_template_render_key(
+            "asian_games.roster_line",
+            vars,
+            (int)(sizeof(vars) / sizeof(vars[0])),
+            rendered,
+            sizeof(rendered),
+            "asian_games_body")) {
         return 0;
     }
-    *used += (size_t)wrote;
+    kbo_news_text_append(out, out_size, rendered);
+    *used = strlen(out);
     return 1;
 }
 
@@ -121,7 +150,7 @@ KboAsianGamesRosterEntry* kbo_asian_games_choose_captain(void)
     return best;
 }
 
-void kbo_build_asian_games_news_body(char* out, size_t out_size, const char* title, const char* lead)
+void kbo_build_asian_games_news_body(char* out, size_t out_size, const char* template_prefix, const char* lead, const char* source)
 {
     if (out == NULL || out_size == 0) {
         return;
@@ -148,56 +177,67 @@ void kbo_build_asian_games_news_body(char* out, size_t out_size, const char* tit
     if (captain != NULL) {
         kbo_copy_asian_games_player_link(captain, captain_link, sizeof(captain_link));
     }
-    int include_roster = title != NULL && strstr(title, "Roster") != NULL;
+    int is_selection = template_prefix != NULL && strcmp(template_prefix, "asian_games.selection") == 0;
+    int is_departure = template_prefix != NULL && strcmp(template_prefix, "asian_games.departure") == 0;
+    int is_final_gold = template_prefix != NULL && strcmp(template_prefix, "asian_games.final") == 0;
+    int is_final_failure = template_prefix != NULL && strcmp(template_prefix, "asian_games.final.failure") == 0;
+    int is_final = is_final_gold || is_final_failure;
+    int include_roster = is_selection;
     int include_samples = include_roster;
 
-    int len = snprintf(
-        out,
-        out_size,
-        "%s ",
-        lead != NULL && lead[0] != '\0' ? lead : "The KBO issued an Asian Games update.");
-    if (len < 0) {
-        out[0] = '\0';
-        return;
+    kbo_news_text_append(out, out_size, lead != NULL && lead[0] != '\0' ? lead : "");
+    if (out[0] != '\0') {
+        kbo_news_text_append(out, out_size, " ");
     }
 
     size_t used = strlen(out);
-    if (title != NULL && strstr(title, "Roster") != NULL) {
-        len = snprintf(
-            out + used,
-            out_size - used,
-            "The Korean baseball delegation has settled on a %ld-man squad for the Asian Games, balancing young domestic standouts with %d over-age wild-card selection%s. League officials framed the group as a tournament roster built for short-series flexibility rather than a straight all-star list.\n\nThe first wave of attention is expected to fall on ",
-            roster_count,
-            wildcards,
-            wildcards == 1 ? "" : "s");
-    } else if (title != NULL && strstr(title, "Depart") != NULL) {
-        len = snprintf(
-            out + used,
-            out_size - used,
-            "%d player%s will now leave club duty for the Asian Games window, forcing several teams to cover short-term roster holes during a sensitive part of the league calendar. The delegation will gather before moving into tournament preparation, with the KBO saying clubs have already been notified of the final travel list.",
-            departed,
-            departed == 1 ? "" : "s");
-    } else if (title != NULL && (strstr(title, "Return") != NULL || strstr(title, "Gold") != NULL || strstr(title, "Win") != NULL)) {
-        len = snprintf(
-            out + used,
-            out_size - used,
-            "%d player%s returned to their clubs after the Asian Games final, with %d player%s receiving military exemption status as part of Korea's championship result. Teams can now fold the group back into the pennant race and postseason picture.",
-            returned,
-            returned == 1 ? "" : "s",
-            exempted,
-            exempted == 1 ? "" : "s");
-    } else {
-        len = snprintf(
-            out + used,
-            out_size - used,
-            "Korea's Asian Games group stands at %ld players for %u.\n\nThe squad includes ",
-            roster_count,
-            g_kbo_asian_games_roster_year);
-    }
-    if (len <= 0) {
+    (void)used;
+
+    char roster_count_text[16] = {0};
+    char wildcards_text[16] = {0};
+    char departed_text[16] = {0};
+    char returned_text[16] = {0};
+    char exempted_text[16] = {0};
+    char roster_year_text[16] = {0};
+    kbo_asian_games_u32_text((uint32_t)roster_count, roster_count_text, sizeof(roster_count_text));
+    kbo_asian_games_u32_text((uint32_t)wildcards, wildcards_text, sizeof(wildcards_text));
+    kbo_asian_games_u32_text((uint32_t)departed, departed_text, sizeof(departed_text));
+    kbo_asian_games_u32_text((uint32_t)returned, returned_text, sizeof(returned_text));
+    kbo_asian_games_u32_text((uint32_t)exempted, exempted_text, sizeof(exempted_text));
+    kbo_asian_games_u32_text(g_kbo_asian_games_roster_year, roster_year_text, sizeof(roster_year_text));
+
+    KboNewsTemplateVar body_vars[] = {
+        { "roster_count", roster_count_text },
+        { "wildcards", wildcards_text },
+        { "wildcards_plural", kbo_asian_games_plural(wildcards) },
+        { "departed", departed_text },
+        { "departed_plural", kbo_asian_games_plural(departed) },
+        { "returned", returned_text },
+        { "returned_plural", kbo_asian_games_plural(returned) },
+        { "exempted", exempted_text },
+        { "exempted_plural", kbo_asian_games_plural(exempted) },
+        { "roster_year", roster_year_text },
+    };
+    const char* body_key = is_selection
+        ? "asian_games.selection.body"
+        : (is_departure
+            ? "asian_games.departure.body"
+            : (is_final_failure
+                ? "asian_games.final.failure.body"
+                : (is_final ? "asian_games.final.body" : "asian_games.default.body")));
+    char rendered[2048] = {0};
+    if (!kbo_news_template_render_key(
+            body_key,
+            body_vars,
+            (int)(sizeof(body_vars) / sizeof(body_vars[0])),
+            rendered,
+            sizeof(rendered),
+            source)) {
+        out[0] = '\0';
         return;
     }
-    used += (size_t)len;
+    kbo_news_text_append(out, out_size, rendered);
+    used = strlen(out);
 
     if (include_samples) {
         LONG sample_count = roster_count < 6 ? roster_count : 6;
@@ -216,31 +256,44 @@ void kbo_build_asian_games_news_body(char* out, size_t out_size, const char* tit
     }
 
     if (used < out_size - 1) {
-        len = snprintf(
-            out + used,
-            out_size - used,
-            "%s\n\nThe league said the final decisions reflected player availability, age rules and positional balance, with clubs notified before the roster was made public.",
-            include_samples ? "." : "");
-        if (len > 0) {
-            used += (size_t)len;
+        KboNewsTemplateVar suffix_vars[] = {
+            { "period", include_samples ? "." : "" },
+        };
+        char suffix[512] = {0};
+        if (kbo_news_template_render_key(
+                "asian_games.samples_suffix",
+                suffix_vars,
+                (int)(sizeof(suffix_vars) / sizeof(suffix_vars[0])),
+                suffix,
+                sizeof(suffix),
+                source)) {
+            kbo_news_text_append(out, out_size, suffix);
+            used = strlen(out);
         }
     }
 
     if (include_roster && captain_link[0] != '\0' && used < out_size - 1) {
-        len = snprintf(
-            out + used,
-            out_size - used,
-            "\n\n%s, named captain after being selected as one of the wild-card players, said the older players understand what is expected of them. \"This roster belongs to the young players,\" he said. \"Our job is to make the game slow down for them and make sure Korea is ready from the first pitch.\"",
-            captain_link);
-        if (len > 0) {
-            used += (size_t)len;
+        KboNewsTemplateVar quote_vars[] = {
+            { "captain_link", captain_link },
+        };
+        char quote[768] = {0};
+        if (kbo_news_template_render_key(
+                "asian_games.captain_quote",
+                quote_vars,
+                (int)(sizeof(quote_vars) / sizeof(quote_vars[0])),
+                quote,
+                sizeof(quote),
+                source)) {
+            kbo_news_text_append(out, out_size, quote);
+            used = strlen(out);
         }
     }
 
     if (include_roster && used < out_size - 1) {
-        len = snprintf(out + used, out_size - used, "\n\nComplete roster:\n");
-        if (len > 0) {
-            used += (size_t)len;
+        char header[128] = {0};
+        if (kbo_news_template_load("asian_games.complete_roster_header", header, sizeof(header), NULL, 0u, source)) {
+            kbo_news_text_append(out, out_size, header);
+            used = strlen(out);
         }
     }
 

@@ -15,6 +15,83 @@
 
 /* Asian Games final return and exemption lifecycle. */
 
+static uint32_t kbo_asian_games_result_hash_add(uint32_t hash, uint32_t value)
+{
+    hash ^= value;
+    hash *= 16777619u;
+    hash ^= hash >> 13;
+    return hash;
+}
+
+static uint8_t kbo_asian_games_roll_final_result(
+    uint32_t event_yyyymmdd,
+    LONG roster_count,
+    int no_gold_odds_denominator)
+{
+    uint32_t hash = 2166136261u;
+    hash = kbo_asian_games_result_hash_add(hash, event_yyyymmdd);
+    hash = kbo_asian_games_result_hash_add(hash, g_kbo_asian_games_roster_year);
+    hash = kbo_asian_games_result_hash_add(hash, (uint32_t)roster_count);
+    for (LONG i = 0; i < roster_count && i < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
+        const KboAsianGamesRosterEntry* entry = &g_kbo_asian_games_roster[i];
+        hash = kbo_asian_games_result_hash_add(hash, entry->player_id);
+        hash = kbo_asian_games_result_hash_add(hash, entry->original_team_id);
+        hash = kbo_asian_games_result_hash_add(hash, (uint32_t)entry->age);
+        hash = kbo_asian_games_result_hash_add(hash, (uint32_t)entry->role);
+        hash = kbo_asian_games_result_hash_add(hash, (uint32_t)entry->wildcard);
+        hash = kbo_asian_games_result_hash_add(hash, (uint32_t)entry->score);
+    }
+    int odds = kbo_clamp_asian_games_no_gold_odds_denominator(no_gold_odds_denominator);
+    return (hash % (uint32_t)odds) == 0u
+        ? KBO_ASIAN_GAMES_RESULT_NO_GOLD
+        : KBO_ASIAN_GAMES_RESULT_GOLD;
+}
+
+static uint8_t kbo_asian_games_resolve_final_result(uint32_t event_yyyymmdd, LONG roster_count, const char* source)
+{
+    if (g_kbo_asian_games_result == KBO_ASIAN_GAMES_RESULT_GOLD
+            || g_kbo_asian_games_result == KBO_ASIAN_GAMES_RESULT_NO_GOLD) {
+        return g_kbo_asian_games_result;
+    }
+
+    int returned = 0;
+    int exempted = 0;
+    for (LONG i = 0; i < roster_count && i < KBO_ASIAN_GAMES_ROSTER_SIZE; i++) {
+        const KboAsianGamesRosterEntry* entry = &g_kbo_asian_games_roster[i];
+        if (entry->player_id == 0u) {
+            continue;
+        }
+        if (entry->returned != 0u) {
+            returned++;
+        }
+        if (entry->exempted != 0u) {
+            exempted++;
+        }
+    }
+
+    int no_gold_odds_denominator = kbo_get_asian_games_no_gold_odds_denominator();
+    if (returned > 0) {
+        g_kbo_asian_games_result = exempted > 0
+            ? KBO_ASIAN_GAMES_RESULT_GOLD
+            : KBO_ASIAN_GAMES_RESULT_NO_GOLD;
+    } else {
+        g_kbo_asian_games_result = kbo_asian_games_roll_final_result(
+            event_yyyymmdd,
+            roster_count,
+            no_gold_odds_denominator);
+    }
+
+    append_logf(
+        "KBO Asian Games final result resolved source=%s date=%u result=%u no_gold_odds=1/%u returned=%d exempted=%d",
+        source != NULL ? source : "",
+        event_yyyymmdd,
+        (uint32_t)g_kbo_asian_games_result,
+        (uint32_t)no_gold_odds_denominator,
+        returned,
+        exempted);
+    return g_kbo_asian_games_result;
+}
+
 int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const char* source)
 {
     LONG roster_count = g_kbo_asian_games_roster_count;
@@ -32,6 +109,8 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         return 0;
     }
 
+    uint8_t final_result = kbo_asian_games_resolve_final_result(event_yyyymmdd, roster_count, source);
+    int gold_won = final_result == KBO_ASIAN_GAMES_RESULT_GOLD;
     int returned = 0;
     int exempted = 0;
     int missing = 0;
@@ -76,9 +155,13 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) = league_id;
         *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) = team_id;
 
-        complete_kbo_military_service_status(player);
-        entry->exempted = 1u;
-        exempted++;
+        if (gold_won) {
+            complete_kbo_military_service_status(player);
+            entry->exempted = 1u;
+            exempted++;
+        } else {
+            entry->exempted = 0u;
+        }
 
         player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = entry->old_restricted;
         player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = entry->old_secondary_restricted;
@@ -91,11 +174,13 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         entry->returned = 1u;
         returned++;
         append_logf(
-            "KBO Asian Games finalized #%ld player_id=%u team=%u league=%u exempted=%u removed_restricted=%d added_assignment=%d restored_restricted=%u restored_secondary=%u restored_injury=%u restored_days=%d",
+            "KBO Asian Games finalized #%ld player_id=%u team=%u league=%u result=%u gold=%d exempted=%u removed_restricted=%d added_assignment=%d restored_restricted=%u restored_secondary=%u restored_injury=%u restored_days=%d",
             i + 1,
             entry->player_id,
             team_id,
             league_id,
+            (uint32_t)final_result,
+            gold_won,
             (uint32_t)player[OOTP27_PLAYER_MILITARY_EXEMPT_OFFSET],
             removed_restricted,
             added_assignment,
@@ -106,10 +191,12 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
     }
 
     append_logf(
-        "KBO Asian Games final processed source=%s date=%u roster=%ld returned=%d exempted=%d missing=%d no_team=%d",
+        "KBO Asian Games final processed source=%s date=%u roster=%ld result=%u gold=%d returned=%d exempted=%d missing=%d no_team=%d",
         source != NULL ? source : "",
         event_yyyymmdd,
         roster_count,
+        (uint32_t)final_result,
+        gold_won,
         returned,
         exempted,
         missing,

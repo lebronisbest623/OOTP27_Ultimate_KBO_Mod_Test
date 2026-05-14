@@ -46,6 +46,7 @@ void kbo_clear_asian_games_roster_memory(const char* source)
     memset(g_kbo_asian_games_roster, 0, sizeof(g_kbo_asian_games_roster));
     g_kbo_asian_games_roster_count = 0;
     g_kbo_asian_games_roster_year = 0;
+    g_kbo_asian_games_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
     g_kbo_asian_games_roster_save_path[0] = '\0';
     append_logf("KBO Asian Games roster memory cleared source=%s", source != NULL ? source : "");
 }
@@ -86,7 +87,7 @@ int kbo_save_asian_games_roster_csv(const char* source)
         return 0;
     }
 
-    const char* header = "year,index,player_id,original_team_id,original_league_id,departure_date,return_date,age,role,wildcard,old_restricted,old_secondary_restricted,old_injury_active,old_injury_days_left,departed,returned,exempted,score\r\n";
+    const char* header = "year,index,player_id,original_team_id,original_league_id,departure_date,return_date,age,role,wildcard,old_restricted,old_secondary_restricted,old_injury_active,old_injury_days_left,departed,returned,exempted,score,tournament_result\r\n";
     DWORD written = 0;
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
 
@@ -97,7 +98,7 @@ int kbo_save_asian_games_roster_csv(const char* source)
         int len = snprintf(
             line,
             sizeof(line),
-            "%u,%ld,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d\r\n",
+            "%u,%ld,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d,%u\r\n",
             g_kbo_asian_games_roster_year,
             i + 1,
             entry->player_id,
@@ -115,7 +116,8 @@ int kbo_save_asian_games_roster_csv(const char* source)
             (uint32_t)entry->departed,
             (uint32_t)entry->returned,
             (uint32_t)entry->exempted,
-            entry->score);
+            entry->score,
+            (uint32_t)g_kbo_asian_games_result);
         if (len <= 0 || !WriteFile(file, line, (DWORD)len, &written, NULL) || written != (DWORD)len) {
             ok = 0;
             break;
@@ -182,6 +184,7 @@ int kbo_load_asian_games_roster_csv(const char* source)
     memset(loaded, 0, sizeof(loaded));
     int loaded_count = 0;
     uint32_t loaded_year = 0;
+    uint8_t loaded_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
 
     char* line = raw;
     while (line != NULL && *line != '\0') {
@@ -196,15 +199,21 @@ int kbo_load_asian_games_roster_csv(const char* source)
             unsigned int old_restricted = 0, old_secondary = 0, old_injury = 0;
             int old_days = 0, score = 0;
             unsigned int departed = 0, returned = 0, exempted = 0;
+            unsigned int tournament_result = 0;
             int fields = sscanf(
                 line,
-                "%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d",
+                "%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d,%u",
                 &year, &index, &player_id, &team_id, &league_id, &departure_date, &return_date,
                 &age, &role, &wildcard, &old_restricted, &old_secondary, &old_injury, &old_days,
-                &departed, &returned, &exempted, &score);
-            if (fields == 18 && player_id != 0u && loaded_count < KBO_ASIAN_GAMES_ROSTER_SIZE) {
+                &departed, &returned, &exempted, &score, &tournament_result);
+            if (fields >= 18 && player_id != 0u && loaded_count < KBO_ASIAN_GAMES_ROSTER_SIZE) {
                 KboAsianGamesRosterEntry* entry = &loaded[loaded_count++];
                 loaded_year = year;
+                if (fields >= 19
+                        && (tournament_result == KBO_ASIAN_GAMES_RESULT_GOLD
+                            || tournament_result == KBO_ASIAN_GAMES_RESULT_NO_GOLD)) {
+                    loaded_result = (uint8_t)tournament_result;
+                }
                 entry->player_id = player_id;
                 entry->original_team_id = team_id;
                 entry->original_league_id = league_id;
@@ -236,7 +245,8 @@ int kbo_load_asian_games_roster_csv(const char* source)
     memcpy(g_kbo_asian_games_roster, loaded, sizeof(KboAsianGamesRosterEntry) * (size_t)loaded_count);
     g_kbo_asian_games_roster_count = loaded_count;
     g_kbo_asian_games_roster_year = loaded_year;
+    g_kbo_asian_games_result = loaded_result;
     snprintf(g_kbo_asian_games_roster_save_path, sizeof(g_kbo_asian_games_roster_save_path), "%s", path);
-    append_logf("KBO Asian Games roster csv load source=%s year=%u count=%d path=%s", source != NULL ? source : "", loaded_year, loaded_count, path);
+    append_logf("KBO Asian Games roster csv load source=%s year=%u count=%d result=%u path=%s", source != NULL ? source : "", loaded_year, loaded_count, (uint32_t)g_kbo_asian_games_result, path);
     return loaded_count;
 }

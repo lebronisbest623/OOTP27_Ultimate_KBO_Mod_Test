@@ -30,8 +30,7 @@ int kbo_handle_asian_games_selection_event(uint32_t event_yyyymmdd, const char* 
     uint32_t news_yyyymmdd = kbo_asian_games_effective_action_date(event_yyyymmdd);
     kbo_emit_asian_games_news(
         news_yyyymmdd,
-        "[KBO] Asian Games Roster Announced",
-        "The KBO has announced Korea's Asian Games roster.",
+        "asian_games.selection",
         source);
     append_logf(
         "KBO Asian Games selection reached source=%s event_date=%u news_date=%u selected=%d",
@@ -76,8 +75,7 @@ int kbo_handle_asian_games_departure_event(uint32_t event_yyyymmdd, const char* 
     g_kbo_asian_games_last_departure_fired_date = event_yyyymmdd;
     kbo_emit_asian_games_news(
         action_yyyymmdd,
-        "[KBO] Asian Games Players Depart",
-        "Selected players have departed their clubs for Asian Games duty.",
+        "asian_games.departure",
         source);
     append_logf(
         "KBO Asian Games departure reached source=%s event_date=%u action_date=%u departed=%d",
@@ -121,17 +119,21 @@ int kbo_handle_asian_games_final_event(uint32_t event_yyyymmdd, const char* sour
         return 0;
     }
     g_kbo_asian_games_last_final_fired_date = event_yyyymmdd;
+    const char* template_prefix = g_kbo_asian_games_result == KBO_ASIAN_GAMES_RESULT_NO_GOLD
+        ? "asian_games.final.failure"
+        : "asian_games.final";
     kbo_emit_asian_games_news(
         action_yyyymmdd,
-        "[KBO] Korea Wins Asian Games Gold",
-        "Korea has won the Asian Games baseball title.",
+        template_prefix,
         source);
     append_logf(
-        "KBO Asian Games final reached source=%s event_date=%u action_date=%u returned=%d already_finalized=%d",
+        "KBO Asian Games final reached source=%s event_date=%u action_date=%u returned=%d already_finalized=%d result=%u template=%s",
         source != NULL ? source : "",
         event_yyyymmdd,
         action_yyyymmdd,
         returned,
-        already_finalized);
+        already_finalized,
+        (uint32_t)g_kbo_asian_games_result,
+        template_prefix);
     return 1;
 }

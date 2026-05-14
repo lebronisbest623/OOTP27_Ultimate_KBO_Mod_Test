@@ -257,11 +257,19 @@ void kbo_build_asian_games_hub_text(char* out, size_t out_size)
         if (g_kbo_asian_games_roster[i].exempted) { exempted++; }
     }
 
+    const char* result_text = "Pending";
+    if (g_kbo_asian_games_result == KBO_ASIAN_GAMES_RESULT_GOLD) {
+        result_text = "Gold";
+    } else if (g_kbo_asian_games_result == KBO_ASIAN_GAMES_RESULT_NO_GOLD) {
+        result_text = "No gold";
+    }
+
     kbo_window_text_appendf(&buffer, "ASIAN GAMES ROSTER\r\n");
     kbo_window_text_appendf(
         &buffer,
-        "Year: %u / Selected: %ld / Departed: %d / Returned: %d / Exempted: %d\r\n\r\n",
+        "Year: %u / Result: %s / Selected: %ld / Departed: %d / Returned: %d / Exempted: %d\r\n\r\n",
         g_kbo_asian_games_roster_year,
+        result_text,
         roster_count,
         departed,
         returned,

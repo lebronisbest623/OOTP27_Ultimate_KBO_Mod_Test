@@ -133,6 +133,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
     memset(g_kbo_asian_games_roster, 0, sizeof(g_kbo_asian_games_roster));
     g_kbo_asian_games_roster_count = 0;
     g_kbo_asian_games_roster_year = year;
+    g_kbo_asian_games_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
 
     uint32_t required_orgs[KBO_ASIAN_GAMES_MAX_ORGS] = {0};
     int required_org_count = kbo_asian_games_collect_required_orgs(

@@ -30,6 +30,37 @@ int kbo_set_foreign_fa_quality_cap_enabled_setting(int enabled)
         enabled ? 1 : 0);
 }
 
+#define KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_KEY "asian_games_no_gold_odds_denominator"
+
+int kbo_clamp_asian_games_no_gold_odds_denominator(int value)
+{
+    if (value < KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MIN) {
+        return KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MIN;
+    }
+    if (value > KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MAX) {
+        return KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MAX;
+    }
+    return value;
+}
+
+int kbo_get_asian_games_no_gold_odds_denominator(void)
+{
+    int value = KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_DEFAULT;
+    if (!kbo_read_localappdata_json_int_value(
+            KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_KEY,
+            &value)) {
+        value = KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_DEFAULT;
+    }
+    return kbo_clamp_asian_games_no_gold_odds_denominator(value);
+}
+
+int kbo_set_asian_games_no_gold_odds_denominator(int value)
+{
+    return kbo_write_localappdata_json_int_value(
+        KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_KEY,
+        kbo_clamp_asian_games_no_gold_odds_denominator(value));
+}
+
 int kbo_get_profiler_enabled_setting(void)
 {
     int value = 0;

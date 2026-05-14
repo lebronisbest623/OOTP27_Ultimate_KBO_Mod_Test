@@ -83,6 +83,7 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
 
     int quality_cap_enabled = kbo_get_foreign_fa_quality_cap_enabled_setting();
     int asian_quota_salary_limit = kbo_get_asian_quota_salary_limit();
+    int asian_games_no_gold_odds = kbo_get_asian_games_no_gold_odds_denominator();
     kbo_window_text_appendf(
         buffer,
         "</div></details></div><div class='settingRow'><label class='settingLabel' for='foreignFaQualityCapSelect'>");
@@ -104,6 +105,19 @@ void kbo_webview_append_settings_view(KboWindowTextBuffer* buffer)
         "onchange=\"location.href='kbo://settings/asian-quota-salary-limit/'+this.value\" "
         "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
         asian_quota_salary_limit);
+
+    kbo_window_text_appendf(
+        buffer,
+        "<div class='settingRow'><label class='settingLabel' for='asianGamesNoGoldOdds'>");
+    kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xec\x9a\xb0\xec\x8a\xb9 \xec\x8b\xa4\xed\x8c\xa8 \xed\x99\x95\xeb\xa5\xa0(1/N)", "Asian Games no-gold odds (1/N)"));
+    kbo_window_text_appendf(
+        buffer,
+        "</label><input id='asianGamesNoGoldOdds' class='ootpSelect salaryInput' type='text' inputmode='numeric' pattern='[0-9]*' data-min='%d' data-max='%d' data-step='1' value='%d' "
+        "onchange=\"location.href='kbo://settings/asian-games-no-gold-odds/'+this.value\" "
+        "onkeydown=\"if(event.key==='Enter'){this.blur();}\"></div>",
+        KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MIN,
+        KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MAX,
+        asian_games_no_gold_odds);
 
     kbo_window_text_appendf(
         buffer,

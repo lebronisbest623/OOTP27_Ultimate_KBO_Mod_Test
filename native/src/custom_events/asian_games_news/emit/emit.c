@@ -12,12 +12,28 @@
 #include "../../../allstar/allstar_league_context/allstar_league_context.h"
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/news/live/core_live_news.h"
+#include "../../../core/news/templates/core_news_templates.h"
 #include "../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../links/links.h"
 
-int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* title, const char* lead, const char* source)
+int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* template_prefix, const char* source)
 {
-    if (event_yyyymmdd == 0u || title == NULL || title[0] == '\0') {
+    if (event_yyyymmdd == 0u || template_prefix == NULL || template_prefix[0] == '\0') {
+        return 0;
+    }
+
+    char title_key[128] = {0};
+    char lead_key[128] = {0};
+    char title[160] = {0};
+    char lead[256] = {0};
+    snprintf(title_key, sizeof(title_key), "%s.title", template_prefix);
+    snprintf(lead_key, sizeof(lead_key), "%s.lead", template_prefix);
+    if (!kbo_news_template_render_key(title_key, NULL, 0, title, sizeof(title), source)
+            || !kbo_news_template_render_key(lead_key, NULL, 0, lead, sizeof(lead), source)) {
+        append_logf(
+            "KBO Asian Games news skipped source=%s template=%s reason=template_unavailable",
+            source != NULL ? source : "",
+            template_prefix);
         return 0;
     }
 
@@ -34,7 +50,15 @@ int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* title, const 
     }
 
     char body[8192] = {0};
-    kbo_build_asian_games_news_body(body, sizeof(body), title, lead);
+    kbo_build_asian_games_news_body(body, sizeof(body), template_prefix, lead, source);
+    if (body[0] == '\0') {
+        append_logf(
+            "KBO Asian Games news skipped source=%s template=%s title=%s reason=body_template_unavailable",
+            source != NULL ? source : "",
+            template_prefix,
+            title);
+        return 0;
+    }
     int created = create_kbo_native_live_news_with_body(
         event_yyyymmdd / 10000u,
         (event_yyyymmdd / 100u) % 100u,
@@ -44,8 +68,9 @@ int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* title, const 
         title,
         body);
     append_logf(
-        "KBO Asian Games news source=%s title=%s date=%u league_id=%u created=%d",
+        "KBO Asian Games news source=%s template=%s title=%s date=%u league_id=%u created=%d",
         source != NULL ? source : "",
+        template_prefix,
         title,
         event_yyyymmdd,
         league_id,
@@ -97,17 +122,40 @@ int kbo_emit_asian_games_replacement_news(
     kbo_copy_asian_games_team_link(new_entry->original_team_id, new_team, sizeof(new_team));
 
     char body[2048] = {0};
-    snprintf(
-        body,
-        sizeof(body),
-        "The KBO announced a late change to Korea's Asian Games roster after %s%s%s was ruled unavailable through injury or roster status before the team's departure.\n\n%s%s%s has been added as the replacement, keeping the roster at %d players and preserving the same position group. League officials said the change was made before travel paperwork was finalized, allowing the national team to depart with a full tournament squad.",
-        old_player,
-        old_team[0] != '\0' ? " of " : "",
-        old_team,
-        new_player,
-        new_team[0] != '\0' ? " of " : "",
-        new_team,
-        KBO_ASIAN_GAMES_ROSTER_SIZE);
+    char title[160] = {0};
+    char roster_size_text[16] = {0};
+    snprintf(roster_size_text, sizeof(roster_size_text), "%d", KBO_ASIAN_GAMES_ROSTER_SIZE);
+    KboNewsTemplateVar vars[] = {
+        { "old_player", old_player },
+        { "old_team_prefix", old_team[0] != '\0' ? " of " : "" },
+        { "old_team", old_team },
+        { "new_player", new_player },
+        { "new_team_prefix", new_team[0] != '\0' ? " of " : "" },
+        { "new_team", new_team },
+        { "roster_size", roster_size_text },
+    };
+    if (!kbo_news_template_render_key(
+            "asian_games.replacement.title",
+            vars,
+            (int)(sizeof(vars) / sizeof(vars[0])),
+            title,
+            sizeof(title),
+            source)
+            || !kbo_news_template_render_key(
+                "asian_games.replacement.body",
+                vars,
+                (int)(sizeof(vars) / sizeof(vars[0])),
+                body,
+                sizeof(body),
+                source)) {
+        append_logf(
+            "KBO Asian Games replacement news skipped source=%s date=%u old_player=%u new_player=%u reason=template_unavailable",
+            source != NULL ? source : "",
+            event_yyyymmdd,
+            old_entry->player_id,
+            new_entry->player_id);
+        return 0;
+    }
 
     int created = create_kbo_native_live_news_with_body(
         event_yyyymmdd / 10000u,
@@ -115,7 +163,7 @@ int kbo_emit_asian_games_replacement_news(
         event_yyyymmdd % 100u,
         league_id,
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
-        "[KBO] Asian Games Roster Change",
+        title,
         body);
     append_logf(
         "KBO Asian Games replacement news source=%s date=%u old_player=%u new_player=%u created=%d",

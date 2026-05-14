@@ -23,6 +23,13 @@ int kbo_set_asian_quota_salary_limit(int32_t value);
 int kbo_get_foreign_fa_quality_cap_enabled_setting(void);
 int kbo_set_foreign_fa_quality_cap_enabled_setting(int enabled);
 
+#define KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_DEFAULT 7
+#define KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MIN 1
+#define KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MAX 100
+int kbo_clamp_asian_games_no_gold_odds_denominator(int value);
+int kbo_get_asian_games_no_gold_odds_denominator(void);
+int kbo_set_asian_games_no_gold_odds_denominator(int value);
+
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT 5
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_STARTER 0
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_BULLPEN 1
@@ -44,6 +51,12 @@ int kbo_set_profiler_enabled_setting(int enabled);
 
 int kbo_get_allow_all_ui_team_actions_setting(void);
 int kbo_set_allow_all_ui_team_actions_setting(int enabled);
+
+#define KBO_CUSTOM_NEWS_LANGUAGE_KO 0
+#define KBO_CUSTOM_NEWS_LANGUAGE_EN 1
+int kbo_get_custom_news_language_setting(void);
+int kbo_set_custom_news_language_setting(int language);
+const char* kbo_custom_news_language_dir(void);
 
 int kbo_fix_enabled(void);
 void kbo_request_runtime_threads_stop(void);

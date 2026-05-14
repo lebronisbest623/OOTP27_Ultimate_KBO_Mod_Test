@@ -15,6 +15,9 @@
 #define KBO_ASIAN_GAMES_MAX_ORGS 32
 #define KBO_ASIAN_GAMES_TEAM_MIN_PLAYERS 1
 #define KBO_ASIAN_GAMES_TEAM_MAX_PLAYERS 3
+#define KBO_ASIAN_GAMES_RESULT_UNKNOWN 0
+#define KBO_ASIAN_GAMES_RESULT_GOLD 1
+#define KBO_ASIAN_GAMES_RESULT_NO_GOLD 2
 
 typedef struct KboAsianGamesRosterEntry {
     uint32_t player_id;
@@ -45,6 +48,7 @@ typedef struct KboAsianGamesCandidate {
 extern KboAsianGamesRosterEntry g_kbo_asian_games_roster[KBO_ASIAN_GAMES_ROSTER_SIZE];
 extern LONG g_kbo_asian_games_roster_count;
 extern uint32_t g_kbo_asian_games_roster_year;
+extern uint8_t g_kbo_asian_games_result;
 extern char g_kbo_asian_games_roster_save_path[MAX_PATH];
 
 #endif
