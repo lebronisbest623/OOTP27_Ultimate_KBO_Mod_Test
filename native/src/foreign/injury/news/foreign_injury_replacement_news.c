@@ -205,6 +205,10 @@ void kbo_emit_foreign_injury_replacement_news(
     char injured_player_link[144] = {0};
     char replacement_player_link[144] = {0};
     char replacement_player_name[96] = {0};
+    char retained_player_link[144] = {0};
+    char retained_player_name[96] = {0};
+    char released_player_link[144] = {0};
+    char released_player_name[96] = {0};
     char days_left_text[16] = {0};
     kbo_foreign_injury_copy_team_link(rec->team_id, team_link, sizeof(team_link));
     snprintf(injured_player_link, sizeof(injured_player_link), "<%s:player#%u>", player_name, rec->injured_player_id);
@@ -232,9 +236,28 @@ void kbo_emit_foreign_injury_replacement_news(
     }
     snprintf(days_left_text, sizeof(days_left_text), "%d", days_left > 0 ? days_left : 0);
 
+    int keep_replacement = phase != NULL && strcmp(phase, "closed_keep_replacement") == 0;
+    if (keep_replacement) {
+        snprintf(retained_player_name, sizeof(retained_player_name), "%s", replacement_player_name);
+        snprintf(retained_player_link, sizeof(retained_player_link), "%s", replacement_player_link);
+        snprintf(released_player_name, sizeof(released_player_name), "%s", player_name);
+        snprintf(released_player_link, sizeof(released_player_link), "%s", injured_player_link);
+    } else {
+        snprintf(retained_player_name, sizeof(retained_player_name), "%s", player_name);
+        snprintf(retained_player_link, sizeof(retained_player_link), "%s", injured_player_link);
+        snprintf(released_player_name, sizeof(released_player_name), "%s", replacement_player_name);
+        snprintf(released_player_link, sizeof(released_player_link), "%s", replacement_player_link);
+    }
+
     const char* title_key = "foreign_injury.open.title";
     const char* body_key = "foreign_injury.open.body";
-    if (phase != NULL && strcmp(phase, "closed") == 0) {
+    if (phase != NULL && strcmp(phase, "closed_keep_replacement") == 0) {
+        title_key = "foreign_injury.closed_keep_replacement.title";
+        body_key = "foreign_injury.closed_keep_replacement.body";
+    } else if (phase != NULL && strcmp(phase, "closed_keep_injured") == 0) {
+        title_key = "foreign_injury.closed_keep_injured.title";
+        body_key = "foreign_injury.closed_keep_injured.body";
+    } else if (phase != NULL && strcmp(phase, "closed") == 0) {
         if (rec->replacement_player_id != 0u) {
             title_key = "foreign_injury.closed_with_replacement.title";
             body_key = "foreign_injury.closed_with_replacement.body";
@@ -253,6 +276,10 @@ void kbo_emit_foreign_injury_replacement_news(
         { "injured_player_link", injured_player_link },
         { "replacement_player_name", replacement_player_name },
         { "replacement_player_link", replacement_player_link },
+        { "retained_player_name", retained_player_name },
+        { "retained_player_link", retained_player_link },
+        { "released_player_name", released_player_name },
+        { "released_player_link", released_player_link },
         { "days_left", days_left_text },
         { "slot_label", kbo_foreign_injury_slot_label(rec->slot_type) },
     };

@@ -79,7 +79,7 @@ int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryR
     return 1;
 }
 
-static void kbo_foreign_injury_clear_replacement_contract_for_market(uint8_t* player)
+static void kbo_foreign_injury_clear_contract_for_market(uint8_t* player)
 {
     if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
         return;
@@ -100,11 +100,20 @@ static void kbo_foreign_injury_clear_replacement_contract_for_market(uint8_t* pl
     }
 }
 
-int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t player_id, const char* source)
+static int kbo_foreign_injury_release_player_from_team(
+    uint32_t team_id,
+    uint32_t player_id,
+    const char* source,
+    const char* player_role,
+    const char* audit_action,
+    const char* audit_reason)
 {
     if (team_id == 0u || player_id == 0u) {
         return 0;
     }
+    const char* role = player_role != NULL && player_role[0] != '\0'
+        ? player_role
+        : "player";
 
     uint8_t* player = kbo_find_player_by_id(player_id, NULL, NULL);
     if (player == NULL || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
@@ -204,14 +213,15 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
                 || *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET) == current_team_id)) {
         *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET) = 0u;
     }
-    kbo_foreign_injury_clear_replacement_contract_for_market(player);
+    kbo_foreign_injury_clear_contract_for_market(player);
     player[OOTP27_PLAYER_STATUS_FLAGS_OFFSET] = 1u;
     player[OOTP27_PLAYER_DFA_FLAG_OFFSET] = 0u;
     player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] = 0u;
     player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = 0u;
 
     kbo_log_runtimef(
-        "foreign injury replacement: released replacement source=%s team=%u player=%u removed_arrays=%d before_current=%u before_active=%u before_original=%u before_league=%u current_team_league=%u release_league=%u before_original_league=%u before_default=%u old_status41=%u old_contract_level=%u old_contract_status=%u non_kbo_repair=%d market=1",
+        "foreign injury replacement: released %s source=%s team=%u player=%u removed_arrays=%d before_current=%u before_active=%u before_original=%u before_league=%u current_team_league=%u release_league=%u before_original_league=%u before_default=%u old_status41=%u old_contract_level=%u old_contract_status=%u non_kbo_repair=%d market=1",
+        role,
         source != NULL ? source : "",
         team_id,
         player_id,
@@ -231,6 +241,7 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
         do {
         KboLogFields audit_fields;
         kbo_log_fields_init(&audit_fields);
+        kbo_log_field_str(&audit_fields, "player_role", role);
         kbo_log_field_u32(&audit_fields, "team_id", team_id);
         kbo_log_field_u32(&audit_fields, "player_id", player_id);
         kbo_log_field_i32(&audit_fields, "removed_arrays", removed);
@@ -240,10 +251,32 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
         kbo_log_field_i32(&audit_fields, "non_kbo_repair", current_non_kbo_assignment);
         kbo_rule_audit_emit_fields(
             "foreign_injury.replacement.player",
-            "release_replacement",
-            "injured_player_returned",
+            audit_action != NULL && audit_action[0] != '\0' ? audit_action : "release_player",
+            audit_reason != NULL && audit_reason[0] != '\0' ? audit_reason : "foreign_injury_decision",
             source,
             &audit_fields);
     } while (0);
     return 1;
+}
+
+int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t player_id, const char* source)
+{
+    return kbo_foreign_injury_release_player_from_team(
+        team_id,
+        player_id,
+        source,
+        "replacement",
+        "release_replacement",
+        "injured_player_retained");
+}
+
+int kbo_foreign_injury_release_injured_player(uint32_t team_id, uint32_t player_id, const char* source)
+{
+    return kbo_foreign_injury_release_player_from_team(
+        team_id,
+        player_id,
+        source,
+        "injured",
+        "release_injured",
+        "replacement_retained");
 }

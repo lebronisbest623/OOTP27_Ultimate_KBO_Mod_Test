@@ -26,6 +26,7 @@ typedef struct KboForeignPlayerPolicy {
     int32_t demand_salary_max;
     int32_t no_minor_copy_age_max;
     int32_t injury_replacement_min_days;
+    int32_t injury_replacement_decision_margin_min;
     int32_t pending_offer_ttl_days;
     int32_t ai_roster_daily_callup_max_attempts;
     int32_t recent_allow_ttl_ms;

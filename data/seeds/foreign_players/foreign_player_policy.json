@@ -18,6 +18,7 @@
   "demand_salary_max": 1000000000,
   "no_minor_copy_age_max": 80,
   "injury_replacement_min_days": 42,
+  "injury_replacement_decision_margin_min": 12000,
   "pending_offer_ttl_days": 45,
   "ai_roster_daily_callup_max_attempts": 24,
   "recent_allow_ttl_ms": 600000,

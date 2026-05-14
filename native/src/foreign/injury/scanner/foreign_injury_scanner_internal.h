@@ -3,6 +3,18 @@
 
 #include "../internal/foreign_injury_internal.h"
 
+#define KBO_FOREIGN_INJURY_DECISION_KEEP_INJURED      1u
+#define KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT  2u
+
+typedef struct KboForeignInjuryReplacementDecision {
+    uint8_t choice;
+    int32_t injured_score;
+    int32_t replacement_score;
+    int32_t score_margin;
+    int32_t required_margin;
+    char reason[64];
+} KboForeignInjuryReplacementDecision;
+
 int kbo_foreign_injury_player_matches_team(uint8_t* player, uint32_t team_id);
 int kbo_foreign_injury_candidate_matches_slot(uint8_t* player, uint8_t slot_type);
 int kbo_foreign_injury_player_has_baseball_position(uint8_t* player);
@@ -18,7 +30,14 @@ int kbo_foreign_injury_injured_player_returned_to_top_team(
     const KboForeignInjuryReplacement* rec,
     uint8_t* injured);
 uint32_t kbo_foreign_injury_resolve_replacement_for_record(const KboForeignInjuryReplacement* rec);
+int kbo_foreign_injury_choose_returning_player(
+    const KboForeignInjuryReplacement* rec,
+    uint8_t* injured,
+    uint8_t* replacement,
+    KboForeignInjuryReplacementDecision* out);
+const char* kbo_foreign_injury_decision_choice_label(uint8_t choice);
 int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryReplacement* rec, const char* source);
 int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t player_id, const char* source);
+int kbo_foreign_injury_release_injured_player(uint32_t team_id, uint32_t player_id, const char* source);
 
 #endif

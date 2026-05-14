@@ -4,6 +4,12 @@
 static LONG g_kbo_foreign_injury_return_wait_log_count = 0;
 static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
 
+typedef struct KboForeignInjuryClosedNews {
+    KboForeignInjuryReplacement rec;
+    KboForeignInjuryReplacementDecision decision;
+    char phase[32];
+} KboForeignInjuryClosedNews;
+
 void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
     if (!kbo_foreign_injury_replacement_enabled()) {
@@ -144,7 +150,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         }
     }
 
-    KboForeignInjuryReplacement closed_news[16];
+    KboForeignInjuryClosedNews closed_news[16];
     int closed_count = 0;
     KboForeignInjuryReplacement active_news[16];
     int active_count = 0;
@@ -211,16 +217,37 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         if (replacement_player_id != 0u) {
             rec->replacement_player_id = replacement_player_id;
         }
+        KboForeignInjuryReplacementDecision decision;
+        memset(&decision, 0, sizeof(decision));
+        const char* close_phase = "closed_without_replacement";
         if (rec->replacement_player_id != 0u) {
-            kbo_foreign_injury_release_replacement_player(
-                rec->team_id,
-                rec->replacement_player_id,
-                source);
+            uint8_t* replacement = kbo_find_player_by_id(rec->replacement_player_id, NULL, NULL);
+            kbo_foreign_injury_choose_returning_player(rec, injured, replacement, &decision);
+            if (decision.choice == KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT) {
+                kbo_foreign_injury_release_injured_player(
+                    rec->team_id,
+                    rec->injured_player_id,
+                    source);
+                rec->converted = 1u;
+                close_phase = "closed_keep_replacement";
+            } else {
+                kbo_foreign_injury_release_replacement_player(
+                    rec->team_id,
+                    rec->replacement_player_id,
+                    source);
+                rec->converted = 0u;
+                close_phase = "closed_keep_injured";
+            }
+        } else {
+            kbo_foreign_injury_choose_returning_player(rec, injured, NULL, &decision);
+            rec->converted = 0u;
         }
         rec->status = KBO_FOREIGN_INJURY_STATUS_CLOSED;
-        rec->converted = 0u;
         if (closed_count < (int)(sizeof(closed_news) / sizeof(closed_news[0]))) {
-            closed_news[closed_count++] = *rec;
+            closed_news[closed_count].rec = *rec;
+            closed_news[closed_count].decision = decision;
+            snprintf(closed_news[closed_count].phase, sizeof(closed_news[closed_count].phase), "%s", close_phase);
+            closed_count++;
         }
         changed = 1;
     }
@@ -255,29 +282,54 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     }
 
     for (int i = 0; i < closed_count; i++) {
-        kbo_emit_foreign_injury_replacement_news(&closed_news[i], 0, "closed");
+        const KboForeignInjuryReplacement* rec = &closed_news[i].rec;
+        const KboForeignInjuryReplacementDecision* decision = &closed_news[i].decision;
+        const char* close_phase = closed_news[i].phase[0] != '\0' ? closed_news[i].phase : "closed";
+        kbo_emit_foreign_injury_replacement_news(rec, 0, close_phase);
                 do {
             KboLogFields audit_fields;
             kbo_log_fields_init(&audit_fields);
             kbo_log_field_u32(&audit_fields, "date", today);
-            kbo_log_field_u32(&audit_fields, "team_id", closed_news[i].team_id);
-            kbo_log_field_u32(&audit_fields, "league_id", closed_news[i].league_id);
-            kbo_log_field_u32(&audit_fields, "injured_player_id", closed_news[i].injured_player_id);
-            kbo_log_field_u32(&audit_fields, "replacement_player_id", closed_news[i].replacement_player_id);
+            kbo_log_field_u32(&audit_fields, "team_id", rec->team_id);
+            kbo_log_field_u32(&audit_fields, "league_id", rec->league_id);
+            kbo_log_field_u32(&audit_fields, "injured_player_id", rec->injured_player_id);
+            kbo_log_field_u32(&audit_fields, "replacement_player_id", rec->replacement_player_id);
+            kbo_log_field_str(&audit_fields, "decision", kbo_foreign_injury_decision_choice_label(decision->choice));
+            kbo_log_field_str(&audit_fields, "decision_reason", decision->reason);
+            kbo_log_field_i32(&audit_fields, "injured_score", decision->injured_score);
+            kbo_log_field_i32(&audit_fields, "replacement_score", decision->replacement_score);
+            kbo_log_field_i32(&audit_fields, "score_margin", decision->score_margin);
+            kbo_log_field_i32(&audit_fields, "required_margin", decision->required_margin);
+            kbo_log_field_u32(&audit_fields, "retained_player_id",
+                decision->choice == KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT
+                    ? rec->replacement_player_id
+                    : rec->injured_player_id);
+            kbo_log_field_u32(&audit_fields, "released_player_id",
+                decision->choice == KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT
+                    ? rec->injured_player_id
+                    : rec->replacement_player_id);
             kbo_rule_audit_emit_fields(
                 "foreign_injury.replacement.lifecycle",
                 "close_slot",
-                "injured_player_returned",
+                decision->choice == KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT
+                    ? "replacement_retained"
+                    : "injured_player_retained",
                 source,
                 &audit_fields);
         } while (0);
         kbo_log_runtimef(
-            "foreign injury replacement: closed source=%s team=%u injured=%u replacement=%u league=%u",
+            "foreign injury replacement: closed source=%s team=%u injured=%u replacement=%u league=%u decision=%s reason=%s injured_score=%d replacement_score=%d required_margin=%d phase=%s",
             source != NULL ? source : "",
-            closed_news[i].team_id,
-            closed_news[i].injured_player_id,
-            closed_news[i].replacement_player_id,
-            closed_news[i].league_id);
+            rec->team_id,
+            rec->injured_player_id,
+            rec->replacement_player_id,
+            rec->league_id,
+            kbo_foreign_injury_decision_choice_label(decision->choice),
+            decision->reason,
+            decision->injured_score,
+            decision->replacement_score,
+            decision->required_margin,
+            close_phase);
     }
 
     if (opened > 0 || active_count > 0 || closed_count > 0) {
