@@ -17,6 +17,12 @@ static const char* kbo_asian_games_plural(int value)
     return value == 1 ? "" : "s";
 }
 
+static int kbo_asian_games_news_uses_korean(void)
+{
+    const char* language_dir = kbo_custom_news_language_dir();
+    return language_dir == NULL || strcmp(language_dir, "en") != 0;
+}
+
 static void kbo_asian_games_u32_text(uint32_t value, char* out, size_t out_size)
 {
     if (out != NULL && out_size > 0u) {
@@ -48,11 +54,20 @@ int kbo_asian_games_append_player_blurb(
     if (bucket[0] != '\0') {
         snprintf(role_suffix, sizeof(role_suffix), " (%s)", bucket);
     }
+    int use_korean = kbo_asian_games_news_uses_korean();
+    const char* separator = "";
+    if (display_index != 0) {
+        separator = use_korean ? ", " : (display_index == display_count - 1 ? " and " : ", ");
+    }
+    const char* team_prefix = "";
+    if (team_link[0] != '\0') {
+        team_prefix = use_korean ? " / " : " of ";
+    }
 
     KboNewsTemplateVar vars[] = {
-        { "separator", display_index == 0 ? "" : (display_index == display_count - 1 ? " and " : ", ") },
+        { "separator", separator },
         { "player_link", player_link },
-        { "team_prefix", team_link[0] != '\0' ? " of " : "" },
+        { "team_prefix", team_prefix },
         { "team_link", team_link },
         { "role_suffix", role_suffix },
     };
@@ -87,15 +102,24 @@ int kbo_asian_games_append_roster_line(
 
     char team_link[128] = {0};
     kbo_copy_asian_games_team_link(entry->original_team_id, team_link, sizeof(team_link));
+    int use_korean = kbo_asian_games_news_uses_korean();
     if (team_link[0] == '\0') {
-        snprintf(team_link, sizeof(team_link), "unattached");
+        snprintf(
+            team_link,
+            sizeof(team_link),
+            "%s",
+            use_korean ? "\xec\x86\x8c\xec\x86\x8d \xec\x97\x86\xec\x9d\x8c" : "unattached");
     }
 
-    const char* status = "selected";
+    const char* status = use_korean ? "\xec\x84\xa0\xeb\xb0\x9c" : "selected";
     if (entry->returned) {
-        status = entry->exempted ? "returned, exempt" : "returned, no exemption";
+        status = use_korean
+            ? (entry->exempted
+                ? "\xeb\xb3\xb5\xea\xb7\x80, \xeb\xb3\x91\xec\x97\xad \xed\x98\x9c\xed\x83\x9d"
+                : "\xeb\xb3\xb5\xea\xb7\x80, \xed\x98\x9c\xed\x83\x9d \xec\x97\x86\xec\x9d\x8c")
+            : (entry->exempted ? "returned, exempt" : "returned, no exemption");
     } else if (entry->departed) {
-        status = "on tournament leave";
+        status = use_korean ? "\xec\xb0\xa8\xec\xb6\x9c \xec\xa4\x91" : "on tournament leave";
     }
 
     char index_text[16] = {0};
@@ -107,7 +131,9 @@ int kbo_asian_games_append_roster_line(
         { "player_link", player_link },
         { "role_bucket", kbo_asian_games_role_bucket_label(entry->role) },
         { "team_link", team_link },
-        { "wildcard_text", entry->wildcard ? ", wild card" : "" },
+        { "wildcard_text", entry->wildcard
+            ? (use_korean ? ", \xec\x99\x80\xec\x9d\xbc\xeb\x93\x9c\xec\xb9\xb4\xeb\x93\x9c" : ", wild card")
+            : "" },
         { "age", age_text },
         { "status", status },
     };

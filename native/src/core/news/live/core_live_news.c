@@ -152,6 +152,78 @@ int create_kbo_native_live_news_with_body(
     return event_created || league_news_created || sql_created || native_created || core_created;
 }
 
+int create_kbo_native_live_news_with_body_live_required(
+    uint32_t year,
+    uint32_t month,
+    uint32_t day,
+    uint32_t league_id,
+    uint32_t message_type,
+    const char* title,
+    const char* body)
+{
+    if (title == NULL || title[0] == '\0'
+            || league_id == 0u
+            || year < 1800u || year > 2300u
+            || month < 1u || month > 12u
+            || day < 1u || day > 31u) {
+        return 0;
+    }
+    if (body == NULL || body[0] == '\0') {
+        body = "";
+    }
+
+    int real_created = create_kbo_real_add_news(
+        year,
+        month,
+        day,
+        league_id,
+        message_type,
+        title,
+        body,
+        "native_live_news_live_required");
+    if (!real_created) {
+        append_logf(
+            "native live news live-required deferred title=%s date=%04u-%02u-%02u league_id=%u type=%u reason=real_add_unavailable",
+            title,
+            year,
+            month,
+            day,
+            league_id,
+            message_type);
+        return 0;
+    }
+
+    int league_news_created = insert_kbo_league_news_table_sql(
+        year,
+        month,
+        day,
+        league_id,
+        title,
+        body,
+        "native_live_news_live_required");
+    int sql_created = insert_kbo_league_news_sql(
+        year,
+        month,
+        day,
+        league_id,
+        message_type,
+        title,
+        body,
+        "native_live_news_live_required");
+    append_logf(
+        "native live news live-required result title=%s date=%04u-%02u-%02u league_id=%u type=%u league_news=%d sql=%d real=%d",
+        title,
+        year,
+        month,
+        day,
+        league_id,
+        message_type,
+        league_news_created,
+        sql_created,
+        real_created);
+    return 2;
+}
+
 int create_kbo_native_live_news(
     uint32_t year,
     uint32_t month,

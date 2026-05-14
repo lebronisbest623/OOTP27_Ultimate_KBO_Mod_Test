@@ -819,7 +819,7 @@ int kbo_emit_captain_initial_selection_news(
         NULL,
         title,
         sizeof(title));
-    int created = create_kbo_native_live_news_with_body(
+    int created = create_kbo_native_live_news_with_body_live_required(
         date / 10000u,
         (date / 100u) % 100u,
         date % 100u,

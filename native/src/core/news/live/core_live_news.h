@@ -12,6 +12,15 @@ int create_kbo_native_live_news_with_body(
     const char* title,
     const char* body);
 
+int create_kbo_native_live_news_with_body_live_required(
+    uint32_t year,
+    uint32_t month,
+    uint32_t day,
+    uint32_t league_id,
+    uint32_t message_type,
+    const char* title,
+    const char* body);
+
 int create_kbo_native_live_news(
     uint32_t year,
     uint32_t month,

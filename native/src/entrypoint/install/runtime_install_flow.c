@@ -352,6 +352,7 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     }
     start_kbo_military_seed_bootstrap_thread();
     start_kbo_military_days_tick_thread();
+    start_kbo_captain_preseason_selection_thread();
     if (read_kbo_localappdata_flag_file("enable_kbo_cbt_service_time_probe.txt")) {
         kbo_cbt_service_time_probe_once();
     } else {

@@ -667,10 +667,10 @@ DWORD WINAPI kbo_captain_preseason_selection_thread(LPVOID parameter)
     append_log_line("KBO captain selection maintenance thread started");
 
     while (kbo_runtime_threads_should_continue()) {
+        kbo_run_captain_selection_maintenance_once("captain_selection_thread");
         if (!kbo_runtime_sleep_should_continue(5000)) {
             break;
         }
-        kbo_run_captain_selection_maintenance_once("captain_selection_thread");
     }
 
     InterlockedExchange(&g_kbo_captain_preseason_thread_started, 0);

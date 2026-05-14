@@ -16,6 +16,12 @@
 #include "../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../links/links.h"
 
+static int kbo_asian_games_news_uses_korean(void)
+{
+    const char* language_dir = kbo_custom_news_language_dir();
+    return language_dir == NULL || strcmp(language_dir, "en") != 0;
+}
+
 int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* template_prefix, const char* source)
 {
     if (event_yyyymmdd == 0u || template_prefix == NULL || template_prefix[0] == '\0') {
@@ -121,16 +127,18 @@ int kbo_emit_asian_games_replacement_news(
     kbo_copy_asian_games_team_link(old_entry->original_team_id, old_team, sizeof(old_team));
     kbo_copy_asian_games_team_link(new_entry->original_team_id, new_team, sizeof(new_team));
 
+    int use_korean = kbo_asian_games_news_uses_korean();
+    const char* team_prefix = use_korean ? " / " : " of ";
     char body[2048] = {0};
     char title[160] = {0};
     char roster_size_text[16] = {0};
-    snprintf(roster_size_text, sizeof(roster_size_text), "%d", KBO_ASIAN_GAMES_ROSTER_SIZE);
+    snprintf(roster_size_text, sizeof(roster_size_text), "%d", kbo_asian_games_policy_roster_size());
     KboNewsTemplateVar vars[] = {
         { "old_player", old_player },
-        { "old_team_prefix", old_team[0] != '\0' ? " of " : "" },
+        { "old_team_prefix", old_team[0] != '\0' ? team_prefix : "" },
         { "old_team", old_team },
         { "new_player", new_player },
-        { "new_team_prefix", new_team[0] != '\0' ? " of " : "" },
+        { "new_team_prefix", new_team[0] != '\0' ? team_prefix : "" },
         { "new_team", new_team },
         { "roster_size", roster_size_text },
     };
