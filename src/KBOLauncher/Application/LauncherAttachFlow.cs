@@ -1,3 +1,4 @@
+using Spectre.Console;
 using static DllInjector;
 using static DllPayloadStager;
 using static InjectedModuleDetector;
@@ -48,15 +49,15 @@ internal static partial class LauncherApp
 
         if (options.DryRun)
         {
-            Console.WriteLine($"Dry-run attach target pid={targetPid}");
-            Console.WriteLine($"DLL: {Path.GetFullPath(options.DllPath)}");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]Dry-run attach target pid={targetPid}[/]");
+            AnsiConsole.MarkupLineInterpolated($"DLL: {Path.GetFullPath(options.DllPath)}");
             Log(logPath, $"dry_run_attach pid={targetPid} dll={Path.GetFullPath(options.DllPath)}");
             return 0;
         }
 
         if (IsKboFixAlreadyLoaded(targetPid.Value, logPath))
         {
-            Console.WriteLine($"KBOFix is already loaded in pid={targetPid.Value}; skipping injection.");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]KBOFix is already loaded in pid={targetPid.Value}; skipping injection.[/]");
             WarnIfLoadedKboFixLooksStale(targetPid.Value, options.DllPath, logPath);
             Log(logPath, $"inject_skipped pid={targetPid.Value} reason=already_loaded");
             return 0;

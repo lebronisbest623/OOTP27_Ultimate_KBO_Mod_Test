@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class LauncherPathsTests : IDisposable
@@ -25,7 +26,7 @@ public sealed class LauncherPathsTests : IDisposable
 
             var resolved = global::LauncherPaths.ResolveOotpPath(explicitPath);
 
-            Assert.Equal(explicitPath, resolved);
+            resolved.Should().Be(explicitPath);
         }
         finally
         {
@@ -47,7 +48,7 @@ public sealed class LauncherPathsTests : IDisposable
 
             var resolved = global::LauncherPaths.ResolveOotpPath(Path.Combine(tempDir, "missing", "ootp27.exe"));
 
-            Assert.Equal(envExe, resolved);
+            resolved.Should().Be(envExe);
         }
         finally
         {
@@ -68,7 +69,7 @@ public sealed class LauncherPathsTests : IDisposable
 
             var resolved = global::LauncherPaths.ResolveOotpPath(explicitDirectory);
 
-            Assert.Null(resolved);
+            resolved.Should().BeNull();
         }
         finally
         {
@@ -90,7 +91,7 @@ public sealed class LauncherPathsTests : IDisposable
 
             var resolved = global::LauncherPaths.ResolveOotpPath(explicitPath);
 
-            Assert.Null(resolved);
+            resolved.Should().BeNull();
         }
         finally
         {
@@ -117,15 +118,15 @@ public sealed class LauncherPathsTests : IDisposable
             newest
         ]);
 
-        Assert.Equal(newest, resolved);
+        resolved.Should().Be(newest);
     }
 
     [Fact]
     public void ResolveExistingNewestPath_ReturnsNullWhenNoCandidateExists()
     {
-        Assert.Null(global::LauncherPaths.ResolveExistingNewestPath([
+        global::LauncherPaths.ResolveExistingNewestPath([
             Path.Combine(tempDir, "missing", "ootp27.exe")
-        ]));
+        ]).Should().BeNull();
     }
 
     [Fact]
@@ -133,15 +134,15 @@ public sealed class LauncherPathsTests : IDisposable
     {
         var candidates = global::LauncherPaths.GetOotpPathCandidates(null).ToList();
 
-        Assert.Contains(candidates, path =>
+        candidates.Should().Contain(path =>
             path.EndsWith(
                 @"Out of the Park Developments\OOTP Baseball 27\ootp27.exe",
                 StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(candidates, path =>
+        candidates.Should().Contain(path =>
             path.EndsWith(
                 @"Out of the Park Developments\Out of the Park Baseball 27\ootp27.exe",
                 StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(candidates, path =>
+        candidates.Should().Contain(path =>
             path.EndsWith(
                 @"OOTP 27\ootp27.exe",
                 StringComparison.OrdinalIgnoreCase));
@@ -161,8 +162,8 @@ public sealed class LauncherPathsTests : IDisposable
 
             var candidates = global::LauncherPaths.GetOotpPathCandidates(null).ToList();
 
-            Assert.Contains(Path.Combine(envDir, "ootp27.exe"), candidates);
-            Assert.Contains(envExe, candidates);
+            candidates.Should().Contain(Path.Combine(envDir, "ootp27.exe"));
+            candidates.Should().Contain(envExe);
         }
         finally
         {
@@ -199,7 +200,7 @@ public sealed class LauncherPathsTests : IDisposable
 
         var libraries = global::LauncherPaths.ReadSteamLibraryFolders(vdf).ToList();
 
-        Assert.Equal([libraryA, libraryB], libraries);
+        libraries.Should().Equal(libraryA, libraryB);
     }
 
     public void Dispose()

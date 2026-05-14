@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class DllPayloadStagerTests : IDisposable
@@ -20,14 +21,14 @@ public sealed class DllPayloadStagerTests : IDisposable
 
         var staged = global::DllPayloadStager.PrepareInjectableDllCopy(dllPath, runDir, logPath);
 
-        Assert.StartsWith(Path.Combine(runDir, "KBOFix-"), staged, StringComparison.OrdinalIgnoreCase);
-        Assert.EndsWith(".dll", staged, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal([1, 2, 3, 4], File.ReadAllBytes(staged));
-        Assert.Equal([5, 6, 7], File.ReadAllBytes(Path.Combine(runDir, "WebView2Loader.dll")));
-        Assert.Equal("font", File.ReadAllText(Path.Combine(runDir, "assets", "fonts", "JejuGothic-Regular.ttf")));
-        Assert.Contains("dll_copy", File.ReadAllText(logPath));
-        Assert.Contains("webview2_loader_copy", File.ReadAllText(logPath));
-        Assert.Contains("assets_copy", File.ReadAllText(logPath));
+        staged.Should().StartWithEquivalentOf(Path.Combine(runDir, "KBOFix-"));
+        staged.Should().EndWithEquivalentOf(".dll");
+        File.ReadAllBytes(staged).Should().Equal([1, 2, 3, 4]);
+        File.ReadAllBytes(Path.Combine(runDir, "WebView2Loader.dll")).Should().Equal([5, 6, 7]);
+        File.ReadAllText(Path.Combine(runDir, "assets", "fonts", "JejuGothic-Regular.ttf")).Should().Be("font");
+        File.ReadAllText(logPath).Should().Contain("dll_copy");
+        File.ReadAllText(logPath).Should().Contain("webview2_loader_copy");
+        File.ReadAllText(logPath).Should().Contain("assets_copy");
     }
 
     [Fact]
@@ -49,9 +50,9 @@ public sealed class DllPayloadStagerTests : IDisposable
 
         _ = global::DllPayloadStager.PrepareInjectableDllCopy(dllPath, runDir, logPath);
 
-        Assert.False(File.Exists(oldDll));
-        Assert.True(File.Exists(recentDll));
-        Assert.Contains("staged_dll_cleanup", File.ReadAllText(logPath));
+        File.Exists(oldDll).Should().BeFalse();
+        File.Exists(recentDll).Should().BeTrue();
+        File.ReadAllText(logPath).Should().Contain("staged_dll_cleanup");
     }
 
     [Fact]
@@ -67,9 +68,9 @@ public sealed class DllPayloadStagerTests : IDisposable
         var first = global::DllPayloadStager.PrepareInjectableDllCopy(dllPath, runDir, logPath);
         var second = global::DllPayloadStager.PrepareInjectableDllCopy(dllPath, runDir, logPath);
 
-        Assert.NotEqual(first, second);
-        Assert.True(File.Exists(first));
-        Assert.True(File.Exists(second));
+        first.Should().NotBe(second);
+        File.Exists(first).Should().BeTrue();
+        File.Exists(second).Should().BeTrue();
     }
 
     [Fact]
@@ -77,13 +78,13 @@ public sealed class DllPayloadStagerTests : IDisposable
     {
         var missingPath = Path.Combine(tempDir, "missing", "KBOFix.dll");
 
-        var ex = Assert.Throws<FileNotFoundException>(() =>
-            global::DllPayloadStager.PrepareInjectableDllCopy(
-                missingPath,
-                Path.Combine(tempDir, "run_dlls"),
-                Path.Combine(tempDir, "launcher.log")));
+        var act = () => global::DllPayloadStager.PrepareInjectableDllCopy(
+            missingPath,
+            Path.Combine(tempDir, "run_dlls"),
+            Path.Combine(tempDir, "launcher.log"));
 
-        Assert.Equal(Path.GetFullPath(missingPath), ex.FileName);
+        act.Should().Throw<FileNotFoundException>()
+            .Which.FileName.Should().Be(Path.GetFullPath(missingPath));
     }
 
     public void Dispose()

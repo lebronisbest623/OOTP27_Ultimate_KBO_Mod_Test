@@ -1,6 +1,7 @@
 namespace KBOLauncher.Tests;
 
 using System.ComponentModel;
+using FluentAssertions;
 using Xunit;
 
 public sealed class LauncherLaunchFlowTests : IDisposable
@@ -24,10 +25,10 @@ public sealed class LauncherLaunchFlowTests : IDisposable
         }
 
         var text = writer.ToString();
-        Assert.Contains("KBOFix injection disabled", text);
-        Assert.Contains("timestamp=0x11111111", text);
-        Assert.Contains("size_of_image=0x22222222", text);
-        Assert.Contains("Update the launcher/native supported-build list", text);
+        text.Should().Contain("KBOFix injection disabled");
+        text.Should().Contain("timestamp=0x11111111");
+        text.Should().Contain("size_of_image=0x22222222");
+        text.Should().Contain("Update the launcher/native supported-build list");
     }
 
     [Fact]
@@ -38,15 +39,15 @@ public sealed class LauncherLaunchFlowTests : IDisposable
         Directory.CreateDirectory(tempDir);
         File.WriteAllBytes(dllPath, [1]);
 
-        var ex = Assert.Throws<Win32Exception>(() =>
-            global::DllInjector.InjectDll(-1, dllPath, logPath));
+        var act = () => global::DllInjector.InjectDll(-1, dllPath, logPath);
+        var ex = act.Should().Throw<Win32Exception>().Which;
 
         var log = File.ReadAllText(logPath);
-        Assert.Contains("inject_start pid=-1", log);
-        Assert.Contains("inject_failed pid=-1", log);
-        Assert.Contains(Path.GetFullPath(dllPath), log);
-        Assert.Contains("OpenProcess failed win32=", ex.Message);
-        Assert.Contains("OpenProcess failed win32=", log);
+        log.Should().Contain("inject_start pid=-1");
+        log.Should().Contain("inject_failed pid=-1");
+        log.Should().Contain(Path.GetFullPath(dllPath));
+        ex.Message.Should().Contain("OpenProcess failed win32=");
+        log.Should().Contain("OpenProcess failed win32=");
     }
 
     public void Dispose()

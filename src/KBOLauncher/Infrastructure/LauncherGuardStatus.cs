@@ -1,3 +1,4 @@
+using Spectre.Console;
 using static LauncherPaths;
 using static LauncherLog;
 
@@ -73,7 +74,7 @@ internal static class LauncherGuardStatus
     public static RosterMarkerInfo CheckRosterMarkerForInjectionTarget(int pid, string logPath)
     {
         var info = ProbeRosterMarkerForInjectionTarget(pid, logPath, null);
-        Console.WriteLine(KboRosterMarkerGuard.FormatConsoleStatus(info));
+        AnsiConsole.WriteLine(KboRosterMarkerGuard.FormatConsoleStatus(info));
         return info;
     }
 

@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class KboSeedFilesTests : IDisposable
@@ -17,7 +18,7 @@ public sealed class KboSeedFilesTests : IDisposable
 
         global::KboSeedFiles.EnsureKboLeagueIdConfig(localDir, [missing, candidate]);
 
-        Assert.Equal("100", File.ReadAllText(Path.Combine(localDir, "kbo_league_id.txt")));
+        File.ReadAllText(Path.Combine(localDir, "kbo_league_id.txt")).Should().Be("100");
     }
 
     [Fact]
@@ -36,8 +37,8 @@ public sealed class KboSeedFilesTests : IDisposable
 
         global::KboSeedFiles.EnsureKboLeagueIdConfig(localDir, [candidate]);
 
-        Assert.Equal("100", File.ReadAllText(localPath));
-        Assert.Equal(before, File.GetLastWriteTimeUtc(localPath));
+        File.ReadAllText(localPath).Should().Be("100");
+        File.GetLastWriteTimeUtc(localPath).Should().Be(before);
     }
 
     [Fact]
@@ -52,14 +53,14 @@ public sealed class KboSeedFilesTests : IDisposable
 
         global::KboSeedFiles.EnsureBundledKboDataFile(localDir, "allstar_teams.csv", "All-Star seed", [candidate]);
 
-        Assert.Equal("team_id,name\n1,A", File.ReadAllText(localPath));
+        File.ReadAllText(localPath).Should().Be("team_id,name\n1,A");
 
         File.WriteAllText(candidate, "team_id,name\n1,A\n2,B");
         File.SetLastWriteTimeUtc(candidate, File.GetLastWriteTimeUtc(localPath).AddMinutes(1));
 
         global::KboSeedFiles.EnsureBundledKboDataFile(localDir, "allstar_teams.csv", "All-Star seed", [candidate]);
 
-        Assert.Equal("team_id,name\n1,A\n2,B", File.ReadAllText(localPath));
+        File.ReadAllText(localPath).Should().Be("team_id,name\n1,A\n2,B");
     }
 
     [Fact]
@@ -79,8 +80,8 @@ public sealed class KboSeedFilesTests : IDisposable
 
         global::KboSeedFiles.EnsureBundledKboDataFile(localDir, "fa_rules.json", "FA rules", [candidate]);
 
-        Assert.Equal("{}", File.ReadAllText(localPath));
-        Assert.Equal(before, File.GetLastWriteTimeUtc(localPath));
+        File.ReadAllText(localPath).Should().Be("{}");
+        File.GetLastWriteTimeUtc(localPath).Should().Be(before);
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public sealed class KboSeedFilesTests : IDisposable
             "Captain news template",
             [candidate]);
 
-        Assert.Equal("{\"captain.summary.title\":\"A\"}", File.ReadAllText(localPath));
+        File.ReadAllText(localPath).Should().Be("{\"captain.summary.title\":\"A\"}");
     }
 
     [Fact]
@@ -140,9 +141,9 @@ public sealed class KboSeedFilesTests : IDisposable
 
         global::KboSeedFiles.EnsureBundledKboDataManifest(localDir, manifestPath, dataRoot);
 
-        Assert.Equal("team_code,player_name\nLG,Park", File.ReadAllText(Path.Combine(localDir, "captain_seed.csv")));
-        Assert.Equal("{}", File.ReadAllText(Path.Combine(localDir, "ui_text", "en", "hotkey_window.json")));
-        Assert.False(File.Exists(Path.Combine(localDir, "foreign_replacement_players_seed.csv")));
+        File.ReadAllText(Path.Combine(localDir, "captain_seed.csv")).Should().Be("team_code,player_name\nLG,Park");
+        File.ReadAllText(Path.Combine(localDir, "ui_text", "en", "hotkey_window.json")).Should().Be("{}");
+        File.Exists(Path.Combine(localDir, "foreign_replacement_players_seed.csv")).Should().BeFalse();
     }
 
     [Fact]
@@ -157,14 +158,14 @@ public sealed class KboSeedFilesTests : IDisposable
 
         global::KboSeedFiles.EnsureBundledKboDataDirectory(localDir, "news_templates", "News templates", [candidate]);
 
-        Assert.Equal("{\"captain.summary.title\":\"A\"}", File.ReadAllText(localPath));
+        File.ReadAllText(localPath).Should().Be("{\"captain.summary.title\":\"A\"}");
 
         File.WriteAllText(sourcePath, "{\"captain.summary.title\":\"B\"}");
         File.SetLastWriteTimeUtc(sourcePath, File.GetLastWriteTimeUtc(localPath).AddMinutes(1));
 
         global::KboSeedFiles.EnsureBundledKboDataDirectory(localDir, "news_templates", "News templates", [candidate]);
 
-        Assert.Equal("{\"captain.summary.title\":\"B\"}", File.ReadAllText(localPath));
+        File.ReadAllText(localPath).Should().Be("{\"captain.summary.title\":\"B\"}");
     }
 
     [Fact]
@@ -184,7 +185,7 @@ public sealed class KboSeedFilesTests : IDisposable
             "foreign_replacement_players_seed.csv",
             "Foreign replacement player seed");
 
-        Assert.False(File.Exists(retiredPath));
+        File.Exists(retiredPath).Should().BeFalse();
 
         File.WriteAllText(retiredPath, "custom01,regular,Keep me");
 
@@ -193,7 +194,7 @@ public sealed class KboSeedFilesTests : IDisposable
             "foreign_replacement_players_seed.csv",
             "Foreign replacement player seed");
 
-        Assert.True(File.Exists(retiredPath));
+        File.Exists(retiredPath).Should().BeTrue();
     }
 
     [Fact]
@@ -221,9 +222,9 @@ public sealed class KboSeedFilesTests : IDisposable
             Path.Combine("news_templates", "ko", "foreign_injury.json"),
             "Language split foreign injury news templates");
 
-        Assert.False(File.Exists(flatCombined));
-        Assert.False(File.Exists(flatSplit));
-        Assert.True(File.Exists(languageSplit));
+        File.Exists(flatCombined).Should().BeFalse();
+        File.Exists(flatSplit).Should().BeFalse();
+        File.Exists(languageSplit).Should().BeTrue();
     }
 
     [Fact]
@@ -242,9 +243,9 @@ public sealed class KboSeedFilesTests : IDisposable
         var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
 
         var text = File.ReadAllText(path);
-        Assert.True(repaired);
-        Assert.Contains("<Game day=\"106\" time=\"1830\" away=\"0\" home=\"0\" type=\"4\" />", text);
-        Assert.True(text.IndexOf("type=\"4\"", StringComparison.Ordinal) < text.IndexOf("day=\"1\"", StringComparison.Ordinal));
+        repaired.Should().BeTrue();
+        text.Should().Contain("<Game day=\"106\" time=\"1830\" away=\"0\" home=\"0\" type=\"4\" />");
+        (text.IndexOf("type=\"4\"", StringComparison.Ordinal) < text.IndexOf("day=\"1\"", StringComparison.Ordinal)).Should().BeTrue();
     }
 
     [Fact]
@@ -262,8 +263,8 @@ public sealed class KboSeedFilesTests : IDisposable
 
         var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
 
-        Assert.False(repaired);
-        Assert.Equal(2, File.ReadAllText(path).Split("type=\"4\"").Length);
+        repaired.Should().BeFalse();
+        File.ReadAllText(path).Split("type=\"4\"").Should().HaveCount(2);
     }
 
     [Fact]
@@ -283,9 +284,9 @@ public sealed class KboSeedFilesTests : IDisposable
         var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
 
         var text = File.ReadAllText(path);
-        Assert.True(repaired);
-        Assert.True(text.IndexOf("type=\"4\"", StringComparison.Ordinal) < text.IndexOf("day=\"1\"", StringComparison.Ordinal));
-        Assert.Equal(2, text.Split("type=\"4\"").Length);
+        repaired.Should().BeTrue();
+        (text.IndexOf("type=\"4\"", StringComparison.Ordinal) < text.IndexOf("day=\"1\"", StringComparison.Ordinal)).Should().BeTrue();
+        text.Split("type=\"4\"").Should().HaveCount(2);
     }
 
     [Fact]
@@ -302,8 +303,8 @@ public sealed class KboSeedFilesTests : IDisposable
 
         var repaired = global::KboSeedFiles.EnsureKboScheduleAllstarGameLine(path);
 
-        Assert.False(repaired);
-        Assert.DoesNotContain("type=\"4\"", File.ReadAllText(path));
+        repaired.Should().BeFalse();
+        File.ReadAllText(path).Should().NotContain("type=\"4\"");
     }
 
     public void Dispose()

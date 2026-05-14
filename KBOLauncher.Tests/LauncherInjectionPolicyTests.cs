@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class LauncherInjectionPolicyTests
@@ -14,10 +15,10 @@ public sealed class LauncherInjectionPolicyTests
             attachRequested: false,
             allstarBootstrapRequested: false);
 
-        Assert.False(decision.ShouldInject);
-        Assert.Equal(global::LauncherInjectionMode.None, decision.Mode);
-        Assert.False(decision.RequiresSupportedBuild);
-        Assert.Equal("dll_not_requested", decision.Reason);
+        decision.ShouldInject.Should().BeFalse();
+        decision.Mode.Should().Be(global::LauncherInjectionMode.None);
+        decision.RequiresSupportedBuild.Should().BeFalse();
+        decision.Reason.Should().Be("dll_not_requested");
     }
 
     [Theory]
@@ -32,10 +33,10 @@ public sealed class LauncherInjectionPolicyTests
             attachRequested: attachRequested,
             allstarBootstrapRequested: true);
 
-        Assert.False(decision.ShouldInject);
-        Assert.True(decision.RequiresSupportedBuild);
-        Assert.False(decision.AllowsPresaveInjection);
-        Assert.Equal("unsupported_ootp_build", decision.Reason);
+        decision.ShouldInject.Should().BeFalse();
+        decision.RequiresSupportedBuild.Should().BeTrue();
+        decision.AllowsPresaveInjection.Should().BeFalse();
+        decision.Reason.Should().Be("unsupported_ootp_build");
     }
 
     [Theory]
@@ -50,11 +51,11 @@ public sealed class LauncherInjectionPolicyTests
             attachRequested: true,
             allstarBootstrapRequested: true);
 
-        Assert.True(decision.ShouldInject);
-        Assert.Equal(global::LauncherInjectionMode.AttachExisting, decision.Mode);
-        Assert.True(decision.RequiresRosterMarkerBeforeInjection);
-        Assert.False(decision.AllowsPresaveInjection);
-        Assert.Equal(expectedReason, decision.Reason);
+        decision.ShouldInject.Should().BeTrue();
+        decision.Mode.Should().Be(global::LauncherInjectionMode.AttachExisting);
+        decision.RequiresRosterMarkerBeforeInjection.Should().BeTrue();
+        decision.AllowsPresaveInjection.Should().BeFalse();
+        decision.Reason.Should().Be(expectedReason);
     }
 
     [Fact]
@@ -67,10 +68,10 @@ public sealed class LauncherInjectionPolicyTests
             attachRequested: false,
             allstarBootstrapRequested: false);
 
-        Assert.True(decision.ShouldInject);
-        Assert.Equal(global::LauncherInjectionMode.LaunchThenWaitForMarkedSave, decision.Mode);
-        Assert.True(decision.RequiresRosterMarkerBeforeInjection);
-        Assert.False(decision.AllowsPresaveInjection);
+        decision.ShouldInject.Should().BeTrue();
+        decision.Mode.Should().Be(global::LauncherInjectionMode.LaunchThenWaitForMarkedSave);
+        decision.RequiresRosterMarkerBeforeInjection.Should().BeTrue();
+        decision.AllowsPresaveInjection.Should().BeFalse();
     }
 
     [Fact]
@@ -83,10 +84,10 @@ public sealed class LauncherInjectionPolicyTests
             attachRequested: false,
             allstarBootstrapRequested: true);
 
-        Assert.True(decision.ShouldInject);
-        Assert.Equal(global::LauncherInjectionMode.PresaveAllstarBootstrap, decision.Mode);
-        Assert.False(decision.RequiresRosterMarkerBeforeInjection);
-        Assert.True(decision.AllowsPresaveInjection);
-        Assert.Equal("presave_allstar_bootstrap", decision.Reason);
+        decision.ShouldInject.Should().BeTrue();
+        decision.Mode.Should().Be(global::LauncherInjectionMode.PresaveAllstarBootstrap);
+        decision.RequiresRosterMarkerBeforeInjection.Should().BeFalse();
+        decision.AllowsPresaveInjection.Should().BeTrue();
+        decision.Reason.Should().Be("presave_allstar_bootstrap");
     }
 }

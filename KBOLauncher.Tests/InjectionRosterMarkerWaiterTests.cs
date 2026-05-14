@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class InjectionRosterMarkerWaiterTests
@@ -20,6 +21,6 @@ public sealed class InjectionRosterMarkerWaiterTests
 
         var actual = global::InjectionRosterMarkerWaiter.IsTerminalRosterMarkerFailure(info);
 
-        Assert.Equal(expected, actual);
+        actual.Should().Be(expected);
     }
 }

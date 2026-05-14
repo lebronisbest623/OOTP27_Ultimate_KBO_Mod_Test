@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class LauncherOptionsTests
@@ -17,18 +18,18 @@ public sealed class LauncherOptionsTests
             "debug"
         ]);
 
-        Assert.Equal(@"D:\Games\ootp27.exe", options.OotpPath);
-        Assert.Equal(@"C:\mods\KBOFix.dll", options.DllPath);
-        Assert.True(options.AttachExisting);
-        Assert.False(options.EnableForeignWaiverAi);
-        Assert.Equal(["no3d", "debug"], options.OotpArgs);
+        options.OotpPath.Should().Be(@"D:\Games\ootp27.exe");
+        options.DllPath.Should().Be(@"C:\mods\KBOFix.dll");
+        options.AttachExisting.Should().BeTrue();
+        options.EnableForeignWaiverAi.Should().BeFalse();
+        options.OotpArgs.Should().Equal("no3d", "debug");
     }
 
     [Fact]
     public void Parse_RejectsAttachPidWithoutNumericValue()
     {
-        var ex = Assert.Throws<ArgumentException>(() => global::LauncherOptions.Parse(["--attach-pid", "abc"]));
-        Assert.Contains("--attach-pid", ex.Message);
+        var act = () => global::LauncherOptions.Parse(["--attach-pid", "abc"]);
+        act.Should().Throw<ArgumentException>().WithMessage("*--attach-pid*");
     }
 
     [Fact]
@@ -43,18 +44,18 @@ public sealed class LauncherOptionsTests
             "--help"
         ]);
 
-        Assert.Equal(1234, options.AttachPid);
-        Assert.True(options.EnableForeignWaiverAi);
-        Assert.False(options.EnableSingleDivisionAllstarEvents);
-        Assert.True(options.DryRun);
-        Assert.True(options.AllowSecondInstance);
-        Assert.True(options.ShowHelp);
+        options.AttachPid.Should().Be(1234);
+        options.EnableForeignWaiverAi.Should().BeTrue();
+        options.EnableSingleDivisionAllstarEvents.Should().BeFalse();
+        options.DryRun.Should().BeTrue();
+        options.AllowSecondInstance.Should().BeTrue();
+        options.ShowHelp.Should().BeTrue();
     }
 
     [Fact]
     public void Parse_RejectsUnknownArgument()
     {
-        var ex = Assert.Throws<ArgumentException>(() => global::LauncherOptions.Parse(["--wat"]));
-        Assert.Contains("Unknown argument", ex.Message);
+        var act = () => global::LauncherOptions.Parse(["--wat"]);
+        act.Should().Throw<ArgumentException>().WithMessage("*--wat*");
     }
 }

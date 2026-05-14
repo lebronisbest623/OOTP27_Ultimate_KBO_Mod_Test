@@ -1,3 +1,5 @@
+using System.CommandLine;
+
 record LauncherOptions(
     string? OotpPath,
     string? DllPath,
@@ -10,82 +12,90 @@ record LauncherOptions(
     bool ShowHelp,
     IReadOnlyList<string> OotpArgs)
 {
+    private static readonly Option<string?> OotpPathOpt =
+        new("--ootp", "Explicit ootp27.exe path.");
+    private static readonly Option<string?> DllPathOpt =
+        new("--dll", "Native DLL to load into OOTP.");
+    private static readonly Option<int?> AttachPidOpt =
+        new("--attach-pid", "Attach to a specific OOTP process id.");
+    private static readonly Option<bool> AttachExistingOpt =
+        new("--attach-existing", "Attach to the single running OOTP process.");
+    private static readonly Option<bool> EnableForeignWaiverAiOpt =
+        new("--enable-foreign-waiver-ai", "Enable foreign waiver assistant log.");
+    private static readonly Option<bool> DisableForeignWaiverAiOpt =
+        new("--disable-foreign-waiver-ai", "Disable foreign waiver assistant log.");
+    private static readonly Option<bool> EnableAllstarEventsOpt =
+        new("--enable-single-division-allstar-events", "Enable single-division all-star event creation.");
+    private static readonly Option<bool> DisableAllstarEventsOpt =
+        new("--disable-single-division-allstar-events", "Disable single-division all-star event creation.");
+    private static readonly Option<bool> DryRunOpt =
+        new("--dry-run", "Resolve paths and detect existing process without launching.");
+    private static readonly Option<bool> AllowSecondInstanceOpt =
+        new("--allow-second-instance", "Launch even if an OOTP process is already running.");
+
+    private static readonly RootCommand Command = BuildCommand();
+
+    private static RootCommand BuildCommand()
+    {
+        var cmd = new RootCommand("KBOLauncher — OOTP 27 KBO mod launcher");
+        cmd.AddOption(OotpPathOpt);
+        cmd.AddOption(DllPathOpt);
+        cmd.AddOption(AttachPidOpt);
+        cmd.AddOption(AttachExistingOpt);
+        cmd.AddOption(EnableForeignWaiverAiOpt);
+        cmd.AddOption(DisableForeignWaiverAiOpt);
+        cmd.AddOption(EnableAllstarEventsOpt);
+        cmd.AddOption(DisableAllstarEventsOpt);
+        cmd.AddOption(DryRunOpt);
+        cmd.AddOption(AllowSecondInstanceOpt);
+        return cmd;
+    }
+
     public static LauncherOptions Parse(string[] args)
     {
-        string? ootpPath = null;
-        string? dllPath = null;
-        int? attachPid = null;
-        var attachExisting = false;
-        bool? enableForeignWaiverAi = null;
-        bool? enableSingleDivisionAllstarEvents = null;
-        var dryRun = false;
-        var allowSecondInstance = false;
-        var showHelp = false;
-        var ootpArgs = new List<string>();
+        var showHelp = args.Any(a => a is "-h" or "--help");
 
-        for (var i = 0; i < args.Length; i++)
+        // Split at -- so OOTP passthrough args are not parsed as launcher options
+        var dashDashIdx = Array.IndexOf(args, "--");
+        string[] launcherArgs;
+        List<string> ootpArgs;
+        if (dashDashIdx >= 0)
         {
-            var arg = args[i];
-            switch (arg)
-            {
-                case "--ootp":
-                    if (++i >= args.Length)
-                        throw new ArgumentException("--ootp requires a path");
-                    ootpPath = args[i];
-                    break;
-                case "--dll":
-                    if (++i >= args.Length)
-                        throw new ArgumentException("--dll requires a path");
-                    dllPath = args[i];
-                    break;
-                case "--attach-pid":
-                    if (++i >= args.Length || !int.TryParse(args[i], out var parsedPid))
-                        throw new ArgumentException("--attach-pid requires a numeric process id");
-                    attachPid = parsedPid;
-                    break;
-                case "--attach-existing":
-                    attachExisting = true;
-                    break;
-                case "--enable-foreign-waiver-ai":
-                    enableForeignWaiverAi = true;
-                    break;
-                case "--disable-foreign-waiver-ai":
-                    enableForeignWaiverAi = false;
-                    break;
-                case "--enable-single-division-allstar-events":
-                    enableSingleDivisionAllstarEvents = true;
-                    break;
-                case "--disable-single-division-allstar-events":
-                    enableSingleDivisionAllstarEvents = false;
-                    break;
-                case "--dry-run":
-                    dryRun = true;
-                    break;
-                case "--allow-second-instance":
-                    allowSecondInstance = true;
-                    break;
-                case "-h":
-                case "--help":
-                    showHelp = true;
-                    break;
-                case "--":
-                    ootpArgs.AddRange(args.Skip(i + 1));
-                    i = args.Length;
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown argument: {arg}");
-            }
+            launcherArgs = args[..dashDashIdx];
+            ootpArgs = [..args[(dashDashIdx + 1)..]];
+        }
+        else
+        {
+            launcherArgs = args;
+            ootpArgs = [];
         }
 
+        // Strip --help/-h before SC parsing — we handle help output ourselves
+        launcherArgs = launcherArgs.Where(a => a is not ("-h" or "--help")).ToArray();
+
+        var parseResult = Command.Parse(launcherArgs);
+        if (parseResult.Errors.Count > 0)
+        {
+            throw new ArgumentException(parseResult.Errors[0].Message);
+        }
+
+        bool? enableForeignWaiverAi = null;
+        if (parseResult.GetValueForOption(EnableForeignWaiverAiOpt)) enableForeignWaiverAi = true;
+        if (parseResult.GetValueForOption(DisableForeignWaiverAiOpt)) enableForeignWaiverAi = false;
+
+        bool? enableSingleDivisionAllstarEvents = null;
+        if (parseResult.GetValueForOption(EnableAllstarEventsOpt)) enableSingleDivisionAllstarEvents = true;
+        if (parseResult.GetValueForOption(DisableAllstarEventsOpt)) enableSingleDivisionAllstarEvents = false;
+
         return new LauncherOptions(
-            ootpPath,
-            dllPath,
-            attachPid,
-            attachExisting,
+            parseResult.GetValueForOption(OotpPathOpt),
+            parseResult.GetValueForOption(DllPathOpt),
+            parseResult.GetValueForOption(AttachPidOpt),
+            parseResult.GetValueForOption(AttachExistingOpt),
             enableForeignWaiverAi,
             enableSingleDivisionAllstarEvents,
-            dryRun,
-            allowSecondInstance,
+            parseResult.GetValueForOption(DryRunOpt),
+            parseResult.GetValueForOption(AllowSecondInstanceOpt),
             showHelp,
             ootpArgs);
     }

@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class OotpBuildGuardTests : IDisposable
@@ -15,9 +16,9 @@ public sealed class OotpBuildGuardTests : IDisposable
 
         var info = global::OotpBuildGuard.Read(path);
 
-        Assert.False(info.Ok);
-        Assert.Equal("file too small", info.Error);
-        Assert.Null(global::OotpBuildGuard.FindSupportedBuild(info));
+        info.Ok.Should().BeFalse();
+        info.Error.Should().Be("file too small");
+        global::OotpBuildGuard.FindSupportedBuild(info).Should().BeNull();
     }
 
     [Fact]
@@ -28,11 +29,11 @@ public sealed class OotpBuildGuardTests : IDisposable
 
         var info = global::OotpBuildGuard.Read(path);
 
-        Assert.True(info.Ok);
-        Assert.Equal(0x12345678u, info.Timestamp);
-        Assert.Equal(0x00100000u, info.SizeOfImage);
-        Assert.Null(global::OotpBuildGuard.FindSupportedBuild(info));
-        Assert.Contains("unsupported", global::OotpBuildGuard.FormatConsoleStatus(info, null));
+        info.Ok.Should().BeTrue();
+        info.Timestamp.Should().Be(0x12345678u);
+        info.SizeOfImage.Should().Be(0x00100000u);
+        global::OotpBuildGuard.FindSupportedBuild(info).Should().BeNull();
+        global::OotpBuildGuard.FormatConsoleStatus(info, null).Should().Contain("unsupported");
     }
 
     [Fact]
@@ -41,7 +42,7 @@ public sealed class OotpBuildGuardTests : IDisposable
         var invalidDos = Path.Combine(tempDir, "invalid-dos.exe");
         Directory.CreateDirectory(tempDir);
         File.WriteAllBytes(invalidDos, new byte[0x200]);
-        Assert.Equal("invalid DOS signature", global::OotpBuildGuard.Read(invalidDos).Error);
+        global::OotpBuildGuard.Read(invalidDos).Error.Should().Be("invalid DOS signature");
 
         var invalidOffset = Path.Combine(tempDir, "invalid-offset.exe");
         var offsetBytes = new byte[0x200];
@@ -49,7 +50,7 @@ public sealed class OotpBuildGuardTests : IDisposable
         offsetBytes[1] = 0x5A;
         BitConverter.GetBytes(0x1FF).CopyTo(offsetBytes, 0x3C);
         File.WriteAllBytes(invalidOffset, offsetBytes);
-        Assert.Equal("invalid PE header offset", global::OotpBuildGuard.Read(invalidOffset).Error);
+        global::OotpBuildGuard.Read(invalidOffset).Error.Should().Be("invalid PE header offset");
 
         var invalidPe = Path.Combine(tempDir, "invalid-pe.exe");
         WriteMinimalPe(invalidPe, 0x12345678u, 0x00100000u);
@@ -59,7 +60,7 @@ public sealed class OotpBuildGuardTests : IDisposable
             stream.WriteByte(0x00);
         }
 
-        Assert.Equal("invalid PE signature", global::OotpBuildGuard.Read(invalidPe).Error);
+        global::OotpBuildGuard.Read(invalidPe).Error.Should().Be("invalid PE signature");
     }
 
     [Fact]
@@ -71,15 +72,14 @@ public sealed class OotpBuildGuardTests : IDisposable
 
             var supported = global::OotpBuildGuard.FindSupportedBuild(info);
 
-            Assert.NotNull(supported);
-            Assert.Equal(expected.Label, supported.Label);
-            Assert.Contains($"supported ({expected.Label})", global::OotpBuildGuard.FormatConsoleStatus(info, supported));
-            Assert.Contains("status=supported", global::OotpBuildGuard.FormatLogStatus(info, supported));
-            Assert.Contains(
+            supported.Should().NotBeNull();
+            supported!.Label.Should().Be(expected.Label);
+            global::OotpBuildGuard.FormatConsoleStatus(info, supported).Should().Contain($"supported ({expected.Label})");
+            global::OotpBuildGuard.FormatLogStatus(info, supported).Should().Contain("status=supported");
+            global::OotpBuildGuard.SupportedBuildDescriptions().Should().Contain(
                 $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}" +
                 (expected.ExperimentalSignature ? "[experimental_signature]" : "") +
-                "[native_patches]",
-                global::OotpBuildGuard.SupportedBuildDescriptions());
+                "[native_patches]");
         }
     }
 
@@ -92,14 +92,13 @@ public sealed class OotpBuildGuardTests : IDisposable
         var supported = global::OotpBuildGuard.FindSupportedBuild(info);
         var known = global::OotpBuildGuard.FindKnownBuild(info);
 
-        Assert.Null(supported);
-        Assert.NotNull(known);
-        Assert.True(known.ExperimentalSignature);
-        Assert.False(known.NativePatchesSupported);
-        Assert.Contains("unsupported", global::OotpBuildGuard.FormatConsoleStatus(info, supported));
-        Assert.Contains(
-            $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}[experimental_signature][metadata_only]",
-            global::OotpBuildGuard.SupportedBuildDescriptions());
+        supported.Should().BeNull();
+        known.Should().NotBeNull();
+        known!.ExperimentalSignature.Should().BeTrue();
+        known.NativePatchesSupported.Should().BeFalse();
+        global::OotpBuildGuard.FormatConsoleStatus(info, supported).Should().Contain("unsupported");
+        global::OotpBuildGuard.SupportedBuildDescriptions().Should().Contain(
+            $"{expected.Label}:0x{expected.Timestamp:X8}/0x{expected.SizeOfImage:X8}[experimental_signature][metadata_only]");
     }
 
     [Fact]
@@ -108,12 +107,11 @@ public sealed class OotpBuildGuardTests : IDisposable
         var unreadable = global::OotpBuildInfo.Fail("boom");
         var unsupported = new global::OotpBuildInfo(true, 0x11111111u, 0x22222222u, null);
 
-        Assert.Equal("OOTP build: unreadable (boom)", global::OotpBuildGuard.FormatConsoleStatus(unreadable, null));
-        Assert.Equal("ootp_build status=unreadable error=\"boom\"", global::OotpBuildGuard.FormatLogStatus(unreadable, null));
-        Assert.Contains("timestamp=0x11111111", global::OotpBuildGuard.FormatConsoleStatus(unsupported, null));
-        Assert.Equal(
-            "ootp_build status=unsupported timestamp=0x11111111 size_of_image=0x22222222",
-            global::OotpBuildGuard.FormatLogStatus(unsupported, null));
+        global::OotpBuildGuard.FormatConsoleStatus(unreadable, null).Should().Be("OOTP build: unreadable (boom)");
+        global::OotpBuildGuard.FormatLogStatus(unreadable, null).Should().Be("ootp_build status=unreadable error=\"boom\"");
+        global::OotpBuildGuard.FormatConsoleStatus(unsupported, null).Should().Contain("timestamp=0x11111111");
+        global::OotpBuildGuard.FormatLogStatus(unsupported, null).Should().Be(
+            "ootp_build status=unsupported timestamp=0x11111111 size_of_image=0x22222222");
     }
 
     private static void WriteMinimalPe(string path, uint timestamp, uint sizeOfImage)

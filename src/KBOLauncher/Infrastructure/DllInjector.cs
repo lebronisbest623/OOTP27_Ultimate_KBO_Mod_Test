@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Spectre.Console;
 using static LauncherPaths;
 using static LauncherLog;
 
@@ -14,7 +15,7 @@ internal static class DllInjector
             throw new FileNotFoundException("DLL not found", fullDllPath);
         }
     
-        Console.WriteLine($"Injecting DLL into pid={pid}: {fullDllPath}");
+        AnsiConsole.MarkupLineInterpolated($"[green]Injecting DLL[/] into pid={pid}: {fullDllPath}");
         Log(logPath, $"inject_start pid={pid} dll={fullDllPath}");
 
         try
@@ -97,7 +98,7 @@ internal static class DllInjector
                             ThrowWin32("GetExitCodeThread");
                         }
 
-                        Console.WriteLine($"DLL injection thread={threadId} exit=0x{exitCode:X}");
+                        AnsiConsole.MarkupLineInterpolated($"[green]DLL injection[/] thread={threadId} exit=0x{exitCode:X}");
                         Log(logPath, $"inject_done pid={pid} thread={threadId} exit=0x{exitCode:X}");
                         if (exitCode == 0)
                         {

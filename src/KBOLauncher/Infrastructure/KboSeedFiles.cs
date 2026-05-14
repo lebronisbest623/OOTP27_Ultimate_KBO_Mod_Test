@@ -1,5 +1,5 @@
 using System.Text.Json;
-
+using Spectre.Console;
 using static LauncherPaths;
 
 internal static partial class KboSeedFiles
@@ -45,19 +45,19 @@ internal static partial class KboSeedFiles
                 if (shouldCopy)
                 {
                     File.Copy(candidate, localPath, overwrite: true);
-                    Console.WriteLine($"KBO league id: seeded {localPath}");
+                    AnsiConsole.MarkupLineInterpolated($"[green]KBO league id: seeded[/] {localPath}");
                 }
                 return;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to seed kbo_league_id.txt from {candidate}: {ex.Message}");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]Failed to seed kbo_league_id.txt from {candidate}: {ex.Message}[/]");
                 return;
             }
         }
-    
-        Console.WriteLine("kbo_league_id.txt not found in launcher directory. Set it manually at:");
-        Console.WriteLine(localPath);
+
+        AnsiConsole.MarkupLine("[yellow]kbo_league_id.txt not found in launcher directory. Set it manually at:[/]");
+        AnsiConsole.WriteLine(localPath);
     }
     
     public static void EnsureBundledKboDataManifest()
@@ -87,13 +87,13 @@ internal static partial class KboSeedFiles
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to read {SeedManifestFileName}: {ex.Message}");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]Failed to read {SeedManifestFileName}: {ex.Message}[/]");
             return;
         }
 
         if (manifest?.Groups is null)
         {
-            Console.WriteLine($"{SeedManifestFileName}: no seed groups found");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]{SeedManifestFileName}: no seed groups found[/]");
             return;
         }
 
@@ -112,7 +112,7 @@ internal static partial class KboSeedFiles
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{SeedManifestFileName}: ignored invalid seed path '{file.Path}': {ex.Message}");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]{SeedManifestFileName}: ignored invalid seed path '{file.Path}': {ex.Message}[/]");
                 continue;
             }
 
@@ -124,7 +124,7 @@ internal static partial class KboSeedFiles
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{SeedManifestFileName}: ignored invalid seed source '{source}': {ex.Message}");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]{SeedManifestFileName}: ignored invalid seed source '{source}': {ex.Message}[/]");
                 continue;
             }
 
@@ -223,11 +223,11 @@ internal static partial class KboSeedFiles
             }
 
             File.Delete(localPath);
-            Console.WriteLine($"{label}: removed retired bundled seed {localPath}");
+            AnsiConsole.MarkupLineInterpolated($"{label}: removed retired bundled seed {localPath}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to remove retired {fileName}: {ex.Message}");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]Failed to remove retired {fileName}: {ex.Message}[/]");
         }
     }
 
@@ -321,18 +321,18 @@ internal static partial class KboSeedFiles
                 if (shouldCopy)
                 {
                     File.Copy(candidate, localPath, overwrite: true);
-                    Console.WriteLine($"{label}: seeded {localPath}");
+                    AnsiConsole.MarkupLineInterpolated($"[green]{label}: seeded[/] {localPath}");
                 }
                 return;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to seed {fileName} from {candidate}: {ex.Message}");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]Failed to seed {fileName} from {candidate}: {ex.Message}[/]");
                 return;
             }
         }
 
-        Console.WriteLine($"{label}: bundled seed not found for {fileName}");
+        AnsiConsole.MarkupLineInterpolated($"[yellow]{label}: bundled seed not found for {fileName}[/]");
     }
 
     private static IReadOnlyList<string> ResolveBundledKboDataFileCandidates(string relativePath)
@@ -437,18 +437,18 @@ internal static partial class KboSeedFiles
 
                 if (copied > 0)
                 {
-                    Console.WriteLine($"{label}: seeded {copied} file(s) under {localPath}");
+                    AnsiConsole.MarkupLineInterpolated($"[green]{label}: seeded {copied} file(s) under[/] {localPath}");
                 }
                 return;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to seed {directoryName} from {candidate}: {ex.Message}");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]Failed to seed {directoryName} from {candidate}: {ex.Message}[/]");
                 return;
             }
         }
 
-        Console.WriteLine($"{label}: bundled seed directory not found for {directoryName}");
+        AnsiConsole.MarkupLineInterpolated($"[yellow]{label}: bundled seed directory not found for {directoryName}[/]");
     }
 
 }

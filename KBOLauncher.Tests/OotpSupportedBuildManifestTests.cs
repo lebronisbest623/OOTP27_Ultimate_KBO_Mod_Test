@@ -2,6 +2,7 @@ namespace KBOLauncher.Tests;
 
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using FluentAssertions;
 using Xunit;
 
 public sealed class OotpSupportedBuildManifestTests
@@ -20,8 +21,8 @@ public sealed class OotpSupportedBuildManifestTests
             .ToArray();
         var nativeBuilds = ReadNativeGeneratedBuilds();
 
-        Assert.Equal(manifestBuilds, managedBuilds);
-        Assert.Equal(manifestBuilds.Select(build => build.NativeRow).ToArray(), nativeBuilds);
+        managedBuilds.Should().Equal(manifestBuilds);
+        nativeBuilds.Should().Equal(manifestBuilds.Select(build => build.NativeRow).ToArray());
     }
 
     [Fact]
@@ -33,7 +34,7 @@ public sealed class OotpSupportedBuildManifestTests
             .GroupBy(build => new { build.Timestamp, build.SizeOfImage })
             .FirstOrDefault(group => group.Count() > 1);
 
-        Assert.Null(duplicate);
+        duplicate.Should().BeNull();
     }
 
     [Fact]
@@ -58,13 +59,13 @@ public sealed class OotpSupportedBuildManifestTests
         foreach (var build in officialExperimentalBuilds)
         {
             var token = ToNativeBuildMacroToken(build.Label);
-            Assert.Contains($"KBO_SUPPORTED_OOTP_BUILD_{token}_TIMESTAMP", resolverText);
-            Assert.Contains($"KBO_SUPPORTED_OOTP_BUILD_{token}_SIZE_OF_IMAGE", resolverText);
+            resolverText.Should().Contain($"KBO_SUPPORTED_OOTP_BUILD_{token}_TIMESTAMP");
+            resolverText.Should().Contain($"KBO_SUPPORTED_OOTP_BUILD_{token}_SIZE_OF_IMAGE");
         }
 
         foreach (var rva in criticalRvas)
         {
-            Assert.Equal(officialExperimentalBuilds.Length, Regex.Matches(resolverText, $"case {rva}:").Count);
+            Regex.Matches(resolverText, $"case {rva}:").Count.Should().Be(officialExperimentalBuilds.Length);
         }
     }
 
@@ -82,14 +83,14 @@ public sealed class OotpSupportedBuildManifestTests
             "OOTP27_MAKE_ALLSTAR_GAME_EVENTS_RVA",
         };
 
-        Assert.NotEmpty(officialBuilds);
+        officialBuilds.Should().NotBeEmpty();
         foreach (var build in officialBuilds.Where(build => build.NativePatchesSupported))
         {
             var token = ToNativeBuildMacroToken(build.Label);
-            Assert.Contains($"KBO_SUPPORTED_OOTP_BUILD_{token}_TIMESTAMP", resolverText);
+            resolverText.Should().Contain($"KBO_SUPPORTED_OOTP_BUILD_{token}_TIMESTAMP");
             foreach (var rva in requiredDirectFunctionRvas)
             {
-                Assert.Contains($"case {rva}:", resolverText);
+                resolverText.Should().Contain($"case {rva}:");
             }
         }
     }
@@ -124,7 +125,7 @@ public sealed class OotpSupportedBuildManifestTests
 
     private static uint ParseHexUInt32(string value)
     {
-        Assert.Matches("^0x[0-9A-Fa-f]{1,8}$", value);
+        value.Should().MatchRegex("^0x[0-9A-Fa-f]{1,8}$");
         return Convert.ToUInt32(value[2..], 16);
     }
 

@@ -1,7 +1,7 @@
 namespace KBOLauncher.Tests;
 
 using System.Text.Json;
-
+using FluentAssertions;
 using Xunit;
 
 public sealed class ReleasePackageIgnoreTests
@@ -18,7 +18,7 @@ public sealed class ReleasePackageIgnoreTests
     {
         var gitignore = File.ReadAllLines(Path.Combine(FindRepoRoot(), ".gitignore"));
 
-        Assert.Contains(requiredPattern, gitignore);
+        gitignore.Should().Contain(requiredPattern);
     }
 
     [Theory]
@@ -35,7 +35,7 @@ public sealed class ReleasePackageIgnoreTests
     {
         var script = File.ReadAllText(Path.Combine(FindRepoRoot(), "scripts", "release.ps1"));
 
-        Assert.Contains(requiredFileLiteral, script);
+        script.Should().Contain(requiredFileLiteral);
     }
 
     [Fact]
@@ -45,10 +45,10 @@ public sealed class ReleasePackageIgnoreTests
         var releaseScript = File.ReadAllText(Path.Combine(root, "scripts", "release.ps1"));
         var validationScript = File.ReadAllText(Path.Combine(root, "tests", "release", "verify-release-artifact.ps1"));
 
-        Assert.Contains("seed_manifest.json", releaseScript);
-        Assert.Contains("seed_manifest.json", validationScript);
-        Assert.Contains("Get-SeedManifestPayloadFiles", releaseScript);
-        Assert.Contains("Get-SeedManifestPayloadFiles", validationScript);
+        releaseScript.Should().Contain("seed_manifest.json");
+        validationScript.Should().Contain("seed_manifest.json");
+        releaseScript.Should().Contain("Get-SeedManifestPayloadFiles");
+        validationScript.Should().Contain("Get-SeedManifestPayloadFiles");
     }
 
     [Fact]
@@ -77,9 +77,9 @@ public sealed class ReleasePackageIgnoreTests
             .Select(path => Path.GetRelativePath(seedRoot, path))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.Empty(actual.Except(listedSources, StringComparer.OrdinalIgnoreCase));
-        Assert.Empty(listedSources.Except(actual, StringComparer.OrdinalIgnoreCase));
-        Assert.Equal(listedTargets.Length, listedTargets.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        actual.Except(listedSources, StringComparer.OrdinalIgnoreCase).Should().BeEmpty();
+        listedSources.Except(actual, StringComparer.OrdinalIgnoreCase).Should().BeEmpty();
+        listedTargets.Distinct(StringComparer.OrdinalIgnoreCase).Count().Should().Be(listedTargets.Length);
     }
 
     private static string GetManifestRelativePath(

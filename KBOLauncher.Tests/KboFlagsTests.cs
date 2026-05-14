@@ -1,6 +1,7 @@
 namespace KBOLauncher.Tests;
 
 using System.Text.Json;
+using FluentAssertions;
 using Xunit;
 
 public sealed class KboFlagsTests : IDisposable
@@ -12,8 +13,8 @@ public sealed class KboFlagsTests : IDisposable
     [Fact]
     public void NormalizeKboFlagKey_StripsDirectoryAndTxtExtension()
     {
-        Assert.Equal("enable_foreign_waiver_ai", global::KboFlags.NormalizeKboFlagKey(@"C:\tmp\enable_foreign_waiver_ai.txt"));
-        Assert.Equal("disable_foreign_injury_replacement", global::KboFlags.NormalizeKboFlagKey("disable_foreign_injury_replacement"));
+        global::KboFlags.NormalizeKboFlagKey(@"C:\tmp\enable_foreign_waiver_ai.txt").Should().Be("enable_foreign_waiver_ai");
+        global::KboFlags.NormalizeKboFlagKey("disable_foreign_injury_replacement").Should().Be("disable_foreign_injury_replacement");
     }
 
     [Fact]
@@ -31,11 +32,11 @@ public sealed class KboFlagsTests : IDisposable
 
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
 
-        Assert.True(flags["enable_launcher_injection"]);
-        Assert.True(flags["enable_foreign_waiver_ai"]);
-        Assert.False(flags["disable_foreign_injury_replacement"]);
-        Assert.False(flags.ContainsKey("enable_launcher_injection.txt"));
-        Assert.False(flags.ContainsKey("ignored"));
+        flags["enable_launcher_injection"].Should().BeTrue();
+        flags["enable_foreign_waiver_ai"].Should().BeTrue();
+        flags["disable_foreign_injury_replacement"].Should().BeFalse();
+        flags.ContainsKey("enable_launcher_injection.txt").Should().BeFalse();
+        flags.ContainsKey("ignored").Should().BeFalse();
     }
 
     [Fact]
@@ -51,8 +52,8 @@ public sealed class KboFlagsTests : IDisposable
         }
         """);
 
-        Assert.True(global::KboFlags.ReadKboFlag(ConfigPath, "enable_foreign_waiver_ai.txt"));
-        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_single_division_allstar_events.txt"));
+        global::KboFlags.ReadKboFlag(ConfigPath, "enable_foreign_waiver_ai.txt").Should().BeTrue();
+        global::KboFlags.ReadKboFlag(ConfigPath, "enable_single_division_allstar_events.txt").Should().BeFalse();
     }
 
     [Fact]
@@ -70,10 +71,10 @@ public sealed class KboFlagsTests : IDisposable
         global::KboFlags.WriteKboFlagValue(ConfigPath, "disable_foreign_injury_replacement.txt", false);
 
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["enable_launcher_injection"]);
-        Assert.True(flags["enable_foreign_waiver_ai"]);
-        Assert.False(flags["disable_foreign_injury_replacement"]);
-        Assert.Equal(10, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20));
+        flags["enable_launcher_injection"].Should().BeTrue();
+        flags["enable_foreign_waiver_ai"].Should().BeTrue();
+        flags["disable_foreign_injury_replacement"].Should().BeFalse();
+        global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20).Should().Be(10);
     }
 
     [Fact]
@@ -95,10 +96,10 @@ public sealed class KboFlagsTests : IDisposable
 
         using var doc = JsonDocument.Parse(File.ReadAllText(ConfigPath));
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["enable_launcher_injection"]);
+        flags["enable_launcher_injection"].Should().BeTrue();
         for (var index = 0; index < 32; index++)
         {
-            Assert.Equal(index % 2 == 0, flags[$"enable_concurrent_flag_{index}"]);
+            flags[$"enable_concurrent_flag_{index}"].Should().Be(index % 2 == 0);
         }
     }
 
@@ -112,8 +113,8 @@ public sealed class KboFlagsTests : IDisposable
 
         using var doc = JsonDocument.Parse(File.ReadAllText(ConfigPath));
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["enable_foreign_waiver_ai"]);
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        flags["enable_foreign_waiver_ai"].Should().BeTrue();
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt").Should().BeTrue();
     }
 
     [Fact]
@@ -129,8 +130,8 @@ public sealed class KboFlagsTests : IDisposable
         global::KboFlags.WriteKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 99, 1, 20);
 
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["enable_launcher_injection"]);
-        Assert.Equal(20, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20));
+        flags["enable_launcher_injection"].Should().BeTrue();
+        global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20).Should().Be(20);
     }
 
     [Theory]
@@ -148,11 +149,11 @@ public sealed class KboFlagsTests : IDisposable
         global::KboFlags.WriteKboSingleDivisionAllstarEventsFlag(ConfigPath, enabled);
 
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["enable_launcher_injection"]);
-        Assert.Equal(enabled, flags["enable_single_division_allstar_runtime_patches"]);
-        Assert.Equal(enabled, flags["enable_single_division_allstar_settings_patch"]);
-        Assert.Equal(enabled, flags["enable_single_division_allstar_voting_hook"]);
-        Assert.Equal(enabled, flags["enable_single_division_allstar_events"]);
+        flags["enable_launcher_injection"].Should().BeTrue();
+        flags["enable_single_division_allstar_runtime_patches"].Should().Be(enabled);
+        flags["enable_single_division_allstar_settings_patch"].Should().Be(enabled);
+        flags["enable_single_division_allstar_voting_hook"].Should().Be(enabled);
+        flags["enable_single_division_allstar_events"].Should().Be(enabled);
     }
 
     [Fact]
@@ -161,25 +162,25 @@ public sealed class KboFlagsTests : IDisposable
         global::KboFlags.EnsureDefaultKboRuntimeFlags(ConfigPath);
 
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["enable_experimental_runtime_hooks"]);
-        Assert.True(flags["enable_foreign_waiver_ai"]);
-        Assert.True(flags["enable_foreign_waiver_background_scanner"]);
-        Assert.True(flags["enable_launcher_injection"]);
-        Assert.False(flags["enable_foreign_ai_roster_management"]);
-        Assert.False(flags["enable_single_division_allstar_runtime_patches"]);
-        Assert.False(flags["enable_single_division_allstar_settings_patch"]);
-        Assert.False(flags["enable_single_division_allstar_voting_hook"]);
-        Assert.False(flags["enable_single_division_allstar_events"]);
-        Assert.True(flags["enable_kbo_foreign_trade_check_patch"]);
-        Assert.True(flags["enable_kbo_ai_fa_fallback_patch"]);
-        Assert.True(flags["enable_kbo_player_team_signability_patch"]);
-        Assert.True(flags["enable_kbo_offer_eligibility_patch"]);
-        Assert.True(flags["enable_kbo_callup_foreign_limit_patch"]);
-        Assert.True(flags["enable_intl_established_fa_quality_probe_patch"]);
-        Assert.False(flags["enable_kbo_season_phase_monitor"]);
-        Assert.False(flags["disable_kbo_fa_salary_opening_day_snapshot"]);
-        Assert.False(flags["disable_kbo_no_minor_contract_patch"]);
-        Assert.False(flags.ContainsKey("disable_kbo_no_minor_contract_experimental_patch"));
+        flags["enable_experimental_runtime_hooks"].Should().BeTrue();
+        flags["enable_foreign_waiver_ai"].Should().BeTrue();
+        flags["enable_foreign_waiver_background_scanner"].Should().BeTrue();
+        flags["enable_launcher_injection"].Should().BeTrue();
+        flags["enable_foreign_ai_roster_management"].Should().BeFalse();
+        flags["enable_single_division_allstar_runtime_patches"].Should().BeFalse();
+        flags["enable_single_division_allstar_settings_patch"].Should().BeFalse();
+        flags["enable_single_division_allstar_voting_hook"].Should().BeFalse();
+        flags["enable_single_division_allstar_events"].Should().BeFalse();
+        flags["enable_kbo_foreign_trade_check_patch"].Should().BeTrue();
+        flags["enable_kbo_ai_fa_fallback_patch"].Should().BeTrue();
+        flags["enable_kbo_player_team_signability_patch"].Should().BeTrue();
+        flags["enable_kbo_offer_eligibility_patch"].Should().BeTrue();
+        flags["enable_kbo_callup_foreign_limit_patch"].Should().BeTrue();
+        flags["enable_intl_established_fa_quality_probe_patch"].Should().BeTrue();
+        flags["enable_kbo_season_phase_monitor"].Should().BeFalse();
+        flags["disable_kbo_fa_salary_opening_day_snapshot"].Should().BeFalse();
+        flags["disable_kbo_no_minor_contract_patch"].Should().BeFalse();
+        flags.ContainsKey("disable_kbo_no_minor_contract_experimental_patch").Should().BeFalse();
     }
 
     [Fact]
@@ -195,8 +196,8 @@ public sealed class KboFlagsTests : IDisposable
         global::KboFlags.EnsureDefaultKboRuntimeFlags(ConfigPath);
 
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["disable_kbo_no_minor_contract_patch"]);
-        Assert.False(flags.ContainsKey("disable_kbo_no_minor_contract_experimental_patch"));
+        flags["disable_kbo_no_minor_contract_patch"].Should().BeTrue();
+        flags.ContainsKey("disable_kbo_no_minor_contract_experimental_patch").Should().BeFalse();
     }
 
     [Fact]
@@ -212,8 +213,8 @@ public sealed class KboFlagsTests : IDisposable
 
         global::KboFlags.EnsureDefaultKboRuntimeFlags(ConfigPath);
 
-        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_kbo_foreign_trade_check_patch.txt"));
-        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_experimental_runtime_hooks.txt"));
+        global::KboFlags.ReadKboFlag(ConfigPath, "enable_kbo_foreign_trade_check_patch.txt").Should().BeFalse();
+        global::KboFlags.ReadKboFlag(ConfigPath, "enable_experimental_runtime_hooks.txt").Should().BeFalse();
     }
 
     [Fact]
@@ -230,12 +231,12 @@ public sealed class KboFlagsTests : IDisposable
         global::KboFlags.ImportLegacyKboFlagFilesIfMissing(ConfigPath);
 
         var flags = global::KboFlags.ReadKboFlagConfig(ConfigPath);
-        Assert.True(flags["enable_launcher_injection"]);
-        Assert.True(flags["enable_experimental_runtime_hooks"]);
-        Assert.False(flags["disable_foreign_injury_replacement"]);
-        Assert.False(flags.ContainsKey("enable_player_profile_ocr_click_v1"));
-        Assert.False(flags.ContainsKey("kbo_league_id"));
-        Assert.False(flags.ContainsKey("foreign_waiver_negotiation_window"));
+        flags["enable_launcher_injection"].Should().BeTrue();
+        flags["enable_experimental_runtime_hooks"].Should().BeTrue();
+        flags["disable_foreign_injury_replacement"].Should().BeFalse();
+        flags.ContainsKey("enable_player_profile_ocr_click_v1").Should().BeFalse();
+        flags.ContainsKey("kbo_league_id").Should().BeFalse();
+        flags.ContainsKey("foreign_waiver_negotiation_window").Should().BeFalse();
     }
 
     [Fact]
@@ -251,28 +252,28 @@ public sealed class KboFlagsTests : IDisposable
 
         global::KboFlags.ImportLegacyKboFlagFilesIfMissing(ConfigPath);
 
-        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
+        global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt").Should().BeFalse();
     }
 
     [Fact]
     public void ReadKboFlagConfig_MissingOrMalformedFileFailsClosed()
     {
-        Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));
-        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        global::KboFlags.ReadKboFlagConfig(ConfigPath).Should().BeEmpty();
+        global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt").Should().BeFalse();
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt").Should().BeTrue();
 
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, "{ nope");
 
-        Assert.Empty(global::KboFlags.ReadKboFlagConfig(ConfigPath));
-        Assert.False(global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt"));
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        global::KboFlags.ReadKboFlagConfig(ConfigPath).Should().BeEmpty();
+        global::KboFlags.ReadKboFlag(ConfigPath, "enable_launcher_injection.txt").Should().BeFalse();
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt").Should().BeTrue();
     }
 
     [Fact]
     public void ReadKboFlagDefaultEnabled_EnableLauncherInjectionMissing_ReturnsTrue()
     {
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt").Should().BeTrue();
     }
 
     [Fact]
@@ -281,7 +282,7 @@ public sealed class KboFlagsTests : IDisposable
         Directory.CreateDirectory(tempDir);
         File.WriteAllText(ConfigPath, "{ nope");
 
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt").Should().BeTrue();
     }
 
     [Fact]
@@ -294,7 +295,7 @@ public sealed class KboFlagsTests : IDisposable
         }
         """);
 
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt").Should().BeTrue();
     }
 
     [Fact]
@@ -308,9 +309,9 @@ public sealed class KboFlagsTests : IDisposable
         }
         """);
 
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_foreign_waiver_ai.txt"));
-        Assert.True(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "missing_flag.txt"));
-        Assert.False(global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt"));
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_foreign_waiver_ai.txt").Should().BeTrue();
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "missing_flag.txt").Should().BeTrue();
+        global::KboFlags.ReadKboFlagDefaultEnabled(ConfigPath, "enable_launcher_injection.txt").Should().BeFalse();
     }
 
     [Theory]
@@ -327,7 +328,7 @@ public sealed class KboFlagsTests : IDisposable
         }
         """);
 
-        Assert.Equal(expected, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20));
+        global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 1, 1, 20).Should().Be(expected);
     }
 
     [Theory]
@@ -343,7 +344,7 @@ public sealed class KboFlagsTests : IDisposable
         }
         """);
 
-        Assert.Equal(7, global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 7, 1, 20));
+        global::KboFlags.ReadKboIntSetting(ConfigPath, "intl_established_fa_multiplier", 7, 1, 20).Should().Be(7);
     }
 
     [Theory]
@@ -359,8 +360,8 @@ public sealed class KboFlagsTests : IDisposable
     {
         using var doc = JsonDocument.Parse(json);
 
-        Assert.True(global::KboFlags.TryReadJsonBool(doc.RootElement, out var actual));
-        Assert.Equal(expected, actual);
+        global::KboFlags.TryReadJsonBool(doc.RootElement, out var actual).Should().BeTrue();
+        actual.Should().Be(expected);
     }
 
     [Theory]
@@ -372,7 +373,7 @@ public sealed class KboFlagsTests : IDisposable
     {
         using var doc = JsonDocument.Parse(json);
 
-        Assert.False(global::KboFlags.TryReadJsonBool(doc.RootElement, out _));
+        global::KboFlags.TryReadJsonBool(doc.RootElement, out _).Should().BeFalse();
     }
 
     public void Dispose()

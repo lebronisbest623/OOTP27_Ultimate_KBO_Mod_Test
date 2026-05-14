@@ -1,3 +1,4 @@
+using Spectre.Console;
 using static KboFlags;
 using static KboSeedFiles;
 using static LauncherGuardStatus;
@@ -65,13 +66,13 @@ internal static partial class LauncherApp
             Log(logPath, "default_injection=disabled reason=explicit_flag");
         }
 
-        Console.WriteLine($"OOTP: {exePath}");
-        Console.WriteLine($"WorkDir: {Path.GetDirectoryName(exePath)}");
-        Console.WriteLine($"Log: {logPath}");
+        AnsiConsole.MarkupLineInterpolated($"OOTP: {exePath}");
+        AnsiConsole.MarkupLineInterpolated($"WorkDir: {Path.GetDirectoryName(exePath)}");
+        AnsiConsole.MarkupLineInterpolated($"Log: {logPath}");
         if (isDefaultRun && options.DllPath is null)
         {
-            Console.WriteLine("KBOFix injection is disabled by enable_launcher_injection=false.");
-            Console.WriteLine($"To re-enable launcher injection, set enable_launcher_injection=true in: {GetKboFlagConfigPath()}");
+            AnsiConsole.MarkupLine("[yellow]KBOFix injection is disabled by enable_launcher_injection=false.[/]");
+            AnsiConsole.MarkupLineInterpolated($"To re-enable launcher injection, set enable_launcher_injection=true in: {GetKboFlagConfigPath()}");
         }
 
         return logPath;
@@ -87,7 +88,7 @@ internal static partial class LauncherApp
         var ootpBuildInfo = OotpBuildGuard.Read(exePath);
         var supportedOotpBuild = OotpBuildGuard.FindSupportedBuild(ootpBuildInfo);
         var knownOotpBuild = supportedOotpBuild ?? OotpBuildGuard.FindKnownBuild(ootpBuildInfo);
-        Console.WriteLine(OotpBuildGuard.FormatConsoleStatus(ootpBuildInfo, knownOotpBuild));
+        AnsiConsole.WriteLine(OotpBuildGuard.FormatConsoleStatus(ootpBuildInfo, knownOotpBuild));
         Log(logPath, OotpBuildGuard.FormatLogStatus(ootpBuildInfo, knownOotpBuild));
         WriteLauncherBuildGuardStatus(ootpBuildInfo, knownOotpBuild, options.DllPath is not null);
 
@@ -116,7 +117,7 @@ internal static partial class LauncherApp
         var safeOptions = options with { DllPath = null, AttachExisting = false };
         if (existingProcessCount > 0)
         {
-            Console.WriteLine("Existing OOTP process left unmodified because this build is not supported.");
+            AnsiConsole.MarkupLine("[yellow]Existing OOTP process left unmodified because this build is not supported.[/]");
             return new(safeOptions, supportedOotpBuild, 0);
         }
 
@@ -130,10 +131,10 @@ internal static partial class LauncherApp
             return;
         }
 
-        Console.WriteLine("Existing OOTP process:");
+        AnsiConsole.MarkupLine("[yellow]Existing OOTP process:[/]");
         foreach (var process in existing)
         {
-            Console.WriteLine($"  pid={process.Id} name={process.Name} path={process.Path}");
+            AnsiConsole.MarkupLineInterpolated($"  pid={process.Id} name={process.Name} path={process.Path}");
             Log(logPath, $"existing pid={process.Id} name={process.Name} path={process.Path}");
         }
     }
@@ -178,16 +179,16 @@ internal static partial class LauncherApp
         if (!options.DryRun)
         {
             Log(logPath, "global_major_league_schedule_mutation=retired");
-            Console.WriteLine("Global MLB schedule mutation is retired.");
+            AnsiConsole.MarkupLine("[grey]Global MLB schedule mutation is retired.[/]");
             return;
         }
 
         if (allstarBootstrapRequested)
         {
-            Console.WriteLine("Dry-run: all-star presave bootstrap would run before OOTP launch.");
+            AnsiConsole.MarkupLine("[yellow]Dry-run: all-star presave bootstrap would run before OOTP launch.[/]");
             return;
         }
 
-        Console.WriteLine("Dry-run: global MLB schedule mutation is retired.");
+        AnsiConsole.MarkupLine("[yellow]Dry-run: global MLB schedule mutation is retired.[/]");
     }
 }

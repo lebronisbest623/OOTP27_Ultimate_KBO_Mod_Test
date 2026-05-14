@@ -1,5 +1,6 @@
 namespace KBOLauncher.Tests;
 
+using FluentAssertions;
 using Xunit;
 
 public sealed class RosterMarkerGuardTests : IDisposable
@@ -14,8 +15,8 @@ public sealed class RosterMarkerGuardTests : IDisposable
 
         var info = global::KboRosterMarkerGuard.CheckSavePath(missing);
 
-        Assert.False(info.Ok);
-        Assert.Equal("current_save_missing", info.Status);
+        info.Ok.Should().BeFalse();
+        info.Status.Should().Be("current_save_missing");
     }
 
     [Fact]
@@ -26,8 +27,8 @@ public sealed class RosterMarkerGuardTests : IDisposable
 
         var info = global::KboRosterMarkerGuard.CheckSavePath(savePath);
 
-        Assert.False(info.Ok);
-        Assert.Equal("current_save_not_lg", info.Status);
+        info.Ok.Should().BeFalse();
+        info.Status.Should().Be("current_save_not_lg");
     }
 
     [Fact]
@@ -37,13 +38,13 @@ public sealed class RosterMarkerGuardTests : IDisposable
         Directory.CreateDirectory(savePath);
 
         var missingDescription = global::KboRosterMarkerGuard.CheckSavePath(savePath);
-        Assert.False(missingDescription.Ok);
-        Assert.Equal("description_missing", missingDescription.Status);
+        missingDescription.Ok.Should().BeFalse();
+        missingDescription.Status.Should().Be("description_missing");
 
         File.WriteAllText(Path.Combine(savePath, "description.txt"), "plain roster");
         var missingMarker = global::KboRosterMarkerGuard.CheckSavePath(savePath);
-        Assert.False(missingMarker.Ok);
-        Assert.Equal("marker_missing", missingMarker.Status);
+        missingMarker.Ok.Should().BeFalse();
+        missingMarker.Status.Should().Be("marker_missing");
     }
 
     [Fact]
@@ -55,9 +56,9 @@ public sealed class RosterMarkerGuardTests : IDisposable
 
         var info = global::KboRosterMarkerGuard.CheckSavePath(savePath);
 
-        Assert.False(info.Ok);
-        Assert.Equal("save_not_completed", info.Status);
-        Assert.EndsWith("flag_save_completed.dat", info.SaveCompletedPath);
+        info.Ok.Should().BeFalse();
+        info.Status.Should().Be("save_not_completed");
+        info.SaveCompletedPath.Should().EndWith("flag_save_completed.dat");
     }
 
     [Fact]
@@ -74,8 +75,8 @@ public sealed class RosterMarkerGuardTests : IDisposable
             savePath,
             new DateTimeOffset(2026, 5, 9, 14, 45, 0, TimeSpan.Zero));
 
-        Assert.False(info.Ok);
-        Assert.Equal("save_completion_stale", info.Status);
+        info.Ok.Should().BeFalse();
+        info.Status.Should().Be("save_completion_stale");
     }
 
     [Fact]
@@ -90,9 +91,9 @@ public sealed class RosterMarkerGuardTests : IDisposable
             minSaveCompletedAt: null,
             allowIncompleteMarkedSave: true);
 
-        Assert.True(info.Ok);
-        Assert.Equal("marked_save_in_progress", info.Status);
-        Assert.Equal(Path.GetFullPath(savePath), info.SavePath);
+        info.Ok.Should().BeTrue();
+        info.Status.Should().Be("marked_save_in_progress");
+        info.SavePath.Should().Be(Path.GetFullPath(savePath));
     }
 
     [Fact]
@@ -110,8 +111,8 @@ public sealed class RosterMarkerGuardTests : IDisposable
             new DateTimeOffset(2026, 5, 9, 14, 45, 0, TimeSpan.Zero),
             allowIncompleteMarkedSave: true);
 
-        Assert.True(info.Ok);
-        Assert.Equal("marked_save_in_progress", info.Status);
+        info.Ok.Should().BeTrue();
+        info.Status.Should().Be("marked_save_in_progress");
     }
 
     [Fact]
@@ -124,13 +125,13 @@ public sealed class RosterMarkerGuardTests : IDisposable
 
         var info = global::KboRosterMarkerGuard.CheckSavePath(savePath);
 
-        Assert.True(info.Ok);
-        Assert.Equal("marked_save_completed", info.Status);
-        Assert.Equal(Path.GetFullPath(savePath), info.SavePath);
-        Assert.Equal(Path.Combine(Path.GetFullPath(savePath), "description.txt"), info.DescriptionPath);
-        Assert.Equal(Path.Combine(Path.GetFullPath(savePath), "flag_save_completed.dat"), info.SaveCompletedPath);
-        Assert.Contains("ok=1", global::KboRosterMarkerGuard.FormatLogStatus(info));
-        Assert.Contains("current save marked and saved", global::KboRosterMarkerGuard.FormatConsoleStatus(info));
+        info.Ok.Should().BeTrue();
+        info.Status.Should().Be("marked_save_completed");
+        info.SavePath.Should().Be(Path.GetFullPath(savePath));
+        info.DescriptionPath.Should().Be(Path.Combine(Path.GetFullPath(savePath), "description.txt"));
+        info.SaveCompletedPath.Should().Be(Path.Combine(Path.GetFullPath(savePath), "flag_save_completed.dat"));
+        global::KboRosterMarkerGuard.FormatLogStatus(info).Should().Contain("ok=1");
+        global::KboRosterMarkerGuard.FormatConsoleStatus(info).Should().Contain("current save marked and saved");
     }
 
     [Fact]
@@ -147,9 +148,9 @@ public sealed class RosterMarkerGuardTests : IDisposable
             savedGames,
             new DateTimeOffset(2026, 5, 9, 14, 30, 0, TimeSpan.Zero));
 
-        Assert.NotNull(info);
-        Assert.True(info.Ok);
-        Assert.Equal(Path.GetFullPath(newSave), info.SavePath);
+        info.Should().NotBeNull();
+        info!.Ok.Should().BeTrue();
+        info.SavePath.Should().Be(Path.GetFullPath(newSave));
     }
 
     [Fact]
@@ -171,10 +172,10 @@ public sealed class RosterMarkerGuardTests : IDisposable
             savedGames,
             new DateTimeOffset(2026, 5, 9, 14, 30, 0, TimeSpan.Zero));
 
-        Assert.NotNull(info);
-        Assert.True(info.Ok);
-        Assert.Equal("marked_save_in_progress", info.Status);
-        Assert.Equal(Path.GetFullPath(newSave), info.SavePath);
+        info.Should().NotBeNull();
+        info!.Ok.Should().BeTrue();
+        info.Status.Should().Be("marked_save_in_progress");
+        info.SavePath.Should().Be(Path.GetFullPath(newSave));
     }
 
     [Fact]
@@ -186,12 +187,12 @@ public sealed class RosterMarkerGuardTests : IDisposable
 
         var log = global::KboRosterMarkerGuard.FormatLogStatus(info);
 
-        Assert.Equal("KBO roster marker: blocked (marker_missing)", global::KboRosterMarkerGuard.FormatConsoleStatus(info));
-        Assert.Contains("status=marker_missing", log);
-        Assert.Contains("ok=0", log);
-        Assert.Contains($"save=\"{savePath}\"", log);
-        Assert.Contains($"description=\"{descriptionPath}\"", log);
-        Assert.Contains("required marker missing", log);
+        global::KboRosterMarkerGuard.FormatConsoleStatus(info).Should().Be("KBO roster marker: blocked (marker_missing)");
+        log.Should().Contain("status=marker_missing");
+        log.Should().Contain("ok=0");
+        log.Should().Contain($"save=\"{savePath}\"");
+        log.Should().Contain($"description=\"{descriptionPath}\"");
+        log.Should().Contain("required marker missing");
     }
 
     public void Dispose()
@@ -216,5 +217,4 @@ public sealed class RosterMarkerGuardTests : IDisposable
         File.WriteAllText(completedPath, SaveCompletedText);
         File.SetLastWriteTimeUtc(completedPath, completedUtc);
     }
-
 }

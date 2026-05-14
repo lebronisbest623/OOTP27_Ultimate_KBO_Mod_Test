@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using Polly;
+using Polly.Retry;
+using Spectre.Console;
 using static DllInjector;
 using static DllPayloadStager;
 using static InjectedModuleDetector;
@@ -67,7 +70,7 @@ internal static partial class LauncherApp
             return null;
         }
 
-        Console.WriteLine($"Launched OOTP pid={launched.Id}");
+        AnsiConsole.MarkupLineInterpolated($"[green]Launched OOTP[/] pid={launched.Id}");
         Log(logPath, $"launched pid={launched.Id}");
         return launched;
     }
@@ -212,7 +215,7 @@ internal static partial class LauncherApp
         }
 
         Log(logPath, $"stable_injection_target_lost old_pid={oldPid} reason=process_unavailable");
-        Console.WriteLine("OOTP process exited before injection; looking for a replacement OOTP process...");
+        AnsiConsole.MarkupLine("[yellow]OOTP process exited before injection; looking for a replacement OOTP process...[/]");
 
         try
         {
@@ -240,7 +243,7 @@ internal static partial class LauncherApp
     {
         if (IsKboFixAlreadyLoaded(pid, logPath))
         {
-            Console.WriteLine($"KBOFix is already loaded in pid={pid}; skipping injection.");
+            AnsiConsole.MarkupLineInterpolated($"[yellow]KBOFix is already loaded in pid={pid}; skipping injection.[/]");
             WarnIfLoadedKboFixLooksStale(pid, dllPath, logPath);
             Log(logPath, $"inject_skipped pid={pid} reason=already_loaded");
             return;
@@ -251,29 +254,39 @@ internal static partial class LauncherApp
         Log(logPath, $"inject_complete pid={pid} reason={reason}");
     }
 
+    private static readonly ResiliencePipeline InjectRetry = new ResiliencePipelineBuilder()
+        .AddRetry(new RetryStrategyOptions
+        {
+            ShouldHandle = new PredicateBuilder()
+                .Handle<System.ComponentModel.Win32Exception>()
+                .Handle<InvalidOperationException>()
+                .Handle<TimeoutException>(),
+            MaxRetryAttempts = 4,
+            Delay = TimeSpan.FromMilliseconds(500),
+            BackoffType = DelayBackoffType.Constant,
+        })
+        .Build();
+
     private static void InjectDllWithShortRetry(int pid, string dllPath, string logPath)
     {
-        Exception? lastError = null;
-        for (var attempt = 1; attempt <= 5; attempt++)
+        var attempt = 0;
+        InjectRetry.Execute(() =>
         {
+            attempt++;
             try
             {
                 InjectDll(pid, dllPath, logPath);
-                if (attempt > 1)
-                {
-                    Log(logPath, $"inject_retry_succeeded pid={pid} attempt={attempt}");
-                }
-                return;
             }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or TimeoutException)
             {
-                lastError = ex;
                 Log(logPath, $"inject_retry_wait pid={pid} attempt={attempt} error=\"{ex.Message.Replace("\"", "'")}\"");
-                Thread.Sleep(500);
+                throw;
             }
+        });
+        if (attempt > 1)
+        {
+            Log(logPath, $"inject_retry_succeeded pid={pid} attempt={attempt}");
         }
-
-        throw lastError ?? new InvalidOperationException("DLL injection failed without an exception.");
     }
 
     private sealed class PresaveEarlyInjector

@@ -1,6 +1,7 @@
 namespace KBOLauncher.Tests;
 
 using System.Text;
+using FluentAssertions;
 using Xunit;
 
 public sealed class OotpCurrentSavePathReaderTests : IDisposable
@@ -14,7 +15,7 @@ public sealed class OotpCurrentSavePathReaderTests : IDisposable
     [InlineData(@"D:/OOTP/saved_games/KBO.lg", @"D:/OOTP/saved_games/KBO.lg")]
     public void ExtractLgSavePath_ReturnsContainingLgFolder(string sourcePath, string expected)
     {
-        Assert.Equal(expected, global::OotpCurrentSavePathReader.ExtractLgSavePath(sourcePath));
+        global::OotpCurrentSavePathReader.ExtractLgSavePath(sourcePath).Should().Be(expected);
     }
 
     [Theory]
@@ -25,7 +26,7 @@ public sealed class OotpCurrentSavePathReaderTests : IDisposable
     [InlineData(@"C:\OOTP\saved_games\KBO.lgx")]
     public void ExtractLgSavePath_RejectsNonLgPaths(string? sourcePath)
     {
-        Assert.Null(global::OotpCurrentSavePathReader.ExtractLgSavePath(sourcePath));
+        global::OotpCurrentSavePathReader.ExtractLgSavePath(sourcePath).Should().BeNull();
     }
 
     [Fact]
@@ -35,10 +36,10 @@ public sealed class OotpCurrentSavePathReaderTests : IDisposable
         Directory.CreateDirectory(saveDir);
         var relativeSave = Path.Combine("relative", "KBO.lg");
 
-        Assert.True(global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(saveDir));
-        Assert.False(global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(relativeSave));
-        Assert.False(global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(Path.Combine(tempDir, "Missing.lg")));
-        Assert.False(global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(tempDir));
+        global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(saveDir).Should().BeTrue();
+        global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(relativeSave).Should().BeFalse();
+        global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(Path.Combine(tempDir, "Missing.lg")).Should().BeFalse();
+        global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(tempDir).Should().BeFalse();
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public sealed class OotpCurrentSavePathReaderTests : IDisposable
 
         var savePath = global::OotpCurrentSavePathReader.ExtractLgSavePath(sourcePath);
 
-        Assert.Equal(@"C:\Users\홍길동\Documents\OOTP Baseball 27\saved_games\한국시리즈 2026.lg", savePath);
+        savePath.Should().Be(@"C:\Users\홍길동\Documents\OOTP Baseball 27\saved_games\한국시리즈 2026.lg");
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public sealed class OotpCurrentSavePathReaderTests : IDisposable
         var saveDir = Path.Combine(tempDir, "Users", "홍길동", "AppData", "Local", "OOTP", "saved_games", "테스트 저장.lg");
         Directory.CreateDirectory(saveDir);
 
-        Assert.True(global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(saveDir));
+        global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(saveDir).Should().BeTrue();
     }
 
     [Fact]
@@ -67,42 +68,42 @@ public sealed class OotpCurrentSavePathReaderTests : IDisposable
         var saveDir = Path.Combine(tempDir, longSegment, longSegment, "긴 저장 이름.lg");
         Directory.CreateDirectory(saveDir);
 
-        Assert.True(global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(saveDir));
-        Assert.True(saveDir.Length >= 240);
+        global::OotpCurrentSavePathReader.LooksLikeAbsoluteLgSavePath(saveDir).Should().BeTrue();
+        saveDir.Length.Should().BeGreaterThanOrEqualTo(240);
     }
 
     [Fact]
     public void DecodeNullTerminatedOotpPathString_AllowsUtf8KoreanSavePaths()
     {
-        var path = "C:\\Users\\\uD64D\uAE38\uB3D9\\Documents\\Out of the Park Developments\\OOTP Baseball 27\\saved_games\\\uAE34 \uC800\uC7A5 \uC774\uB984.lg";
+        var path = "C:\\Users\\홍길동\\Documents\\Out of the Park Developments\\OOTP Baseball 27\\saved_games\\긴 저장 이름.lg";
         var bytes = Encoding.UTF8.GetBytes(path).Concat([byte.MinValue]).ToArray();
 
         var decoded = global::OotpCurrentSavePathReader.DecodeNullTerminatedOotpPathString(bytes);
 
-        Assert.Equal(path, decoded);
+        decoded.Should().Be(path);
     }
 
     [Fact]
     public void DecodeNullTerminatedOotpPathString_AllowsLongUtf8SavePaths()
     {
-        var longName = new string('\uAC00', 260);
-        var path = $"C:\\Users\\\uD64D\uAE38\uB3D9\\OneDrive\\\uBB38\uC11C\\OOTP\\saved_games\\{longName}.lg";
+        var longName = new string('가', 260);
+        var path = $"C:\\Users\\홍길동\\OneDrive\\문서\\OOTP\\saved_games\\{longName}.lg";
         var bytes = Encoding.UTF8.GetBytes(path).Concat([byte.MinValue]).ToArray();
 
         var decoded = global::OotpCurrentSavePathReader.DecodeNullTerminatedOotpPathString(bytes);
 
-        Assert.Equal(path, decoded);
-        Assert.NotNull(decoded);
-        Assert.True(decoded.Length > 260);
-        Assert.True(bytes.Length > 260);
+        decoded.Should().Be(path);
+        decoded.Should().NotBeNull();
+        decoded!.Length.Should().BeGreaterThan(260);
+        bytes.Length.Should().BeGreaterThan(260);
     }
 
     [Fact]
     public void DecodeNullTerminatedOotpPathString_RejectsControlCharacters()
     {
-        var bytes = Encoding.UTF8.GetBytes("C:\\OOTP\\bad\u0001save.lg").Concat([byte.MinValue]).ToArray();
+        var bytes = Encoding.UTF8.GetBytes("C:\\OOTP\\badsave.lg").Concat([byte.MinValue]).ToArray();
 
-        Assert.Null(global::OotpCurrentSavePathReader.DecodeNullTerminatedOotpPathString(bytes));
+        global::OotpCurrentSavePathReader.DecodeNullTerminatedOotpPathString(bytes).Should().BeNull();
     }
 
     public void Dispose()
