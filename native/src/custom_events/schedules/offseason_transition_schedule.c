@@ -4,6 +4,7 @@
 #include <string.h>
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/logging/rule_audit.h"
 #include "../../core/dates/core_current_date.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/dates/core_text_date.h"
@@ -12,6 +13,36 @@
 #include "../../allstar/allstar_league_context/allstar_league_context.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
+
+static void kbo_audit_offseason_transition(
+    const char* decision,
+    const char* reason,
+    const char* source,
+    uint32_t today_yyyymmdd,
+    uint32_t league_id,
+    uint32_t league_year,
+    uint8_t previous_phase,
+    uint8_t phase,
+    uint32_t anchor_yyyymmdd,
+    uint32_t pending_anchor,
+    int scheduled)
+{
+    kbo_rule_audit_emitf(
+        "custom_event.offseason_transition",
+        decision,
+        reason,
+        source,
+        "\"date\":%u,\"league_id\":%u,\"league_year\":%u,\"previous_phase\":%u,"
+        "\"phase\":%u,\"anchor_date\":%u,\"pending_anchor\":%u,\"scheduled\":%d",
+        today_yyyymmdd,
+        league_id,
+        league_year,
+        (unsigned)previous_phase,
+        (unsigned)phase,
+        anchor_yyyymmdd,
+        pending_anchor,
+        scheduled);
+}
 
 int kbo_custom_event_phase_is_offseason(uint8_t phase)
 {
@@ -136,10 +167,34 @@ int kbo_custom_event_schedule_pending_offseason_transition(
     }
     if (g_kbo_custom_event_last_offseason_transition_anchor
             == g_kbo_custom_event_pending_offseason_transition_anchor) {
+        kbo_audit_offseason_transition(
+            "skip",
+            "pending_anchor_already_scheduled",
+            source,
+            today_yyyymmdd,
+            0u,
+            0u,
+            255u,
+            255u,
+            g_kbo_custom_event_pending_offseason_transition_anchor,
+            g_kbo_custom_event_pending_offseason_transition_anchor,
+            0);
         g_kbo_custom_event_pending_offseason_transition_anchor = 0u;
         return 0;
     }
     if (today_yyyymmdd < g_kbo_custom_event_pending_offseason_transition_anchor) {
+        kbo_audit_offseason_transition(
+            "skip",
+            "pending_anchor_in_future",
+            source,
+            today_yyyymmdd,
+            0u,
+            0u,
+            255u,
+            255u,
+            g_kbo_custom_event_pending_offseason_transition_anchor,
+            g_kbo_custom_event_pending_offseason_transition_anchor,
+            0);
         return 0;
     }
 
@@ -150,6 +205,18 @@ int kbo_custom_event_schedule_pending_offseason_transition(
         "KBO custom event offseason transition schedule source=%s today=%u anchor=%u result=%d",
         source != NULL ? source : "",
         today_yyyymmdd,
+        g_kbo_custom_event_pending_offseason_transition_anchor,
+        scheduled);
+    kbo_audit_offseason_transition(
+        scheduled >= 0 ? "schedule_foreign_priority" : "fail",
+        scheduled >= 0 ? "pending_anchor_ready" : "pending_anchor_schedule_failed",
+        source,
+        today_yyyymmdd,
+        0u,
+        0u,
+        255u,
+        255u,
+        g_kbo_custom_event_pending_offseason_transition_anchor,
         g_kbo_custom_event_pending_offseason_transition_anchor,
         scheduled);
     if (scheduled >= 0) {
@@ -166,6 +233,18 @@ int kbo_custom_event_monitor_check_offseason_transition(
     const char* source)
 {
     if (today_yyyymmdd == 0u) {
+        kbo_audit_offseason_transition(
+            "skip",
+            "date_unavailable",
+            source,
+            today_yyyymmdd,
+            0u,
+            0u,
+            255u,
+            255u,
+            0u,
+            g_kbo_custom_event_pending_offseason_transition_anchor,
+            0);
         return 0;
     }
     if (!kbo_custom_event_date_allows_offseason_transition(today_yyyymmdd)) {
@@ -187,6 +266,18 @@ int kbo_custom_event_monitor_check_offseason_transition(
             &league_year,
             &phase,
             &phase_year)) {
+        kbo_audit_offseason_transition(
+            "defer",
+            "league_phase_unavailable",
+            source,
+            today_yyyymmdd,
+            league_id,
+            0u,
+            255u,
+            255u,
+            0u,
+            g_kbo_custom_event_pending_offseason_transition_anchor,
+            0);
         return kbo_custom_event_schedule_pending_offseason_transition(today_yyyymmdd, source);
     }
 
@@ -222,6 +313,18 @@ int kbo_custom_event_monitor_check_offseason_transition(
                 source);
             if (g_kbo_custom_event_last_offseason_transition_anchor != transition_anchor) {
                 g_kbo_custom_event_pending_offseason_transition_anchor = transition_anchor;
+                kbo_audit_offseason_transition(
+                    "queue_schedule",
+                    "phase_transition_to_offseason",
+                    source,
+                    today_yyyymmdd,
+                    league_id,
+                    league_year,
+                    g_kbo_custom_event_last_seen_league_phase,
+                    phase,
+                    transition_anchor,
+                    g_kbo_custom_event_pending_offseason_transition_anchor,
+                    0);
                 append_logf(
                     "KBO custom event offseason transition detected source=%s league=%p league_id=%u date=%u anchor=%u league_year=%u previous_phase=%u phase=%u",
                     source != NULL ? source : "",
@@ -232,6 +335,19 @@ int kbo_custom_event_monitor_check_offseason_transition(
                     league_year,
                     (unsigned)g_kbo_custom_event_last_seen_league_phase,
                     (unsigned)phase);
+            } else {
+                kbo_audit_offseason_transition(
+                    "skip",
+                    "anchor_already_scheduled",
+                    source,
+                    today_yyyymmdd,
+                    league_id,
+                    league_year,
+                    g_kbo_custom_event_last_seen_league_phase,
+                    phase,
+                    transition_anchor,
+                    g_kbo_custom_event_pending_offseason_transition_anchor,
+                    0);
             }
         } else {
             append_logf(
@@ -240,6 +356,18 @@ int kbo_custom_event_monitor_check_offseason_transition(
                 today_yyyymmdd,
                 (unsigned)g_kbo_custom_event_last_seen_league_phase,
                 (unsigned)phase);
+            kbo_audit_offseason_transition(
+                "skip",
+                "date_window",
+                source,
+                today_yyyymmdd,
+                league_id,
+                league_year,
+                g_kbo_custom_event_last_seen_league_phase,
+                phase,
+                0u,
+                g_kbo_custom_event_pending_offseason_transition_anchor,
+                0);
         }
     }
 

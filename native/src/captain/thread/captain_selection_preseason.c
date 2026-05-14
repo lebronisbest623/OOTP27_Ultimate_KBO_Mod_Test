@@ -1,5 +1,5 @@
 #include "../internal/captain_selection_internal.h"
-
+#include "../audit/captain_rule_audit.h"
 static const char* kbo_captain_phase_label(uint8_t phase)
 {
     switch (phase) {
@@ -11,7 +11,6 @@ static const char* kbo_captain_phase_label(uint8_t phase)
     default: return "unknown";
     }
 }
-
 void kbo_captain_log_phase_observed(
     const char* source,
     uint32_t date,
@@ -33,7 +32,6 @@ void kbo_captain_log_phase_observed(
     static int last_csv_exists = -1;
     static int last_calendar_recovery = -1;
     static int last_calendar_preseason = -1;
-
     if (league_ptr == last_league_ptr
             && date == last_date
             && league_id == last_league_id
@@ -45,7 +43,6 @@ void kbo_captain_log_phase_observed(
             && calendar_preseason == last_calendar_preseason) {
         return;
     }
-
     append_logf(
         "KBO captain phase observed source=%s date=%u league_id=%u league=%p league_season=%u effective_season=%u phase=%u label=%s csv_exists=%d calendar_recovery=%d calendar_preseason=%d",
         source != NULL ? source : "",
@@ -252,6 +249,8 @@ int kbo_captain_write_initial_selection(
         KBO_CAPTAIN_MAX_TEAMS,
         &selected_count);
     if (row_count <= 0 || selected_count <= 0) {
+        kbo_captain_audit_preseason_selection(
+            "skip", "no_selection", source, date, season, league_id, row_count, selected_count);
         append_logf(
             "KBO captain selection skipped source=%s date=%u season=%u league_id=%u reason=no_selection rows=%d selected=%d",
             source != NULL ? source : "",
@@ -280,6 +279,8 @@ int kbo_captain_write_initial_selection(
             row_count,
             selected_count,
             csv_path);
+        kbo_captain_audit_preseason_selection(
+            "write_selection_csv", "selected_captains", source, date, season, league_id, row_count, selected_count);
         kbo_emit_captain_initial_selection_news(
             date,
             season,
@@ -299,11 +300,15 @@ int kbo_captain_write_missing_selection_csv(
     const char* source)
 {
     if (kbo_captain_selection_csv_exists(season)) {
+        kbo_captain_audit_preseason_bootstrap(
+            "skip", "csv_already_exists", source, date, season, league_id, phase);
         return 0;
     }
 
     LONG last_attempt = InterlockedCompareExchange(&g_kbo_captain_last_attempted_season, 0, 0);
     if (last_attempt == (LONG)season) {
+        kbo_captain_audit_preseason_bootstrap(
+            "skip", "season_attempt_in_progress", source, date, season, league_id, phase);
         return 0;
     }
     InterlockedExchange(&g_kbo_captain_last_attempted_season, (LONG)season);
@@ -315,6 +320,8 @@ int kbo_captain_write_missing_selection_csv(
         season,
         league_id,
         (unsigned)phase);
+    kbo_captain_audit_preseason_bootstrap(
+        "write_missing_selection_csv", "missing_csv", source, date, season, league_id, phase);
     int wrote = kbo_captain_write_initial_selection(
         date,
         season,
@@ -330,8 +337,9 @@ int kbo_captain_run_seed_startup_without_league_ptr(
     const char* source)
 {
     uint32_t season = date / 10000u;
-    if (!kbo_captain_seed_startup_window_active(date, season)
-            || !kbo_captain_seed_available_for_season(season, league_id)) {
+    int startup_window = kbo_captain_seed_startup_window_active(date, season);
+    int seed_available = startup_window && kbo_captain_seed_available_for_season(season, league_id);
+    if (!startup_window || !seed_available) {
         return 0;
     }
 
@@ -358,6 +366,9 @@ int kbo_captain_run_seed_startup_without_league_ptr(
     }
 
     if (!csv_exists) {
+        kbo_captain_audit_seed_startup(
+            "write_missing_selection_csv", "league_ptr_unavailable", source, date, season, league_id,
+            startup_window, seed_available, csv_exists, 0);
         return kbo_captain_write_missing_selection_csv(
             date,
             season,
@@ -370,8 +381,14 @@ int kbo_captain_run_seed_startup_without_league_ptr(
     memset(summary_rows, 0, sizeof(summary_rows));
     int summary_count = kbo_captain_load_selection_csv(season, summary_rows, KBO_CAPTAIN_MAX_TEAMS);
     if (summary_count <= 0) {
+        kbo_captain_audit_seed_startup(
+            "skip", "summary_rows_unavailable", source, date, season, league_id,
+            startup_window, seed_available, csv_exists, summary_count);
         return 0;
     }
+    kbo_captain_audit_seed_startup(
+        "emit_initial_selection_news", "league_ptr_unavailable_existing_csv", source, date, season, league_id,
+        startup_window, seed_available, csv_exists, summary_count);
     return kbo_emit_captain_initial_selection_news(
         date,
         season,
