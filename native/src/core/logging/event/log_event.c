@@ -1,6 +1,5 @@
 #include "log_event.h"
 
-#include "../core_log.h"
 #include "../../files/save_paths/core_save_paths.h"
 #include "../../sync/spin_lock.h"
 
@@ -316,7 +315,7 @@ static void kbo_log_build_json(char* out, size_t out_size, const char* channel, 
 static int kbo_log_event_emit_raw_internal(const char* file_name, const char* channel, KboLogLevel level,
     const char* domain, const char* event, const char* decision, const char* reason,
     const char* source, const char* fields_json, unsigned sink_flags, size_t max_bytes,
-    int archive_count, const char* mirror_prefix, int fields_truncated)
+    int archive_count, int fields_truncated)
 {
     char global_path[MAX_PATH] = {0}, save_path[MAX_PATH] = {0}, save_id[192] = {0};
     int has_global = (sink_flags & KBO_LOG_SINK_GLOBAL) && kbo_get_global_data_file(file_name, global_path, sizeof(global_path));
@@ -339,39 +338,17 @@ static int kbo_log_event_emit_raw_internal(const char* file_name, const char* ch
         wrote_any |= kbo_log_append_ndjson_path(save_path, json);
     }
     kbo_spin_unlock(&g_kbo_log_event_file_lock);
-
-    if ((sink_flags & KBO_LOG_SINK_MIRROR_CORE) || (!wrote_any && (sink_flags & KBO_LOG_SINK_FALLBACK_MIRROR_CORE))) {
-        char message[4096] = {0};
-        const char* prefix = mirror_prefix != NULL ? mirror_prefix : "KBO_LOG_EVENT";
-        size_t pos = 0u;
-        size_t prefix_len = strlen(prefix);
-        if (prefix_len > sizeof(message) - 1u) {
-            prefix_len = sizeof(message) - 1u;
-        }
-        memcpy(message, prefix, prefix_len);
-        pos = prefix_len;
-        if (pos + 1u < sizeof(message)) {
-            message[pos++] = ' ';
-        }
-        size_t json_len = strlen(json);
-        if (json_len > sizeof(message) - pos - 1u) {
-            json_len = sizeof(message) - pos - 1u;
-        }
-        memcpy(message + pos, json, json_len);
-        message[pos + json_len] = '\0';
-        append_log_line(message);
-    }
     return wrote_any;
 }
 
 int kbo_log_event_emit(const char* file_name, const char* channel, KboLogLevel level,
     const char* domain, const char* event, const char* decision, const char* reason,
     const char* source, const KboLogFields* fields, unsigned sink_flags, size_t max_bytes,
-    int archive_count, const char* mirror_prefix)
+    int archive_count)
 {
     return kbo_log_event_emit_raw_internal(file_name, channel, level, domain, event, decision, reason,
         source, fields != NULL ? fields->json : NULL, sink_flags, max_bytes, archive_count,
-        mirror_prefix, fields != NULL ? fields->truncated : 0);
+        fields != NULL ? fields->truncated : 0);
 }
 
 void kbo_log_runtime_event(KboLogLevel level, const char* domain, const char* event,
@@ -379,7 +356,7 @@ void kbo_log_runtime_event(KboLogLevel level, const char* domain, const char* ev
 {
     kbo_log_event_emit(KBO_LOG_RUNTIME_FILE_NAME, "runtime", level, domain, event, decision, reason,
         source, fields, KBO_LOG_SINK_GLOBAL, KBO_LOG_RUNTIME_MAX_BYTES,
-        KBO_LOG_DEFAULT_ARCHIVES, NULL);
+        KBO_LOG_DEFAULT_ARCHIVES);
 }
 
 void kbo_log_runtime_message(KboLogLevel level, const char* domain, const char* event, const char* message)

@@ -8,8 +8,6 @@
 
 #define KBO_LOG_SINK_GLOBAL 0x01u
 #define KBO_LOG_SINK_SAVE_SCOPED 0x02u
-#define KBO_LOG_SINK_MIRROR_CORE 0x04u
-#define KBO_LOG_SINK_FALLBACK_MIRROR_CORE 0x08u
 
 #define KBO_LOG_RUNTIME_MAX_BYTES (10u * 1024u * 1024u)
 #define KBO_LOG_RULE_AUDIT_MAX_BYTES (50u * 1024u * 1024u)
@@ -53,8 +51,7 @@ int kbo_log_event_emit(
     const KboLogFields* fields,
     unsigned sink_flags,
     size_t max_bytes,
-    int archive_count,
-    const char* mirror_prefix);
+    int archive_count);
 
 void kbo_log_runtime_event(
     KboLogLevel level,

@@ -1,11 +1,8 @@
 #include "rule_audit.h"
 
-#include "../core_flags/api/flags_api.h"
-
 #include <string.h>
 
 #define KBO_RULE_AUDIT_FILE_NAME "rule_audit.ndjson"
-#define KBO_RULE_AUDIT_MIRROR_FLAG_FILE "enable_rule_audit_kbofix_mirror.txt"
 
 static KboLogLevel kbo_rule_audit_level_for_decision(const char* decision)
 {
@@ -33,11 +30,6 @@ static void kbo_rule_audit_emit_combined(
     kbo_log_field_str(&combined, "rule", rule != NULL ? rule : "");
     kbo_log_fields_merge(&combined, fields);
 
-    unsigned sink_flags = KBO_LOG_SINK_GLOBAL | KBO_LOG_SINK_SAVE_SCOPED | KBO_LOG_SINK_FALLBACK_MIRROR_CORE;
-    if (read_kbo_localappdata_flag_file(KBO_RULE_AUDIT_MIRROR_FLAG_FILE)) {
-        sink_flags |= KBO_LOG_SINK_MIRROR_CORE;
-    }
-
     kbo_log_event_emit(
         KBO_RULE_AUDIT_FILE_NAME,
         "rule_audit",
@@ -48,10 +40,9 @@ static void kbo_rule_audit_emit_combined(
         reason,
         source,
         &combined,
-        sink_flags,
+        KBO_LOG_SINK_GLOBAL | KBO_LOG_SINK_SAVE_SCOPED,
         KBO_LOG_RULE_AUDIT_MAX_BYTES,
-        KBO_LOG_DEFAULT_ARCHIVES,
-        "KBO_RULE_AUDIT");
+        KBO_LOG_DEFAULT_ARCHIVES);
 }
 
 void kbo_rule_audit_emit_fields(

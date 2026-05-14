@@ -1,72 +1,13 @@
 #include "core_log.h"
 
-#include "../../bootstrap/profiling/profiler.h"
-#include "../files/save_paths/core_save_paths.h"
 #include "event/log_event.h"
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <windows.h>
 
 void append_log_line(const char* message)
 {
-    LARGE_INTEGER profile_start = {0};
-    int profile_active = kbo_profiler_begin(&profile_start);
-
-    char dir[MAX_PATH] = {0};
-    if (!kbo_get_global_data_dir(dir, sizeof(dir))) {
-        if (profile_active) {
-            kbo_profiler_end("log.append_line.env_unavailable", &profile_start);
-        }
-        return;
-    }
-
-    char path[MAX_PATH] = {0};
-    snprintf(path, sizeof(path), "%s\\kbofix.log", dir);
-
-    HANDLE file = CreateFileA(
-        path,
-        FILE_APPEND_DATA,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
-    if (file == INVALID_HANDLE_VALUE) {
-        if (profile_active) {
-            kbo_profiler_end("log.append_line.open_failed", &profile_start);
-        }
-        return;
-    }
-
-    SYSTEMTIME now;
-    GetLocalTime(&now);
-
-    char line[4096] = {0};
-    int len = snprintf(
-        line,
-        sizeof(line),
-        "%04u-%02u-%02u %02u:%02u:%02u.%03u pid=%lu %s\r\n",
-        now.wYear,
-        now.wMonth,
-        now.wDay,
-        now.wHour,
-        now.wMinute,
-        now.wSecond,
-        now.wMilliseconds,
-        GetCurrentProcessId(),
-        message);
-
-    if (len > 0) {
-        DWORD written = 0;
-        WriteFile(file, line, (DWORD)len, &written, NULL);
-    }
-
-    CloseHandle(file);
     kbo_log_runtime_message(KBO_LOG_LEVEL_INFO, "legacy", "message", message);
-    if (profile_active) {
-        kbo_profiler_end("log.append_line", &profile_start);
-    }
 }
 
 void append_logf(const char* format, ...)
