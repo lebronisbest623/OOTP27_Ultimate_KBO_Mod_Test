@@ -69,6 +69,11 @@ void kbo_independent_acquisition_read_buyer_state(
     uint8_t* team,
     KboIndependentAcquisitionBuyerState* out);
 int kbo_independent_acquisition_player_status_ok(uint8_t* player);
+int64_t kbo_independent_acquisition_score_candidate_for_buyer(
+    const KboIndependentAcquisitionBuyerState* buyer,
+    uint8_t* player,
+    uint32_t effective_before,
+    uint32_t effective_limit);
 uintptr_t kbo_independent_acquisition_find_player_snapshot(
     const uintptr_t* player_snapshot,
     int32_t player_count,
@@ -99,6 +104,9 @@ int kbo_independent_acquisition_decision_exists(
     uint32_t season,
     uint32_t seller_team_id,
     uint32_t player_id);
+int kbo_independent_acquisition_transferred_count(
+    uint32_t season,
+    uint32_t seller_team_id);
 int kbo_independent_acquisition_append_decision(
     uint32_t today,
     const KboIndependentAcquisitionQueuedRequest* request,

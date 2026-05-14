@@ -36,6 +36,7 @@ int g_kbo_hub_selected_agames_subview = 0;
 int g_kbo_hub_selected_military_subview = 0;
 int g_kbo_hub_selected_fa_subview = 0;
 int g_kbo_hub_selected_cbt_subview = 0;
+int g_kbo_hub_selected_futures_subview = 0;
 int g_kbo_hub_fa_market_page = 0;
 uint32_t g_kbo_hub_selected_fa_compensation_player_id = 0u;
 uint32_t g_kbo_hub_selected_military_results_year = 0;
@@ -90,7 +91,8 @@ HBITMAP g_kbo_hub_asset_sb_slider_bottom = NULL;
 #define KBO_HUB_VIEW_SETTINGS    7
 #define KBO_HUB_VIEW_REPUTATION  8
 #define KBO_HUB_VIEW_CBT         9
-#define KBO_HUB_NAV_COUNT        10
+#define KBO_HUB_VIEW_FUTURES_LEAGUE 10
+#define KBO_HUB_NAV_COUNT        11
 #define KBO_HUB_FOREIGN_SUBVIEW_ROSTER 0
 #define KBO_HUB_FOREIGN_SUBVIEW_RIGHTS 1
 #define KBO_HUB_FOREIGN_SUBVIEW_COUNT  2

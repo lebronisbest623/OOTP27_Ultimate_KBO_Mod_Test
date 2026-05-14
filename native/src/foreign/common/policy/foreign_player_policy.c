@@ -59,6 +59,7 @@ static BOOL CALLBACK kbo_foreign_player_policy_init_once(PINIT_ONCE init_once, P
     p->injury_replacement_min_days = kbo_foreign_player_policy_int("injury_replacement_min_days", 42, 0, 3660);
     p->injury_replacement_decision_margin_min = kbo_foreign_player_policy_int("injury_replacement_decision_margin_min", 12000, 0, 10000000);
     p->pending_offer_ttl_days = kbo_foreign_player_policy_int("pending_offer_ttl_days", 45, 0, 3660);
+    p->independent_acquisition_seller_transfer_limit = kbo_foreign_player_policy_int("independent_acquisition_seller_transfer_limit", 5, 0, 100);
     p->ai_roster_daily_callup_max_attempts = kbo_foreign_player_policy_int("ai_roster_daily_callup_max_attempts", 24, 0, 10000);
     p->recent_allow_ttl_ms = kbo_foreign_player_policy_int("recent_allow_ttl_ms", 10 * 60 * 1000, 0, 3600000);
     p->recent_block_ttl_ms = kbo_foreign_player_policy_int("recent_block_ttl_ms", 120000, 0, 3600000);

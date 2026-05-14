@@ -28,6 +28,7 @@ typedef struct KboForeignPlayerPolicy {
     int32_t injury_replacement_min_days;
     int32_t injury_replacement_decision_margin_min;
     int32_t pending_offer_ttl_days;
+    int32_t independent_acquisition_seller_transfer_limit;
     int32_t ai_roster_daily_callup_max_attempts;
     int32_t recent_allow_ttl_ms;
     int32_t recent_block_ttl_ms;

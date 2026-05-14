@@ -55,6 +55,7 @@
 #include "../support/roster/cells/ui_roster_cells.h"
 #include "../views/mod/reputation/ui_reputation_view.h"
 #include "../views/cbt/ui_cbt_view.h"
+#include "../views/futures/ui_futures_league_view.h"
 #include "../support/roster/sort/ui_roster_sort_script.h"
 #include "../support/roster/table/ui_roster_table_css.h"
 #include "../support/skin/ui_scrollbar_skin_css.h"
@@ -85,7 +86,8 @@
 #define KBO_HUB_VIEW_SETTINGS    7
 #define KBO_HUB_VIEW_REPUTATION  8
 #define KBO_HUB_VIEW_CBT         9
-#define KBO_HUB_NAV_COUNT        10
+#define KBO_HUB_VIEW_FUTURES_LEAGUE 10
+#define KBO_HUB_NAV_COUNT        11
 #define KBO_HUB_FOREIGN_SUBVIEW_ROSTER 0
 #define KBO_HUB_FOREIGN_SUBVIEW_RIGHTS 1
 #define KBO_HUB_FOREIGN_SUBVIEW_COUNT  2
@@ -130,6 +132,7 @@ extern int g_kbo_hub_selected_agames_subview;
 extern int g_kbo_hub_selected_military_subview;
 extern int g_kbo_hub_selected_fa_subview;
 extern int g_kbo_hub_selected_cbt_subview;
+extern int g_kbo_hub_selected_futures_subview;
 extern int g_kbo_hub_fa_market_page;
 extern uint32_t g_kbo_hub_selected_fa_compensation_player_id;
 extern uint32_t g_kbo_hub_selected_military_results_year;

@@ -20,6 +20,7 @@
   "injury_replacement_min_days": 42,
   "injury_replacement_decision_margin_min": 12000,
   "pending_offer_ttl_days": 45,
+  "independent_acquisition_seller_transfer_limit": 5,
   "ai_roster_daily_callup_max_attempts": 24,
   "recent_allow_ttl_ms": 600000,
   "recent_block_ttl_ms": 120000,

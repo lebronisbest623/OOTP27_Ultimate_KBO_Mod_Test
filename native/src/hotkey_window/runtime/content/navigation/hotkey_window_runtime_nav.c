@@ -13,6 +13,7 @@ const char* kbo_hub_nav_label(int index)
     case KBO_HUB_VIEW_SETTINGS:       return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",    "SETTINGS");
     case KBO_HUB_VIEW_REPUTATION:     return kbo_hub_text("\xed\x8f\x89\xed\x8c\x90", "REPUTATION");
     case KBO_HUB_VIEW_CBT:            return kbo_hub_text("\xea\xb2\xbd\xec\x9f\x81\xea\xb7\xa0\xed\x98\x95\xec\x84\xb8", "CBT");
+    case KBO_HUB_VIEW_FUTURES_LEAGUE: return kbo_hub_text("2\xea\xb5\xb0 \xeb\xa6\xac\xea\xb7\xb8", "FUTURES");
     default:                          return "";
     }
 }
@@ -64,6 +65,20 @@ const char* kbo_hub_military_subnav_label(int index)
         return kbo_hub_text("\xec\xa7\x80\xec\x9b\x90\xec\x9e\x90", "APPLICANTS");
     case KBO_HUB_MILITARY_SUBVIEW_RESULTS:
         return kbo_hub_text("\xeb\xb0\x9c\xed\x91\x9c \xea\xb2\xb0\xea\xb3\xbc", "RESULTS");
+    default:
+        return "";
+    }
+}
+
+const char* kbo_hub_futures_subnav_label(int index)
+{
+    switch (index) {
+    case KBO_HUB_FUTURES_SUBVIEW_OFFER:
+        return "OFFER";
+    case KBO_HUB_FUTURES_SUBVIEW_PENDING:
+        return "PENDING";
+    case KBO_HUB_FUTURES_SUBVIEW_RESULT:
+        return "RESULT";
     default:
         return "";
     }

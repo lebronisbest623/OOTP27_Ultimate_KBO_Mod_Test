@@ -189,6 +189,19 @@ static int64_t kbo_independent_acquisition_score_candidate(
     return score;
 }
 
+int64_t kbo_independent_acquisition_score_candidate_for_buyer(
+    const KboIndependentAcquisitionBuyerState* buyer,
+    uint8_t* player,
+    uint32_t effective_before,
+    uint32_t effective_limit)
+{
+    return kbo_independent_acquisition_score_candidate(
+        buyer,
+        player,
+        effective_before,
+        effective_limit);
+}
+
 uintptr_t kbo_independent_acquisition_find_player_snapshot(
     const uintptr_t* player_snapshot,
     int32_t player_count,
