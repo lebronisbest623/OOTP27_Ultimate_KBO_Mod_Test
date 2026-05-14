@@ -96,6 +96,12 @@ int kbo_independent_acquisition_append_request(
     const KboIndependentAcquisitionBuyerState* buyer,
     const KboIndependentFuturesTeamLeague* seller,
     const char* source);
+int kbo_independent_acquisition_cancel_request(
+    uint32_t season,
+    uint32_t buyer_team_id,
+    uint32_t seller_team_id,
+    uint32_t player_id,
+    const char* source);
 int kbo_independent_acquisition_load_requests(
     uint32_t season,
     KboIndependentAcquisitionQueuedRequest* out,

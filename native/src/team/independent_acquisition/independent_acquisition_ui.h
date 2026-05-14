@@ -15,6 +15,13 @@
 #define KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_BLOCKED  -5
 #define KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_FAILED   -6
 
+#define KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_OK        1
+#define KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_NOT_FOUND 0
+#define KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_INVALID  -2
+#define KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_DECIDED  -3
+#define KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_BLOCKED  -5
+#define KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_FAILED   -6
+
 typedef struct KboIndependentAcquisitionUiContext {
     uint32_t today;
     uint32_t season;
@@ -102,6 +109,11 @@ int kbo_independent_acquisition_ui_load_result_rows(
     KboIndependentAcquisitionUiResultRow* out_rows,
     int max_rows);
 int kbo_independent_acquisition_ui_submit_offer(
+    uint32_t buyer_team_id,
+    uint32_t seller_team_id,
+    uint32_t player_id,
+    const char* source);
+int kbo_independent_acquisition_ui_cancel_offer(
     uint32_t buyer_team_id,
     uint32_t seller_team_id,
     uint32_t player_id,

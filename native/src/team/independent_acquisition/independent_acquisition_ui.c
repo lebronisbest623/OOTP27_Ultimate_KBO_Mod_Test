@@ -1037,3 +1037,42 @@ int kbo_independent_acquisition_ui_submit_offer(
         cash_cost);
     return KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_OK;
 }
+
+int kbo_independent_acquisition_ui_cancel_offer(
+    uint32_t buyer_team_id,
+    uint32_t seller_team_id,
+    uint32_t player_id,
+    const char* source)
+{
+    KboIndependentAcquisitionUiContext context;
+    if (!kbo_independent_acquisition_ui_context(buyer_team_id, &context)
+            || !context.buyer_valid
+            || seller_team_id == 0u
+            || player_id == 0u) {
+        return KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_INVALID;
+    }
+
+    if (kbo_independent_acquisition_decision_exists(context.season, seller_team_id, player_id)) {
+        return KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_DECIDED;
+    }
+
+    int removed = kbo_independent_acquisition_cancel_request(
+        context.season,
+        buyer_team_id,
+        seller_team_id,
+        player_id,
+        source != NULL ? source : "hub_independent_offer_cancel");
+    if (removed <= 0) {
+        return KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_NOT_FOUND;
+    }
+
+    kbo_cancel_custom_foreign_pending_offer(buyer_team_id, player_id);
+    kbo_log_runtimef(
+        "independent acquisition UI offer cancel source=%s buyer=%u seller=%u player=%u removed=%d",
+        source != NULL ? source : "",
+        buyer_team_id,
+        seller_team_id,
+        player_id,
+        removed);
+    return KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_OK;
+}

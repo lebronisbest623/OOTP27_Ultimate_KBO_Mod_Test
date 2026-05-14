@@ -196,3 +196,34 @@ void kbo_record_custom_foreign_pending_offer(uint32_t team_id, uint8_t* candidat
     }
 }
 
+void kbo_cancel_custom_foreign_pending_offer(uint32_t team_id, uint32_t player_id)
+{
+    if (team_id == 0u || player_id == 0u) {
+        return;
+    }
+
+    kbo_custom_foreign_pending_offer_lock();
+    int write_index = 0;
+    int removed = 0;
+    for (int i = 0; i < g_kbo_custom_foreign_pending_offer_count; i++) {
+        KboCustomForeignPendingOffer rec = g_kbo_custom_foreign_pending_offers[i];
+        if (rec.team_id == team_id && rec.player_id == player_id) {
+            removed++;
+            continue;
+        }
+        g_kbo_custom_foreign_pending_offers[write_index++] = rec;
+    }
+    g_kbo_custom_foreign_pending_offer_count = write_index;
+    if (removed > 0) {
+        g_kbo_custom_foreign_pending_offer_last_prune_tick = 0u;
+    }
+    kbo_custom_foreign_pending_offer_unlock();
+
+    if (removed > 0) {
+        kbo_log_runtimef(
+            "custom foreign policy pending offer cancelled team=%u player=%u removed=%d",
+            team_id,
+            player_id,
+            removed);
+    }
+}

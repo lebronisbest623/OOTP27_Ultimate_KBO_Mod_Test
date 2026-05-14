@@ -272,7 +272,7 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable futuresPendingTable'><thead><tr>"
-        "<th class='roDate' data-sort-type='number'>Date</th><th class='roPo' data-sort-type='text'>PO</th>"
+        "<th class='roAction'>Cancel</th><th class='roDate' data-sort-type='number'>Date</th><th class='roPo' data-sort-type='text'>PO</th>"
         "<th class='roName' data-sort-type='text'>Name</th><th class='roClub' data-sort-type='text'>Independent Club</th>"
         "<th class='roNat' data-sort-type='text'>Nation</th><th class='roSlot' data-sort-type='text'>Slot</th>"
         "<th class='roCash' data-sort-type='number'>Cash</th><th class='roScore' data-sort-type='number'>Score</th>"
@@ -280,9 +280,9 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
         "</tr></thead><tbody>");
 
     if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 9, "Select a KBO club first.");
+        kbo_futures_ui_append_empty_row(buffer, 10, "Select a KBO club first.");
     } else if (count <= 0) {
-        kbo_futures_ui_append_empty_row(buffer, 9, "No pending independent club offer.");
+        kbo_futures_ui_append_empty_row(buffer, 10, "No pending independent club offer.");
     }
     for (int i = 0; i < count; i++) {
         KboIndependentAcquisitionUiRequestRow* row = &rows[i];
@@ -297,7 +297,12 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
 
         kbo_window_text_appendf(
             buffer,
-            "<tr><td class='roDate' data-sort-value='%u'>",
+            "<tr><td class='roAction'><span class='rightsActions'>"
+            "<a class='rightsAction rightsCancel' title='Cancel offer' href='kbo://futures-offer/cancel/%u/%u/%u'>Cancel</a>"
+            "</span></td><td class='roDate' data-sort-value='%u'>",
+            buyer_team_id,
+            row->seller_team_id,
+            row->player_id,
             row->date);
         kbo_html_append_escaped(buffer, date_text);
         kbo_window_text_appendf(buffer, "</td><td class='roPo'>%s</td>", kbo_futures_ui_position_label(row->player_ptr));

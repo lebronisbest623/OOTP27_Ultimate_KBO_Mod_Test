@@ -224,6 +224,148 @@ static int kbo_independent_acquisition_parse_request_line(
         && row.player_id != 0u;
 }
 
+int kbo_independent_acquisition_cancel_request(
+    uint32_t season,
+    uint32_t buyer_team_id,
+    uint32_t seller_team_id,
+    uint32_t player_id,
+    const char* source)
+{
+    if (season == 0u || buyer_team_id == 0u || seller_team_id == 0u || player_id == 0u) {
+        return 0;
+    }
+    if (kbo_independent_acquisition_decision_exists(season, seller_team_id, player_id)) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_independent_acquisition_request_path(path, sizeof(path))) {
+        return 0;
+    }
+    char temp_path[MAX_PATH] = {0};
+    if (strlen(path) + 4u >= sizeof(temp_path)) {
+        return 0;
+    }
+    snprintf(temp_path, sizeof(temp_path), "%s.tmp", path);
+
+    HANDLE file = CreateFileA(
+        path,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+
+    DWORD high = 0u;
+    DWORD size = GetFileSize(file, &high);
+    if (size == INVALID_FILE_SIZE || high != 0u || size == 0u || size > 4u * 1024u * 1024u) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
+    if (buffer == NULL) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    DWORD read = 0u;
+    int removed = 0;
+    int write_ok = 1;
+    if (!ReadFile(file, buffer, size, &read, NULL) || read == 0u) {
+        HeapFree(GetProcessHeap(), 0, buffer);
+        CloseHandle(file);
+        return 0;
+    }
+    buffer[read] = '\0';
+    CloseHandle(file);
+
+    HANDLE temp = CreateFileA(
+        temp_path,
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (temp == INVALID_HANDLE_VALUE) {
+        HeapFree(GetProcessHeap(), 0, buffer);
+        return 0;
+    }
+
+    char* cursor = buffer;
+    char* end = buffer + read;
+    while (cursor < end) {
+        char* content_end = cursor;
+        while (content_end < end && *content_end != '\r' && *content_end != '\n') {
+            content_end++;
+        }
+        char* next = content_end;
+        while (next < end && (*next == '\r' || *next == '\n')) {
+            next++;
+        }
+
+        char saved = *content_end;
+        *content_end = '\0';
+        KboIndependentAcquisitionQueuedRequest row;
+        int remove_line =
+            kbo_independent_acquisition_parse_request_line(cursor, &row)
+            && row.season == season
+            && row.buyer_team_id == buyer_team_id
+            && row.seller_team_id == seller_team_id
+            && row.player_id == player_id;
+        *content_end = saved;
+
+        if (remove_line) {
+            removed++;
+        } else {
+            DWORD to_write = (DWORD)(next - cursor);
+            DWORD written = 0u;
+            if (to_write > 0u
+                    && (!WriteFile(temp, cursor, to_write, &written, NULL) || written != to_write)) {
+                write_ok = 0;
+                break;
+            }
+        }
+        cursor = next;
+    }
+
+    HeapFree(GetProcessHeap(), 0, buffer);
+    CloseHandle(temp);
+
+    if (!write_ok) {
+        DeleteFileA(temp_path);
+        return 0;
+    }
+    if (removed <= 0) {
+        DeleteFileA(temp_path);
+        return 0;
+    }
+    if (!MoveFileExA(temp_path, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        kbo_log_runtimef(
+            "independent acquisition request cancel failed source=%s reason=replace_failed gle=%lu path=%s",
+            source != NULL ? source : "",
+            (unsigned long)GetLastError(),
+            path);
+        DeleteFileA(temp_path);
+        return 0;
+    }
+
+    kbo_log_runtimef(
+        "independent acquisition request cancelled source=%s season=%u buyer=%u seller=%u player=%u removed=%d",
+        source != NULL ? source : "",
+        season,
+        buyer_team_id,
+        seller_team_id,
+        player_id,
+        removed);
+    return removed;
+}
+
 int kbo_independent_acquisition_append_request(
     uint32_t today,
     const KboIndependentAcquisitionCandidate* candidate,

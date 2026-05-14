@@ -113,11 +113,19 @@ static int kbo_webview_handle_cbt_exception_command(const char* cmd)
 
 static int kbo_webview_handle_futures_offer_command(const char* cmd)
 {
-    if (strncmp(cmd, "futures-offer/submit/", 21) != 0) {
+    const char* submit_prefix = "futures-offer/submit/";
+    const char* cancel_prefix = "futures-offer/cancel/";
+    int cancel = 0;
+    const char* text = NULL;
+    if (strncmp(cmd, submit_prefix, strlen(submit_prefix)) == 0) {
+        text = cmd + strlen(submit_prefix);
+    } else if (strncmp(cmd, cancel_prefix, strlen(cancel_prefix)) == 0) {
+        text = cmd + strlen(cancel_prefix);
+        cancel = 1;
+    } else {
         return 0;
     }
 
-    const char* text = cmd + 21;
     uint32_t buyer_team_id = (uint32_t)strtoul(text, NULL, 10);
     const char* slash = strchr(text, '/');
     uint32_t seller_team_id = slash != NULL ? (uint32_t)strtoul(slash + 1, NULL, 10) : 0u;
@@ -126,7 +134,17 @@ static int kbo_webview_handle_futures_offer_command(const char* cmd)
 
     int submit_result = KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_INVALID;
     if (buyer_team_id != 0u && seller_team_id != 0u && player_id != 0u) {
-        if (kbo_webview_team_action_allowed(buyer_team_id, "hub_independent_acquisition_offer")) {
+        if (cancel) {
+            if (kbo_webview_team_action_allowed(buyer_team_id, "hub_independent_acquisition_offer_cancel")) {
+                submit_result = kbo_independent_acquisition_ui_cancel_offer(
+                    buyer_team_id,
+                    seller_team_id,
+                    player_id,
+                    "hub_independent_acquisition_offer_cancel");
+            } else {
+                submit_result = KBO_INDEPENDENT_ACQUISITION_UI_CANCEL_BLOCKED;
+            }
+        } else if (kbo_webview_team_action_allowed(buyer_team_id, "hub_independent_acquisition_offer")) {
             submit_result = kbo_independent_acquisition_ui_submit_offer(
                 buyer_team_id,
                 seller_team_id,
@@ -138,17 +156,22 @@ static int kbo_webview_handle_futures_offer_command(const char* cmd)
     }
 
     kbo_log_runtimef(
-        "independent acquisition UI command buyer=%u seller=%u player=%u result=%d",
+        "independent acquisition UI command action=%s buyer=%u seller=%u player=%u result=%d",
+        cancel ? "cancel" : "submit",
         buyer_team_id,
         seller_team_id,
         player_id,
         submit_result);
     g_kbo_hub_selected_view = KBO_HUB_VIEW_FUTURES_LEAGUE;
-    g_kbo_hub_selected_futures_subview =
-        submit_result == KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_OK
-        || submit_result == KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_DUPLICATE
-            ? KBO_HUB_FUTURES_SUBVIEW_PENDING
-            : KBO_HUB_FUTURES_SUBVIEW_OFFER;
+    if (cancel) {
+        g_kbo_hub_selected_futures_subview = KBO_HUB_FUTURES_SUBVIEW_PENDING;
+    } else {
+        g_kbo_hub_selected_futures_subview =
+            submit_result == KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_OK
+            || submit_result == KBO_INDEPENDENT_ACQUISITION_UI_SUBMIT_DUPLICATE
+                ? KBO_HUB_FUTURES_SUBVIEW_PENDING
+                : KBO_HUB_FUTURES_SUBVIEW_OFFER;
+    }
     g_kbo_hub_open_dropdown = 0;
     kbo_webview_navigate_current();
     return 1;

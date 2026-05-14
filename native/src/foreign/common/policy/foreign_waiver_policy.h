@@ -57,6 +57,7 @@ void kbo_record_custom_foreign_pending_offer(
     uint32_t team_id,
     uint8_t* candidate,
     uint32_t today);
+void kbo_cancel_custom_foreign_pending_offer(uint32_t team_id, uint32_t player_id);
 int kbo_custom_foreign_policy_trade_allows(
     uintptr_t trade_ptr,
     int32_t requested_side,
