@@ -286,6 +286,7 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         kbo_log_runtime_line("KBO foreign AI offer attach hook disabled: no research/probe flag is enabled");
     }
+    start_kbo_custom_event_monitor();
     if (kbo_no_minor_contract_patch_enabled()) {
         if (!kbo_opening_day_storyline_guard_active("no_minor_contract_patch_install", NULL, NULL)) {
             install_kbo_no_minor_contract_patch_once("runtime_install");
@@ -325,7 +326,6 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         kbo_log_runtime_line("KBO FA salary opening-day snapshot thread disabled: kbo_flags.json disable_kbo_fa_salary_opening_day_snapshot is true");
     }
-    start_kbo_custom_event_monitor();
     if (read_kbo_localappdata_flag_file("enable_kbo_season_phase_monitor.txt")) {
         start_kbo_season_phase_monitor();
         kbo_log_runtime_line("KBO season phase write probe disabled: unsafe after crash; using read-only monitor");

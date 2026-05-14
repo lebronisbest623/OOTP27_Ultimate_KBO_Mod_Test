@@ -76,6 +76,10 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
 
     uint32_t last_scheduled_yyyymmdd = 0u;
     uint32_t last_scanned_yyyymmdd = 0u;
+    kbo_custom_event_monitor_tick(
+        &last_scheduled_yyyymmdd,
+        &last_scanned_yyyymmdd,
+        g_kbo_default_event_source);
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->custom_event_monitor_sleep_ms)) {
             break;
