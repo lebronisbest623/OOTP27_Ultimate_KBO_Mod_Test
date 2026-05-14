@@ -13,6 +13,7 @@
 #include "../../../core/season/opening_day_storyline_guard.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../../fa_market_classification/api/fa_market_classification.h"
 #include "../../../fa_requalification/fa_requalification.h"
 #include "../../../foreign/replacement_seed/api/foreign_replacement_seed.h"
@@ -21,6 +22,7 @@
 #include "../../players/loans/military_active_loan.h"
 #include "../../players/state/military_player_state.h"
 #include "../../returns/military_return.h"
+#include "../../returns/military_return_preview_news.h"
 #include "../../calendar/military_service_date.h"
 #include "../../seed/registry/military_seed_registry.h"
 #include "../assignment/military_service_assignment.h"
@@ -107,6 +109,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
     int invalid_released = 0;
     int deferred_returns = 0;
     int deferred_invalid_releases = 0;
+    int return_preview_news = 0;
 
     for (int32_t i = 0; i < player_count; i++) {
         uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
@@ -275,24 +278,28 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
         monitored++;
     }
 
+    return_preview_news = kbo_emit_military_return_preview_news_if_due(today_serial, source);
+
     LONG log_index = InterlockedIncrement(&g_military_days_tick_log_count);
     if (seeded_assignments > 0
             || returned > 0
             || newly_registered > 0
             || managed > 0
             || invalid_released > 0
+            || return_preview_news > 0
             || deferred_returns > 0
             || deferred_invalid_releases > 0
             || log_index <= 20) {
         append_logf(
             "KBO military service day tick source=%s date_serial=%u"
             " seeded=%d tracked=%d newly_registered=%d monitored=%d managed=%d returned=%d invalid_released=%d"
-            " deferred_returns=%d deferred_invalid=%d count=%d vector_off=0x%x",
+            " return_preview_news=%d deferred_returns=%d deferred_invalid=%d count=%d vector_off=0x%x",
             source != NULL ? source : "",
             today_serial,
             seeded_assignments,
             tracked, newly_registered, monitored, managed, returned,
             invalid_released,
+            return_preview_news,
             deferred_returns,
             deferred_invalid_releases,
             player_count, vector_offset);
@@ -306,7 +313,7 @@ DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
     (void)parameter;
     append_log_line("KBO military service day tick thread started");
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(5000)) {
+        if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->military_days_tick_sleep_ms)) {
             break;
         }
         kbo_tick_military_service_days("military_days_tick", NULL);
@@ -323,14 +330,19 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
 
     char last_save_path[MAX_PATH] = {0};
     int settled_attempts = 0;
-    for (int attempt = 1; attempt <= 720; attempt++) {
-        if (!kbo_runtime_sleep_should_continue(attempt == 1 ? 2500u : 5000u)) {
+    const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
+    for (int attempt = 1; attempt <= tuning->military_seed_bootstrap_attempts; attempt++) {
+        uint32_t sleep_ms = attempt == 1
+            ? (uint32_t)tuning->military_seed_bootstrap_first_sleep_ms
+            : (uint32_t)tuning->military_seed_bootstrap_sleep_ms;
+        if (!kbo_runtime_sleep_should_continue(sleep_ms)) {
             break;
         }
 
         char save_path[MAX_PATH] = {0};
         if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
-            if (attempt <= 8 || attempt % 6 == 0) {
+            if (attempt <= tuning->military_seed_bootstrap_log_initial_attempts
+                    || attempt % tuning->military_seed_bootstrap_log_interval == 0) {
                 append_logf("KBO military service seed bootstrap waiting attempt=%d reason=no_save_path", attempt);
             }
             continue;
@@ -351,7 +363,8 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
         if (today_serial == 0u
                 || !find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)
                 || (sang == NULL && kpb == NULL)) {
-            if (attempt <= 8 || attempt % 6 == 0) {
+            if (attempt <= tuning->military_seed_bootstrap_log_initial_attempts
+                    || attempt % tuning->military_seed_bootstrap_log_interval == 0) {
                 append_logf(
                     "KBO military service seed bootstrap waiting attempt=%d reason=state_not_ready date_serial=%u player_count=%d sang=%p kpb=%p save=%s",
                     attempt,

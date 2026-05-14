@@ -1,10 +1,10 @@
 {
-  "custom_event.foreign_priority.open.title": "[KBO] Foreign Player Priority Negotiation Begins",
-  "custom_event.foreign_priority.close.title": "[KBO] Foreign Player Priority Negotiation Ends",
-  "custom_event.military.selection.title": "[KBO] Military Service Selection",
-  "custom_event.asian_games.selection.title": "[KBO] Asian Games Roster Selection",
-  "custom_event.asian_games.departure.title": "[KBO] Asian Games Player Departure",
-  "custom_event.asian_games.final.title": "[KBO] Asian Games Final",
-  "custom_event.cbt.exception_deadline.title": "[KBO CBT] Exception Player Deadline",
-  "custom_event.cbt.announcement.title": "[KBO CBT] Competitive Balance Tax Announcement"
+  "custom_event.foreign_priority.open.title": "Foreign Player Priority Negotiation Begins",
+  "custom_event.foreign_priority.close.title": "Foreign Player Priority Negotiation Ends",
+  "custom_event.military.selection.title": "Military Service Selection",
+  "custom_event.asian_games.selection.title": "Asian Games Roster Selection",
+  "custom_event.asian_games.departure.title": "Asian Games Player Departure",
+  "custom_event.asian_games.final.title": "Asian Games Final",
+  "custom_event.cbt.exception_deadline.title": "Exception Player Deadline",
+  "custom_event.cbt.announcement.title": "Competitive Balance Tax Announcement"
 }

@@ -17,6 +17,8 @@ void kbo_military_copy_team_history_name(
     char* out,
     size_t out_size,
     const char* fallback);
+void kbo_military_copy_team_link(uint32_t team_id, char* out, size_t out_size);
+void kbo_military_copy_player_link(uint32_t player_id, uintptr_t player_ptr, char* out, size_t out_size);
 int kbo_emit_military_selection_news(
     uint32_t event_yyyymmdd,
     KboMilitarySelectionNewsEntry* entries,

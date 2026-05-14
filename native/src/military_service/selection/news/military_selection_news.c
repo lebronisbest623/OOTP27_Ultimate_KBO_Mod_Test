@@ -65,7 +65,7 @@ void kbo_military_copy_team_history_name(uint8_t* team, char* out, size_t out_si
     snprintf(out, out_size, "%s", fallback != NULL ? fallback : "his original club");
 }
 
-static void kbo_military_copy_team_link(uint32_t team_id, char* out, size_t out_size)
+void kbo_military_copy_team_link(uint32_t team_id, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0u) {
         return;
@@ -84,7 +84,7 @@ static void kbo_military_copy_team_link(uint32_t team_id, char* out, size_t out_
     snprintf(out, out_size, "<%s:team#%u>", team_name, team_id);
 }
 
-static void kbo_military_copy_player_link(uint32_t player_id, uintptr_t player_ptr, char* out, size_t out_size)
+void kbo_military_copy_player_link(uint32_t player_id, uintptr_t player_ptr, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0u) {
         return;

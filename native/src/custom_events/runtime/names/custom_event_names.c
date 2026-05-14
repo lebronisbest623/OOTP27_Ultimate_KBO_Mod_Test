@@ -65,6 +65,127 @@ static const char* kbo_custom_event_language_dir_from_index(int language_index)
     return language_index == 1 ? "en" : "ko";
 }
 
+static int kbo_ascii_segment_equals_ignore_case(const char* text, size_t len, const char* expected)
+{
+    if (text == NULL || expected == NULL) {
+        return 0;
+    }
+    size_t expected_len = strlen(expected);
+    if (len != expected_len) {
+        return 0;
+    }
+    for (size_t i = 0u; i < len; i++) {
+        char a = text[i];
+        char b = expected[i];
+        if (a >= 'A' && a <= 'Z') {
+            a = (char)(a - 'A' + 'a');
+        }
+        if (b >= 'A' && b <= 'Z') {
+            b = (char)(b - 'A' + 'a');
+        }
+        if (a != b) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int kbo_custom_event_prefix_is_known(const char* text, size_t len)
+{
+    return kbo_ascii_segment_equals_ignore_case(text, len, "KBO")
+        || kbo_ascii_segment_equals_ignore_case(text, len, "KBO CBT");
+}
+
+static int kbo_custom_event_title_has_plain_prefix(const char* source, const char* prefix)
+{
+    if (source == NULL || prefix == NULL) {
+        return 0;
+    }
+    size_t i = 0u;
+    for (; prefix[i] != '\0'; i++) {
+        if (source[i] == '\0') {
+            return 0;
+        }
+        char a = source[i];
+        char b = prefix[i];
+        if (a >= 'A' && a <= 'Z') {
+            a = (char)(a - 'A' + 'a');
+        }
+        if (b >= 'A' && b <= 'Z') {
+            b = (char)(b - 'A' + 'a');
+        }
+        if (a != b) {
+            return 0;
+        }
+    }
+    return source[i] == ' ';
+}
+
+static size_t kbo_custom_event_title_content_start(const char* source)
+{
+    if (source == NULL || source[0] == '\0') {
+        return 0u;
+    }
+    if (source[0] == '[') {
+        size_t close_index = 1u;
+        while (close_index < 64u && source[close_index] != '\0' && source[close_index] != ']') {
+            unsigned char c = (unsigned char)source[close_index];
+            if (c < 0x20u) {
+                break;
+            }
+            close_index++;
+        }
+        if (source[close_index] == ']'
+                && source[close_index + 1u] == ' '
+                && close_index > 1u
+                && kbo_custom_event_prefix_is_known(source + 1u, close_index - 1u)) {
+            return close_index + 2u;
+        }
+    }
+    if (kbo_custom_event_title_has_plain_prefix(source, "KBO CBT")) {
+        return 8u;
+    }
+    if (kbo_custom_event_title_has_plain_prefix(source, "KBO")) {
+        return 4u;
+    }
+    return 0u;
+}
+
+static int kbo_copy_title_without_known_prefix(const char* source, char* out, size_t out_size)
+{
+    if (source == NULL || out == NULL || out_size == 0u) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    size_t source_index = kbo_custom_event_title_content_start(source);
+    size_t out_index = 0u;
+    for (size_t i = source_index; source[i] != '\0' && out_index + 1u < out_size; i++) {
+        out[out_index++] = source[i];
+    }
+    out[out_index] = '\0';
+    return out_index > 0u;
+}
+
+static int kbo_custom_event_title_text_matches(const char* name, const char* title)
+{
+    if (name == NULL || title == NULL || name[0] == '\0' || title[0] == '\0') {
+        return 0;
+    }
+    if (strcmp(name, title) == 0 || ascii_equals_ignore_case(name, title)) {
+        return 1;
+    }
+
+    char normalized_name[KBO_CUSTOM_EVENT_TITLE_MAX] = {0};
+    char normalized_title[KBO_CUSTOM_EVENT_TITLE_MAX] = {0};
+    if (!kbo_copy_title_without_known_prefix(name, normalized_name, sizeof(normalized_name))
+            || !kbo_copy_title_without_known_prefix(title, normalized_title, sizeof(normalized_title))) {
+        return 0;
+    }
+    return strcmp(normalized_name, normalized_title) == 0
+        || ascii_equals_ignore_case(normalized_name, normalized_title);
+}
+
 static BOOL CALLBACK kbo_custom_event_titles_init_once(
     PINIT_ONCE init_once,
     PVOID parameter,
@@ -128,13 +249,13 @@ int kbo_custom_event_name_equals_title(const char* name, const char* title)
     if (name == NULL || title == NULL || name[0] == '\0' || title[0] == '\0') {
         return 0;
     }
-    if (strcmp(name, title) == 0 || ascii_equals_ignore_case(name, title)) {
+    if (kbo_custom_event_title_text_matches(name, title)) {
         return 1;
     }
 
     char* internal_title = kbo_alloc_ootp_internal_text(title);
     int matches = internal_title != NULL
-        && (strcmp(name, internal_title) == 0 || ascii_equals_ignore_case(name, internal_title));
+        && kbo_custom_event_title_text_matches(name, internal_title);
     kbo_free_ootp_internal_text(internal_title);
     return matches;
 }

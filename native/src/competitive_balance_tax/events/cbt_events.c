@@ -14,6 +14,7 @@
 #include "../../hotkey_window/api/hotkey_window_refresh.h"
 #include "../api/competitive_balance_tax.h"
 #include "../exceptions/cbt_exceptions.h"
+#include "../rules/cbt_rules.h"
 
 static volatile LONG g_kbo_cbt_event_scheduler_started = 0;
 
@@ -42,8 +43,10 @@ int kbo_schedule_cbt_custom_events(const char* source)
         return -1;
     }
 
-    uint32_t deadline = kbo_add_days_yyyymmdd(opening_day, 6u);
-    uint32_t announcement = kbo_add_days_yyyymmdd(opening_day, 7u);
+    KboCbtRules rules;
+    kbo_cbt_rules_load(&rules);
+    uint32_t deadline = kbo_add_days_yyyymmdd(opening_day, rules.exception_deadline_days_after_opening);
+    uint32_t announcement = kbo_add_days_yyyymmdd(opening_day, rules.announcement_days_after_opening);
     if (deadline == 0u || announcement == 0u || today > announcement) {
         return 0;
     }
@@ -66,6 +69,17 @@ int kbo_schedule_cbt_custom_events(const char* source)
             year);
         return -1;
     }
+
+    int pruned_deadline = kbo_prune_duplicate_custom_events_by_kind_for_date(
+        league_id,
+        deadline,
+        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE,
+        source);
+    int pruned_announcement = kbo_prune_duplicate_custom_events_by_kind_for_date(
+        league_id,
+        announcement,
+        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
+        source);
 
     int deadline_exists = deadline_past || kbo_custom_event_exists_by_kind_for_date(
         league_id,
@@ -112,7 +126,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
         KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
 
     append_logf(
-        "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d ready=%d",
+        "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d pruned_deadline=%d pruned_announcement=%d ready=%d",
         source != NULL ? source : "",
         year,
         opening_day,
@@ -120,6 +134,8 @@ int kbo_schedule_cbt_custom_events(const char* source)
         announcement,
         created_deadline,
         created_announcement,
+        pruned_deadline,
+        pruned_announcement,
         deadline_exists && announcement_exists);
     return (deadline_exists && announcement_exists) ? (created_deadline || created_announcement) : -1;
 }
@@ -129,27 +145,35 @@ static DWORD WINAPI kbo_cbt_event_scheduler_thread(LPVOID parameter)
     (void)parameter;
     append_log_line("KBO CBT event scheduler started");
     uint32_t last_attempt_date = 0u;
-    for (int attempt = 1; attempt <= 180 && kbo_runtime_threads_should_continue(); attempt++) {
+    KboCbtRules rules;
+    kbo_cbt_rules_load(&rules);
+    for (uint32_t attempt = 1u; attempt <= rules.event_scheduler_max_attempts && kbo_runtime_threads_should_continue(); attempt++) {
         uint32_t today = 0u;
         kbo_get_current_yyyymmdd(&today);
         int result = kbo_schedule_cbt_custom_events("cbt_early_event_scheduler");
         if (result >= 0) {
             append_logf(
                 "KBO CBT event scheduler ready attempt=%d today=%u result=%d",
-                attempt,
+                (int)attempt,
                 today,
                 result);
             break;
         }
-        if (attempt == 1 || today != last_attempt_date || attempt == 10 || attempt == 30 || attempt == 60 || attempt == 120) {
+        int should_log = today != last_attempt_date;
+        for (int i = 0; i < 5; i++) {
+            if (attempt == rules.event_scheduler_log_attempts[i]) {
+                should_log = 1;
+            }
+        }
+        if (should_log) {
             append_logf(
                 "KBO CBT event scheduler waiting attempt=%d today=%u result=%d",
-                attempt,
+                (int)attempt,
                 today,
                 result);
             last_attempt_date = today;
         }
-        if (!kbo_runtime_sleep_should_continue(2000u)) {
+        if (!kbo_runtime_sleep_should_continue(rules.event_scheduler_sleep_ms)) {
             break;
         }
     }

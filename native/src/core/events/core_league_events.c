@@ -18,7 +18,109 @@
 #include "../dates/core_text_date.h"
 #include "../text/ootp_text_encoding.h"
 
-static int kbo_league_event_title_matches(const char* existing_title, const char* expected_title)
+static int kbo_event_title_ascii_segment_equals_ignore_case(const char* text, size_t len, const char* expected)
+{
+    if (text == NULL || expected == NULL) {
+        return 0;
+    }
+    size_t expected_len = strlen(expected);
+    if (len != expected_len) {
+        return 0;
+    }
+    for (size_t i = 0u; i < len; i++) {
+        char a = text[i];
+        char b = expected[i];
+        if (a >= 'A' && a <= 'Z') {
+            a = (char)(a - 'A' + 'a');
+        }
+        if (b >= 'A' && b <= 'Z') {
+            b = (char)(b - 'A' + 'a');
+        }
+        if (a != b) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int kbo_league_event_title_prefix_is_known(const char* text, size_t len)
+{
+    return kbo_event_title_ascii_segment_equals_ignore_case(text, len, "KBO")
+        || kbo_event_title_ascii_segment_equals_ignore_case(text, len, "KBO CBT");
+}
+
+static int kbo_league_event_title_has_plain_prefix(const char* source, const char* prefix)
+{
+    if (source == NULL || prefix == NULL) {
+        return 0;
+    }
+    size_t i = 0u;
+    for (; prefix[i] != '\0'; i++) {
+        if (source[i] == '\0') {
+            return 0;
+        }
+        char a = source[i];
+        char b = prefix[i];
+        if (a >= 'A' && a <= 'Z') {
+            a = (char)(a - 'A' + 'a');
+        }
+        if (b >= 'A' && b <= 'Z') {
+            b = (char)(b - 'A' + 'a');
+        }
+        if (a != b) {
+            return 0;
+        }
+    }
+    return source[i] == ' ';
+}
+
+static size_t kbo_league_event_title_content_start(const char* source)
+{
+    if (source == NULL || source[0] == '\0') {
+        return 0u;
+    }
+    if (source[0] == '[') {
+        size_t close_index = 1u;
+        while (close_index < 64u && source[close_index] != '\0' && source[close_index] != ']') {
+            unsigned char c = (unsigned char)source[close_index];
+            if (c < 0x20u) {
+                break;
+            }
+            close_index++;
+        }
+        if (source[close_index] == ']'
+                && source[close_index + 1u] == ' '
+                && close_index > 1u
+                && kbo_league_event_title_prefix_is_known(source + 1u, close_index - 1u)) {
+            return close_index + 2u;
+        }
+    }
+    if (kbo_league_event_title_has_plain_prefix(source, "KBO CBT")) {
+        return 8u;
+    }
+    if (kbo_league_event_title_has_plain_prefix(source, "KBO")) {
+        return 4u;
+    }
+    return 0u;
+}
+
+static int kbo_copy_event_title_without_known_prefix(const char* source, char* out, size_t out_size)
+{
+    if (source == NULL || out == NULL || out_size == 0u) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    size_t source_index = kbo_league_event_title_content_start(source);
+    size_t out_index = 0u;
+    for (size_t i = source_index; source[i] != '\0' && out_index + 1u < out_size; i++) {
+        out[out_index++] = source[i];
+    }
+    out[out_index] = '\0';
+    return out_index > 0u;
+}
+
+static int kbo_league_event_title_text_matches(const char* existing_title, const char* expected_title)
 {
     if (existing_title == NULL || expected_title == NULL || existing_title[0] == '\0' || expected_title[0] == '\0') {
         return 0;
@@ -27,9 +129,28 @@ static int kbo_league_event_title_matches(const char* existing_title, const char
         return 1;
     }
 
+    char normalized_existing[160] = {0};
+    char normalized_expected[160] = {0};
+    if (!kbo_copy_event_title_without_known_prefix(existing_title, normalized_existing, sizeof(normalized_existing))
+            || !kbo_copy_event_title_without_known_prefix(expected_title, normalized_expected, sizeof(normalized_expected))) {
+        return 0;
+    }
+    return strcmp(normalized_existing, normalized_expected) == 0
+        || ascii_equals_ignore_case(normalized_existing, normalized_expected);
+}
+
+static int kbo_league_event_title_matches(const char* existing_title, const char* expected_title)
+{
+    if (existing_title == NULL || expected_title == NULL || existing_title[0] == '\0' || expected_title[0] == '\0') {
+        return 0;
+    }
+    if (kbo_league_event_title_text_matches(existing_title, expected_title)) {
+        return 1;
+    }
+
     char* internal_title = kbo_alloc_ootp_internal_text(expected_title);
     int matches = internal_title != NULL
-        && (strcmp(existing_title, internal_title) == 0 || ascii_equals_ignore_case(existing_title, internal_title));
+        && kbo_league_event_title_text_matches(existing_title, internal_title);
     kbo_free_ootp_internal_text(internal_title);
     return matches;
 }
@@ -81,8 +202,8 @@ static int kbo_league_event_exists(
             continue;
         }
 
-        char existing_title[128] = {0};
-        if (!copy_ootp_string_object_text(event, OOTP27_LEAGUE_EVENT_NAME_STRING_OFFSET, existing_title, sizeof(existing_title))) {
+        char existing_title[160] = {0};
+        if (!copy_ootp_string_object_raw_text(event, OOTP27_LEAGUE_EVENT_NAME_STRING_OFFSET, existing_title, sizeof(existing_title))) {
             continue;
         }
         if (kbo_league_event_title_matches(existing_title, title)) {

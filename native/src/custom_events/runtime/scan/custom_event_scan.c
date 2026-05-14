@@ -59,8 +59,8 @@ int scan_kbo_custom_events_once(const char* source)
             continue;
         }
 
-        char name[128] = {0};
-        if (!copy_ootp_string_object_text(event, OOTP27_LEAGUE_EVENT_NAME_STRING_OFFSET, name, sizeof(name))) {
+        char name[160] = {0};
+        if (!copy_ootp_string_object_raw_text(event, OOTP27_LEAGUE_EVENT_NAME_STRING_OFFSET, name, sizeof(name))) {
             continue;
         }
         if (!kbo_custom_event_name_matches_local(name)) {

@@ -12,5 +12,14 @@
   "military.selection.outro": "\nThe announcement is not only a subtraction from depth charts. For some clubs it removes a useful player now, but it also gives the return date a shape. The rights stay with the original teams, and the planning moves from uncertainty to calendar math.",
   "military.selection.outro.variants": 2,
   "military.selection.outro.v1": "\nThe announcement is not only a subtraction from depth charts. For some clubs it removes a useful player now, but it also gives the return date a shape. The rights stay with the original teams, and the planning moves from uncertainty to calendar math.",
-  "military.selection.outro.v2": "\nSangmu selections force clubs to live in two timelines at once: covering the present roster hole and protecting the value of a player expected back later. That quiet roster strategy sits behind every service assignment."
+  "military.selection.outro.v2": "\nSangmu selections force clubs to live in two timelines at once: covering the present roster hole and protecting the value of a player expected back later. That quiet roster strategy sits behind every service assignment.",
+  "military.return_preview.title": "{lead_player_name}'s service return is approaching",
+  "military.return_preview.title.variants": 3,
+  "military.return_preview.title.v1": "{lead_player_name}'s service return is approaching",
+  "military.return_preview.title.v2": "Sangmu return watch starts with {lead_player_name}",
+  "military.return_preview.title.v3": "{return_count} service return{return_count_plural} due this year, led by {lead_player_name}",
+  "military.return_preview.intro": "{lead_player_link} is nearing the end of his service assignment. His projected return date is {return_date}, leaving about {days_left} days before he can rejoin {lead_team_link}.\n\nThe exact return dates vary by player, but the return season is starting to take shape around the highest-profile name in this year's group. The currently tracked return class has {return_count} player{return_count_plural}.\n\n",
+  "military.return_preview.line": "{index}. {player_link}{team_separator}{team_link} - {return_date}\n",
+  "military.return_preview.more_line": "{more_count} more player{more_count_plural} also project to return this year.\n",
+  "military.return_preview.outro": "\nFor clubs, these are no longer abstract future reinforcements. The calendar is close enough that each return can start affecting depth charts, late-season planning, and the next roster cycle."
 }

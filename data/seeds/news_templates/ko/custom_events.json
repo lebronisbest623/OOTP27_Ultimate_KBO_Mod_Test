@@ -1,10 +1,10 @@
 {
-  "custom_event.foreign_priority.open.title": "[KBO] 외국인 선수 우선협상 시작",
-  "custom_event.foreign_priority.close.title": "[KBO] 외국인 선수 우선협상 종료",
-  "custom_event.military.selection.title": "[KBO] 상무 입대 선수 선발",
-  "custom_event.asian_games.selection.title": "[KBO] 아시안게임 대표팀 선발",
-  "custom_event.asian_games.departure.title": "[KBO] 아시안게임 대표팀 소집",
-  "custom_event.asian_games.final.title": "[KBO] 아시안게임 결승",
-  "custom_event.cbt.exception_deadline.title": "[KBO CBT] 균형세 예외 선수 지정 마감",
-  "custom_event.cbt.announcement.title": "[KBO CBT] 경쟁균형세 발표"
+  "custom_event.foreign_priority.open.title": "외국인 선수 우선협상이 시작됩니다",
+  "custom_event.foreign_priority.close.title": "외국인 선수 우선협상이 마감됩니다",
+  "custom_event.military.selection.title": "상무 입대 명단이 발표됩니다",
+  "custom_event.asian_games.selection.title": "아시안게임 대표팀 명단이 발표됩니다",
+  "custom_event.asian_games.departure.title": "아시안게임 대표팀이 소집됩니다",
+  "custom_event.asian_games.final.title": "아시안게임 야구 결승이 열립니다",
+  "custom_event.cbt.exception_deadline.title": "경쟁균형세 예외 선수 지정이 마감됩니다",
+  "custom_event.cbt.announcement.title": "경쟁균형세 집계가 발표됩니다"
 }

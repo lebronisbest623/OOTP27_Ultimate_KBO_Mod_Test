@@ -13,5 +13,10 @@ int kbo_custom_event_exists_for_date(uint32_t league_id, uint32_t event_yyyymmdd
 int kbo_custom_event_name_matches_local(const char* name);
 int kbo_custom_event_exists_by_title_for_date(uint32_t league_id, uint32_t event_yyyymmdd, const char* expected_title);
 int kbo_custom_event_exists_by_kind_for_date(uint32_t league_id, uint32_t event_yyyymmdd, KboCustomEventKind kind);
+int kbo_prune_duplicate_custom_events_by_kind_for_date(
+    uint32_t league_id,
+    uint32_t event_yyyymmdd,
+    KboCustomEventKind kind,
+    const char* source);
 
 #endif
