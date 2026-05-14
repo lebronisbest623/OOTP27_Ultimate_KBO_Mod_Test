@@ -179,5 +179,30 @@ __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t pla
             original_team_id);
     }
 
+    if (memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
+            && kbo_player_is_foreign_for_kbo_rights(player)) {
+        uint32_t effective_before = 0u;
+        uint32_t effective_after = 0u;
+        uint32_t effective_limit = 0u;
+        uint8_t slot_type = 0u;
+        uint32_t injured_player_id = 0u;
+        (void)kbo_custom_foreign_policy_team_allows_final_signing(
+            team_id,
+            player,
+            &effective_before,
+            &effective_after,
+            &effective_limit,
+            &slot_type,
+            &injured_player_id);
+        if (slot_type != 0u && injured_player_id != 0u) {
+            kbo_attach_foreign_injury_replacement_after_signing(
+                team_id,
+                player,
+                slot_type,
+                injured_player_id,
+                "fa_signing_success_post");
+        }
+    }
+
     kbo_record_fa_compensation_signing(player_ptr, team_id, league_id, "fa_signing_success_post");
 }

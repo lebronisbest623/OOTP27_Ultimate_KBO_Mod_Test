@@ -55,6 +55,12 @@ int kbo_foreign_injury_replacement_signing_exception_available(
     uint32_t* out_injured_player_id,
     uint32_t* out_effective_count,
     uint32_t* out_effective_limit);
+int kbo_attach_foreign_injury_replacement_after_signing(
+    uint32_t team_id,
+    uint8_t* replacement,
+    uint8_t slot_type,
+    uint32_t injured_player_id,
+    const char* source);
 int kbo_foreign_injury_replacement_callup_exception_available(
     uintptr_t team_ptr,
     uint8_t* candidate,

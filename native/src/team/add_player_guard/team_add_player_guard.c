@@ -368,6 +368,13 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         KBO_PROFILE_END(profile_team_add_amateur_assignment, "team_add_guard.amateur_assignment_after_original");
     }
     if (result != 0u) {
+        KBO_PROFILE_BEGIN(profile_team_add_foreign_injury_attach);
+        kbo_team_add_attach_foreign_injury_replacement_success(
+            effective_team_ptr,
+            player_ptr,
+            "team_add_player_success");
+        KBO_PROFILE_END(profile_team_add_foreign_injury_attach, "team_add_guard.foreign_injury_attach");
+
         KBO_PROFILE_BEGIN(profile_team_add_fa_comp);
         kbo_team_add_player_record_fa_compensation_success(
             effective_team_ptr,
