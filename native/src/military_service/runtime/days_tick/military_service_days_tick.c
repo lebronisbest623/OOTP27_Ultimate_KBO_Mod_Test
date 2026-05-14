@@ -30,28 +30,7 @@
 #include "military_service_days_tick_internal.h"
 #include "military_service_tick.h"
 
-static void kbo_military_prewarm_save_scoped_bootstrap_files(const char* save_path)
-{
-    if (save_path == NULL || save_path[0] == '\0') {
-        return;
-    }
-
-    kbo_ensure_military_service_seeds_loaded();
-    kbo_ensure_foreign_replacement_player_seeds_loaded();
-    kbo_ensure_amateur_reputation_seeds_loaded();
-
-    KboFaMarketSeedCase fa_seed_cases[1];
-    char fa_seed_path[MAX_PATH] = {0};
-    kbo_load_fa_market_seed_cases(fa_seed_cases, 1, fa_seed_path, sizeof(fa_seed_path));
-
-    KboFaRequalificationRecord requalification_records[1];
-    kbo_load_fa_requalification_records(requalification_records, 1);
-
-    append_logf(
-        "KBO save bootstrap files prewarmed save=%s fa_seed=%s",
-        save_path,
-        fa_seed_path[0] != '\0' ? fa_seed_path : "-");
-}
+#include "military_service_seed_bootstrap.inc"
 
 int kbo_tick_military_service_days(const char* source, int* out_seeded_assignments)
 {
@@ -323,90 +302,4 @@ DWORD WINAPI kbo_military_days_tick_thread(LPVOID parameter)
     return 0;
 }
 
-DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
-{
-    (void)parameter;
-    append_log_line("KBO military service seed bootstrap thread started");
-
-    char last_save_path[MAX_PATH] = {0};
-    int settled_attempts = 0;
-    const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
-    for (int attempt = 1; attempt <= tuning->military_seed_bootstrap_attempts; attempt++) {
-        uint32_t sleep_ms = attempt == 1
-            ? (uint32_t)tuning->military_seed_bootstrap_first_sleep_ms
-            : (uint32_t)tuning->military_seed_bootstrap_sleep_ms;
-        if (!kbo_runtime_sleep_should_continue(sleep_ms)) {
-            break;
-        }
-
-        char save_path[MAX_PATH] = {0};
-        if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
-            if (attempt <= tuning->military_seed_bootstrap_log_initial_attempts
-                    || attempt % tuning->military_seed_bootstrap_log_interval == 0) {
-                append_logf("KBO military service seed bootstrap waiting attempt=%d reason=no_save_path", attempt);
-            }
-            continue;
-        }
-
-        if (_stricmp(last_save_path, save_path) != 0) {
-            snprintf(last_save_path, sizeof(last_save_path), "%s", save_path);
-            settled_attempts = 0;
-            kbo_military_prewarm_save_scoped_bootstrap_files(save_path);
-        }
-
-        uint32_t today_serial = kbo_current_date_serial();
-        uintptr_t player_vector = 0;
-        int32_t player_count = 0;
-        uint32_t vector_offset = 0;
-        uint8_t* sang = find_kbo_team_by_csv_id_any_league("SANG", 0);
-        uint8_t* kpb = find_kbo_team_by_csv_id_any_league("KPB", 0);
-        if (today_serial == 0u
-                || !find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)
-                || (sang == NULL && kpb == NULL)) {
-            if (attempt <= tuning->military_seed_bootstrap_log_initial_attempts
-                    || attempt % tuning->military_seed_bootstrap_log_interval == 0) {
-                append_logf(
-                    "KBO military service seed bootstrap waiting attempt=%d reason=state_not_ready date_serial=%u player_count=%d sang=%p kpb=%p save=%s",
-                    attempt,
-                    today_serial,
-                    player_count,
-                    (void*)sang,
-                    (void*)kpb,
-                    save_path);
-            }
-            continue;
-        }
-
-        if (kbo_opening_day_storyline_guard_active("military_seed_bootstrap", NULL, NULL)) {
-            settled_attempts = 0;
-            continue;
-        }
-
-        int seeded = 0;
-        int returned = kbo_tick_military_service_days("military_seed_bootstrap", &seeded);
-        if (seeded > 0 || returned > 0) {
-            append_logf(
-                "KBO military service seed bootstrap applied attempt=%d seeded=%d returned=%d save=%s",
-                attempt,
-                seeded,
-                returned,
-                save_path);
-            return 0;
-        }
-
-        if (GetFileAttributesA(save_path) != INVALID_FILE_ATTRIBUTES) {
-            settled_attempts++;
-        }
-        if (settled_attempts >= 3) {
-            append_logf(
-                "KBO military service seed bootstrap settled attempt=%d seeded=0 returned=0 save=%s",
-                attempt,
-                save_path);
-            return 0;
-        }
-    }
-
-    append_log_line("KBO military service seed bootstrap ended without settled save");
-    return 0;
-}
-
+#include "military_service_seed_bootstrap_thread.inc"

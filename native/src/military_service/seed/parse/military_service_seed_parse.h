@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "../../selection/events/military_selection_policy.h"
+#include "../../selection/events/policy/military_selection_policy.h"
 
 #ifndef KBO_MILITARY_SERVICE_DAYS
 #define KBO_MILITARY_SERVICE_DAYS kbo_military_service_days()

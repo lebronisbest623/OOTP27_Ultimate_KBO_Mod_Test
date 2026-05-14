@@ -16,7 +16,7 @@
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../players/loans/military_active_loan.h"
 #include "../../players/state/military_player_state.h"
-#include "../../selection/events/military_selection_policy.h"
+#include "../../selection/events/policy/military_selection_policy.h"
 #include "../../seed/registry/military_seed_registry.h"
 #include "../../calendar/military_service_date.h"
 #include "../state/military_service_runtime_state.h"

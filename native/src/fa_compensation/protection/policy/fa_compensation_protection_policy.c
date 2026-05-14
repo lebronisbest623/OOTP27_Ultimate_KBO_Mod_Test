@@ -3,7 +3,7 @@
 
 #include "fa_compensation_protection_policy.h"
 
-#include "../../core/policy/core_policy.h"
+#include "../../../core/policy/core_policy.h"
 
 #define KBO_FA_COMPENSATION_POLICY_FILE "fa_compensation_policy.json"
 

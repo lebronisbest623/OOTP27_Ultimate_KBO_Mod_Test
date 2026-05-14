@@ -15,7 +15,7 @@
 #include "../players/loans/military_native_loan.h"
 #include "../players/state/military_player_state.h"
 #include "military_return.h"
-#include "military_return_history.h"
+#include "history/military_return_history.h"
 #include "../selection/news/military_selection_news.h"
 
 static LONG g_military_loan_return_log_count = 0;

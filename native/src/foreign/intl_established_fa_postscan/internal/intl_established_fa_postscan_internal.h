@@ -11,7 +11,7 @@
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
-#include "../../../core/core_flags/api/settings/economic_defaults.h"
+#include "../../../core/core_flags/api/settings/economic/economic_defaults.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/runtime_tuning/runtime_tuning_policy.h"

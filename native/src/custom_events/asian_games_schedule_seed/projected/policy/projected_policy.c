@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../../core/core_flags/json/json_bool_parser.h"
-#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../../core/core_flags/json/json_bool_parser.h"
+#include "../../../../core/files/save_paths/core_save_paths.h"
 
 #define KBO_ASIAN_GAMES_PROJECTED_POLICY_FILE "asian_games_projected_policy.json"
 

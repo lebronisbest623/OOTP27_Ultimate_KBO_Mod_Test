@@ -1,7 +1,7 @@
-#include "../flags_api.h"
+#include "../../flags_api.h"
 
-#include "../../localappdata/localappdata_reader.h"
-#include "economic_defaults.h"
+#include "../../../localappdata/localappdata_reader.h"
+#include "../economic/economic_defaults.h"
 
 #include <stdint.h>
 

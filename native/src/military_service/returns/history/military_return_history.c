@@ -2,7 +2,7 @@
 #include <windows.h>
 #include <stdint.h>
 
-#include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../../bootstrap/abi/ootp_offsets.h"
 #include "military_return_history.h"
 
 typedef struct KboMilitaryReturnHistoryKey {

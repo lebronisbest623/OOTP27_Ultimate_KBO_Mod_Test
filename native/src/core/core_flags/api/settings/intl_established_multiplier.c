@@ -1,7 +1,7 @@
 #include "../flags_api.h"
 
 #include "../../localappdata/localappdata_reader.h"
-#include "economic_defaults.h"
+#include "economic/economic_defaults.h"
 
 #define KBO_INTL_ESTABLISHED_FA_MULTIPLIER_KEY "intl_established_fa_multiplier"
 #define KBO_INTL_ESTABLISHED_FA_MULTIPLIER_MIN 1

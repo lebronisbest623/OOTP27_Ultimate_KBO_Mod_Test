@@ -3,7 +3,7 @@
 
 #include "military_selection_policy.h"
 
-#include "../../../core/policy/core_policy.h"
+#include "../../../../core/policy/core_policy.h"
 
 #define KBO_MILITARY_SELECTION_POLICY_FILE "military_service_policy.json"
 

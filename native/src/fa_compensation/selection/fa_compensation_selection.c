@@ -8,7 +8,7 @@
 #include "../../core/logging/core_log.h"
 #include "../../fa_rules/fa_rules.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
-#include "../protection/fa_compensation_protection_policy.h"
+#include "../protection/policy/fa_compensation_protection_policy.h"
 #include "../decisions/fa_compensation_decisions.h"
 #include "../protection/fa_compensation_protection_score.h"
 #include "../records/fa_compensation_records.h"

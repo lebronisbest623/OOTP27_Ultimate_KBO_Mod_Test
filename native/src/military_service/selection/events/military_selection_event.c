@@ -14,7 +14,7 @@
 #include "../news/military_selection_news.h"
 #include "../../seed/parse/military_service_seed_parse.h"
 #include "../../runtime/days_tick/military_service_tick.h"
-#include "military_selection_policy.h"
+#include "policy/military_selection_policy.h"
 
 static int kbo_count_players_on_team_with_military_days(uint32_t team_id)
 {

@@ -11,7 +11,7 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "military_fa_policy.h"
-#include "../events/military_selection_policy.h"
+#include "../events/policy/military_selection_policy.h"
 #include "../../players/team_policy/military_service_team_policy.h"
 
 static volatile LONG g_kbo_military_fa_block_player_id = 0;

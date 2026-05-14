@@ -10,7 +10,7 @@
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../import/import_and_load.h"
-#include "../projected/projected_policy.h"
+#include "../projected/policy/projected_policy.h"
 
 int kbo_get_asian_games_schedule_for_year(uint32_t year, KboAsianGamesScheduleSeed* out)
 {
