@@ -50,6 +50,7 @@
 #include "../patch_installers/foreign/roster_limits/trade/patch_installers_foreign_trade_check.h"
 #include "../patch_installers/foreign/intl_established_fa/patch_installers_intl_established_fa.h"
 #include "../patch_installers/amateur_assignment/patch_installers_amateur_assignment.h"
+#include "../patch_installers/competitive_balance_tax/patch_installers_cbt_draft_order.h"
 #include "../patch_installers/military/patch_installers_military.h"
 #include "../patch_installers/season_phase/patch_installers_season_phase_probe.h"
 #include "../season_phase_monitor/season_phase_monitor.h"

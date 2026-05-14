@@ -80,6 +80,12 @@ DWORD WINAPI patch_thread(LPVOID parameter)
     append_log_line("KBO F2 hub starting before runtime marker guard");
     start_kbo_hotkey_window_thread((HINSTANCE)parameter);
     start_kbo_cbt_event_scheduler_thread();
+    if (!read_kbo_localappdata_flag_file("disable_kbo_cbt_draft_order_penalty_hook.txt")) {
+        append_log_line("KBO CBT draft order penalty hook install requested");
+        install_kbo_cbt_draft_order_penalty_patch();
+    } else {
+        append_log_line("KBO CBT draft order penalty hook skipped: disable_kbo_cbt_draft_order_penalty_hook is true");
+    }
     start_kbo_fa_salary_snapshot_thread();
     start_kbo_domestic_fa_market_investigation_thread();
     start_kbo_captain_preseason_selection_thread();
