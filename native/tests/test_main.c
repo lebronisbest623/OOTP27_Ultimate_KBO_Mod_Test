@@ -41,6 +41,7 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
 #include "../src/core/files/atomic/core_atomic_file.h"
 #include "../src/military_service/players/loans/military_native_loan.h"
+#include "../src/team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../src/bootstrap/abi/ootp_offsets.h"
 #include "../src/foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../src/foreign/injury/api/foreign_injury.h"
@@ -936,6 +937,32 @@ static void test_military_native_loan_clear(void)
     printf("test_military_native_loan_clear: PASS\n");
 }
 
+static void test_team_roster_arrays_contains_player(void)
+{
+    size_t team_size = OOTP27_TEAM_PLAYER_IDS_3700_OFFSET
+        + (OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT * sizeof(uint32_t));
+    uint8_t* team = (uint8_t*)calloc(1u, team_size);
+    assert(team != NULL);
+
+    assert(!kbo_team_roster_arrays_contain_player(NULL, 42u));
+    assert(!kbo_team_roster_arrays_contain_player(team, 0u));
+    assert(!kbo_team_roster_arrays_contain_player(team, 42u));
+
+    uint32_t* ids_2a80 = (uint32_t*)(team + OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET);
+    ids_2a80[3] = 42u;
+    assert(kbo_team_fixed_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET, 42u));
+    assert(kbo_team_roster_arrays_contain_player(team, 42u));
+    assert(!kbo_team_roster_arrays_contain_player(team, 43u));
+
+    ids_2a80[3] = 0u;
+    uint32_t* restricted_ids = (uint32_t*)(team + OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET);
+    restricted_ids[0] = 77u;
+    assert(kbo_team_roster_arrays_contain_player(team, 77u));
+
+    free(team);
+    printf("test_team_roster_arrays_contains_player: PASS\n");
+}
+
 static void test_foreign_waiver_read_player_i16(void)
 {
     uint8_t player[OOTP27_PLAYER_SCAN_BYTES];
@@ -1071,6 +1098,34 @@ static void test_foreign_injury_status_label(void)
     assert(strcmp(kbo_foreign_injury_status_label(255u), "Unknown") == 0);
 
     printf("test_foreign_injury_status_label: PASS\n");
+}
+
+static void test_foreign_injury_foreign_count_exclusion(void)
+{
+    memset(g_kbo_foreign_injury_replacements, 0, sizeof(g_kbo_foreign_injury_replacements));
+    g_kbo_foreign_injury_replacement_count = 3;
+
+    g_kbo_foreign_injury_replacements[0].team_id = 7u;
+    g_kbo_foreign_injury_replacements[0].injured_player_id = 1001u;
+    g_kbo_foreign_injury_replacements[0].status = KBO_FOREIGN_INJURY_STATUS_OPEN;
+
+    g_kbo_foreign_injury_replacements[1].team_id = 7u;
+    g_kbo_foreign_injury_replacements[1].injured_player_id = 1002u;
+    g_kbo_foreign_injury_replacements[1].status = KBO_FOREIGN_INJURY_STATUS_ACTIVE;
+
+    g_kbo_foreign_injury_replacements[2].team_id = 7u;
+    g_kbo_foreign_injury_replacements[2].injured_player_id = 1003u;
+    g_kbo_foreign_injury_replacements[2].status = KBO_FOREIGN_INJURY_STATUS_CLOSED;
+
+    assert(kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 1001u));
+    assert(kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 1002u));
+    assert(!kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 1003u));
+    assert(!kbo_foreign_injury_player_excluded_from_foreign_count_locked(8u, 1001u));
+    assert(!kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 0u));
+
+    g_kbo_foreign_injury_replacement_count = 0;
+    memset(g_kbo_foreign_injury_replacements, 0, sizeof(g_kbo_foreign_injury_replacements));
+    printf("test_foreign_injury_foreign_count_exclusion: PASS\n");
 }
 
 static void test_flag_key_from_file_name(void)
@@ -1349,11 +1404,13 @@ int main(void)
     test_core_atomic_file_round_trip();
     test_military_native_loan_on_loan_predicate();
     test_military_native_loan_clear();
+    test_team_roster_arrays_contains_player();
     test_foreign_waiver_read_player_i16();
     test_foreign_waiver_value_score();
     test_player_is_foreign_for_kbo_rights();
     test_foreign_injury_slot_label();
     test_foreign_injury_status_label();
+    test_foreign_injury_foreign_count_exclusion();
     test_amateur_assignment_policy();
     printf("All tests passed.\n");
     return 0;

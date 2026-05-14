@@ -79,6 +79,7 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\core\files\atomic\core_atomic_file.c") `
     (Join-Path $Root "src\core\policy\core_policy.c") `
     (Join-Path $Root "src\military_service\players\loans\military_native_loan.c") `
+    (Join-Path $Root "src\team\assignment\roster_arrays\team_roster_arrays.c") `
     (Join-Path $Root "src\foreign\common\policy\foreign_player_policy.c") `
     (Join-Path $Root "src\foreign\common\player_eval\foreign_waiver_player_eval.c") `
     (Join-Path $Root "src\foreign\injury\state\foreign_injury_state.c") `

@@ -1,4 +1,17 @@
 #include "../ui_fa_views_internal.h"
+#include "../../../../team/lookup/team_lookup.h"
+
+static int kbo_fa_market_ui_row_capacity(void)
+{
+    int row_capacity = KBO_FA_MARKET_CLASSIFICATION_MAX;
+    uintptr_t player_vector = 0u;
+    int32_t player_count = 0;
+    if (find_kbo_global_player_vector(&player_vector, &player_count, NULL)
+            && player_count > row_capacity) {
+        row_capacity = player_count;
+    }
+    return row_capacity;
+}
 
 void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t selected_league_id)
 {
@@ -6,17 +19,19 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
         return;
     }
 
-    static KboFaMarketClassification s_cached_rows[KBO_FA_MARKET_CLASSIFICATION_MAX];
+    static KboFaMarketClassification* s_cached_rows = NULL;
     static KboFaMarketScanSummary s_cached_summary;
     static uint32_t s_cached_league_id = 0u;
     static uint32_t s_cached_today = 0u;
     static uint32_t s_cached_year = 0u;
     static int s_cached_count = -1;
+    static int s_cached_capacity = 0;
 
+    int row_capacity = kbo_fa_market_ui_row_capacity();
     KboFaMarketClassification* rows = (KboFaMarketClassification*)HeapAlloc(
         GetProcessHeap(),
         HEAP_ZERO_MEMORY,
-        (SIZE_T)KBO_FA_MARKET_CLASSIFICATION_MAX * sizeof(KboFaMarketClassification));
+        (SIZE_T)row_capacity * sizeof(KboFaMarketClassification));
     if (rows == NULL) {
         kbo_window_text_appendf(buffer, "<div class='rights rosterRights'><section class='tablewrap rosterTableWrap'>Could not allocate classification buffer.</section></div>");
         return;
@@ -32,7 +47,10 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
     if (s_cached_count >= 0
             && s_cached_league_id == selected_league_id
             && s_cached_today == today
-            && s_cached_year == current_year) {
+            && s_cached_year == current_year
+            && s_cached_rows != NULL
+            && s_cached_count <= s_cached_capacity
+            && s_cached_count <= row_capacity) {
         count = s_cached_count;
         summary = s_cached_summary;
         memcpy(rows, s_cached_rows, (SIZE_T)count * sizeof(rows[0]));
@@ -40,7 +58,7 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
         count = kbo_collect_fa_market_classifications(
             selected_league_id,
             rows,
-            KBO_FA_MARKET_CLASSIFICATION_MAX,
+            row_capacity,
             &summary,
             0,
             "f2_webview");
@@ -49,7 +67,28 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
         s_cached_year = current_year;
         s_cached_count = count;
         s_cached_summary = summary;
-        memcpy(s_cached_rows, rows, (SIZE_T)count * sizeof(rows[0]));
+        if (count > s_cached_capacity) {
+            KboFaMarketClassification* new_cache = NULL;
+            if (s_cached_rows != NULL) {
+                new_cache = (KboFaMarketClassification*)HeapReAlloc(
+                    GetProcessHeap(),
+                    HEAP_ZERO_MEMORY,
+                    s_cached_rows,
+                    (SIZE_T)count * sizeof(rows[0]));
+            } else {
+                new_cache = (KboFaMarketClassification*)HeapAlloc(
+                    GetProcessHeap(),
+                    HEAP_ZERO_MEMORY,
+                    (SIZE_T)count * sizeof(rows[0]));
+            }
+            if (new_cache != NULL) {
+                s_cached_rows = new_cache;
+                s_cached_capacity = count;
+            }
+        }
+        if (s_cached_rows != NULL && count <= s_cached_capacity) {
+            memcpy(s_cached_rows, rows, (SIZE_T)count * sizeof(rows[0]));
+        }
     }
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights faCases'>");
@@ -66,7 +105,7 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
         "<th data-sort-type='text'>Rights</th>"
         "</tr></thead><tbody>");
 
-    for (int i = 0; i < count && i < 800; i++) {
+    for (int i = 0; i < count; i++) {
         KboFaMarketClassification* row = &rows[i];
         char team_abbrev[16] = "-";
         char rights_abbrev[16] = "-";
@@ -107,8 +146,8 @@ void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t sele
     }
     if (count == 0) {
         kbo_window_text_appendf(buffer, "<tr><td colspan='8'>No active players without a current team found.</td></tr>");
-    } else if (summary.truncated || count > 800) {
-        kbo_window_text_appendf(buffer, "<tr><td colspan='8'>Output truncated. Open fa_market_classification.csv for the full snapshot.</td></tr>");
+    } else if (summary.truncated) {
+        kbo_window_text_appendf(buffer, "<tr><td colspan='8'>Classification buffer reached. Some market candidates may be missing.</td></tr>");
     }
 
     kbo_window_text_appendf(buffer, "</tbody></table></section></div>");

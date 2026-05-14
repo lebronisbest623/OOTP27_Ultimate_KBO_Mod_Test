@@ -112,7 +112,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
         int active_index = find_active_kbo_military_loan_index(player_id);
         int32_t direct_days_left = kbo_military_days_left(player);
         uint8_t military_active = player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET];
-        if (active_index < 0 && military_active == 0u) {
+        if (active_index < 0 && military_active == 0u && direct_days_left <= 0) {
             if (!source_allows_roster_mutation) {
                 deferred_invalid_releases++;
                 continue;
@@ -165,6 +165,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
                 service_team_id,
                 service_league != 0 ? service_league
                     : *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET));
+            player[OOTP27_PLAYER_MILITARY_ACTIVE_OFFSET] = 1u;
             active_index = find_active_kbo_military_loan_index(player_id);
             newly_registered++;
             static volatile LONG discovered_register_log_count = 0;

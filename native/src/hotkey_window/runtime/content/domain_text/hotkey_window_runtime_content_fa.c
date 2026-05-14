@@ -1,5 +1,18 @@
 #include "../hotkey_window_runtime_content_internal.h"
 #include "../../hotkey_window_domain_contract.h"
+#include "../../../../team/lookup/team_lookup.h"
+
+static int kbo_fa_market_text_row_capacity(void)
+{
+    int row_capacity = KBO_FA_MARKET_CLASSIFICATION_MAX;
+    uintptr_t player_vector = 0u;
+    int32_t player_count = 0;
+    if (find_kbo_global_player_vector(&player_vector, &player_count, NULL)
+            && player_count > row_capacity) {
+        row_capacity = player_count;
+    }
+    return row_capacity;
+}
 
 void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
 {
@@ -13,10 +26,11 @@ void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     buffer.capacity = out_size;
     buffer.length = 0;
 
+    int row_capacity = kbo_fa_market_text_row_capacity();
     KboFaMarketClassification* rows = (KboFaMarketClassification*)HeapAlloc(
         GetProcessHeap(),
         HEAP_ZERO_MEMORY,
-        (SIZE_T)KBO_FA_MARKET_CLASSIFICATION_MAX * sizeof(KboFaMarketClassification));
+        (SIZE_T)row_capacity * sizeof(KboFaMarketClassification));
     if (rows == NULL) {
         kbo_window_text_appendf(&buffer, "FA MARKET\r\n\r\nCould not allocate classification buffer.\r\n");
         return;
@@ -26,7 +40,7 @@ void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     int count = kbo_collect_fa_market_classifications(
         g_kbo_hub_selected_league_id,
         rows,
-        KBO_FA_MARKET_CLASSIFICATION_MAX,
+        row_capacity,
         &summary,
         1,
         "f2_text");
@@ -47,7 +61,7 @@ void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     kbo_window_text_appendf(&buffer, "PLAYER                   CASE            GRADE    PREV SALARY TEAM AGE RIGHTS\r\n");
     kbo_window_text_appendf(&buffer, "----------------------------------------------------------------------------------\r\n");
 
-    for (int i = 0; i < count && i < 600; i++) {
+    for (int i = 0; i < count; i++) {
         KboFaMarketClassification* row = &rows[i];
         char team_abbrev[16] = "-";
         char rights_abbrev[16] = "-";
@@ -72,8 +86,8 @@ void kbo_build_fa_cases_hub_text(char* out, size_t out_size)
     }
     if (count == 0) {
         kbo_window_text_appendf(&buffer, "No active players without a current team found.\r\n");
-    } else if (summary.truncated || count > 600) {
-        kbo_window_text_appendf(&buffer, "\r\nOutput truncated. Open the CSV for the full snapshot.\r\n");
+    } else if (summary.truncated) {
+        kbo_window_text_appendf(&buffer, "\r\nClassification buffer reached. Some market candidates may be missing.\r\n");
     }
 
     HeapFree(GetProcessHeap(), 0, rows);
@@ -199,13 +213,14 @@ void kbo_refresh_hotkey_window(void)
         return;
     }
 
-    char* text = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 65536u);
+    const SIZE_T text_cap = 1048576u;
+    char* text = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, text_cap);
     if (text == NULL) {
         SetWindowTextA(g_kbo_hotkey_edit, "Ultimate KBO\r\n\r\nCould not prepare this page.");
         return;
     }
 
-    kbo_build_hub_window_text(text, 65536u);
+    kbo_build_hub_window_text(text, text_cap);
     HFONT content_font = (g_kbo_hub_selected_view == KBO_HUB_VIEW_MILITARY
             || g_kbo_hub_selected_view == KBO_HUB_VIEW_FOREIGN_RIGHTS
             || g_kbo_hub_selected_view == KBO_HUB_VIEW_ASIAN_QUOTA
