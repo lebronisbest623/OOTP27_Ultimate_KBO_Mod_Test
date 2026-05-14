@@ -166,6 +166,13 @@ int kbo_fa_market_overlay_filing_history_cases(
     }
 
     if (filing_count > 0 || applied > 0) {
+        static DWORD last_overlay_log_tick = 0u;
+        DWORD now = GetTickCount();
+        if (last_overlay_log_tick != 0u && now >= last_overlay_log_tick && now - last_overlay_log_tick < 60000u) {
+            HeapFree(GetProcessHeap(), 0, filings);
+            return applied;
+        }
+        last_overlay_log_tick = now;
         append_logf(
             "FA market filing ledger overlay applied=%d filings=%d rows=%d csv=%s",
             applied,

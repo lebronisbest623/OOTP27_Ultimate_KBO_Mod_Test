@@ -276,29 +276,31 @@ static int kbo_collect_fa_market_classifications_internal(
             (unsigned long long)classify_ms,
             (unsigned long long)total_ms);
     }
-    kbo_rule_audit_emitf(
-        "fa_market.classification.scan",
-        row_count > 0 ? "classify" : "scan_empty",
-        row_count > 0 ? "candidates_classified" : "no_candidates",
-        source,
-        "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u,\"current_year\":%u,"
-        "\"rows\":%d,\"candidates\":%d,\"scanned\":%d,\"truncated\":%d,"
-        "\"seed_count\":%d,\"requalification_count\":%d,\"salary_snapshot\":%d,"
-        "\"write_csv\":%d,\"csv_written\":%d,\"total_ms\":%llu",
-        requested_league_id,
-        league_id,
-        today,
-        current_year,
-        row_count,
-        candidate_count,
-        scanned,
-        truncated,
-        seed_count,
-        requalification_count,
-        salary_grade_count,
-        write_csv,
-        summary != NULL ? summary->csv_written : 0,
-        (unsigned long long)total_ms);
+    if (!interactive_ui) {
+        kbo_rule_audit_emitf(
+            "fa_market.classification.scan",
+            row_count > 0 ? "classify" : "scan_empty",
+            row_count > 0 ? "candidates_classified" : "no_candidates",
+            source,
+            "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u,\"current_year\":%u,"
+            "\"rows\":%d,\"candidates\":%d,\"scanned\":%d,\"truncated\":%d,"
+            "\"seed_count\":%d,\"requalification_count\":%d,\"salary_snapshot\":%d,"
+            "\"write_csv\":%d,\"csv_written\":%d,\"total_ms\":%llu",
+            requested_league_id,
+            league_id,
+            today,
+            current_year,
+            row_count,
+            candidate_count,
+            scanned,
+            truncated,
+            seed_count,
+            requalification_count,
+            salary_grade_count,
+            write_csv,
+            summary != NULL ? summary->csv_written : 0,
+            (unsigned long long)total_ms);
+    }
 
     HeapFree(GetProcessHeap(), 0, seeds);
     HeapFree(GetProcessHeap(), 0, records);
