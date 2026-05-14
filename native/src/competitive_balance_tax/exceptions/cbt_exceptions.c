@@ -7,6 +7,7 @@
 
 #include "cbt_exceptions.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
@@ -76,54 +77,30 @@ int kbo_cbt_exception_load_designations(KboCbtExceptionDesignation* rows, int ma
     if (!kbo_cbt_exception_designation_path(path, sizeof(path))) {
         return 0;
     }
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 256u * 1024u) {
-        CloseHandle(file);
-        return 0;
-    }
-    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buffer == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-    DWORD read = 0;
+
     int count = 0;
-    if (ReadFile(file, buffer, size, &read, NULL)) {
-        buffer[read] = '\0';
-        char* cursor = buffer;
-        int header = 0;
-        while (*cursor != '\0' && count < max) {
-            char* next = strchr(cursor, '\n');
-            if (next != NULL) { *next = '\0'; }
-            char* p = cursor;
-            while (*p == ' ' || *p == '\t' || *p == '\r') { p++; }
-            if (!header) {
-                header = 1;
-            } else if (*p >= '0' && *p <= '9') {
-                KboCbtExceptionDesignation row;
-                memset(&row, 0, sizeof(row));
-                char field[128] = {0};
-                for (int fi = 0; fi <= 3 && *p != '\0'; fi++) {
-                    if (!kbo_fa_salary_snapshot_parse_csv_field(&p, field, sizeof(field))) { break; }
-                    if (fi == 0) row.season = (uint32_t)strtoul(field, NULL, 10);
-                    else if (fi == 1) row.team_id = (uint32_t)strtoul(field, NULL, 10);
-                    else if (fi == 2) snprintf(row.player_key, sizeof(row.player_key), "%s", field);
-                    else if (fi == 3) snprintf(row.player_name, sizeof(row.player_name), "%s", field);
-                }
-                if (row.season != 0u && row.team_id != 0u && row.player_key[0] != '\0') {
-                    rows[count++] = row;
-                }
-            }
-            if (next == NULL) { break; }
-            cursor = next + 1;
+    while (count < max && kbo_csv_reader_next_row(reader)) {
+        char fields[4][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 4);
+        if (field_count < 4 || fields[0][0] < '0' || fields[0][0] > '9') {
+            continue;
+        }
+
+        KboCbtExceptionDesignation row;
+        memset(&row, 0, sizeof(row));
+        row.season = (uint32_t)strtoul(fields[0], NULL, 10);
+        row.team_id = (uint32_t)strtoul(fields[1], NULL, 10);
+        snprintf(row.player_key, sizeof(row.player_key), "%.*s", (int)sizeof(row.player_key) - 1, fields[2]);
+        snprintf(row.player_name, sizeof(row.player_name), "%.*s", (int)sizeof(row.player_name) - 1, fields[3]);
+        if (row.season != 0u && row.team_id != 0u && row.player_key[0] != '\0') {
+            rows[count++] = row;
         }
     }
-    CloseHandle(file);
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
     return count;
 }
 

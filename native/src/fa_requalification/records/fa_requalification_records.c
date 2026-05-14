@@ -20,38 +20,6 @@ void kbo_unlock_fa_requalification_records(void)
     InterlockedExchange(&g_kbo_fa_requalification_records_lock, 0);
 }
 
-int kbo_fa_parse_u32_csv_field(const char** cursor, uint32_t* out_value)
-{
-    if (cursor == NULL || *cursor == NULL || out_value == NULL) {
-        return 0;
-    }
-
-    const char* p = *cursor;
-    while (*p == ' ' || *p == '\t' || *p == '\r') {
-        p++;
-    }
-    if (*p == '"') {
-        p++;
-    }
-
-    char* tail = NULL;
-    unsigned long value = strtoul(p, &tail, 10);
-    if (tail == p || value > 0xfffffffful) {
-        return 0;
-    }
-
-    while (*tail != '\0' && *tail != ',' && *tail != '\n') {
-        tail++;
-    }
-    if (*tail == ',') {
-        tail++;
-    }
-
-    *cursor = tail;
-    *out_value = (uint32_t)value;
-    return 1;
-}
-
 void kbo_ensure_fa_requalification_template(void)
 {
     char path[MAX_PATH] = {0};
@@ -99,80 +67,47 @@ int kbo_load_fa_requalification_records(KboFaRequalificationRecord* records, int
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
-
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 1024u * 1024u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buffer == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
-    if (!ReadFile(file, buffer, size, &read, NULL)) {
-        HeapFree(GetProcessHeap(), 0, buffer);
-        CloseHandle(file);
-        return 0;
-    }
-    CloseHandle(file);
-    buffer[read] = '\0';
 
     int count = 0;
-    const char* cursor = buffer;
-    while (*cursor != '\0' && count < max_records) {
-        const char* next = strchr(cursor, '\n');
-        size_t len = next != NULL ? (size_t)(next - cursor) : strlen(cursor);
-        if (len > 0 && len < 256) {
-            char line[256] = {0};
-            memcpy(line, cursor, len);
-            const char* p = line;
-            while (*p == ' ' || *p == '\t' || *p == '\r') {
-                p++;
-            }
-            if (*p != '\0' && *p != '#' && *p != ';' && (*p < 'A' || *p > 'z')) {
-                uint32_t player_id = 0;
-                uint32_t original_team_id = 0;
-                uint32_t last_fa_year = 0;
-                uint32_t fa_count = 0;
-                char last_fa_grade[12] = "UNKNOWN";
-                if (kbo_fa_parse_u32_csv_field(&p, &player_id)
-                        && kbo_fa_parse_u32_csv_field(&p, &original_team_id)
-                        && kbo_fa_parse_u32_csv_field(&p, &last_fa_year)
-                        && kbo_fa_parse_u32_csv_field(&p, &fa_count)
-                        && player_id != 0u
-                        && original_team_id != 0u
-                        && last_fa_year >= 1982u
-                        && last_fa_year <= 2200u
-                        && fa_count >= 1u) {
-                    char grade_field[24] = {0};
-                    if (kbo_csv_parse_const_field(&p, grade_field, sizeof(grade_field)) && grade_field[0] != '\0') {
-                        kbo_csv_trim_token_in_place(grade_field);
-                        snprintf(last_fa_grade, sizeof(last_fa_grade), "%s", grade_field);
-                    }
-                    records[count].player_id = player_id;
-                    records[count].original_team_id = original_team_id;
-                    records[count].last_fa_year = last_fa_year;
-                    records[count].fa_count = fa_count;
-                    snprintf(records[count].last_fa_grade, sizeof(records[count].last_fa_grade), "%s", last_fa_grade);
-                    count++;
-                }
-            }
+    while (count < max_records && kbo_csv_reader_next_row(reader)) {
+        char fields[5][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 5);
+        if (field_count < 4
+                || fields[0][0] == '\0'
+                || fields[0][0] == '#'
+                || fields[0][0] == ';'
+                || (fields[0][0] >= 'A' && fields[0][0] <= 'z')) {
+            continue;
         }
-        if (next == NULL || *next == '\0') {
-            break;
+
+        uint32_t player_id = kbo_csv_parse_u32_text(fields[0], 10);
+        uint32_t original_team_id = kbo_csv_parse_u32_text(fields[1], 10);
+        uint32_t last_fa_year = kbo_csv_parse_u32_text(fields[2], 10);
+        uint32_t fa_count = kbo_csv_parse_u32_text(fields[3], 10);
+        if (player_id != 0u
+                && original_team_id != 0u
+                && last_fa_year >= 1982u
+                && last_fa_year <= 2200u
+                && fa_count >= 1u) {
+            records[count].player_id = player_id;
+            records[count].original_team_id = original_team_id;
+            records[count].last_fa_year = last_fa_year;
+            records[count].fa_count = fa_count;
+            snprintf(
+                records[count].last_fa_grade,
+                sizeof(records[count].last_fa_grade),
+                "%.*s",
+                (int)sizeof(records[count].last_fa_grade) - 1,
+                field_count >= 5 && fields[4][0] != '\0' ? fields[4] : "UNKNOWN");
+            count++;
         }
-        cursor = next + 1;
     }
 
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
     return count;
 }
 

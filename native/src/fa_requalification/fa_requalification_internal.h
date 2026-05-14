@@ -49,7 +49,6 @@ extern uint32_t g_kbo_fa_requalification_last_no_records_date;
 int get_kbo_fa_requalification_path(char* out, size_t out_size);
 void kbo_lock_fa_requalification_records(void);
 void kbo_unlock_fa_requalification_records(void);
-int kbo_fa_parse_u32_csv_field(const char** cursor, uint32_t* out_value);
 void kbo_ensure_fa_requalification_template(void);
 int kbo_load_fa_requalification_records(KboFaRequalificationRecord* records, int max_records);
 int kbo_write_fa_requalification_records(const KboFaRequalificationRecord* records, int count);

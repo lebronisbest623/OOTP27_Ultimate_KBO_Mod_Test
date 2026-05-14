@@ -4,6 +4,7 @@
 #include <string.h>
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/csv/core_csv.h"
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/dates/core_text_date.h"
@@ -141,34 +142,13 @@ int kbo_load_asian_games_roster_csv(const char* source)
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         DWORD scoped_error = GetLastError();
         kbo_clear_asian_games_roster_memory(source);
         append_logf("KBO Asian Games roster csv load skipped source=%s reason=open_failed gle=%lu path=%s", source != NULL ? source : "", scoped_error, path);
         return 0;
     }
-
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0 || size > 65536u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* raw = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (raw == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
-    int ok = ReadFile(file, raw, size, &read, NULL) && read > 0u;
-    CloseHandle(file);
-    if (!ok) {
-        HeapFree(GetProcessHeap(), 0, raw);
-        return 0;
-    }
-    raw[read] = '\0';
 
     KboAsianGamesRosterEntry loaded[KBO_ASIAN_GAMES_ROSTER_SIZE];
     memset(loaded, 0, sizeof(loaded));
@@ -176,57 +156,49 @@ int kbo_load_asian_games_roster_csv(const char* source)
     uint32_t loaded_year = 0;
     uint8_t loaded_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
 
-    char* line = raw;
-    while (line != NULL && *line != '\0') {
-        char* next = strchr(line, '\n');
-        if (next != NULL) { *next++ = '\0'; }
-        char* cr = strchr(line, '\r');
-        if (cr != NULL) { *cr = '\0'; }
-
-        if (strncmp(line, "year,", 5) != 0 && line[0] != '\0') {
-            unsigned int year = 0, index = 0, player_id = 0, team_id = 0, league_id = 0;
-            unsigned int departure_date = 0, return_date = 0, age = 0, role = 0, wildcard = 0;
-            unsigned int old_restricted = 0, old_secondary = 0, old_injury = 0;
-            int old_days = 0, score = 0;
-            unsigned int departed = 0, returned = 0, exempted = 0;
-            unsigned int tournament_result = 0;
-            int fields = sscanf(
-                line,
-                "%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d,%u",
-                &year, &index, &player_id, &team_id, &league_id, &departure_date, &return_date,
-                &age, &role, &wildcard, &old_restricted, &old_secondary, &old_injury, &old_days,
-                &departed, &returned, &exempted, &score, &tournament_result);
-            if (fields >= 18 && player_id != 0u && loaded_count < KBO_ASIAN_GAMES_ROSTER_SIZE) {
-                KboAsianGamesRosterEntry* entry = &loaded[loaded_count++];
-                loaded_year = year;
-                if (fields >= 19
-                        && (tournament_result == KBO_ASIAN_GAMES_RESULT_GOLD
-                            || tournament_result == KBO_ASIAN_GAMES_RESULT_NO_GOLD)) {
-                    loaded_result = (uint8_t)tournament_result;
-                }
-                entry->player_id = player_id;
-                entry->original_team_id = team_id;
-                entry->original_league_id = league_id;
-                entry->departure_date = departure_date;
-                entry->return_date = return_date;
-                entry->age = (uint16_t)age;
-                entry->role = (uint8_t)role;
-                entry->wildcard = (uint8_t)wildcard;
-                entry->old_restricted = (uint8_t)old_restricted;
-                entry->old_secondary_restricted = (uint8_t)old_secondary;
-                entry->old_injury_active = (uint8_t)old_injury;
-                entry->old_injury_days_left = (int16_t)old_days;
-                entry->departed = (uint8_t)departed;
-                entry->returned = (uint8_t)returned;
-                entry->exempted = (uint8_t)exempted;
-                entry->score = score;
-                entry->player_ptr = 0;
-            }
+    while (loaded_count < KBO_ASIAN_GAMES_ROSTER_SIZE && kbo_csv_reader_next_row(reader)) {
+        char fields[19][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 19);
+        if (field_count < 18
+                || fields[0][0] == '\0'
+                || _stricmp(fields[0], "year") == 0) {
+            continue;
         }
-        line = next;
+
+        uint32_t year = kbo_csv_parse_u32_text(fields[0], 10);
+        uint32_t player_id = kbo_csv_parse_u32_text(fields[2], 10);
+        if (player_id == 0u) {
+            continue;
+        }
+
+        KboAsianGamesRosterEntry* entry = &loaded[loaded_count++];
+        uint32_t tournament_result = field_count >= 19 ? kbo_csv_parse_u32_text(fields[18], 10) : 0u;
+        loaded_year = year;
+        if (field_count >= 19
+                && (tournament_result == KBO_ASIAN_GAMES_RESULT_GOLD
+                    || tournament_result == KBO_ASIAN_GAMES_RESULT_NO_GOLD)) {
+            loaded_result = (uint8_t)tournament_result;
+        }
+        entry->player_id = player_id;
+        entry->original_team_id = kbo_csv_parse_u32_text(fields[3], 10);
+        entry->original_league_id = kbo_csv_parse_u32_text(fields[4], 10);
+        entry->departure_date = kbo_csv_parse_u32_text(fields[5], 10);
+        entry->return_date = kbo_csv_parse_u32_text(fields[6], 10);
+        entry->age = (uint16_t)kbo_csv_parse_u32_text(fields[7], 10);
+        entry->role = (uint8_t)kbo_csv_parse_u32_text(fields[8], 10);
+        entry->wildcard = (uint8_t)kbo_csv_parse_u32_text(fields[9], 10);
+        entry->old_restricted = (uint8_t)kbo_csv_parse_u32_text(fields[10], 10);
+        entry->old_secondary_restricted = (uint8_t)kbo_csv_parse_u32_text(fields[11], 10);
+        entry->old_injury_active = (uint8_t)kbo_csv_parse_u32_text(fields[12], 10);
+        entry->old_injury_days_left = (int16_t)strtol(fields[13], NULL, 10);
+        entry->departed = (uint8_t)kbo_csv_parse_u32_text(fields[14], 10);
+        entry->returned = (uint8_t)kbo_csv_parse_u32_text(fields[15], 10);
+        entry->exempted = (uint8_t)kbo_csv_parse_u32_text(fields[16], 10);
+        entry->score = (int32_t)strtol(fields[17], NULL, 10);
+        entry->player_ptr = 0;
     }
 
-    HeapFree(GetProcessHeap(), 0, raw);
+    kbo_csv_reader_close(reader);
     if (loaded_count <= 0) {
         return 0;
     }

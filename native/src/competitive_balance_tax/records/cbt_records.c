@@ -58,7 +58,7 @@ int kbo_cbt_load_records(KboCbtRecord* records, int max, char* path_out, size_t 
         rec->tax_amount        = (int32_t)strtol(fields[6], NULL, 10);
         rec->consecutive_count = (uint32_t)strtoul(fields[7], NULL, 10);
         rec->processed_date    = (uint32_t)strtoul(fields[8], NULL, 10);
-        snprintf(rec->team_name, sizeof(rec->team_name), "%s", fields[9]);
+        snprintf(rec->team_name, sizeof(rec->team_name), "%.*s", (int)sizeof(rec->team_name) - 1, fields[9]);
         if (rec->season > 0u && rec->team_id > 0u) {
             count++;
         }

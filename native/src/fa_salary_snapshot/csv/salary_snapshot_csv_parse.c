@@ -20,11 +20,6 @@ void kbo_fa_salary_snapshot_write_csv_text(HANDLE file, const char* text)
     WriteFile(file, "\"", 1, &written, NULL);
 }
 
-int kbo_fa_salary_snapshot_parse_csv_field(char** cursor, char* out, size_t out_size)
-{
-    return kbo_csv_parse_field(cursor, out, out_size);
-}
-
 uint32_t kbo_fa_salary_snapshot_parse_u32(const char* text)
 {
     return kbo_csv_parse_u32_text(text, 10);

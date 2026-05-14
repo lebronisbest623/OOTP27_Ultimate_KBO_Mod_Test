@@ -177,7 +177,7 @@ int kbo_fa_salary_snapshot_load_grade_rows(
         grade_row.season = kbo_fa_salary_snapshot_parse_u32(fields[1]);
         grade_row.opening_day = kbo_fa_salary_snapshot_parse_u32(fields[2]);
         grade_row.player_id = kbo_fa_salary_snapshot_parse_u32(fields[5]);
-        snprintf(grade_row.player_name, sizeof(grade_row.player_name), "%s", fields[6]);
+        snprintf(grade_row.player_name, sizeof(grade_row.player_name), "%.*s", (int)sizeof(grade_row.player_name) - 1, fields[6]);
         grade_row.ranking_team_id = kbo_fa_salary_snapshot_parse_u32(fields[10]);
         grade_row.foreign_flag = kbo_fa_salary_snapshot_parse_u32(fields[16]) != 0u ? 1u : 0u;
         grade_row.salary = kbo_fa_salary_snapshot_parse_i32(fields[17]);
@@ -186,7 +186,7 @@ int kbo_fa_salary_snapshot_load_grade_rows(
         grade_row.team_rank = kbo_fa_salary_snapshot_parse_u32(fields[20]);
         grade_row.team_ordinal = kbo_fa_salary_snapshot_parse_u32(fields[21]);
         if (field_count > 34) {
-            snprintf(grade_row.player_key, sizeof(grade_row.player_key), "%s", fields[34]);
+            snprintf(grade_row.player_key, sizeof(grade_row.player_key), "%.*s", (int)sizeof(grade_row.player_key) - 1, fields[34]);
         }
 
         if (grade_row.player_id != 0u && grade_row.season == season) {

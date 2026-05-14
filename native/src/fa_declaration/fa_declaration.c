@@ -81,88 +81,38 @@ int kbo_fa_declaration_find_latest_decision(
         return 0;
     }
 
-    HANDLE file = CreateFileA(
-        path,
-        GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         return 0;
     }
-
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 4u * 1024u * 1024u) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buffer == NULL) {
-        CloseHandle(file);
-        return 0;
-    }
-
-    DWORD read = 0;
-    if (!ReadFile(file, buffer, size, &read, NULL)) {
-        HeapFree(GetProcessHeap(), 0, buffer);
-        CloseHandle(file);
-        return 0;
-    }
-    CloseHandle(file);
-    buffer[read] = '\0';
 
     int found = 0;
     uint32_t best_date = 0u;
-    char* cursor = buffer;
-    while (*cursor != '\0') {
-        char* next = strchr(cursor, '\n');
-        if (next != NULL) {
-            *next = '\0';
+    while (kbo_csv_reader_next_row(reader)) {
+        char fields[7][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 7);
+        if (field_count < 7 || fields[0][0] < '0' || fields[0][0] > '9') {
+            continue;
         }
 
-        char* p = cursor;
-        while (*p == ' ' || *p == '\t' || *p == '\r') {
-            p++;
+        uint32_t row_date = kbo_csv_parse_u32_text(fields[0], 10);
+        uint32_t row_season = kbo_csv_parse_u32_text(fields[1], 10);
+        uint32_t row_player_id = kbo_csv_parse_u32_text(fields[2], 10);
+        if (row_player_id == player_id
+                && (season == 0u || row_season == season)
+                && row_date >= best_date) {
+            found = 1;
+            best_date = row_date;
+            out_decision->player_id = row_player_id;
+            out_decision->declaration_date = row_date;
+            out_decision->season = row_season;
+            out_decision->declared = kbo_csv_parse_u32_text(fields[4], 10) != 0u ? 1u : 0u;
+            out_decision->team_id = kbo_csv_parse_u32_text(fields[5], 10);
+            out_decision->league_id = kbo_csv_parse_u32_text(fields[6], 10);
         }
-        if (*p >= '0' && *p <= '9') {
-            char fields[7][128];
-            memset(fields, 0, sizeof(fields));
-            int field_count = 0;
-            for (; field_count < 7 && *p != '\0'; field_count++) {
-                if (!kbo_csv_parse_field(&p, fields[field_count], sizeof(fields[field_count]))) {
-                    break;
-                }
-            }
-
-            if (field_count >= 7) {
-                uint32_t row_date = kbo_csv_parse_u32_text(fields[0], 10);
-                uint32_t row_season = kbo_csv_parse_u32_text(fields[1], 10);
-                uint32_t row_player_id = kbo_csv_parse_u32_text(fields[2], 10);
-                if (row_player_id == player_id
-                        && (season == 0u || row_season == season)
-                        && row_date >= best_date) {
-                    found = 1;
-                    best_date = row_date;
-                    out_decision->player_id = row_player_id;
-                    out_decision->declaration_date = row_date;
-                    out_decision->season = row_season;
-                    out_decision->declared = kbo_csv_parse_u32_text(fields[4], 10) != 0u ? 1u : 0u;
-                    out_decision->team_id = kbo_csv_parse_u32_text(fields[5], 10);
-                    out_decision->league_id = kbo_csv_parse_u32_text(fields[6], 10);
-                }
-            }
-        }
-
-        if (next == NULL) {
-            break;
-        }
-        cursor = next + 1;
     }
 
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
     return found;
 }
 

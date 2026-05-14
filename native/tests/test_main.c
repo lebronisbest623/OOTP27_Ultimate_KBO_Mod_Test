@@ -11,8 +11,8 @@
 #include "../src/core/dates/core_text_date.h"
 #include "../src/core/core_flags/json/json_bool_parser.h"
 #include "../src/core/news/templates/core_news_templates.h"
+#include "../src/core/csv/core_csv.h"
 #include "../src/core/sql/escape/core_sql_escape.h"
-#include "../src/foreign/common/csv/foreign_csv_parse.h"
 #include "../src/foreign/replacement_seed/parse/foreign_replacement_seed_parse.h"
 #include "../src/captain/season/captain_season.h"
 #include "../src/captain/seed/captain_seed_parse.h"
@@ -224,10 +224,10 @@ static void test_foreign_waiver_date_helpers(void)
 
 static void test_military_csv_parse(void)
 {
-    char token[] = "  \" player-01 \"\r\n";
+    char token[] = "  player-01\r\n";
     uint32_t value = 0u;
 
-    kbo_military_trim_csv_token_in_place(token);
+    kbo_csv_trim_token_in_place(token);
     assert(strcmp(token, "player-01") == 0);
     assert(kbo_military_ascii_is_seed_id_char('A'));
     assert(kbo_military_ascii_is_seed_id_char('_'));
@@ -321,8 +321,15 @@ static void test_allstar_csv_parse(void)
     int team_id_col = -1;
     int name_col = -1;
     int allstar_col = -1;
-    kbo_csv_find_allstar_team_columns(
+    char fields[KBO_ALLSTAR_CSV_MAX_COLUMNS][KBO_ALLSTAR_CSV_FIELD_SIZE];
+    int field_count = kbo_csv_read_trimmed_line_fields(
         "yearID,teamID,name,allstar_team",
+        (char*)fields,
+        sizeof(fields[0]),
+        KBO_ALLSTAR_CSV_MAX_COLUMNS);
+    kbo_csv_find_allstar_team_columns_from_fields(
+        fields,
+        field_count,
         &year_col,
         &team_id_col,
         &name_col,
@@ -337,8 +344,14 @@ static void test_allstar_csv_parse(void)
     char team_name[96] = {0};
     char current_city[64] = {0};
     uint8_t side = 0u;
-    kbo_csv_extract_allstar_team_fields(
+    field_count = kbo_csv_read_trimmed_line_fields(
         "2026,LG,LG Twins,Nanum",
+        (char*)fields,
+        sizeof(fields[0]),
+        KBO_ALLSTAR_CSV_MAX_COLUMNS);
+    kbo_csv_extract_allstar_team_fields_from_fields(
+        fields,
+        field_count,
         year_col,
         team_id_col,
         name_col,
@@ -357,8 +370,14 @@ static void test_allstar_csv_parse(void)
     assert(strcmp(current_city, "LG") == 0);
     assert(side == 1u);
 
-    kbo_csv_find_allstar_team_columns(
+    field_count = kbo_csv_read_trimmed_line_fields(
         "\"year\",\"team_id\",\"name\",\"all_star_division\"",
+        (char*)fields,
+        sizeof(fields[0]),
+        KBO_ALLSTAR_CSV_MAX_COLUMNS);
+    kbo_csv_find_allstar_team_columns_from_fields(
+        fields,
+        field_count,
         &year_col,
         &team_id_col,
         &name_col,
@@ -368,8 +387,14 @@ static void test_allstar_csv_parse(void)
     assert(name_col == 2);
     assert(allstar_col == 3);
 
-    kbo_csv_extract_allstar_team_fields(
+    field_count = kbo_csv_read_trimmed_line_fields(
         "2027,\"SSG\",\"SSG Landers, Incheon\",\"dong-gun\"",
+        (char*)fields,
+        sizeof(fields[0]),
+        KBO_ALLSTAR_CSV_MAX_COLUMNS);
+    kbo_csv_extract_allstar_team_fields_from_fields(
+        fields,
+        field_count,
         year_col,
         team_id_col,
         name_col,
@@ -388,8 +413,14 @@ static void test_allstar_csv_parse(void)
     assert(strcmp(current_city, "SSG") == 0);
     assert(side == 2u);
 
-    kbo_csv_extract_allstar_team_fields(
+    field_count = kbo_csv_read_trimmed_line_fields(
         "1700,KIWOOM,Kiwoom Heroes,unknown",
+        (char*)fields,
+        sizeof(fields[0]),
+        KBO_ALLSTAR_CSV_MAX_COLUMNS);
+    kbo_csv_extract_allstar_team_fields_from_fields(
+        fields,
+        field_count,
         year_col,
         team_id_col,
         name_col,
@@ -410,9 +441,9 @@ static void test_allstar_csv_parse(void)
 static void test_foreign_replacement_seed_parse(void)
 {
     KboForeignReplacementPlayerSeed seed;
-    char token[] = " \t\"seed-key\"\r\n";
+    char token[] = " \tseed-key\r\n";
 
-    kbo_trim_csv_token_in_place(token);
+    kbo_csv_trim_token_in_place(token);
     assert(strcmp(token, "seed-key") == 0);
     assert(kbo_ascii_is_seed_id_char('Z'));
     assert(kbo_ascii_is_seed_id_char('7'));
@@ -451,8 +482,8 @@ static void test_captain_seed_parse(void)
     uint32_t u32 = 0u;
     int32_t i32 = 0;
 
-    char token[] = "  \" LG \"\r\n";
-    kbo_captain_trim_csv_token_in_place(token);
+    char token[] = "  LG\r\n";
+    kbo_csv_trim_token_in_place(token);
     assert(strcmp(token, "LG") == 0);
     assert(kbo_captain_parse_u32_full_token("4294967295", &u32));
     assert(u32 == 0xffffffffu);
@@ -516,25 +547,48 @@ static void test_captain_effective_season(void)
     printf("test_captain_effective_season: PASS\n");
 }
 
-static void test_foreign_csv_parse(void)
+static void test_core_csv_parse(void)
 {
     const char* cursor = " 123, 456";
     uint32_t value = 0;
 
-    assert(parse_u32_from_csv_field(&cursor, &value));
+    assert(kbo_csv_parse_u32_field(&cursor, &value));
     assert(value == 123u);
     assert(*cursor == ',');
-    assert(parse_u32_from_csv_field(&cursor, &value));
+    assert(kbo_csv_parse_u32_field(&cursor, &value));
     assert(value == 456u);
 
     cursor = "4294967296";
-    assert(!parse_u32_from_csv_field(&cursor, &value));
+    assert(!kbo_csv_parse_u32_field(&cursor, &value));
 
     cursor = "abc";
-    assert(!parse_u32_from_csv_field(&cursor, &value));
-    assert(!parse_u32_from_csv_field(NULL, &value));
-    assert(!parse_u32_from_csv_field(&cursor, NULL));
-    printf("test_foreign_csv_parse: PASS\n");
+    assert(!kbo_csv_parse_u32_field(&cursor, &value));
+    assert(!kbo_csv_parse_u32_field(NULL, &value));
+    assert(!kbo_csv_parse_u32_field(&cursor, NULL));
+
+    char csv[] = " plain , \"quoted, with comma\" ,\"\"\"escaped\"\"\",last\n";
+    char* cur = csv;
+    char field[64];
+    assert(kbo_csv_parse_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "plain") == 0);
+    assert(kbo_csv_parse_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "quoted, with comma") == 0);
+    assert(kbo_csv_parse_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "\"escaped\"") == 0);
+    assert(kbo_csv_parse_field(&cur, field, sizeof(field)));
+    assert(strcmp(field, "last") == 0);
+
+    char small[4];
+    char src[] = "abcdef,rest";
+    cur = src;
+    assert(kbo_csv_parse_field(&cur, small, sizeof(small)));
+    assert(strcmp(small, "abc") == 0);
+    assert(strcmp(cur, "rest") == 0);
+
+    assert(!kbo_csv_parse_field(NULL, field, sizeof(field)));
+    assert(!kbo_csv_parse_field(&cur, NULL, sizeof(field)));
+    assert(!kbo_csv_parse_field(&cur, field, 0u));
+    printf("test_core_csv_parse: PASS\n");
 }
 
 static void test_masked_pattern_matching(void)
@@ -664,34 +718,6 @@ static void test_fa_filing_csv_parse(void)
     kbo_fa_filing_copy_text(buf, 0u, "ignored");
     kbo_fa_filing_copy_text(NULL, sizeof(buf), "ignored");
 
-    /* parse_csv_field: quoted, escaped quotes, trim, comma advance. */
-    char csv[] = " plain , \"quoted, with comma\" ,\"\"\"escaped\"\"\",last\n";
-    char* cur = csv;
-    char field[64];
-
-    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "plain") == 0);
-    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "quoted, with comma") == 0);
-    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "\"escaped\"") == 0);
-    assert(kbo_fa_filing_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "last") == 0);
-
-    /* Truncation: out_size limits payload but result stays NUL-terminated. */
-    char small[4];
-    char src[] = "abcdef,rest";
-    cur = src;
-    assert(kbo_fa_filing_parse_csv_field(&cur, small, sizeof(small)));
-    assert(strcmp(small, "abc") == 0);
-    /* Cursor must still advance past the comma even when content was truncated. */
-    assert(strcmp(cur, "rest") == 0);
-
-    /* NULL / zero-size guards. */
-    assert(!kbo_fa_filing_parse_csv_field(NULL, field, sizeof(field)));
-    assert(!kbo_fa_filing_parse_csv_field(&cur, NULL, sizeof(field)));
-    assert(!kbo_fa_filing_parse_csv_field(&cur, field, 0u));
-
     printf("test_fa_filing_csv_parse: PASS\n");
 }
 
@@ -713,28 +739,6 @@ static void test_salary_snapshot_csv_parse(void)
     assert(kbo_fa_salary_snapshot_parse_i32("123") == 123);
     assert(kbo_fa_salary_snapshot_parse_i32("-42") == -42);
     assert(kbo_fa_salary_snapshot_parse_i32("+7") == 7);
-
-    /* parse_csv_field: same shape as fa_filing — sanity check it agrees on
-     * the same key cases, locking the duplicated parsers to identical behavior. */
-    char csv[] = " plain , \"quoted, with comma\" ,\"\"\"escaped\"\"\",last\n";
-    char* cur = csv;
-    char field[64];
-
-    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "plain") == 0);
-    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "quoted, with comma") == 0);
-    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "\"escaped\"") == 0);
-    assert(kbo_fa_salary_snapshot_parse_csv_field(&cur, field, sizeof(field)));
-    assert(strcmp(field, "last") == 0);
-
-    /* NULL / zero-size guards. */
-    char dummy[8];
-    char* cur2 = csv;
-    assert(!kbo_fa_salary_snapshot_parse_csv_field(NULL, dummy, sizeof(dummy)));
-    assert(!kbo_fa_salary_snapshot_parse_csv_field(&cur2, NULL, sizeof(dummy)));
-    assert(!kbo_fa_salary_snapshot_parse_csv_field(&cur2, dummy, 0u));
 
     printf("test_salary_snapshot_csv_parse: PASS\n");
 }
@@ -1331,7 +1335,7 @@ int main(void)
     test_foreign_replacement_seed_parse();
     test_captain_seed_parse();
     test_captain_effective_season();
-    test_foreign_csv_parse();
+    test_core_csv_parse();
     test_masked_pattern_matching();
     test_patch_bytes_writers();
     test_patch_bytes_jump_recognizers();

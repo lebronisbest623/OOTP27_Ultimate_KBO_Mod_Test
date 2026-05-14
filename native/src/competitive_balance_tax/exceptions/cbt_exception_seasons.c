@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "cbt_exceptions.h"
+#include "../../core/csv/core_csv.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../core/sync/spin_lock.h"
@@ -107,13 +108,13 @@ static void kbo_cbt_exception_ensure_seed_loaded(void)
         return;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) {
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
         append_logf("KBO CBT exception seed unavailable path=%s", path);
         if (kbo_cbt_exception_bundled_seed_path(path, sizeof(path))) {
-            file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            reader = kbo_csv_reader_open(path);
         }
-        if (file == INVALID_HANDLE_VALUE) {
+        if (reader == NULL) {
             append_logf("KBO CBT exception bundled seed unavailable path=%s", path);
             InterlockedExchange(&g_cbt_season_seed_loaded, 1);
             kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
@@ -121,64 +122,28 @@ static void kbo_cbt_exception_ensure_seed_loaded(void)
         }
     }
 
-    DWORD size = GetFileSize(file, NULL);
-    if (size == INVALID_FILE_SIZE || size == 0u || size > 4u * 1024u * 1024u) {
-        CloseHandle(file);
-        InterlockedExchange(&g_cbt_season_seed_loaded, 1);
-        kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
-        return;
-    }
+    while (g_cbt_season_seed_count < KBO_CBT_EXCEPTION_SEASON_SEED_MAX
+            && kbo_csv_reader_next_row(reader)) {
+        char fields[5][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 5);
+        if (field_count < 5
+                || fields[0][0] == '\0'
+                || fields[0][0] == '#'
+                || _stricmp(fields[0], "player_key") == 0) {
+            continue;
+        }
 
-    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
-    if (buffer == NULL) {
-        CloseHandle(file);
-        InterlockedExchange(&g_cbt_season_seed_loaded, 1);
-        kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
-        return;
-    }
-
-    DWORD read = 0;
-    if (ReadFile(file, buffer, size, &read, NULL)) {
-        buffer[read] = '\0';
-        char* cursor = buffer;
-        while (*cursor != '\0' && g_cbt_season_seed_count < KBO_CBT_EXCEPTION_SEASON_SEED_MAX) {
-            char* next = strchr(cursor, '\n');
-            if (next != NULL) {
-                *next = '\0';
-            }
-            char* p = cursor;
-            while (*p == ' ' || *p == '\t' || *p == '\r') {
-                p++;
-            }
-            if (*p != '\0' && *p != '#' && strncmp(p, "player_key,", 11) != 0) {
-                KboCbtSeasonSeedRow row;
-                memset(&row, 0, sizeof(row));
-                char field[128] = {0};
-                for (int fi = 0; fi <= 4 && *p != '\0'; fi++) {
-                    if (!kbo_fa_salary_snapshot_parse_csv_field(&p, field, sizeof(field))) {
-                        break;
-                    }
-                    if (fi == 0) {
-                        snprintf(row.player_key, sizeof(row.player_key), "%s", field);
-                    } else if (fi == 3) {
-                        snprintf(row.team_code, sizeof(row.team_code), "%s", field);
-                    } else if (fi == 4) {
-                        row.season_count = (int)strtol(field, NULL, 10);
-                    }
-                }
-                if (row.player_key[0] != '\0' && row.team_code[0] != '\0') {
-                    g_cbt_season_seed[g_cbt_season_seed_count++] = row;
-                }
-            }
-            if (next == NULL) {
-                break;
-            }
-            cursor = next + 1;
+        KboCbtSeasonSeedRow row;
+        memset(&row, 0, sizeof(row));
+        snprintf(row.player_key, sizeof(row.player_key), "%.*s", (int)sizeof(row.player_key) - 1, fields[0]);
+        snprintf(row.team_code, sizeof(row.team_code), "%.*s", (int)sizeof(row.team_code) - 1, fields[3]);
+        row.season_count = (int)strtol(fields[4], NULL, 10);
+        if (row.player_key[0] != '\0' && row.team_code[0] != '\0') {
+            g_cbt_season_seed[g_cbt_season_seed_count++] = row;
         }
     }
 
-    CloseHandle(file);
-    HeapFree(GetProcessHeap(), 0, buffer);
+    kbo_csv_reader_close(reader);
     append_logf("KBO CBT exception seed loaded rows=%d path=%s", g_cbt_season_seed_count, path);
     InterlockedExchange(&g_cbt_season_seed_loaded, 1);
     kbo_cbt_exception_unlock(&g_cbt_season_seed_lock);
