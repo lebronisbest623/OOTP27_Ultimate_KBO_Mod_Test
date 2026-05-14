@@ -286,7 +286,7 @@ int kbo_webview_handle_view_navigation_command(const char* cmd)
         return 1;
     }
     if (strncmp(cmd, "futures/", 8) == 0) {
-        if (!kbo_hub_selected_league_is_independent_futures()) {
+        if (!kbo_hub_selected_league_is_kbo()) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
             g_kbo_hub_open_dropdown = 0;
             kbo_webview_navigate_current();

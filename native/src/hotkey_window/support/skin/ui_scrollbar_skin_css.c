@@ -60,6 +60,9 @@ void kbo_webview_build_scrollbar_skin_css(char* out, size_t out_size, int scroll
     char minus_up[2048] = {0};
     char minus_over[2048] = {0};
     char minus_down[2048] = {0};
+    char plus_up[2048] = {0};
+    char plus_over[2048] = {0};
+    char plus_down[2048] = {0};
 
     kbo_webview_copy_scrollbar_skin_src("sb_bar_top.png", bar_top, sizeof(bar_top));
     kbo_webview_copy_scrollbar_skin_src("sb_bar_mid.png", bar_mid, sizeof(bar_mid));
@@ -82,6 +85,9 @@ void kbo_webview_build_scrollbar_skin_css(char* out, size_t out_size, int scroll
     kbo_webview_copy_button_skin_src("list_buttons_minus_up.png", minus_up, sizeof(minus_up));
     kbo_webview_copy_button_skin_src("list_buttons_minus_over.png", minus_over, sizeof(minus_over));
     kbo_webview_copy_button_skin_src("list_buttons_minus_down.png", minus_down, sizeof(minus_down));
+    kbo_webview_copy_button_skin_src("list_buttons_plus_up.png", plus_up, sizeof(plus_up));
+    kbo_webview_copy_button_skin_src("list_buttons_plus_over.png", plus_over, sizeof(plus_over));
+    kbo_webview_copy_button_skin_src("list_buttons_plus_down.png", plus_down, sizeof(plus_down));
 
     if (scrollbar_width < 12) {
         scrollbar_width = 20;
@@ -99,7 +105,8 @@ void kbo_webview_build_scrollbar_skin_css(char* out, size_t out_size, int scroll
         "--ootp-sb-slider-up-top:url('%s');--ootp-sb-slider-up-mid:url('%s');--ootp-sb-slider-up-bottom:url('%s');"
         "--ootp-sb-slider-over-top:url('%s');--ootp-sb-slider-over-mid:url('%s');--ootp-sb-slider-over-bottom:url('%s');"
         "--ootp-sb-slider-down-top:url('%s');--ootp-sb-slider-down-mid:url('%s');--ootp-sb-slider-down-bottom:url('%s');"
-        "--ootp-btn-minus-up:url('%s');--ootp-btn-minus-over:url('%s');--ootp-btn-minus-down:url('%s')}"
+        "--ootp-btn-minus-up:url('%s');--ootp-btn-minus-over:url('%s');--ootp-btn-minus-down:url('%s');"
+        "--ootp-btn-plus-up:url('%s');--ootp-btn-plus-over:url('%s');--ootp-btn-plus-down:url('%s')}"
         ".dropdown::-webkit-scrollbar:vertical,.ootpChoiceMenu::-webkit-scrollbar:vertical,.content::-webkit-scrollbar:vertical,.rights::-webkit-scrollbar:vertical,.settingsGrid::-webkit-scrollbar:vertical,.settingsCard::-webkit-scrollbar:vertical,.tablewrap::-webkit-scrollbar:vertical,.card::-webkit-scrollbar:vertical{width:var(--ootp-sb-width)!important}"
         ".dropdown::-webkit-scrollbar-track:vertical,.ootpChoiceMenu::-webkit-scrollbar-track:vertical,.content::-webkit-scrollbar-track:vertical,.rights::-webkit-scrollbar-track:vertical,.settingsGrid::-webkit-scrollbar-track:vertical,.settingsCard::-webkit-scrollbar-track:vertical,.tablewrap::-webkit-scrollbar-track:vertical,.card::-webkit-scrollbar-track:vertical{background-color:#101010!important;background-image:var(--ootp-sb-bar-top),var(--ootp-sb-bar-bottom),var(--ootp-sb-bar-mid)!important;background-repeat:no-repeat,no-repeat,repeat-y!important;background-position:center top,center bottom,center top!important;border:0!important}"
         ".dropdown::-webkit-scrollbar-thumb:vertical,.ootpChoiceMenu::-webkit-scrollbar-thumb:vertical,.content::-webkit-scrollbar-thumb:vertical,.rights::-webkit-scrollbar-thumb:vertical,.settingsGrid::-webkit-scrollbar-thumb:vertical,.settingsCard::-webkit-scrollbar-thumb:vertical,.tablewrap::-webkit-scrollbar-thumb:vertical,.card::-webkit-scrollbar-thumb:vertical{min-height:42px;background-color:#2a2a2a!important;background-image:var(--ootp-sb-slider-up-top),var(--ootp-sb-slider-up-bottom),var(--ootp-sb-slider-up-mid)!important;background-repeat:no-repeat,no-repeat,repeat-y!important;background-position:center top,center bottom,center top!important;border:0!important}"
@@ -132,7 +139,10 @@ void kbo_webview_build_scrollbar_skin_css(char* out, size_t out_size, int scroll
         slider_down_bottom,
         minus_up,
         minus_over,
-        minus_down);
+        minus_down,
+        plus_up,
+        plus_over,
+        plus_down);
     kbo_window_text_appendf(
         &css,
         ".dropdown::-webkit-scrollbar:vertical,.ootpChoiceMenu::-webkit-scrollbar:vertical,.content::-webkit-scrollbar:vertical,.rights::-webkit-scrollbar:vertical,.settingsGrid::-webkit-scrollbar:vertical,.settingsCard::-webkit-scrollbar:vertical,.tablewrap::-webkit-scrollbar:vertical,.card::-webkit-scrollbar:vertical{width:%dpx!important;background:transparent!important}"

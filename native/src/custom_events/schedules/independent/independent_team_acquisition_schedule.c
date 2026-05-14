@@ -12,6 +12,7 @@
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/events/core_league_events.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../fa_salary_snapshot/paths/salary_snapshot_paths_dates.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../../runtime_memory/runtime_memory.h"
@@ -66,6 +67,67 @@ static int kbo_independent_team_acquisition_read_league_start_date(
 
     *out_start_date = year * 10000u + month * 100u + day;
     return 1;
+}
+
+static int kbo_independent_team_acquisition_start_matches_year(
+    uint32_t start_date,
+    uint32_t expected_year)
+{
+    return start_date != 0u
+        && expected_year >= 1982u
+        && expected_year <= 2200u
+        && start_date / 10000u == expected_year;
+}
+
+static int kbo_independent_team_acquisition_resolve_start_date(
+    uint32_t anchor_league_id,
+    uint32_t event_league_id,
+    uint32_t today,
+    uint32_t* out_start_date,
+    const char** out_start_source)
+{
+    if (out_start_date != NULL) {
+        *out_start_date = 0u;
+    }
+    if (out_start_source != NULL) {
+        *out_start_source = "";
+    }
+    if (out_start_date == NULL) {
+        return 0;
+    }
+
+    uint32_t expected_year = today / 10000u;
+    uint32_t start_date = 0u;
+    if (kbo_independent_team_acquisition_read_league_start_date(anchor_league_id, &start_date)
+            && kbo_independent_team_acquisition_start_matches_year(start_date, expected_year)) {
+        *out_start_date = start_date;
+        if (out_start_source != NULL) {
+            *out_start_source = "anchor_memory";
+        }
+        return 1;
+    }
+
+    if (event_league_id != 0u
+            && event_league_id != anchor_league_id
+            && kbo_independent_team_acquisition_read_league_start_date(event_league_id, &start_date)
+            && kbo_independent_team_acquisition_start_matches_year(start_date, expected_year)) {
+        *out_start_date = start_date;
+        if (out_start_source != NULL) {
+            *out_start_source = "event_memory";
+        }
+        return 1;
+    }
+
+    if (kbo_fa_salary_snapshot_load_schedule_opening_day(expected_year, &start_date)
+            && kbo_independent_team_acquisition_start_matches_year(start_date, expected_year)) {
+        *out_start_date = start_date;
+        if (out_start_source != NULL) {
+            *out_start_source = "schedule_file";
+        }
+        return 1;
+    }
+
+    return 0;
 }
 
 int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
@@ -140,7 +202,13 @@ int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
     for (int i = 0; i < league_count; i++) {
         uint32_t anchor_league_id = leagues[i].league_id;
         uint32_t season_start = 0u;
-        if (!kbo_independent_team_acquisition_read_league_start_date(anchor_league_id, &season_start)) {
+        const char* start_source = "";
+        if (!kbo_independent_team_acquisition_resolve_start_date(
+                anchor_league_id,
+                event_league_id,
+                today,
+                &season_start,
+                &start_source)) {
             failed++;
             kbo_log_runtimef(
                 "KBO independent futures acquisition schedule deferred source=%s reason=season_start_unavailable today=%u event_league_id=%u anchor_league_id=%u team=%u csv=%s",
@@ -200,7 +268,7 @@ int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
         }
 
         kbo_log_runtimef(
-            "KBO independent futures acquisition schedule source=%s today=%u event_league_id=%u anchor_league_id=%u team=%u csv=%s start=%u open=%u offset_months=%u created=%d ready=%d",
+            "KBO independent futures acquisition schedule source=%s today=%u event_league_id=%u anchor_league_id=%u team=%u csv=%s start=%u start_source=%s open=%u offset_months=%u created=%d ready=%d",
             source != NULL ? source : "",
             today,
             event_league_id,
@@ -208,6 +276,7 @@ int kbo_schedule_independent_team_acquisition_custom_events(const char* source)
             leagues[i].team_id,
             leagues[i].team_csv_id,
             season_start,
+            start_source != NULL ? start_source : "",
             open_date,
             offset_months,
             created_event,

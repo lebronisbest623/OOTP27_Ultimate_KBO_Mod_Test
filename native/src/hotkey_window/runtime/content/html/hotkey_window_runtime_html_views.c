@@ -154,11 +154,6 @@ int kbo_hub_selected_league_is_kbo(void)
     return kbo_league_id != 0u && g_kbo_hub_selected_league_id == kbo_league_id;
 }
 
-int kbo_hub_selected_league_is_independent_futures(void)
-{
-    return kbo_team_classification_league_has_independent_futures_team(g_kbo_hub_selected_league_id);
-}
-
 int kbo_hub_selected_league_is_amateur_reputation_league(void)
 {
     return g_kbo_hub_selected_league_id == KBO_HIGH_SCHOOL_LEAGUE_ID
@@ -172,9 +167,6 @@ int kbo_hub_view_available_for_selected_league(int view)
     }
     if (view == KBO_HUB_VIEW_REPUTATION) {
         return kbo_hub_selected_league_is_amateur_reputation_league();
-    }
-    if (view == KBO_HUB_VIEW_FUTURES_LEAGUE) {
-        return kbo_hub_selected_league_is_independent_futures();
     }
     return kbo_hub_selected_league_is_kbo();
 }

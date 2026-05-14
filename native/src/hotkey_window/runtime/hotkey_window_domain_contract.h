@@ -50,7 +50,6 @@
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../foreign/injury/api/foreign_injury.h"
 #include "../../foreign/rights/query/foreign_waiver_rights_query.h"
-#include "../../team/classification/team_classification.h"
 #include "../../team/independent_acquisition/independent_acquisition_ui.h"
 #include "../../military_service/military_service.h"
 #include "../../military_service/players/state/military_player_state.h"

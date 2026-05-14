@@ -285,7 +285,7 @@ int kbo_independent_acquisition_ui_collect_offer_rows(
     if (out_context != NULL) {
         *out_context = context;
     }
-    if (!context.window_open || !context.buyer_valid || context.seller_count <= 0) {
+    if (!context.policy_enabled || !context.buyer_valid || context.seller_count <= 0) {
         return 0;
     }
 

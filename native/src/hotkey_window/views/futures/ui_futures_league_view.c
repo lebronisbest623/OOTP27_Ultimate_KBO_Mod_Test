@@ -193,10 +193,8 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
 
     if (!context.policy_enabled) {
         kbo_futures_ui_append_empty_row(buffer, 10, "Custom foreign policy is disabled.");
-    } else if (!context.window_open) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "The independent club acquisition window is not open.");
     } else if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "Select an affiliated Futures League club first.");
+        kbo_futures_ui_append_empty_row(buffer, 10, "Select a KBO club first.");
     } else if (context.seller_count <= 0) {
         kbo_futures_ui_append_empty_row(buffer, 10, "No independent Futures League club is resolved from the seed file.");
     } else if (count <= 0) {
@@ -216,22 +214,24 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
             snprintf(status, sizeof(status), "Result");
         } else if (row->already_requested) {
             snprintf(status, sizeof(status), "Pending");
+        } else if (!context.window_open) {
+            snprintf(status, sizeof(status), "Closed");
         }
 
-        kbo_window_text_appendf(buffer, "<tr><td class='roAction'>");
-        if (!row->already_requested && !row->already_decided) {
+        kbo_window_text_appendf(buffer, "<tr><td class='roAction'><span class='rightsActions'>");
+        if (context.window_open && !row->already_requested && !row->already_decided) {
             kbo_window_text_appendf(
                 buffer,
-                "<a class='rightsTextAction' href='kbo://futures-offer/submit/%u/%u/%u'>Offer</a>",
+                "<a class='rightsAction rightsAdd' title='Submit offer' href='kbo://futures-offer/submit/%u/%u/%u'>Offer</a>",
                 buyer_team_id,
                 row->seller_team_id,
                 row->player_id);
         } else {
-            kbo_window_text_appendf(buffer, "<span class='rightsTextAction disabled'>");
+            kbo_window_text_appendf(buffer, "<span class='rightsAction rightsAdd disabled' title='");
             kbo_html_append_escaped(buffer, status);
-            kbo_window_text_appendf(buffer, "</span>");
+            kbo_window_text_appendf(buffer, "'>Offer</span>");
         }
-        kbo_window_text_appendf(buffer, "</td><td class='roPo'>%s</td>", kbo_futures_ui_position_label(row->player_ptr));
+        kbo_window_text_appendf(buffer, "</span></td><td class='roPo'>%s</td>", kbo_futures_ui_position_label(row->player_ptr));
         kbo_webview_append_player_name_cell(buffer, player_name, row->player_id);
         kbo_window_text_appendf(buffer, "<td class='roClub'>");
         kbo_html_append_escaped(buffer, seller_name);
@@ -280,7 +280,7 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
         "</tr></thead><tbody>");
 
     if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 9, "Select an affiliated Futures League club first.");
+        kbo_futures_ui_append_empty_row(buffer, 9, "Select a KBO club first.");
     } else if (count <= 0) {
         kbo_futures_ui_append_empty_row(buffer, 9, "No pending independent club offer.");
     }
@@ -356,7 +356,7 @@ static void kbo_futures_ui_append_result_view(KboWindowTextBuffer* buffer, uint3
         "</tr></thead><tbody>");
 
     if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 8, "Select an affiliated Futures League club first.");
+        kbo_futures_ui_append_empty_row(buffer, 8, "Select a KBO club first.");
     } else if (count <= 0) {
         kbo_futures_ui_append_empty_row(buffer, 8, "No independent club offer result.");
     }

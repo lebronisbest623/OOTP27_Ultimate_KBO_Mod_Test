@@ -41,9 +41,6 @@ void kbo_custom_event_monitor_tick(
         today_yyyymmdd,
         source);
     if (offseason_transition_ready) {
-        if (last_scheduled_yyyymmdd != NULL) {
-            *last_scheduled_yyyymmdd = today_yyyymmdd;
-        }
         if (last_scanned_yyyymmdd != NULL) {
             *last_scanned_yyyymmdd = 0u;
         }

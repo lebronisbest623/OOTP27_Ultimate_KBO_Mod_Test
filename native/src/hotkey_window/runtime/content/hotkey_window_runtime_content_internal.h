@@ -61,7 +61,6 @@ void kbo_webview_append_fallback_text_view(KboWindowTextBuffer* buffer);
 void kbo_webview_append_selected_view(KboWindowTextBuffer* buffer, uint32_t current_year, const char* window_status);
 int kbo_hub_selected_league_is_amateur_reputation_league(void);
 int kbo_hub_selected_league_is_kbo(void);
-int kbo_hub_selected_league_is_independent_futures(void);
 int kbo_hub_view_available_for_selected_league(int view);
 void kbo_webview_append_main_tabs(KboWindowTextBuffer* buffer);
 void kbo_webview_append_sub_tabs(KboWindowTextBuffer* buffer);
