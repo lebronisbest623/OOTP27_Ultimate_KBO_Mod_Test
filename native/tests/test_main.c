@@ -1215,10 +1215,12 @@ static void test_foreign_injury_foreign_count_exclusion(void)
 
     g_kbo_foreign_injury_replacements[0].team_id = 7u;
     g_kbo_foreign_injury_replacements[0].injured_player_id = 1001u;
+    g_kbo_foreign_injury_replacements[0].expected_end_yyyymmdd = 20260701u;
     g_kbo_foreign_injury_replacements[0].status = KBO_FOREIGN_INJURY_STATUS_OPEN;
 
     g_kbo_foreign_injury_replacements[1].team_id = 7u;
     g_kbo_foreign_injury_replacements[1].injured_player_id = 1002u;
+    g_kbo_foreign_injury_replacements[1].expected_end_yyyymmdd = 20260702u;
     g_kbo_foreign_injury_replacements[1].status = KBO_FOREIGN_INJURY_STATUS_ACTIVE;
 
     g_kbo_foreign_injury_replacements[2].team_id = 7u;
@@ -1228,6 +1230,8 @@ static void test_foreign_injury_foreign_count_exclusion(void)
     assert(kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 1001u));
     assert(kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 1002u));
     assert(!kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 1003u));
+    g_kbo_foreign_injury_replacements[0].expected_end_yyyymmdd = 0u;
+    assert(!kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 1001u));
     assert(!kbo_foreign_injury_player_excluded_from_foreign_count_locked(8u, 1001u));
     assert(!kbo_foreign_injury_player_excluded_from_foreign_count_locked(7u, 0u));
 

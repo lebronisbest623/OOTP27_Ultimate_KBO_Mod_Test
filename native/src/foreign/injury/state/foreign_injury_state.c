@@ -73,6 +73,28 @@ const char* kbo_foreign_injury_status_label(uint8_t status)
     }
 }
 
+static int kbo_foreign_injury_state_record_has_minimum_injury_basis(
+    const KboForeignInjuryReplacement* rec)
+{
+    if (rec == NULL || rec->injured_player_id == 0u) {
+        return 0;
+    }
+    if (rec->expected_end_yyyymmdd != 0u) {
+        return 1;
+    }
+
+    uint32_t team_id = 0u;
+    uint32_t league_id = 0u;
+    uint8_t* injured = kbo_find_player_by_id(rec->injured_player_id, &team_id, &league_id);
+    if (injured == NULL || !memory_range_readable(injured, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    int16_t days_left = *(int16_t*)(injured + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
+    return injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] != 0u
+        && days_left >= kbo_foreign_player_policy()->injury_replacement_min_days;
+}
+
 int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id)
 {
     if (team_id == 0u || player_id == 0u) {
@@ -83,7 +105,8 @@ int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_i
         if (rec->team_id == team_id
                 && rec->injured_player_id == player_id
                 && (rec->status == KBO_FOREIGN_INJURY_STATUS_OPEN
-                    || rec->status == KBO_FOREIGN_INJURY_STATUS_ACTIVE)) {
+                    || rec->status == KBO_FOREIGN_INJURY_STATUS_ACTIVE)
+                && kbo_foreign_injury_state_record_has_minimum_injury_basis(rec)) {
             return 1;
         }
     }

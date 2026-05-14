@@ -69,10 +69,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             configured_league_id,
             &team_id,
             &league_id);
-        int inactive_roster_eligible = !direct_injury_eligible && has_assignment
-            ? kbo_foreign_injury_player_on_inactive_replacement_roster(player, player_id, team_id, today)
-            : 0;
-        if (!direct_injury_eligible && !inactive_roster_eligible) {
+        if (!direct_injury_eligible) {
             continue;
         }
         int effective_days_left = days_left;
@@ -100,7 +97,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                     has_assignment,
                     (uint32_t)injury_active,
                     (int)days_left,
-                    inactive_roster_eligible);
+                    0);
             }
             continue;
         }
@@ -117,9 +114,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             rec->injured_player_id = player_id;
             rec->replacement_player_id = 0u;
             rec->opened_on_yyyymmdd = today;
-            rec->expected_end_yyyymmdd = direct_injury_eligible
-                ? kbo_add_days_yyyymmdd(today, (uint32_t)days_left)
-                : 0u;
+            rec->expected_end_yyyymmdd = kbo_add_days_yyyymmdd(today, (uint32_t)days_left);
             rec->slot_type = kbo_foreign_injury_slot_type_for_player(player);
             rec->status = KBO_FOREIGN_INJURY_STATUS_OPEN;
             rec->converted = 0u;
@@ -133,7 +128,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             kbo_emit_foreign_injury_replacement_news(
                 &created_rec,
                 effective_days_left,
-                direct_injury_eligible ? "open" : "open_roster");
+                "open");
                         do {
                 KboLogFields audit_fields;
                 kbo_log_fields_init(&audit_fields);
@@ -143,12 +138,12 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 kbo_log_field_u32(&audit_fields, "injured_player_id", created_rec.injured_player_id);
                 kbo_log_field_i32(&audit_fields, "days_left", (int)days_left);
                 kbo_log_field_i32(&audit_fields, "effective_days_left", effective_days_left);
-                kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_eligible ? 1u : 0u);
+                kbo_log_field_u32(&audit_fields, "inactive_roster", 0u);
                 kbo_log_field_u32(&audit_fields, "slot_type", (uint32_t)created_rec.slot_type);
                 kbo_rule_audit_emit_fields(
                     "foreign_injury.replacement.lifecycle",
                     "open_slot",
-                    direct_injury_eligible ? "injury_min_days_met" : "inactive_roster_long_term_il",
+                    "injury_min_days_met",
                     source,
                     &audit_fields);
             } while (0);
@@ -160,7 +155,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 created_rec.league_id,
                 (int)days_left,
                 effective_days_left,
-                direct_injury_eligible ? "injury_fields" : "inactive_roster",
+                "injury_fields",
                 kbo_foreign_injury_slot_label(created_rec.slot_type));
         }
     }

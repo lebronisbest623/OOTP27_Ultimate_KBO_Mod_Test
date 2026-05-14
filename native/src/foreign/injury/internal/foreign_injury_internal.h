@@ -88,6 +88,7 @@ int kbo_foreign_injury_replacements_loaded_for_current_save(void);
 int kbo_find_foreign_injury_replacement_locked(uint32_t injured_player_id, int include_closed);
 int kbo_team_has_foreign_injury_slot_locked(uint32_t team_id, uint8_t slot_type, uint32_t* out_injured_player_id);
 int kbo_team_has_foreign_injury_slot(uint32_t team_id, uint8_t slot_type, uint32_t* out_injured_player_id);
+int kbo_foreign_injury_record_has_minimum_injury_basis(const KboForeignInjuryReplacement* rec);
 int kbo_team_has_foreign_injury_slot_for_candidate_locked(
     uint32_t team_id,
     uint8_t slot_type,
