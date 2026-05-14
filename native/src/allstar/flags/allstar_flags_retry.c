@@ -89,12 +89,9 @@ void start_kbo_allstar_force_retry_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_allstar_force_retry_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "all-star force retry");
+    if (kbo_start_runtime_thread(kbo_allstar_force_retry_thread, NULL, "all-star force retry")) {
         append_log_line("KBO all-star force retry thread started");
     } else {
         InterlockedExchange(&started, 0);
-        append_log_line("KBO all-star force retry thread failed to start");
     }
 }

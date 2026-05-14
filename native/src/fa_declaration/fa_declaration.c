@@ -10,6 +10,7 @@
 #include "../core/core_flags/api/flags_api.h"
 #include "../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../core/files/save_paths/core_save_paths.h"
+#include "../core/csv/core_csv.h"
 #include "../core/logging/core_log.h"
 #include "../fa_filing/fa_filing.h"
 #include "../fa_filing/fa_filing_parts/fa_filing_csv_write_helpers.h"
@@ -57,6 +58,108 @@ static int kbo_get_fa_declaration_csv_path(char* out, size_t out_size)
         return 0;
     }
     return kbo_get_save_scoped_data_file("fa_declarations.csv", out, out_size);
+}
+
+int kbo_fa_declaration_find_latest_decision(
+    uint32_t player_id,
+    uint32_t season,
+    KboFaDeclarationDecision* out_decision)
+{
+    if (out_decision != NULL) {
+        memset(out_decision, 0, sizeof(*out_decision));
+    }
+    if (player_id == 0u || out_decision == NULL) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_get_fa_declaration_csv_path(path, sizeof(path))) {
+        return 0;
+    }
+
+    HANDLE file = CreateFileA(
+        path,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+
+    DWORD size = GetFileSize(file, NULL);
+    if (size == INVALID_FILE_SIZE || size == 0u || size > 4u * 1024u * 1024u) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
+    if (buffer == NULL) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    DWORD read = 0;
+    if (!ReadFile(file, buffer, size, &read, NULL)) {
+        HeapFree(GetProcessHeap(), 0, buffer);
+        CloseHandle(file);
+        return 0;
+    }
+    CloseHandle(file);
+    buffer[read] = '\0';
+
+    int found = 0;
+    uint32_t best_date = 0u;
+    char* cursor = buffer;
+    while (*cursor != '\0') {
+        char* next = strchr(cursor, '\n');
+        if (next != NULL) {
+            *next = '\0';
+        }
+
+        char* p = cursor;
+        while (*p == ' ' || *p == '\t' || *p == '\r') {
+            p++;
+        }
+        if (*p >= '0' && *p <= '9') {
+            char fields[7][128];
+            memset(fields, 0, sizeof(fields));
+            int field_count = 0;
+            for (; field_count < 7 && *p != '\0'; field_count++) {
+                if (!kbo_csv_parse_field(&p, fields[field_count], sizeof(fields[field_count]))) {
+                    break;
+                }
+            }
+
+            if (field_count >= 7) {
+                uint32_t row_date = kbo_csv_parse_u32_text(fields[0], 10);
+                uint32_t row_season = kbo_csv_parse_u32_text(fields[1], 10);
+                uint32_t row_player_id = kbo_csv_parse_u32_text(fields[2], 10);
+                if (row_player_id == player_id
+                        && (season == 0u || row_season == season)
+                        && row_date >= best_date) {
+                    found = 1;
+                    best_date = row_date;
+                    out_decision->player_id = row_player_id;
+                    out_decision->declaration_date = row_date;
+                    out_decision->season = row_season;
+                    out_decision->declared = kbo_csv_parse_u32_text(fields[4], 10) != 0u ? 1u : 0u;
+                    out_decision->team_id = kbo_csv_parse_u32_text(fields[5], 10);
+                    out_decision->league_id = kbo_csv_parse_u32_text(fields[6], 10);
+                }
+            }
+        }
+
+        if (next == NULL) {
+            break;
+        }
+        cursor = next + 1;
+    }
+
+    HeapFree(GetProcessHeap(), 0, buffer);
+    return found;
 }
 
 static int kbo_fa_declaration_case_candidate(const char* case_label)

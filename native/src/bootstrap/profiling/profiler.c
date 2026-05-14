@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "../../core/core_flags/localappdata/localappdata_reader.h"
+#include "../../core/files/save_paths/core_save_paths.h"
 
 /* Aggregated runtime profiler for DLL hot paths.
  *
@@ -98,19 +99,10 @@ static int kbo_profiler_get_output_path(char* out, size_t out_size)
         return 0;
     }
 
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
+    char dir[MAX_PATH] = {0};
+    if (!kbo_get_global_data_subdir("perf", dir, sizeof(dir))) {
         return 0;
     }
-
-    char root[MAX_PATH] = {0};
-    snprintf(root, sizeof(root), "%s\\OOTP-KBO", local_app_data);
-    CreateDirectoryA(root, NULL);
-
-    char dir[MAX_PATH] = {0};
-    snprintf(dir, sizeof(dir), "%s\\perf", root);
-    CreateDirectoryA(dir, NULL);
 
     snprintf(out, out_size, "%s\\kbo_perf_%lu.csv", dir, GetCurrentProcessId());
     return 1;

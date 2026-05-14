@@ -1,27 +1,24 @@
 #include "../internal/amateur_player_quality_internal.h"
+#include "../../core/sync/spin_lock.h"
 
 void kbo_lock_amateur_reputation_seeds(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_amateur_reputation_seed_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(&g_kbo_amateur_reputation_seed_lock);
 }
 
 void kbo_unlock_amateur_reputation_seeds(void)
 {
-    InterlockedExchange(&g_kbo_amateur_reputation_seed_lock, 0);
+    kbo_spin_unlock(&g_kbo_amateur_reputation_seed_lock);
 }
 
 void kbo_lock_amateur_assignment_candidates(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_amateur_assignment_candidate_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(&g_kbo_amateur_assignment_candidate_lock);
 }
 
 void kbo_unlock_amateur_assignment_candidates(void)
 {
-    InterlockedExchange(&g_kbo_amateur_assignment_candidate_lock, 0);
+    kbo_spin_unlock(&g_kbo_amateur_assignment_candidate_lock);
 }
 
 void kbo_invalidate_amateur_assignment_candidate_cache(void)
@@ -45,13 +42,7 @@ int kbo_get_reputation_seed_path(const char* file_name, char* out, size_t out_si
     }
     out[0] = '\0';
 
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-    snprintf(out, out_size, "%s\\OOTP-KBO\\%s", local_app_data, file_name);
-    return out[0] != '\0';
+    return kbo_get_global_data_file(file_name, out, out_size);
 }
 
 int kbo_amateur_reputation_add_seed(

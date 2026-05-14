@@ -16,12 +16,8 @@ void start_kbo_military_seed_bootstrap_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_military_seed_bootstrap_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "military seed bootstrap");
-    } else {
+    if (!kbo_start_runtime_thread(kbo_military_seed_bootstrap_thread, NULL, "military seed bootstrap")) {
         InterlockedExchange(&g_military_seed_bootstrap_started, 0);
-        append_log_line("KBO military service seed bootstrap thread failed to start");
     }
 }
 
@@ -34,12 +30,8 @@ void start_kbo_military_days_tick_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_military_days_tick_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "military days tick");
-    } else {
+    if (!kbo_start_runtime_thread(kbo_military_days_tick_thread, NULL, "military days tick")) {
         InterlockedExchange(&g_military_days_tick_started, 0);
-        append_log_line("KBO military service day tick thread failed to start");
     }
 }
 

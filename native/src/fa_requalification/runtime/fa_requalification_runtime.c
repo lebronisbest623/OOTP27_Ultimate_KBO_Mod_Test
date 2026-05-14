@@ -192,13 +192,10 @@ void start_kbo_fa_requalification_thread(void)
     if (InterlockedCompareExchange(&g_kbo_fa_requalification_thread_started, 1, 0) != 0) {
         return;
     }
-    HANDLE thread = CreateThread(NULL, 0, kbo_fa_requalification_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "FA requalification monitor");
+    if (kbo_start_runtime_thread(kbo_fa_requalification_thread, NULL, "FA requalification monitor")) {
         append_log_line("KBO FA requalification monitor thread started");
     } else {
         InterlockedExchange(&g_kbo_fa_requalification_thread_started, 0);
-        append_log_line("KBO FA requalification monitor thread failed to start");
     }
 }
 

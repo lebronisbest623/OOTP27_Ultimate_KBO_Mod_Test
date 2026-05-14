@@ -1,4 +1,28 @@
 #include "../internal/foreign_injury_internal.h"
+#include "../../../core/dates/core_text_date.h"
+
+static int kbo_foreign_injury_persisted_date_span_plausible(
+    uint32_t opened_on,
+    uint32_t expected_end)
+{
+    if (opened_on == 0u || expected_end == 0u) {
+        return 1;
+    }
+
+    uint32_t open_serial = kbo_date_serial(
+        opened_on / 10000u,
+        (opened_on / 100u) % 100u,
+        opened_on % 100u);
+    uint32_t end_serial = kbo_date_serial(
+        expected_end / 10000u,
+        (expected_end / 100u) % 100u,
+        expected_end % 100u);
+    if (open_serial == 0u || end_serial == 0u || end_serial < open_serial) {
+        return 0;
+    }
+
+    return end_serial - open_serial <= 730u;
+}
 
 int kbo_foreign_injury_replacement_enabled(void)
 {
@@ -57,6 +81,7 @@ int kbo_load_foreign_injury_replacements_locked(const char* path)
 
     DWORD read = 0;
     int loaded = 0;
+    int invalid_date_span = 0;
     if (ReadFile(file, raw, size, &read, NULL) && read > 0u) {
         raw[read] = '\0';
         char* cursor = raw;
@@ -102,6 +127,20 @@ int kbo_load_foreign_injury_replacements_locked(const char* path)
                     && slot_type <= KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA
                     && status >= KBO_FOREIGN_INJURY_STATUS_OPEN
                     && status <= KBO_FOREIGN_INJURY_STATUS_CLOSED) {
+                if (!kbo_foreign_injury_persisted_date_span_plausible(opened_on, expected_end)) {
+                    invalid_date_span++;
+                    if (invalid_date_span <= 20) {
+                        append_logf(
+                            "foreign injury replacement: discarded persisted record with invalid date span team=%u injured=%u opened=%u expected_end=%u status=%u path=%s",
+                            team_id,
+                            injured_player_id,
+                            opened_on,
+                            expected_end,
+                            status,
+                            path);
+                    }
+                    goto next_line;
+                }
                 KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[g_kbo_foreign_injury_replacement_count++];
                 rec->team_id = team_id;
                 rec->league_id = league_id;
@@ -115,6 +154,7 @@ int kbo_load_foreign_injury_replacements_locked(const char* path)
                 loaded++;
             }
 
+next_line:
             if (*next == '\0') {
                 break;
             }
@@ -124,7 +164,11 @@ int kbo_load_foreign_injury_replacements_locked(const char* path)
 
     HeapFree(GetProcessHeap(), 0, raw);
     CloseHandle(file);
-    append_logf("foreign injury replacement: loaded=%d path=%s", loaded, path);
+    append_logf(
+        "foreign injury replacement: loaded=%d invalid_date_span=%d path=%s",
+        loaded,
+        invalid_date_span,
+        path);
     return loaded;
 }
 

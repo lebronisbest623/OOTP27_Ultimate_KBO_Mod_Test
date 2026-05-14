@@ -190,11 +190,10 @@ void start_kbo_fa_salary_snapshot_phase_event_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_fa_salary_snapshot_phase_event_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "FA salary snapshot phase events");
-    } else {
+    if (!kbo_start_runtime_thread(
+            kbo_fa_salary_snapshot_phase_event_thread,
+            NULL,
+            "FA salary snapshot phase events")) {
         InterlockedExchange(&g_kbo_fa_salary_snapshot_phase_event_thread_started, 0);
-        append_logf("KBO FA salary opening-day phase hook event thread failed to start gle=%lu", GetLastError());
     }
 }

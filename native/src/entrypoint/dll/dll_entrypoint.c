@@ -7,12 +7,8 @@ void start_kbo_full_runtime_marker_wait_thread(HINSTANCE instance)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_full_runtime_marker_wait_thread, instance, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "full runtime marker wait");
-    } else {
+    if (!kbo_start_runtime_thread(kbo_full_runtime_marker_wait_thread, instance, "full runtime marker wait")) {
         InterlockedExchange(&g_kbo_full_runtime_marker_wait_started, 0);
-        append_logf("KBO full runtime marker guard thread failed error=%lu", GetLastError());
     }
 }
 
@@ -86,6 +82,7 @@ DWORD WINAPI patch_thread(LPVOID parameter)
     start_kbo_cbt_event_scheduler_thread();
     start_kbo_fa_salary_snapshot_thread();
     start_kbo_domestic_fa_market_investigation_thread();
+    start_kbo_captain_preseason_selection_thread();
 
     if (read_kbo_localappdata_flag_file("enable_single_division_allstar_runtime_patches.txt")) {
         append_log_line("KBO all-star presave bootstrap install started");
@@ -194,18 +191,15 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
             if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")
                     || kbo_foreign_ai_controller_enabled()
                     || read_kbo_localappdata_flag_file("enable_kbo_hot_reinject_roster_flow_trace.txt")) {
-                HANDLE thread = CreateThread(NULL, 0, kbo_hot_reinject_ai_roster_management_thread, instance, 0, NULL);
-                if (thread != NULL) {
-                    kbo_register_runtime_thread(thread, "hot reinject foreign AI roster management");
-                }
+                kbo_start_runtime_thread(
+                    kbo_hot_reinject_ai_roster_management_thread,
+                    instance,
+                    "hot reinject foreign AI roster management");
             }
             return TRUE;
         }
 
-        HANDLE thread = CreateThread(NULL, 0, patch_thread, instance, 0, NULL);
-        if (thread != NULL) {
-            kbo_register_runtime_thread(thread, "patch install");
-        }
+        kbo_start_runtime_thread(patch_thread, instance, "patch install");
     } else if (reason == DLL_PROCESS_DETACH) {
         if (reserved == NULL) {
             kbo_shutdown_runtime_threads(10000u);

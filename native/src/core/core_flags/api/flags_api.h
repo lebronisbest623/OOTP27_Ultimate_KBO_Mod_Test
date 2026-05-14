@@ -54,6 +54,7 @@ const char* kbo_custom_news_language_dir(void);
 
 int kbo_fix_enabled(void);
 void kbo_request_runtime_threads_stop(void);
+int kbo_start_runtime_thread(LPTHREAD_START_ROUTINE start, LPVOID parameter, const char* label);
 void kbo_register_runtime_thread(HANDLE thread, const char* label);
 void kbo_shutdown_runtime_threads(uint32_t timeout_ms);
 int kbo_runtime_threads_should_continue(void);

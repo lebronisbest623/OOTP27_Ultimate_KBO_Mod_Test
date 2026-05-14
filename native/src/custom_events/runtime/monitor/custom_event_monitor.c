@@ -94,12 +94,9 @@ int start_kbo_custom_event_monitor(void)
         return 1;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_custom_event_monitor_thread, NULL, 0, NULL);
-    if (thread == NULL) {
+    if (!kbo_start_runtime_thread(kbo_custom_event_monitor_thread, NULL, "custom event monitor")) {
         InterlockedExchange(&g_kbo_custom_event_monitor_started, 0);
-        append_logf("KBO custom event monitor skipped reason=create_thread_failed error=%lu", GetLastError());
         return 0;
     }
-    kbo_register_runtime_thread(thread, "custom event monitor");
     return 1;
 }

@@ -294,13 +294,13 @@ void start_kbo_no_minor_contract_demand_floor_scanner_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_no_minor_contract_demand_floor_scanner_thread, NULL, 0, NULL);
-    if (thread == NULL) {
-        append_logf("failed to start KBO no-minor demand floor scanner thread error=%lu", GetLastError());
+    if (!kbo_start_runtime_thread(
+            kbo_no_minor_contract_demand_floor_scanner_thread,
+            NULL,
+            "no-minor demand floor scanner")) {
         InterlockedExchange(&g_kbo_no_minor_contract_demand_floor_scanner_started, 0);
         return;
     }
-    kbo_register_runtime_thread(thread, "no-minor demand floor scanner");
     append_log_line("started KBO no-minor demand floor scanner thread");
 }
 

@@ -3,7 +3,7 @@
 
 #include "captain_selection_policy.h"
 
-#include "../../core/core_flags/localappdata/localappdata_reader.h"
+#include "../../core/policy/core_policy.h"
 
 #define KBO_CAPTAIN_SELECTION_POLICY_FILE "captain_selection_policy.json"
 
@@ -12,12 +12,7 @@ static KboCaptainSelectionPolicy g_kbo_captain_selection_policy;
 
 static int32_t kbo_captain_selection_policy_int(const char* key, int32_t fallback, int32_t min_value, int32_t max_value)
 {
-    int value = (int)fallback;
-    if (kbo_read_localappdata_named_json_int_value(KBO_CAPTAIN_SELECTION_POLICY_FILE, key, &value)
-            && value >= min_value && value <= max_value) {
-        return (int32_t)value;
-    }
-    return fallback;
+    return kbo_read_clamped_policy_int(KBO_CAPTAIN_SELECTION_POLICY_FILE, key, fallback, min_value, max_value);
 }
 
 static BOOL CALLBACK kbo_captain_selection_policy_init_once(PINIT_ONCE init_once, PVOID parameter, PVOID* context)

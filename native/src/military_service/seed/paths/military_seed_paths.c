@@ -25,12 +25,7 @@ int kbo_get_global_military_service_seed_path(char* out, size_t out_size)
         return 0;
     }
     out[0] = '\0';
-    char* local_app_data = getenv("LOCALAPPDATA");
-    if (local_app_data == NULL || local_app_data[0] == '\0') {
-        return 0;
-    }
-    snprintf(out, out_size, "%s\\OOTP-KBO\\military_service_seed.csv", local_app_data);
-    return 1;
+    return kbo_get_global_data_file("military_service_seed.csv", out, out_size);
 }
 
 int kbo_get_save_military_service_resolved_path(char* out, size_t out_size)

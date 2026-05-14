@@ -1,4 +1,5 @@
 #include "../internal/captain_selection_internal.h"
+#include "../../core/sync/spin_lock.h"
 
 static int kbo_captain_seed_source_rank(const char* source)
 {
@@ -21,26 +22,22 @@ static KboCaptainDisplayCache g_kbo_captain_display_cache;
 
 void kbo_lock_captain_seeds(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_captain_seed_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(&g_kbo_captain_seed_lock);
 }
 
 void kbo_unlock_captain_seeds(void)
 {
-    InterlockedExchange(&g_kbo_captain_seed_lock, 0);
+    kbo_spin_unlock(&g_kbo_captain_seed_lock);
 }
 
 static void kbo_lock_captain_display_cache(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_captain_display_cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(&g_kbo_captain_display_cache_lock);
 }
 
 static void kbo_unlock_captain_display_cache(void)
 {
-    InterlockedExchange(&g_kbo_captain_display_cache_lock, 0);
+    kbo_spin_unlock(&g_kbo_captain_display_cache_lock);
 }
 
 int kbo_get_save_captain_seed_path(char* out, size_t out_size)
@@ -58,13 +55,7 @@ int kbo_get_global_captain_seed_path(char* out, size_t out_size)
         return 0;
     }
     out[0] = '\0';
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-    snprintf(out, out_size, "%s\\OOTP-KBO\\captain_seed.csv", local_app_data);
-    return out[0] != '\0';
+    return kbo_get_global_data_file("captain_seed.csv", out, out_size);
 }
 
 static void kbo_captain_seed_file_loaded_key_component(const char* path, char* out, size_t out_size)
@@ -433,6 +424,33 @@ static int kbo_find_best_captain_seed_for_team(
         *out_seed = best;
     }
     return 1;
+}
+
+int kbo_captain_seed_available_for_season(uint32_t season, uint32_t league_id)
+{
+    if (season < 1982u || season > 2200u) {
+        return 0;
+    }
+
+    kbo_ensure_captain_seeds_loaded();
+    int available = 0;
+    kbo_lock_captain_seeds();
+    for (int i = 0; i < g_kbo_captain_seed_count; i++) {
+        const KboCaptainSeed* seed = &g_kbo_captain_seeds[i];
+        if (!seed->active) {
+            continue;
+        }
+        if (seed->season != 0u && seed->season != season) {
+            continue;
+        }
+        if (seed->league_id != 0u && seed->league_id != league_id) {
+            continue;
+        }
+        available = 1;
+        break;
+    }
+    kbo_unlock_captain_seeds();
+    return available;
 }
 
 int kbo_find_captain_seed_for_player(

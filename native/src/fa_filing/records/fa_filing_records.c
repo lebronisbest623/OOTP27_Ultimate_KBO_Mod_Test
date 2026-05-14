@@ -1,4 +1,5 @@
 #include "../fa_filing_internal.h"
+#include "../../build_verify/build_verify.h"
 
 int kbo_fa_filing_negative_cache_contains(uint32_t player_id)
 {
@@ -316,7 +317,19 @@ int kbo_fa_filing_find_latest_player(
 
 int kbo_fa_filing_is_official_transition_caller(uintptr_t caller_rva)
 {
-    return caller_rva == 0x0067D11Eu;
+    if (caller_rva == OOTP27_FA_FILING_OFFICIAL_TRANSITION_RETURN_RVA) {
+        return 1;
+    }
+
+    HMODULE exe = GetModuleHandleA(NULL);
+    void* mapped = kbo_resolve_build_specific_rva_ptr(
+        exe,
+        OOTP27_FA_FILING_OFFICIAL_TRANSITION_RETURN_RVA);
+    if (exe == NULL || mapped == NULL || (uintptr_t)mapped < (uintptr_t)exe) {
+        return 0;
+    }
+
+    return caller_rva == (uintptr_t)mapped - (uintptr_t)exe;
 }
 
 uint32_t kbo_fa_filing_team_league_id(uint32_t team_id)

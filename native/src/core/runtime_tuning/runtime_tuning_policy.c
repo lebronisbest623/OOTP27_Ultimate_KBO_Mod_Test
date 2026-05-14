@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "runtime_tuning_policy.h"
-#include "../core_flags/localappdata/localappdata_reader.h"
+#include "../policy/core_policy.h"
 
 #define KBO_RUNTIME_TUNING_POLICY_FILE "runtime_tuning_policy.json"
 
@@ -13,12 +13,7 @@ static KboRuntimeTuningPolicy g_kbo_runtime_tuning_policy;
 
 static int32_t kbo_runtime_tuning_policy_int(const char* key, int32_t fallback, int32_t min_value, int32_t max_value)
 {
-    int value = (int)fallback;
-    if (kbo_read_localappdata_named_json_int_value(KBO_RUNTIME_TUNING_POLICY_FILE, key, &value)
-            && value >= min_value && value <= max_value) {
-        return (int32_t)value;
-    }
-    return fallback;
+    return kbo_read_clamped_policy_int(KBO_RUNTIME_TUNING_POLICY_FILE, key, fallback, min_value, max_value);
 }
 
 static void kbo_runtime_tuning_policy_log_attempts(

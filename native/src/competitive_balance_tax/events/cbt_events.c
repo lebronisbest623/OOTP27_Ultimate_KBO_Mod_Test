@@ -191,12 +191,8 @@ void start_kbo_cbt_event_scheduler_thread(void)
     if (InterlockedCompareExchange(&g_kbo_cbt_event_scheduler_started, 1, 0) != 0) {
         return;
     }
-    HANDLE thread = CreateThread(NULL, 0, kbo_cbt_event_scheduler_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "CBT event scheduler");
-    } else {
+    if (!kbo_start_runtime_thread(kbo_cbt_event_scheduler_thread, NULL, "CBT event scheduler")) {
         InterlockedExchange(&g_kbo_cbt_event_scheduler_started, 0);
-        append_logf("KBO CBT event scheduler failed to start gle=%lu", GetLastError());
     }
 }
 

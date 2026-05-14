@@ -125,12 +125,11 @@ void start_kbo_delayed_no_minor_contract_patch_install_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_delayed_no_minor_contract_patch_install_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "delayed no-minor contract patch install");
-    } else {
+    if (!kbo_start_runtime_thread(
+            kbo_delayed_no_minor_contract_patch_install_thread,
+            NULL,
+            "delayed no-minor contract patch install")) {
         InterlockedExchange(&g_kbo_no_minor_contract_delayed_install_started, 0);
-        append_logf("KBO no-minor-contract delayed install thread failed error=%lu", GetLastError());
     }
 }
 

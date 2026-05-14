@@ -2,6 +2,7 @@
 
 #include "../../localappdata/localappdata_reader.h"
 #include "../../../logging/core_log.h"
+#include "../../../sync/spin_lock.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -31,14 +32,12 @@ static int kbo_should_log_runtime_thread_registration(const char* label)
 
 static void kbo_lock_runtime_thread_registry(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_runtime_thread_registry_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(&g_kbo_runtime_thread_registry_lock);
 }
 
 static void kbo_unlock_runtime_thread_registry(void)
 {
-    InterlockedExchange(&g_kbo_runtime_thread_registry_lock, 0);
+    kbo_spin_unlock(&g_kbo_runtime_thread_registry_lock);
 }
 
 void kbo_request_runtime_threads_stop(void)
@@ -78,6 +77,27 @@ void kbo_register_runtime_thread(HANDLE thread, const char* label)
 
     append_logf("KBO runtime thread registry full; closing untracked thread label=\"%s\" handle=%p", thread_label, thread);
     CloseHandle(thread);
+}
+
+int kbo_start_runtime_thread(LPTHREAD_START_ROUTINE start, LPVOID parameter, const char* label)
+{
+    const char* thread_label = label != NULL ? label : "runtime thread";
+    if (start == NULL) {
+        append_logf("KBO runtime thread start skipped label=\"%s\" reason=no_start_proc", thread_label);
+        return 0;
+    }
+
+    HANDLE thread = CreateThread(NULL, 0, start, parameter, 0, NULL);
+    if (thread == NULL) {
+        append_logf(
+            "KBO runtime thread start failed label=\"%s\" error=%lu",
+            thread_label,
+            (unsigned long)GetLastError());
+        return 0;
+    }
+
+    kbo_register_runtime_thread(thread, thread_label);
+    return 1;
 }
 
 void kbo_shutdown_runtime_threads(uint32_t timeout_ms)

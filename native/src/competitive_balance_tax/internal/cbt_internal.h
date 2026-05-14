@@ -51,7 +51,7 @@ void kbo_cbt_insert_violation_news_v2(
     uint32_t day,
     const KboCbtRecord* rec,
     const KboCbtRules* rules);
-void kbo_cbt_insert_opening_day_summary_news(
+int kbo_cbt_insert_opening_day_summary_news(
     uint32_t league_id,
     uint32_t year,
     uint32_t month,

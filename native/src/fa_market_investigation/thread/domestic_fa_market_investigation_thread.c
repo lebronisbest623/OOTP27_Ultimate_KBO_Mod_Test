@@ -583,11 +583,10 @@ void start_kbo_domestic_fa_market_investigation_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_domestic_fa_market_investigation_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "domestic FA market investigation");
-    } else {
+    if (!kbo_start_runtime_thread(
+            kbo_domestic_fa_market_investigation_thread,
+            NULL,
+            "domestic FA market investigation")) {
         InterlockedExchange(&g_kbo_domestic_fa_market_investigation_started, 0);
-        append_logf("domestic FA market investigation thread failed error=%lu", GetLastError());
     }
 }

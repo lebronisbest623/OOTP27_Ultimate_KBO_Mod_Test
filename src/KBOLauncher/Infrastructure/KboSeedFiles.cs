@@ -1,9 +1,8 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 using static LauncherPaths;
 
-internal static class KboSeedFiles
+internal static partial class KboSeedFiles
 {
     private const string SeedManifestFileName = "seed_manifest.json";
 
@@ -162,7 +161,7 @@ internal static class KboSeedFiles
                 continue;
             }
 
-            RemoveRetiredBundledKboDataFileIfUnchanged(localDir, relativePath, ManifestLabel(retiredFile));
+            RemoveRetiredBundledKboDataFileIfUnchanged(localDir, relativePath, ManifestLabel(retiredFile), retiredFile);
         }
     }
 
@@ -195,6 +194,15 @@ internal static class KboSeedFiles
 
     internal static void RemoveRetiredBundledKboDataFileIfUnchanged(string localDir, string fileName, string label)
     {
+        RemoveRetiredBundledKboDataFileIfUnchanged(localDir, fileName, label, retiredFile: null);
+    }
+
+    private static void RemoveRetiredBundledKboDataFileIfUnchanged(
+        string localDir,
+        string fileName,
+        string label,
+        KboSeedManifestFile? retiredFile)
+    {
         var localPath = Path.Combine(localDir, fileName);
         if (!File.Exists(localPath))
         {
@@ -208,12 +216,8 @@ internal static class KboSeedFiles
                 .Where(line => line.Length > 0 && !line.StartsWith("#", StringComparison.Ordinal) && !line.StartsWith(";", StringComparison.Ordinal))
                 .ToArray();
 
-            var isRetiredForeignReplacementSeed = string.Equals(fileName, "foreign_replacement_players_seed.csv", StringComparison.OrdinalIgnoreCase)
-                && meaningfulLines.All(line =>
-                    line.StartsWith("verhadr01,", StringComparison.OrdinalIgnoreCase)
-                    || line.StartsWith("olougja01,", StringComparison.OrdinalIgnoreCase));
-
-            if (!isRetiredForeignReplacementSeed)
+            if (!IsRetiredBundledKboDataFileSafeToRemove(retiredFile, meaningfulLines)
+                    && !IsLegacyRetiredBundledKboDataFileSafeToRemove(fileName, meaningfulLines))
             {
                 return;
             }
@@ -225,6 +229,71 @@ internal static class KboSeedFiles
         {
             Console.WriteLine($"Failed to remove retired {fileName}: {ex.Message}");
         }
+    }
+
+    private static bool IsRetiredBundledKboDataFileSafeToRemove(KboSeedManifestFile? retiredFile, string[] meaningfulLines)
+    {
+        if (meaningfulLines.Length == 0)
+        {
+            return false;
+        }
+
+        if (retiredFile?.SafeRemoveAllLinesStartWithAny is { Count: > 0 } prefixes
+                && meaningfulLines.All(line => prefixes.Any(prefix => line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))))
+        {
+            return true;
+        }
+
+        if (retiredFile?.SafeRemoveWhenContainsAny is { Count: > 0 } markers
+                && meaningfulLines.Any(line => markers.Any(marker => line.Contains(marker, StringComparison.OrdinalIgnoreCase))))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsLegacyRetiredBundledKboDataFileSafeToRemove(string fileName, string[] meaningfulLines)
+    {
+        var normalized = fileName.Replace('\\', '/');
+        if (string.Equals(normalized, "foreign_replacement_players_seed.csv", StringComparison.OrdinalIgnoreCase))
+        {
+            return meaningfulLines.All(line =>
+                line.StartsWith("verhadr01,", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("olougja01,", StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (string.Equals(normalized, "captain_news_templates.json", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "news_templates.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return meaningfulLines.Any(line =>
+                line.Contains("\"captain.", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("\"foreign_injury.", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("\"military.", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("\"cbt.", StringComparison.OrdinalIgnoreCase));
+        }
+
+        const string flatNewsPrefix = "news_templates/";
+        if (!normalized.StartsWith(flatNewsPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var rest = normalized[flatNewsPrefix.Length..];
+        if (rest.Contains('/', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var marker = Path.GetFileNameWithoutExtension(rest) switch
+        {
+            "competitive_balance_tax" => "cbt.",
+            "military_service" => "military.",
+            var stem when !string.IsNullOrWhiteSpace(stem) => stem + ".",
+            _ => ""
+        };
+        return marker.Length > 0
+            && meaningfulLines.Any(line => line.Contains(marker, StringComparison.OrdinalIgnoreCase));
     }
 
     internal static void EnsureBundledKboDataFile(
@@ -322,6 +391,10 @@ internal static class KboSeedFiles
         public string Source { get; set; } = "";
 
         public string Label { get; set; } = "";
+
+        public List<string>? SafeRemoveAllLinesStartWithAny { get; set; }
+
+        public List<string>? SafeRemoveWhenContainsAny { get; set; }
     }
 
     internal static void EnsureBundledKboDataDirectory(
@@ -378,128 +451,4 @@ internal static class KboSeedFiles
         Console.WriteLine($"{label}: bundled seed directory not found for {directoryName}");
     }
 
-    public static void EnsureKboScheduleAllstarGameLines(string? ootpExePath)
-    {
-        foreach (var directory in ResolveKboScheduleDirectories(ootpExePath).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            EnsureKboScheduleAllstarGameLinesInDirectory(directory);
-        }
-    }
-
-    internal static void EnsureKboScheduleAllstarGameLinesInDirectory(string scheduleDirectory)
-    {
-        if (string.IsNullOrWhiteSpace(scheduleDirectory) || !Directory.Exists(scheduleDirectory))
-        {
-            return;
-        }
-
-        foreach (var path in Directory.EnumerateFiles(scheduleDirectory, "korean_baseball_organization_int_c_*.lsdl"))
-        {
-            try
-            {
-                if (EnsureKboScheduleAllstarGameLine(path))
-                {
-                    Console.WriteLine($"KBO schedule all-star game: repaired {path}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"KBO schedule all-star game: failed to repair {path}: {ex.Message}");
-            }
-        }
-    }
-
-    internal static bool EnsureKboScheduleAllstarGameLine(string path)
-    {
-        var text = File.ReadAllText(path);
-        var gamesMatch = Regex.Match(text, "<GAMES>\\s*", RegexOptions.IgnoreCase);
-        var gamesEndMatch = Regex.Match(text, "</GAMES>", RegexOptions.IgnoreCase);
-        var hasTypeFourInsideGames = false;
-        if (gamesMatch.Success && gamesEndMatch.Success && gamesEndMatch.Index > gamesMatch.Index)
-        {
-            var gamesBlock = text.Substring(gamesMatch.Index, gamesEndMatch.Index - gamesMatch.Index);
-            hasTypeFourInsideGames = gamesBlock.Contains("type=\"4\"", StringComparison.OrdinalIgnoreCase);
-        }
-        else if (text.Contains("type=\"4\"", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var changed = false;
-        if (!hasTypeFourInsideGames)
-        {
-            var dayMatch = Regex.Match(text, "allstar_game_day\\s*=\\s*\"(?<day>\\d+)\"", RegexOptions.IgnoreCase);
-            if (!dayMatch.Success || !int.TryParse(dayMatch.Groups["day"].Value, out var day) || day <= 0)
-            {
-                return false;
-            }
-
-            var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-            var allstarLine = $"<Game day=\"{day}\" time=\"1830\" away=\"0\" home=\"0\" type=\"4\" />{newline}";
-            if (gamesMatch.Success)
-            {
-                var insertAt = gamesMatch.Index + gamesMatch.Length;
-                text = text.Insert(insertAt, allstarLine);
-            }
-            else
-            {
-                var scheduleHeaderEnd = text.IndexOf('>');
-                if (scheduleHeaderEnd < 0)
-                {
-                    return false;
-                }
-                text = text.Insert(scheduleHeaderEnd + 1, newline + allstarLine);
-            }
-            changed = true;
-        }
-
-        var cleaned = RemoveKboAllstarGameLinesOutsideGamesBlock(text);
-        if (!string.Equals(cleaned, text, StringComparison.Ordinal))
-        {
-            text = cleaned;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            File.WriteAllText(path, text);
-        }
-        return changed;
-    }
-
-    private static string RemoveKboAllstarGameLinesOutsideGamesBlock(string text)
-    {
-        var gamesStart = Regex.Match(text, "<GAMES>\\s*", RegexOptions.IgnoreCase);
-        var gamesEnd = Regex.Match(text, "</GAMES>", RegexOptions.IgnoreCase);
-        if (!gamesStart.Success || !gamesEnd.Success || gamesEnd.Index <= gamesStart.Index)
-        {
-            return text;
-        }
-
-        var before = text[..gamesStart.Index];
-        var games = text[gamesStart.Index..gamesEnd.Index];
-        var after = text[gamesEnd.Index..];
-        const string strayAllstarGameLine = "^[ \\t]*<Game\\b[^\\r\\n>]*type\\s*=\\s*\"4\"[^\\r\\n>]*>\\s*(?:\\r?\\n)?";
-        before = Regex.Replace(before, strayAllstarGameLine, "", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-        after = Regex.Replace(after, strayAllstarGameLine, "", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-        return before + games + after;
-    }
-
-    private static IEnumerable<string> ResolveKboScheduleDirectories(string? ootpExePath)
-    {
-        if (!string.IsNullOrWhiteSpace(ootpExePath))
-        {
-            var ootpDir = Path.GetDirectoryName(ootpExePath);
-            if (!string.IsNullOrWhiteSpace(ootpDir))
-            {
-                yield return Path.Combine(ootpDir, "data", "schedules");
-            }
-        }
-
-        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        if (!string.IsNullOrWhiteSpace(documents))
-        {
-            yield return Path.Combine(documents, "Out of the Park Developments", "OOTP Baseball 27", "schedules");
-        }
-    }
 }

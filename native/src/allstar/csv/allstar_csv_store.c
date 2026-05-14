@@ -38,10 +38,7 @@ static int get_kbo_allstar_teams_csv_path(char* path, size_t path_size)
         }
     }
 
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got > 0 && got < sizeof(local_app_data)) {
-        snprintf(path, path_size, "%s\\OOTP-KBO\\allstar_teams.csv", local_app_data);
+    if (kbo_get_global_data_file("allstar_teams.csv", path, path_size)) {
         if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
             return 1;
         }
@@ -54,8 +51,7 @@ static int get_kbo_allstar_teams_csv_path(char* path, size_t path_size)
         }
     }
 
-    if (got > 0 && got < sizeof(local_app_data)) {
-        snprintf(path, path_size, "%s\\OOTP-KBO\\Teams.csv", local_app_data);
+    if (kbo_get_global_data_file("Teams.csv", path, path_size)) {
         if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
             return 1;
         }

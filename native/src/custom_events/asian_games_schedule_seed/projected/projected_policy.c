@@ -42,13 +42,7 @@ static int kbo_asian_games_projected_policy_global_path(char* out, size_t out_si
         return 0;
     }
     out[0] = '\0';
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0u || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-    snprintf(out, out_size, "%s\\OOTP-KBO\\%s", local_app_data, KBO_ASIAN_GAMES_PROJECTED_POLICY_FILE);
-    return out[0] != '\0';
+    return kbo_get_global_data_file(KBO_ASIAN_GAMES_PROJECTED_POLICY_FILE, out, out_size);
 }
 
 static int kbo_asian_games_projected_policy_save_path(char* out, size_t out_size)

@@ -93,6 +93,7 @@ int kbo_get_save_captain_seed_path(char* out, size_t out_size);
 int kbo_get_global_captain_seed_path(char* out, size_t out_size);
 int kbo_import_captain_seed_file_locked(const char* path, const char* source);
 void kbo_ensure_captain_seeds_loaded(void);
+int kbo_captain_seed_available_for_season(uint32_t season, uint32_t league_id);
 int kbo_find_captain_seed_for_player(
     uint32_t season,
     uint32_t league_id,

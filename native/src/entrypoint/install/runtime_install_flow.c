@@ -101,7 +101,10 @@ DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter)
                 today_serial,
                 stable_ticks);
         }
-        Sleep((DWORD)tuning->sangmu_delayed_install_sleep_ms);
+        if (!kbo_runtime_sleep_should_continue((uint32_t)tuning->sangmu_delayed_install_sleep_ms)) {
+            append_log_line("KBO Sangmu FA hooks delayed install stopped before ready");
+            return 0;
+        }
     }
 
     kbo_load_military_service_team_policy_override_once();
@@ -144,12 +147,12 @@ void start_kbo_delayed_sangmu_fa_hooks_install_thread(
     request->enable_offer = enable_offer;
     request->enable_legacy = enable_legacy;
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_delayed_sangmu_fa_hooks_install_thread, request, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "delayed sangmu FA hook install");
+    if (kbo_start_runtime_thread(
+            kbo_delayed_sangmu_fa_hooks_install_thread,
+            request,
+            "delayed sangmu FA hook install")) {
         append_log_line("KBO Sangmu FA hooks delayed install thread started");
     } else {
-        append_logf("KBO Sangmu FA hooks delayed install thread failed error=%lu", GetLastError());
         HeapFree(GetProcessHeap(), 0, request);
     }
 }
@@ -353,7 +356,6 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     }
     start_kbo_military_seed_bootstrap_thread();
     start_kbo_military_days_tick_thread();
-    start_kbo_captain_preseason_selection_thread();
     if (read_kbo_localappdata_flag_file("enable_kbo_cbt_service_time_probe.txt")) {
         kbo_cbt_service_time_probe_once();
     } else {

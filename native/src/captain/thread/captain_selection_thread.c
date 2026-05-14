@@ -90,6 +90,29 @@ static int kbo_captain_current_yyyymmdd(uint32_t* out_date)
     return 1;
 }
 
+static int kbo_captain_calendar_preseason_start_active(
+    uint32_t date,
+    uint32_t league_season,
+    uint8_t phase,
+    int calendar_preseason)
+{
+    if (!calendar_preseason || phase == 2u || phase == 3u) {
+        return 0;
+    }
+    return (date / 10000u) == league_season && (date % 10000u) == 310u;
+}
+
+static int kbo_captain_seed_startup_window_active(uint32_t date, uint32_t season)
+{
+    uint32_t date_year = date / 10000u;
+    uint32_t month_day = date % 10000u;
+    return season >= 1982u
+        && season <= 2200u
+        && date_year == season
+        && month_day >= 301u
+        && month_day <= 415u;
+}
+
 static int kbo_captain_find_row_index_by_team(
     const KboCaptainSelectionRow* rows,
     int row_count,
@@ -299,6 +322,63 @@ static int kbo_captain_write_missing_selection_csv(
     return wrote;
 }
 
+static int kbo_captain_run_seed_startup_without_league_ptr(
+    uint32_t date,
+    uint32_t league_id,
+    const char* source)
+{
+    uint32_t season = date / 10000u;
+    if (!kbo_captain_seed_startup_window_active(date, season)
+            || !kbo_captain_seed_available_for_season(season, league_id)) {
+        return 0;
+    }
+
+    int csv_exists = kbo_captain_selection_csv_exists(season);
+    static uint32_t last_logged_date = 0u;
+    static uint32_t last_logged_season = 0u;
+    static uint32_t last_logged_league_id = 0u;
+    static int last_logged_csv_exists = -1;
+    if (date != last_logged_date
+            || season != last_logged_season
+            || league_id != last_logged_league_id
+            || csv_exists != last_logged_csv_exists) {
+        append_logf(
+            "KBO captain seed startup fallback source=%s date=%u season=%u league_id=%u csv_exists=%d reason=league_ptr_unavailable",
+            source != NULL ? source : "",
+            date,
+            season,
+            league_id,
+            csv_exists);
+        last_logged_date = date;
+        last_logged_season = season;
+        last_logged_league_id = league_id;
+        last_logged_csv_exists = csv_exists;
+    }
+
+    if (!csv_exists) {
+        return kbo_captain_write_missing_selection_csv(
+            date,
+            season,
+            league_id,
+            0u,
+            source != NULL ? source : "captain_seed_startup_no_league_ptr");
+    }
+
+    KboCaptainSelectionRow summary_rows[KBO_CAPTAIN_MAX_TEAMS];
+    memset(summary_rows, 0, sizeof(summary_rows));
+    int summary_count = kbo_captain_load_selection_csv(season, summary_rows, KBO_CAPTAIN_MAX_TEAMS);
+    if (summary_count <= 0) {
+        return 0;
+    }
+    return kbo_emit_captain_initial_selection_news(
+        date,
+        season,
+        league_id,
+        summary_rows,
+        summary_count,
+        source != NULL ? source : "captain_seed_startup_summary_no_league_ptr");
+}
+
 int kbo_run_captain_preseason_selection_once(const char* source)
 {
     if (!kbo_fix_enabled()) {
@@ -321,15 +401,20 @@ int kbo_run_captain_preseason_selection_once(const char* source)
             || !memory_range_readable(
                 (void*)league_ptr,
                 OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET + sizeof(uint32_t))) {
-        return 0;
+        return kbo_captain_run_seed_startup_without_league_ptr(date, league_id, source);
     }
 
     uint32_t league_season = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
     uint8_t phase = *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET);
     uint32_t season = kbo_captain_effective_season(date, league_season);
-    int calendar_recovery = kbo_captain_calendar_season_recovery_active(date, league_season, phase);
     int calendar_preseason = kbo_captain_calendar_preseason_window_active(date, league_season, phase);
-    if (season < 1982u || season > 2200u || (phase != 2u && !calendar_recovery && !calendar_preseason)) {
+    int seed_startup = calendar_preseason && kbo_captain_seed_available_for_season(season, league_id);
+    int calendar_preseason_start = kbo_captain_calendar_preseason_start_active(
+        date,
+        league_season,
+        phase,
+        calendar_preseason);
+    if (season < 1982u || season > 2200u || (phase != 2u && !seed_startup && !calendar_preseason_start)) {
         return 0;
     }
 
@@ -340,9 +425,9 @@ int kbo_run_captain_preseason_selection_once(const char* source)
         phase,
         source != NULL
             ? source
-            : (calendar_recovery
-                ? "captain_calendar_year_recovery"
-                : (calendar_preseason ? "captain_calendar_preseason_window" : "captain_preseason_phase2")));
+            : (seed_startup
+                ? "captain_seed_startup"
+                : (calendar_preseason_start ? "captain_calendar_preseason_start" : "captain_preseason_phase2")));
 }
 
 static int kbo_run_captain_inseason_repair_once(
@@ -542,7 +627,7 @@ static int kbo_run_captain_selection_maintenance_once(const char* source)
             || !memory_range_readable(
                 (void*)league_ptr,
                 OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET + sizeof(uint32_t))) {
-        return 0;
+        return kbo_captain_run_seed_startup_without_league_ptr(date, league_id, source);
     }
 
     uint32_t league_season = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
@@ -554,6 +639,12 @@ static int kbo_run_captain_selection_maintenance_once(const char* source)
 
     int calendar_recovery = kbo_captain_calendar_season_recovery_active(date, league_season, phase);
     int calendar_preseason = kbo_captain_calendar_preseason_window_active(date, league_season, phase);
+    int seed_startup = calendar_preseason && kbo_captain_seed_available_for_season(season, league_id);
+    int calendar_preseason_start = kbo_captain_calendar_preseason_start_active(
+        date,
+        league_season,
+        phase,
+        calendar_preseason);
     int csv_exists = kbo_captain_selection_csv_exists(season);
     kbo_captain_log_phase_observed(
         source,
@@ -621,13 +712,15 @@ static int kbo_run_captain_selection_maintenance_once(const char* source)
             phase,
             source != NULL ? source : "captain_preseason_start");
     }
-    if (calendar_preseason && !csv_exists) {
+    if ((seed_startup || calendar_preseason_start) && !csv_exists) {
         return kbo_captain_write_missing_selection_csv(
             date,
             season,
             league_id,
             phase,
-            source != NULL ? source : "captain_calendar_preseason_window");
+            source != NULL
+                ? source
+                : (seed_startup ? "captain_seed_startup" : "captain_calendar_preseason_start"));
     }
     if (phase == 3u) {
         if (!csv_exists) {
@@ -646,12 +739,7 @@ static int kbo_run_captain_selection_maintenance_once(const char* source)
     }
     if (calendar_recovery) {
         if (!csv_exists) {
-            return kbo_captain_write_missing_selection_csv(
-                date,
-                season,
-                league_id,
-                phase,
-                source != NULL ? source : "captain_calendar_year_recovery");
+            return 0;
         }
         return kbo_run_captain_inseason_repair_once(
             date,
@@ -685,11 +773,7 @@ void start_kbo_captain_preseason_selection_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_captain_preseason_selection_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "captain selection maintenance");
-    } else {
+    if (!kbo_start_runtime_thread(kbo_captain_preseason_selection_thread, NULL, "captain selection maintenance")) {
         InterlockedExchange(&g_kbo_captain_preseason_thread_started, 0);
-        append_logf("KBO captain selection maintenance thread failed error=%lu", GetLastError());
     }
 }

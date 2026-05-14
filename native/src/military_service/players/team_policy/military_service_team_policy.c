@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "../../../core/core_flags/localappdata/localappdata_reader.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/logging/core_log.h"
 #include "military_service_team_policy.h"
 
@@ -34,13 +35,6 @@ void kbo_load_military_service_team_policy_override_once(void)
         return;
     }
 
-    char local[MAX_PATH] = {0};
-    DWORD local_len = GetEnvironmentVariableA("LOCALAPPDATA", local, (DWORD)sizeof(local));
-    if (local_len == 0 || local_len >= sizeof(local) || local[0] == '\0') {
-        append_logf("KBO military FA team policy fixed sangmu=%u source=fallback", KBO_TEAM_POLICY_FALLBACK_SANGMU_TEAM_ID);
-        return;
-    }
-
     uint32_t configured_sangmu_team_id = 0u;
     if (kbo_military_service_read_json_sangmu_team_id(&configured_sangmu_team_id)) {
         InterlockedExchange(&g_kbo_military_policy_sang_team_id, (LONG)configured_sangmu_team_id);
@@ -50,7 +44,9 @@ void kbo_load_military_service_team_policy_override_once(void)
     }
 
     char path[MAX_PATH] = {0};
-    snprintf(path, sizeof(path), "%s\\OOTP-KBO\\kbo_sangmu_team_id.txt", local);
+    if (!kbo_get_global_data_file("kbo_sangmu_team_id.txt", path, sizeof(path))) {
+        return;
+    }
     FILE* file = fopen(path, "rb");
     if (file == NULL) {
         return;

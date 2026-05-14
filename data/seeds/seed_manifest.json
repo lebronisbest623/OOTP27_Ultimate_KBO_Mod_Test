@@ -83,6 +83,7 @@
       "id": "news_templates",
       "label": "News templates",
       "files": [
+        { "path": "news_templates/index.json", "label": "News template index", "kind": "news_template_index" },
         { "path": "news_templates/en/asian_games.json", "label": "News templates: Asian Games (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/captain.json", "label": "News templates: Captain (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/competitive_balance_tax.json", "label": "News templates: CBT (English)", "kind": "news_template", "language": "en" },
@@ -118,6 +119,65 @@
     }
   ],
   "retiredFiles": [
-    { "path": "foreign_replacement_players_seed.csv", "label": "Foreign replacement player seed", "kind": "retired_seed" }
+    {
+      "path": "foreign_replacement_players_seed.csv",
+      "label": "Foreign replacement player seed",
+      "kind": "retired_seed",
+      "safeRemoveAllLinesStartWithAny": [ "verhadr01,", "olougja01," ]
+    },
+    {
+      "path": "captain_news_templates.json",
+      "label": "Retired flat captain news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "\"captain.", "\"foreign_injury.", "\"military.", "\"cbt." ]
+    },
+    {
+      "path": "news_templates.json",
+      "label": "Retired flat news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "\"captain.", "\"foreign_injury.", "\"military.", "\"cbt." ]
+    },
+    {
+      "path": "news_templates/asian_games.json",
+      "label": "Retired flat Asian Games news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "asian_games." ]
+    },
+    {
+      "path": "news_templates/captain.json",
+      "label": "Retired flat captain news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "captain." ]
+    },
+    {
+      "path": "news_templates/competitive_balance_tax.json",
+      "label": "Retired flat CBT news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "cbt." ]
+    },
+    {
+      "path": "news_templates/fa_compensation.json",
+      "label": "Retired flat FA compensation news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "fa_compensation." ]
+    },
+    {
+      "path": "news_templates/foreign_injury.json",
+      "label": "Retired flat foreign injury news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "foreign_injury." ]
+    },
+    {
+      "path": "news_templates/foreign_waiver.json",
+      "label": "Retired flat foreign waiver news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "foreign_waiver." ]
+    },
+    {
+      "path": "news_templates/military_service.json",
+      "label": "Retired flat military service news templates",
+      "kind": "retired_news_template",
+      "safeRemoveWhenContainsAny": [ "military." ]
+    }
   ]
 }

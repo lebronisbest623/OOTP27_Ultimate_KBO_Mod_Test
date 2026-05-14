@@ -6,7 +6,7 @@
 
 #include "cbt_rules.h"
 #include "../../core/core_flags/api/flags_api.h"
-#include "../../core/files/save_paths/core_save_paths_internal.h"
+#include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/core_flags/json/json_bool_parser.h"
 #include "../../core/logging/core_log.h"
 
@@ -200,13 +200,10 @@ void kbo_cbt_rules_load(KboCbtRules* out)
     }
     kbo_cbt_rules_init_defaults(out);
 
-    char path[MAX_PATH] = {0};
-    if (!kbo_get_localappdata_utf8(path, sizeof(path))) {
+    char json_path[MAX_PATH] = {0};
+    if (!kbo_get_global_data_file("cbt_rules.json", json_path, sizeof(json_path))) {
         return;
     }
-
-    char json_path[MAX_PATH] = {0};
-    snprintf(json_path, sizeof(json_path), "%s\\OOTP-KBO\\cbt_rules.json", path);
 
     HANDLE file = CreateFileA(json_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

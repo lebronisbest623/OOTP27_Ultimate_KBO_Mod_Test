@@ -6,7 +6,9 @@
 #include <string.h>
 
 #include "cbt_exceptions.h"
+#include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/sync/spin_lock.h"
 #include "../../fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
 #include "../../hotkey_window/support/assets/names/support_names.h"
 
@@ -23,14 +25,12 @@ static volatile LONG g_cbt_season_seed_lock = 0;
 
 static void kbo_cbt_exception_lock(volatile LONG* lock)
 {
-    while (InterlockedCompareExchange(lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(lock);
 }
 
 static void kbo_cbt_exception_unlock(volatile LONG* lock)
 {
-    InterlockedExchange(lock, 0);
+    kbo_spin_unlock(lock);
 }
 
 static int kbo_cbt_exception_seed_path(char* out, size_t out_size)
@@ -39,13 +39,7 @@ static int kbo_cbt_exception_seed_path(char* out, size_t out_size)
         return 0;
     }
     out[0] = '\0';
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0u || got >= (DWORD)sizeof(local_app_data)) {
-        return 0;
-    }
-    int written = snprintf(out, out_size, "%s\\OOTP-KBO\\cbt_player_team_seasons_seed.csv", local_app_data);
-    return written > 0 && written < (int)out_size;
+    return kbo_get_global_data_file("cbt_player_team_seasons_seed.csv", out, out_size);
 }
 
 static int kbo_cbt_exception_bundled_seed_path(char* out, size_t out_size)

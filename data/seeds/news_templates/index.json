@@ -1,0 +1,10 @@
+{
+  "captain.": "captain.json",
+  "cbt.": "competitive_balance_tax.json",
+  "military.": "military_service.json",
+  "asian_games.": "asian_games.json",
+  "fa_compensation.": "fa_compensation.json",
+  "foreign_waiver.": "foreign_waiver.json",
+  "foreign_injury.": "foreign_injury.json",
+  "custom_event.": "custom_events.json"
+}

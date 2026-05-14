@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "../api/league_context_lookup.h"
+#include "../../files/save_paths/core_save_paths.h"
 #include "../../logging/core_log.h"
 
 uint32_t kbo_read_kbo_league_id_override(void)
@@ -19,18 +20,14 @@ uint32_t kbo_read_kbo_league_id_override(void)
     }
     last_checked_ms = now_ms;
 
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
+    char path[MAX_PATH] = {0};
+    if (!kbo_get_global_data_file("kbo_league_id.txt", path, sizeof(path))) {
         static LONG missing_logged = 0;
         if (InterlockedCompareExchange(&missing_logged, 1, 0) == 0) {
-            append_logf("KBO league id override: LOCALAPPDATA missing or invalid=%lu", got);
+            append_log_line("KBO league id override: global data path unavailable");
         }
         return 0;
     }
-
-    char path[MAX_PATH] = {0};
-    snprintf(path, sizeof(path), "%s\\OOTP-KBO\\kbo_league_id.txt", local_app_data);
 
     HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

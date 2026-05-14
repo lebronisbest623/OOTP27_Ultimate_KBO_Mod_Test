@@ -5,7 +5,7 @@
 
 #include "foreign_player_policy.h"
 
-#include "../../../core/core_flags/localappdata/localappdata_reader.h"
+#include "../../../core/policy/core_policy.h"
 
 #define KBO_FOREIGN_PLAYER_POLICY_FILE "foreign_player_policy.json"
 
@@ -14,12 +14,7 @@ static KboForeignPlayerPolicy g_kbo_foreign_player_policy;
 
 static int32_t kbo_foreign_player_policy_int(const char* key, int32_t fallback, int32_t min_value, int32_t max_value)
 {
-    int value = (int)fallback;
-    if (kbo_read_localappdata_named_json_int_value(KBO_FOREIGN_PLAYER_POLICY_FILE, key, &value)
-            && value >= min_value && value <= max_value) {
-        return (int32_t)value;
-    }
-    return fallback;
+    return kbo_read_clamped_policy_int(KBO_FOREIGN_PLAYER_POLICY_FILE, key, fallback, min_value, max_value);
 }
 
 static void kbo_foreign_policy_add_asian_quota_nation(KboForeignPlayerPolicy* p, uint32_t nation_id)
@@ -103,21 +98,20 @@ static BOOL CALLBACK kbo_foreign_player_policy_init_once(PINIT_ONCE init_once, P
     static const uint32_t default_nations[] = { 98u, 12u, 43u };
     for (int i = 0; i < (int)(sizeof(default_nations) / sizeof(default_nations[0])); i++) {
         char key[64] = {0};
-        int value = 0;
         snprintf(key, sizeof(key), "asian_quota_nation_id_%d", i + 1);
-        if (kbo_read_localappdata_named_json_int_value(KBO_FOREIGN_PLAYER_POLICY_FILE, key, &value)
-                && value > 0 && value <= 1000000) {
-            kbo_foreign_policy_add_asian_quota_nation(p, (uint32_t)value);
-        } else {
-            kbo_foreign_policy_add_asian_quota_nation(p, default_nations[i]);
-        }
+        int32_t value = kbo_read_clamped_policy_int(
+            KBO_FOREIGN_PLAYER_POLICY_FILE,
+            key,
+            (int32_t)default_nations[i],
+            1,
+            1000000);
+        kbo_foreign_policy_add_asian_quota_nation(p, (uint32_t)value);
     }
     for (int i = 4; i <= KBO_FOREIGN_POLICY_ASIAN_QUOTA_NATION_MAX; i++) {
         char key[64] = {0};
-        int value = 0;
         snprintf(key, sizeof(key), "asian_quota_nation_id_%d", i);
-        if (kbo_read_localappdata_named_json_int_value(KBO_FOREIGN_PLAYER_POLICY_FILE, key, &value)
-                && value > 0 && value <= 1000000) {
+        int32_t value = kbo_read_clamped_policy_int(KBO_FOREIGN_PLAYER_POLICY_FILE, key, 0, 1, 1000000);
+        if (value > 0) {
             kbo_foreign_policy_add_asian_quota_nation(p, (uint32_t)value);
         }
     }

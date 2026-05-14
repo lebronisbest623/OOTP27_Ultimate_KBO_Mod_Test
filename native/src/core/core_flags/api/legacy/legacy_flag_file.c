@@ -2,6 +2,8 @@
 
 #include "../../keys/flag_key.h"
 #include "../../localappdata/localappdata_reader.h"
+#include "../../../files/save_paths/core_save_paths.h"
+#include "../../../sync/spin_lock.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -13,15 +15,8 @@ static int kbo_legacy_localappdata_flag_file_exists(const char* file_name)
         return 0;
     }
 
-    char local_app_data[32768] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= (DWORD)sizeof(local_app_data)) {
-        return 0;
-    }
-
     char path[32768] = {0};
-    int written = snprintf(path, sizeof(path), "%s\\OOTP-KBO\\%s", local_app_data, file_name);
-    if (written <= 0 || written >= (int)sizeof(path)) {
+    if (!kbo_get_global_data_file(file_name, path, sizeof(path))) {
         return 0;
     }
 
@@ -61,17 +56,15 @@ int read_kbo_localappdata_flag_file(const char* file_name)
     static volatile LONG cache_lock = 0;
 
     DWORD now = GetTickCount();
-    while (InterlockedCompareExchange(&cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(&cache_lock);
     for (int i = 0; i < (int)(sizeof(cache) / sizeof(cache[0])); i++) {
         if (cache[i].valid && strcmp(cache[i].key, key) == 0 && now - cache[i].tick < 2000u) {
             int cached = cache[i].value;
-            InterlockedExchange(&cache_lock, 0);
+            kbo_spin_unlock(&cache_lock);
             return cached;
         }
     }
-    InterlockedExchange(&cache_lock, 0);
+    kbo_spin_unlock(&cache_lock);
 
     const char* legacy_json_key = kbo_flag_legacy_json_key_for_key(key);
 
@@ -89,9 +82,7 @@ int read_kbo_localappdata_flag_file(const char* file_name)
         }
     }
 
-    while (InterlockedCompareExchange(&cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_spin_lock(&cache_lock);
     int slot = -1;
     for (int i = 0; i < (int)(sizeof(cache) / sizeof(cache[0])); i++) {
         if (cache[i].valid && strcmp(cache[i].key, key) == 0) {
@@ -109,6 +100,6 @@ int read_kbo_localappdata_flag_file(const char* file_name)
     cache[slot].value = value;
     cache[slot].tick = now;
     cache[slot].valid = 1;
-    InterlockedExchange(&cache_lock, 0);
+    kbo_spin_unlock(&cache_lock);
     return value;
 }

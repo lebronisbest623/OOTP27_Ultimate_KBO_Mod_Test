@@ -71,12 +71,11 @@ void start_kbo_intl_established_fa_postscan_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_intl_established_fa_postscan_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "intl established FA postscan");
-    } else {
+    if (!kbo_start_runtime_thread(
+            kbo_intl_established_fa_postscan_thread,
+            NULL,
+            "intl established FA postscan")) {
         InterlockedExchange(&g_kbo_intl_established_fa_postscan_worker_started, 0);
-        append_logf("international established FA postscan worker failed to start error=%lu", GetLastError());
     }
 }
 

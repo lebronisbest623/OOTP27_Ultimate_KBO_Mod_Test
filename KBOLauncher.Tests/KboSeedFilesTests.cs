@@ -197,6 +197,36 @@ public sealed class KboSeedFilesTests : IDisposable
     }
 
     [Fact]
+    public void RemoveRetiredBundledKboDataFileIfUnchanged_RemovesFlatNewsTemplatesOnly()
+    {
+        var localDir = Path.Combine(tempDir, "local");
+        var flatCombined = Path.Combine(localDir, "news_templates.json");
+        var flatSplit = Path.Combine(localDir, "news_templates", "foreign_injury.json");
+        var languageSplit = Path.Combine(localDir, "news_templates", "ko", "foreign_injury.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(languageSplit)!);
+        File.WriteAllText(flatCombined, "{\"foreign_injury.open.body\":\"old\"}");
+        File.WriteAllText(flatSplit, "{\"foreign_injury.pending.body\":\"old\"}");
+        File.WriteAllText(languageSplit, "{\"foreign_injury.pending.body\":\"keep\"}");
+
+        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
+            localDir,
+            "news_templates.json",
+            "Retired flat news templates");
+        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
+            localDir,
+            Path.Combine("news_templates", "foreign_injury.json"),
+            "Retired flat foreign injury news templates");
+        global::KboSeedFiles.RemoveRetiredBundledKboDataFileIfUnchanged(
+            localDir,
+            Path.Combine("news_templates", "ko", "foreign_injury.json"),
+            "Language split foreign injury news templates");
+
+        Assert.False(File.Exists(flatCombined));
+        Assert.False(File.Exists(flatSplit));
+        Assert.True(File.Exists(languageSplit));
+    }
+
+    [Fact]
     public void EnsureKboScheduleAllstarGameLine_AddsMissingTypeFourGame()
     {
         Directory.CreateDirectory(tempDir);

@@ -326,10 +326,10 @@ void kbo_schedule_foreign_fa_demand_restore_timer(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_foreign_fa_demand_restore_timer_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "foreign FA demand restore timer");
-    } else {
+    if (!kbo_start_runtime_thread(
+            kbo_foreign_fa_demand_restore_timer_thread,
+            NULL,
+            "foreign FA demand restore timer")) {
         InterlockedExchange(&g_kbo_foreign_fa_demand_restore_timer_pending, 0);
     }
 }

@@ -74,9 +74,7 @@ void start_kbo_foreign_waiver_scanner_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_foreign_waiver_scanner_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "foreign waiver scanner");
+    if (kbo_start_runtime_thread(kbo_foreign_waiver_scanner_thread, NULL, "foreign waiver scanner")) {
         if (background_scanner_enabled) {
             append_log_line("foreign waiver scanner thread started");
         } else {
@@ -84,6 +82,5 @@ void start_kbo_foreign_waiver_scanner_thread(void)
         }
     } else {
         InterlockedExchange(&g_kbo_foreign_waiver_scanner_started, 0);
-        append_log_line("foreign waiver scanner thread failed to start");
     }
 }

@@ -387,14 +387,11 @@ int start_kbo_season_phase_monitor(void)
         return 1;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_season_phase_monitor_thread, NULL, 0, NULL);
-    if (thread == NULL) {
-        append_logf("KBO season phase monitor failed to start gle=%lu", (unsigned long)GetLastError());
+    if (!kbo_start_runtime_thread(kbo_season_phase_monitor_thread, NULL, "season phase monitor")) {
         InterlockedExchange(&g_kbo_season_phase_monitor_started, 0);
         return 0;
     }
 
-    kbo_register_runtime_thread(thread, "season phase monitor");
     return 1;
 }
 

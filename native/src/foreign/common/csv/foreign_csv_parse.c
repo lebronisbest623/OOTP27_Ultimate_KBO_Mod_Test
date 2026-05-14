@@ -1,31 +1,8 @@
 #include "foreign_csv_parse.h"
 
-#include <stdint.h>
+#include "../../../core/csv/core_csv.h"
 
 int parse_u32_from_csv_field(const char** cursor, uint32_t* out_value)
 {
-    if (cursor == NULL || *cursor == NULL || out_value == NULL) {
-        return 0;
-    }
-
-    const char* p = *cursor;
-    while (*p == ' ' || *p == '\t' || *p == ',') {
-        p++;
-    }
-    if (*p < '0' || *p > '9') {
-        return 0;
-    }
-
-    unsigned long long value = 0;
-    while (*p >= '0' && *p <= '9') {
-        value = (value * 10ULL) + (unsigned long long)(*p - '0');
-        if (value > UINT32_MAX) {
-            return 0;
-        }
-        p++;
-    }
-
-    *out_value = (uint32_t)value;
-    *cursor = p;
-    return 1;
+    return kbo_csv_parse_u32_field(cursor, out_value);
 }

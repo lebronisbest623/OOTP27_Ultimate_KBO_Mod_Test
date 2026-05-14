@@ -87,6 +87,7 @@ void* kbo_resolve_build_specific_rva_ptr(HMODULE exe, uint32_t steam_rva)
             case OOTP27_FA_SUBMIT_OFFER_PROBE_RVA: rva = 0x00339BFAu; break;
             case OOTP27_FA_OFFER_SCREEN_CALLBACK_PROBE_RVA: rva = 0x0168CD00u; break;
             case OOTP27_FA_CONTRACT_OFFER_CALLBACK_PROBE_RVA: rva = 0x01294EF0u; break;
+            case OOTP27_FA_FILING_OFFICIAL_TRANSITION_RETURN_RVA: rva = 0x005533CEu; break;
             case OOTP27_TEAM_ADD_PLAYER_RVA: rva = 0x0091EBF0u; break;
             case OOTP27_LEAGUE_TRADE_CHECK_RVA: rva = 0x009FA060u; break;
             case OOTP27_AI_FA_STATUS_CANDIDATE_INSERT_RVA: rva = 0x009C707Bu; break;

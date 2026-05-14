@@ -2,6 +2,18 @@
 #include "../../common/policy/foreign_player_policy.h"
 
 static LONG g_kbo_foreign_injury_return_wait_log_count = 0;
+static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
+
+static int kbo_foreign_injury_player_has_baseball_position(uint8_t* player)
+{
+    if (player == NULL || !memory_range_readable(player + OOTP27_PLAYER_POSITION_ROLE_OFFSET, sizeof(uint8_t))) {
+        return 0;
+    }
+
+    uint8_t position = player[OOTP27_PLAYER_POSITION_GROUP_OFFSET];
+    uint8_t role = player[OOTP27_PLAYER_POSITION_ROLE_OFFSET];
+    return (position >= 1u && position <= 10u) || (role >= 1u && role <= 13u);
+}
 
 int kbo_foreign_injury_player_matches_team(uint8_t* player, uint32_t team_id)
 {
@@ -36,6 +48,36 @@ int kbo_foreign_injury_team_active_roster_contains_player(uint8_t* team, uint32_
         }
     }
     return 0;
+}
+
+static int kbo_foreign_injury_team_roster_array_contains_player(
+    uint8_t* team,
+    uint32_t array_offset,
+    uint32_t player_id)
+{
+    if (team == NULL
+            || player_id == 0u
+            || !memory_range_readable(team + array_offset, OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT * sizeof(uint32_t))) {
+        return 0;
+    }
+
+    uint32_t* ids = (uint32_t*)(team + array_offset);
+    for (uint32_t i = 0; i < OOTP27_TEAM_PLAYER_ID_ARRAY_COUNT; i++) {
+        if (ids[i] == player_id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int kbo_foreign_injury_team_known_roster_contains_player(uint8_t* team, uint32_t player_id)
+{
+    return kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_2760_OFFSET, player_id)
+        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_2A80_OFFSET, player_id)
+        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_2DA0_OFFSET, player_id)
+        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET, player_id)
+        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_33E0_OFFSET, player_id)
+        || kbo_foreign_injury_team_roster_array_contains_player(team, OOTP27_TEAM_PLAYER_IDS_3700_OFFSET, player_id);
 }
 
 int kbo_foreign_injury_injured_player_returned_to_top_team(
@@ -186,6 +228,26 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             if (league_id == 0u) {
                 league_id = team_league_id;
             }
+        }
+        if (!kbo_foreign_injury_player_has_baseball_position(player)
+                || (team != NULL
+                    && memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)
+                    && !kbo_foreign_injury_team_known_roster_contains_player(team, player_id))) {
+            LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_non_roster_log_count);
+            if (log_slot <= 60 || (log_slot % 100) == 0) {
+                append_logf(
+                    "foreign injury replacement: skipped non-roster injury candidate source=%s team=%u player=%u league=%u position=%u role=%u rostered=%d",
+                    source != NULL ? source : "",
+                    team_id,
+                    player_id,
+                    league_id,
+                    (uint32_t)player[OOTP27_PLAYER_POSITION_GROUP_OFFSET],
+                    (uint32_t)player[OOTP27_PLAYER_POSITION_ROLE_OFFSET],
+                    team != NULL && memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)
+                        ? kbo_foreign_injury_team_known_roster_contains_player(team, player_id)
+                        : -1);
+            }
+            continue;
         }
         if (configured_league_id != 0u && league_id != 0u && league_id != configured_league_id) {
             continue;
@@ -359,13 +421,13 @@ void start_kbo_foreign_injury_replacement_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_foreign_injury_replacement_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "foreign injury replacement scanner");
+    if (kbo_start_runtime_thread(
+            kbo_foreign_injury_replacement_thread,
+            NULL,
+            "foreign injury replacement scanner")) {
         append_log_line("foreign injury replacement thread started");
     } else {
         InterlockedExchange(&g_kbo_foreign_injury_replacement_thread_started, 0);
-        append_log_line("foreign injury replacement thread failed to start");
     }
 }
 

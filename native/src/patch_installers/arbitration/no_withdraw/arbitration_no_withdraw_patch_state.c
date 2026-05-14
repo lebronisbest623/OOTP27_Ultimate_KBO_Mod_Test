@@ -5,6 +5,7 @@
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../fa_declaration/fa_declaration.h"
 #include "../../../fa_filing/fa_filing.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../../foreign/signability/state/submit_offer_probe_state.h"
@@ -80,6 +81,46 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
         && nation_id == OOTP27_KBO_KOREA_NATION_ID
         && original_team_id != 0u
         && original_team_league_id == OOTP27_KBO_MAIN_LEAGUE_ID;
+    if (fa_filing_candidate) {
+        uint32_t today = 0u;
+        uint32_t declaration_season = 0u;
+        if (kbo_get_current_yyyymmdd(&today) && today != 0u) {
+            declaration_season = today / 10000u;
+        }
+
+        KboFaDeclarationDecision decision;
+        memset(&decision, 0, sizeof(decision));
+        if (declaration_season != 0u
+                && kbo_fa_declaration_find_latest_decision(player_id, declaration_season, &decision)
+                && decision.declared == 0u) {
+            uint32_t floor_league_id = original_team_league_id != 0u
+                ? original_team_league_id
+                : (player_league_id != 0u ? player_league_id : player_draft_league_id);
+            int32_t salary_floor = kbo_salary_arbitration_resolve_minimum_salary(floor_league_id);
+            int32_t new_offer = old_offer;
+            if (new_offer < salary_floor) {
+                *(int32_t*)(player + OOTP27_PLAYER_ARBITRATION_OFFER_OFFSET) = salary_floor;
+                new_offer = salary_floor;
+            }
+
+            static LONG fa_declaration_skip_log_count = 0;
+            LONG slot = InterlockedIncrement(&fa_declaration_skip_log_count);
+            if (slot <= 120) {
+                append_logf(
+                    "KBO FA declaration transition skipped player=%u original_team=%u team_league=%u declaration_date=%u declaration_season=%u today=%u old_offer=%d new_offer=%d caller_rva=0x%llx",
+                    player_id,
+                    original_team_id,
+                    original_team_league_id,
+                    decision.declaration_date,
+                    decision.season,
+                    today,
+                    old_offer,
+                    new_offer,
+                    (unsigned long long)caller_rva);
+            }
+            return;
+        }
+    }
     int direct_block_candidate = contract_level != 0u
         && old_offer <= 0
         && kbo_salary_arbitration_is_known_non_tender_return(caller_rva);

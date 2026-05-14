@@ -28,17 +28,7 @@ int kbo_get_legacy_asian_games_roster_csv_path(char* out, size_t out_size)
     }
     out[0] = '\0';
 
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
-        return 0;
-    }
-
-    char dir[MAX_PATH] = {0};
-    snprintf(dir, sizeof(dir), "%s\\OOTP-KBO", local_app_data);
-    CreateDirectoryA(dir, NULL);
-    snprintf(out, out_size, "%s\\asian_games_roster.csv", dir);
-    return out[0] != '\0';
+    return kbo_get_global_data_file("asian_games_roster.csv", out, out_size);
 }
 
 void kbo_clear_asian_games_roster_memory(const char* source)

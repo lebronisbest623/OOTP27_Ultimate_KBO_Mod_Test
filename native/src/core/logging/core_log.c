@@ -1,6 +1,7 @@
 #include "core_log.h"
 
 #include "../../bootstrap/profiling/profiler.h"
+#include "../files/save_paths/core_save_paths.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -11,18 +12,13 @@ void append_log_line(const char* message)
     LARGE_INTEGER profile_start = {0};
     int profile_active = kbo_profiler_begin(&profile_start);
 
-    char local_app_data[MAX_PATH] = {0};
-    DWORD got = GetEnvironmentVariableA("LOCALAPPDATA", local_app_data, (DWORD)sizeof(local_app_data));
-    if (got == 0 || got >= sizeof(local_app_data)) {
+    char dir[MAX_PATH] = {0};
+    if (!kbo_get_global_data_dir(dir, sizeof(dir))) {
         if (profile_active) {
             kbo_profiler_end("log.append_line.env_unavailable", &profile_start);
         }
         return;
     }
-
-    char dir[MAX_PATH] = {0};
-    snprintf(dir, sizeof(dir), "%s\\OOTP-KBO", local_app_data);
-    CreateDirectoryA(dir, NULL);
 
     char path[MAX_PATH] = {0};
     snprintf(path, sizeof(path), "%s\\kbofix.log", dir);

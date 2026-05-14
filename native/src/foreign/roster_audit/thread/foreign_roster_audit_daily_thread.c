@@ -48,11 +48,7 @@ void start_kbo_foreign_roster_daily_audit_thread(void)
         return;
     }
 
-    HANDLE thread = CreateThread(NULL, 0, kbo_foreign_roster_daily_audit_thread, NULL, 0, NULL);
-    if (thread != NULL) {
-        kbo_register_runtime_thread(thread, "foreign roster daily audit");
-    } else {
+    if (!kbo_start_runtime_thread(kbo_foreign_roster_daily_audit_thread, NULL, "foreign roster daily audit")) {
         InterlockedExchange(&g_kbo_foreign_roster_daily_audit_started, 0);
-        append_logf("foreign roster daily audit thread failed error=%lu", GetLastError());
     }
 }
