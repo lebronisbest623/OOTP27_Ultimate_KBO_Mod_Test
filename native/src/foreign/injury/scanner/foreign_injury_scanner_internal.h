@@ -15,11 +15,23 @@ typedef struct KboForeignInjuryReplacementDecision {
     char reason[64];
 } KboForeignInjuryReplacementDecision;
 
+typedef struct KboForeignInjuryClosedNews {
+    KboForeignInjuryReplacement rec;
+    KboForeignInjuryReplacementDecision decision;
+    char phase[32];
+} KboForeignInjuryClosedNews;
+
 int kbo_foreign_injury_player_matches_team(uint8_t* player, uint32_t team_id);
 int kbo_foreign_injury_candidate_matches_slot(uint8_t* player, uint8_t slot_type);
 int kbo_foreign_injury_player_has_baseball_position(uint8_t* player);
 int kbo_foreign_injury_team_active_roster_contains_player(uint8_t* team, uint32_t player_id);
+int kbo_foreign_injury_team_inactive_roster_contains_player(uint8_t* team, uint32_t player_id);
 int kbo_foreign_injury_team_known_roster_contains_player(uint8_t* team, uint32_t player_id);
+int kbo_foreign_injury_player_on_inactive_replacement_roster(
+    uint8_t* player,
+    uint32_t player_id,
+    uint32_t top_team_id,
+    uint32_t today_yyyymmdd);
 int kbo_foreign_injury_resolve_player_team_assignment(
     uint8_t* player,
     uint32_t player_id,
@@ -36,6 +48,11 @@ int kbo_foreign_injury_choose_returning_player(
     uint8_t* replacement,
     KboForeignInjuryReplacementDecision* out);
 const char* kbo_foreign_injury_decision_choice_label(uint8_t choice);
+void kbo_foreign_injury_emit_closed_news_batch(
+    const KboForeignInjuryClosedNews* closed_news,
+    int closed_count,
+    uint32_t today,
+    const char* source);
 int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryReplacement* rec, const char* source);
 int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t player_id, const char* source);
 int kbo_foreign_injury_release_injured_player(uint32_t team_id, uint32_t player_id, const char* source);

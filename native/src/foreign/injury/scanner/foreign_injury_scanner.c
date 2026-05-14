@@ -4,12 +4,6 @@
 static LONG g_kbo_foreign_injury_return_wait_log_count = 0;
 static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
 
-typedef struct KboForeignInjuryClosedNews {
-    KboForeignInjuryReplacement rec;
-    KboForeignInjuryReplacementDecision decision;
-    char phase[32];
-} KboForeignInjuryClosedNews;
-
 void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
     if (!kbo_foreign_injury_replacement_enabled()) {
@@ -64,9 +58,8 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
 
         uint8_t injury_active = player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
         int16_t days_left = *(int16_t*)(player + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
-        if (!injury_active || days_left < kbo_foreign_player_policy()->injury_replacement_min_days) {
-            continue;
-        }
+        int min_days = kbo_foreign_player_policy()->injury_replacement_min_days;
+        int direct_injury_eligible = injury_active != 0u && days_left >= min_days;
 
         uint32_t team_id = 0u;
         uint32_t league_id = 0u;
@@ -76,11 +69,21 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             configured_league_id,
             &team_id,
             &league_id);
+        int inactive_roster_eligible = !direct_injury_eligible && has_assignment
+            ? kbo_foreign_injury_player_on_inactive_replacement_roster(player, player_id, team_id, today)
+            : 0;
+        if (!direct_injury_eligible && !inactive_roster_eligible) {
+            continue;
+        }
+        int effective_days_left = days_left;
+        if (effective_days_left < min_days) {
+            effective_days_left = min_days;
+        }
         if (!has_assignment || !kbo_foreign_injury_player_has_baseball_position(player)) {
             LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_non_roster_log_count);
             if (log_slot <= 60 || (log_slot % 100) == 0) {
                 kbo_log_runtimef(
-                    "foreign injury replacement: skipped non-roster injury candidate source=%s player=%u current=%u active=%u loan=%u original=%u default=%u resolved_team=%u league=%u position=%u role=%u assignment=%d",
+                    "foreign injury replacement: skipped non-roster injury candidate source=%s player=%u current=%u active=%u loan=%u original=%u default=%u resolved_team=%u league=%u position=%u role=%u assignment=%d injury=%u days_left=%d inactive_roster=%d",
                     source != NULL ? source : "",
                     player_id,
                     *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET),
@@ -94,7 +97,10 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                     league_id,
                     (uint32_t)player[OOTP27_PLAYER_POSITION_GROUP_OFFSET],
                     (uint32_t)player[OOTP27_PLAYER_POSITION_ROLE_OFFSET],
-                    has_assignment);
+                    has_assignment,
+                    (uint32_t)injury_active,
+                    (int)days_left,
+                    inactive_roster_eligible);
             }
             continue;
         }
@@ -111,7 +117,9 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             rec->injured_player_id = player_id;
             rec->replacement_player_id = 0u;
             rec->opened_on_yyyymmdd = today;
-            rec->expected_end_yyyymmdd = kbo_add_days_yyyymmdd(today, (uint32_t)days_left);
+            rec->expected_end_yyyymmdd = direct_injury_eligible
+                ? kbo_add_days_yyyymmdd(today, (uint32_t)days_left)
+                : 0u;
             rec->slot_type = kbo_foreign_injury_slot_type_for_player(player);
             rec->status = KBO_FOREIGN_INJURY_STATUS_OPEN;
             rec->converted = 0u;
@@ -122,7 +130,10 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
 
         if (created) {
             opened++;
-            kbo_emit_foreign_injury_replacement_news(&created_rec, (int)days_left, "open");
+            kbo_emit_foreign_injury_replacement_news(
+                &created_rec,
+                effective_days_left,
+                direct_injury_eligible ? "open" : "open_roster");
                         do {
                 KboLogFields audit_fields;
                 kbo_log_fields_init(&audit_fields);
@@ -131,21 +142,25 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 kbo_log_field_u32(&audit_fields, "league_id", created_rec.league_id);
                 kbo_log_field_u32(&audit_fields, "injured_player_id", created_rec.injured_player_id);
                 kbo_log_field_i32(&audit_fields, "days_left", (int)days_left);
+                kbo_log_field_i32(&audit_fields, "effective_days_left", effective_days_left);
+                kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_eligible ? 1u : 0u);
                 kbo_log_field_u32(&audit_fields, "slot_type", (uint32_t)created_rec.slot_type);
                 kbo_rule_audit_emit_fields(
                     "foreign_injury.replacement.lifecycle",
                     "open_slot",
-                    "injury_min_days_met",
+                    direct_injury_eligible ? "injury_min_days_met" : "inactive_roster_long_term_il",
                     source,
                     &audit_fields);
             } while (0);
             kbo_log_runtimef(
-                "foreign injury replacement: opened source=%s team=%u player=%u league=%u days_left=%d slot=%s",
+                "foreign injury replacement: opened source=%s team=%u player=%u league=%u days_left=%d effective_days_left=%d trigger=%s slot=%s",
                 source != NULL ? source : "",
                 created_rec.team_id,
                 created_rec.injured_player_id,
                 created_rec.league_id,
                 (int)days_left,
+                effective_days_left,
+                direct_injury_eligible ? "injury_fields" : "inactive_roster",
                 kbo_foreign_injury_slot_label(created_rec.slot_type));
         }
     }
@@ -281,56 +296,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             active_news[i].league_id);
     }
 
-    for (int i = 0; i < closed_count; i++) {
-        const KboForeignInjuryReplacement* rec = &closed_news[i].rec;
-        const KboForeignInjuryReplacementDecision* decision = &closed_news[i].decision;
-        const char* close_phase = closed_news[i].phase[0] != '\0' ? closed_news[i].phase : "closed";
-        kbo_emit_foreign_injury_replacement_news(rec, 0, close_phase);
-                do {
-            KboLogFields audit_fields;
-            kbo_log_fields_init(&audit_fields);
-            kbo_log_field_u32(&audit_fields, "date", today);
-            kbo_log_field_u32(&audit_fields, "team_id", rec->team_id);
-            kbo_log_field_u32(&audit_fields, "league_id", rec->league_id);
-            kbo_log_field_u32(&audit_fields, "injured_player_id", rec->injured_player_id);
-            kbo_log_field_u32(&audit_fields, "replacement_player_id", rec->replacement_player_id);
-            kbo_log_field_str(&audit_fields, "decision", kbo_foreign_injury_decision_choice_label(decision->choice));
-            kbo_log_field_str(&audit_fields, "decision_reason", decision->reason);
-            kbo_log_field_i32(&audit_fields, "injured_score", decision->injured_score);
-            kbo_log_field_i32(&audit_fields, "replacement_score", decision->replacement_score);
-            kbo_log_field_i32(&audit_fields, "score_margin", decision->score_margin);
-            kbo_log_field_i32(&audit_fields, "required_margin", decision->required_margin);
-            kbo_log_field_u32(&audit_fields, "retained_player_id",
-                decision->choice == KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT
-                    ? rec->replacement_player_id
-                    : rec->injured_player_id);
-            kbo_log_field_u32(&audit_fields, "released_player_id",
-                decision->choice == KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT
-                    ? rec->injured_player_id
-                    : rec->replacement_player_id);
-            kbo_rule_audit_emit_fields(
-                "foreign_injury.replacement.lifecycle",
-                "close_slot",
-                decision->choice == KBO_FOREIGN_INJURY_DECISION_KEEP_REPLACEMENT
-                    ? "replacement_retained"
-                    : "injured_player_retained",
-                source,
-                &audit_fields);
-        } while (0);
-        kbo_log_runtimef(
-            "foreign injury replacement: closed source=%s team=%u injured=%u replacement=%u league=%u decision=%s reason=%s injured_score=%d replacement_score=%d required_margin=%d phase=%s",
-            source != NULL ? source : "",
-            rec->team_id,
-            rec->injured_player_id,
-            rec->replacement_player_id,
-            rec->league_id,
-            kbo_foreign_injury_decision_choice_label(decision->choice),
-            decision->reason,
-            decision->injured_score,
-            decision->replacement_score,
-            decision->required_margin,
-            close_phase);
-    }
+    kbo_foreign_injury_emit_closed_news_batch(closed_news, closed_count, today, source);
 
     if (opened > 0 || active_count > 0 || closed_count > 0) {
                 do {

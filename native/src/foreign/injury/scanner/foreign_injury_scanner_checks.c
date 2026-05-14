@@ -1,4 +1,5 @@
 #include "foreign_injury_scanner_internal.h"
+#include "../../rights/query/foreign_waiver_rights_query.h"
 
 int kbo_foreign_injury_player_has_baseball_position(uint8_t* player)
 {
@@ -63,6 +64,96 @@ static int kbo_foreign_injury_team_roster_array_contains_player(
             return 1;
         }
     }
+    return 0;
+}
+
+int kbo_foreign_injury_team_inactive_roster_contains_player(uint8_t* team, uint32_t player_id)
+{
+    return kbo_foreign_injury_team_roster_array_contains_player(
+        team,
+        OOTP27_TEAM_RESTRICTED_PLAYER_IDS_OFFSET,
+        player_id);
+}
+
+static int kbo_foreign_injury_inactive_candidate_team_matches(uint32_t team_id, uint32_t player_id)
+{
+    if (team_id == 0u || player_id == 0u) {
+        return 0;
+    }
+
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
+    if (team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        return 0;
+    }
+
+    if (kbo_foreign_injury_team_active_roster_contains_player(team, player_id)) {
+        return 0;
+    }
+    return kbo_foreign_injury_team_inactive_roster_contains_player(team, player_id);
+}
+
+int kbo_foreign_injury_player_on_inactive_replacement_roster(
+    uint8_t* player,
+    uint32_t player_id,
+    uint32_t top_team_id,
+    uint32_t today_yyyymmdd)
+{
+    if (player == NULL
+            || player_id == 0u
+            || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+        return 0;
+    }
+
+    if (top_team_id != 0u
+            && today_yyyymmdd != 0u
+            && kbo_has_active_foreign_waiver_right(top_team_id, player_id, today_yyyymmdd)) {
+        return 0;
+    }
+
+    uint32_t candidates[6] = {
+        *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET),
+        *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET),
+        *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET),
+        *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET),
+        memory_range_readable(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET, sizeof(uint32_t))
+            ? *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET)
+            : 0u,
+        top_team_id
+    };
+
+    for (int i = 0; i < (int)(sizeof(candidates) / sizeof(candidates[0])); i++) {
+        uint32_t candidate_team_id = candidates[i];
+        if (candidate_team_id == 0u) {
+            continue;
+        }
+
+        int duplicate = 0;
+        for (int j = 0; j < i; j++) {
+            if (candidates[j] == candidate_team_id) {
+                duplicate = 1;
+                break;
+            }
+        }
+        if (duplicate) {
+            continue;
+        }
+
+        if (kbo_foreign_injury_inactive_candidate_team_matches(candidate_team_id, player_id)) {
+            return 1;
+        }
+
+        uint8_t* team = find_kbo_team_by_numeric_id_any_league(candidate_team_id, 1);
+        if (team == NULL || !memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            continue;
+        }
+        uint32_t parent_team_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_PARENT_TEAM_ID_OFFSET);
+        if (parent_team_id != 0u
+                && parent_team_id != candidate_team_id
+                && kbo_foreign_injury_inactive_candidate_team_matches(parent_team_id, player_id)) {
+            return 1;
+        }
+    }
+
     return 0;
 }
 

@@ -1,6 +1,6 @@
-#include "foreign_injury_scanner_internal.h"
+#include "../foreign_injury_scanner_internal.h"
 
-#include "../../common/policy/foreign_player_policy.h"
+#include "../../../common/policy/foreign_player_policy.h"
 
 #define KBO_FOREIGN_INJURY_DECISION_UNAVAILABLE_PENALTY 250000
 

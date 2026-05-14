@@ -251,7 +251,10 @@ void kbo_emit_foreign_injury_replacement_news(
 
     const char* title_key = "foreign_injury.open.title";
     const char* body_key = "foreign_injury.open.body";
-    if (phase != NULL && strcmp(phase, "closed_keep_replacement") == 0) {
+    if (phase != NULL && strcmp(phase, "open_roster") == 0) {
+        title_key = "foreign_injury.open_roster.title";
+        body_key = "foreign_injury.open_roster.body";
+    } else if (phase != NULL && strcmp(phase, "closed_keep_replacement") == 0) {
         title_key = "foreign_injury.closed_keep_replacement.title";
         body_key = "foreign_injury.closed_keep_replacement.body";
     } else if (phase != NULL && strcmp(phase, "closed_keep_injured") == 0) {
