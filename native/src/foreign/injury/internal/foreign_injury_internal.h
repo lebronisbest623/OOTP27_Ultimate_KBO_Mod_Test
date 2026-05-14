@@ -23,6 +23,7 @@
 #include "../../../team/names/team_name_cache.h"
 #include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
+#include "../../common/policy/foreign_player_policy.h"
 #include "../../common/policy/foreign_waiver_policy.h"
 #include "../../replacement_seed/api/foreign_replacement_seed.h"
 #include "../paths/foreign_injury_paths.h"
@@ -60,6 +61,12 @@ int kbo_foreign_injury_status_uses_slot(uint8_t status);
 uint8_t kbo_foreign_injury_slot_type_for_player(uint8_t* player);
 int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id);
 int kbo_foreign_injury_player_excluded_from_foreign_count(uint32_t team_id, uint32_t player_id);
+/* OOTP may zero raw injury days for season-ending IL moves; inactive roster is a guarded second source. */
+int kbo_foreign_injury_player_on_inactive_replacement_roster(
+    uint8_t* player,
+    uint32_t player_id,
+    uint32_t top_team_id,
+    uint32_t today_yyyymmdd);
 const char* kbo_foreign_injury_slot_label(uint8_t slot_type);
 const char* kbo_foreign_injury_status_label(uint8_t status);
 void kbo_lock_foreign_injury_replacements(void);

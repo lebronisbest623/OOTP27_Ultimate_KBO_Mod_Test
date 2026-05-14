@@ -1558,6 +1558,19 @@ int memory_range_readable(const void* ptr, size_t size)
     return ptr != NULL && size > 0u;
 }
 
+int kbo_foreign_injury_player_on_inactive_replacement_roster(
+    uint8_t* player,
+    uint32_t player_id,
+    uint32_t top_team_id,
+    uint32_t today_yyyymmdd)
+{
+    (void)player;
+    (void)player_id;
+    (void)top_team_id;
+    (void)today_yyyymmdd;
+    return 0;
+}
+
 /* ---- Test-only stubs for symbols referenced by foreign_waiver_player_eval.c
  * functions that the tests do NOT exercise. The link must resolve them, but
  * their bodies are unreachable from any test path — keeping them inert. */

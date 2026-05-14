@@ -3,6 +3,7 @@
 
 static LONG g_kbo_foreign_injury_return_wait_log_count = 0;
 static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
+static LONG g_kbo_foreign_injury_below_min_log_count = 0;
 
 void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
@@ -69,7 +70,65 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             configured_league_id,
             &team_id,
             &league_id);
-        if (!direct_injury_eligible) {
+        int inactive_roster_present = !direct_injury_eligible && has_assignment
+            ? kbo_foreign_injury_player_on_inactive_replacement_roster(player, player_id, team_id, today)
+            : 0;
+        int inactive_roster_eligible = inactive_roster_present && days_left <= 0;
+        if (!direct_injury_eligible && !inactive_roster_eligible) {
+            if (injury_active != 0u || days_left > 0 || inactive_roster_present) {
+                LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_below_min_log_count);
+                if (log_slot <= 80 || (log_slot % 250) == 0) {
+                    uint32_t current_team = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+                    uint32_t active_team = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+                    uint32_t loan_team = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
+                    uint32_t original_team = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
+                    uint32_t default_team = memory_range_readable(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET, sizeof(uint32_t))
+                        ? *(uint32_t*)(player + OOTP27_PLAYER_DEFAULT_TEAM_ID_OFFSET)
+                        : 0u;
+                    do {
+                        KboLogFields audit_fields;
+                        kbo_log_fields_init(&audit_fields);
+                        kbo_log_field_u32(&audit_fields, "date", today);
+                        kbo_log_field_u32(&audit_fields, "player_id", player_id);
+                        kbo_log_field_u32(&audit_fields, "team_id", team_id);
+                        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+                        kbo_log_field_u32(&audit_fields, "current_team_id", current_team);
+                        kbo_log_field_u32(&audit_fields, "active_team_id", active_team);
+                        kbo_log_field_u32(&audit_fields, "loan_team_id", loan_team);
+                        kbo_log_field_u32(&audit_fields, "original_team_id", original_team);
+                        kbo_log_field_u32(&audit_fields, "default_team_id", default_team);
+                        kbo_log_field_u32(&audit_fields, "injury_active", (uint32_t)injury_active);
+                        kbo_log_field_i32(&audit_fields, "days_left", (int)days_left);
+                        kbo_log_field_i32(&audit_fields, "min_days", min_days);
+                        kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_present ? 1u : 0u);
+                        kbo_log_field_u32(&audit_fields, "assignment", has_assignment ? 1u : 0u);
+                        kbo_rule_audit_emit_fields(
+                            "foreign_injury.replacement.lifecycle",
+                            "skip_candidate",
+                            inactive_roster_present
+                                ? "inactive_roster_without_long_term_injury_days"
+                                : "injury_below_min_days",
+                            source,
+                            &audit_fields);
+                    } while (0);
+                    kbo_log_runtimef(
+                        "foreign injury replacement: skipped below-min injury candidate source=%s player=%u current=%u active=%u loan=%u original=%u default=%u resolved_team=%u league=%u assignment=%d injury=%u days_left=%d min_days=%d inactive_roster=%d",
+                        source != NULL ? source : "",
+                        player_id,
+                        current_team,
+                        active_team,
+                        loan_team,
+                        original_team,
+                        default_team,
+                        team_id,
+                        league_id,
+                        has_assignment,
+                        (uint32_t)injury_active,
+                        (int)days_left,
+                        min_days,
+                        inactive_roster_present);
+                }
+            }
             continue;
         }
         int effective_days_left = days_left;
@@ -97,7 +156,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                     has_assignment,
                     (uint32_t)injury_active,
                     (int)days_left,
-                    0);
+                    inactive_roster_eligible);
             }
             continue;
         }
@@ -114,7 +173,9 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             rec->injured_player_id = player_id;
             rec->replacement_player_id = 0u;
             rec->opened_on_yyyymmdd = today;
-            rec->expected_end_yyyymmdd = kbo_add_days_yyyymmdd(today, (uint32_t)days_left);
+            rec->expected_end_yyyymmdd = direct_injury_eligible
+                ? kbo_add_days_yyyymmdd(today, (uint32_t)days_left)
+                : 0u;
             rec->slot_type = kbo_foreign_injury_slot_type_for_player(player);
             rec->status = KBO_FOREIGN_INJURY_STATUS_OPEN;
             rec->converted = 0u;
@@ -128,7 +189,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             kbo_emit_foreign_injury_replacement_news(
                 &created_rec,
                 effective_days_left,
-                "open");
+                direct_injury_eligible ? "open" : "open_roster");
                         do {
                 KboLogFields audit_fields;
                 kbo_log_fields_init(&audit_fields);
@@ -136,14 +197,16 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 kbo_log_field_u32(&audit_fields, "team_id", created_rec.team_id);
                 kbo_log_field_u32(&audit_fields, "league_id", created_rec.league_id);
                 kbo_log_field_u32(&audit_fields, "injured_player_id", created_rec.injured_player_id);
+                kbo_log_field_u32(&audit_fields, "injury_active", (uint32_t)injury_active);
                 kbo_log_field_i32(&audit_fields, "days_left", (int)days_left);
+                kbo_log_field_i32(&audit_fields, "min_days", min_days);
                 kbo_log_field_i32(&audit_fields, "effective_days_left", effective_days_left);
-                kbo_log_field_u32(&audit_fields, "inactive_roster", 0u);
+                kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_eligible ? 1u : 0u);
                 kbo_log_field_u32(&audit_fields, "slot_type", (uint32_t)created_rec.slot_type);
                 kbo_rule_audit_emit_fields(
                     "foreign_injury.replacement.lifecycle",
                     "open_slot",
-                    "injury_min_days_met",
+                    direct_injury_eligible ? "injury_min_days_met" : "inactive_roster_long_term_il",
                     source,
                     &audit_fields);
             } while (0);
@@ -155,7 +218,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 created_rec.league_id,
                 (int)days_left,
                 effective_days_left,
-                "injury_fields",
+                direct_injury_eligible ? "injury_fields" : "inactive_roster",
                 kbo_foreign_injury_slot_label(created_rec.slot_type));
         }
     }

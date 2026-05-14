@@ -91,8 +91,21 @@ static int kbo_foreign_injury_state_record_has_minimum_injury_basis(
     }
 
     int16_t days_left = *(int16_t*)(injured + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
-    return injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] != 0u
-        && days_left >= kbo_foreign_player_policy()->injury_replacement_min_days;
+    if (injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] != 0u
+            && days_left >= kbo_foreign_player_policy()->injury_replacement_min_days) {
+        return 1;
+    }
+    if (days_left > 0) {
+        return 0;
+    }
+
+    uint32_t today = 0u;
+    kbo_get_current_yyyymmdd(&today);
+    return kbo_foreign_injury_player_on_inactive_replacement_roster(
+        injured,
+        rec->injured_player_id,
+        rec->team_id,
+        today);
 }
 
 int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id)
