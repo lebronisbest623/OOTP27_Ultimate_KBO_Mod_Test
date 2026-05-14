@@ -211,6 +211,108 @@ static void kbo_fa_declaration_apply_salary_grade(
     }
 }
 
+static int32_t kbo_fa_declaration_nonnegative_i16(int16_t value)
+{
+    return value > 0 ? (int32_t)value : 0;
+}
+
+static int32_t kbo_fa_declaration_current_market_score(const KboFaDeclarationCandidate* candidate)
+{
+    if (candidate == NULL) {
+        return 0;
+    }
+    int32_t overall = kbo_fa_declaration_nonnegative_i16(candidate->overall);
+    int32_t ratings = kbo_fa_declaration_nonnegative_i16(candidate->ratings);
+    int32_t career = kbo_fa_declaration_nonnegative_i16(candidate->career);
+    return (overall * 45) + (ratings * 35) + (career * 20);
+}
+
+static int32_t kbo_fa_declaration_upside_score(const KboFaDeclarationCandidate* candidate)
+{
+    if (candidate == NULL) {
+        return 0;
+    }
+    int32_t talent = kbo_fa_declaration_nonnegative_i16(candidate->talent);
+    int32_t career = kbo_fa_declaration_nonnegative_i16(candidate->career);
+    int32_t overall = kbo_fa_declaration_nonnegative_i16(candidate->overall);
+    int32_t ratings = kbo_fa_declaration_nonnegative_i16(candidate->ratings);
+    return (talent * 45) + (career * 25) + (overall * 20) + (ratings * 10);
+}
+
+static int kbo_fa_declaration_grade_rank(const char* grade)
+{
+    if (grade == NULL || grade[0] == '\0') {
+        return 0;
+    }
+    if (_stricmp(grade, "A") == 0) { return 3; }
+    if (_stricmp(grade, "B") == 0) { return 2; }
+    if (_stricmp(grade, "C") == 0) { return 1; }
+    return 0;
+}
+
+static int kbo_fa_declaration_player_is_good(
+    const KboFaDeclarationCandidate* candidate,
+    int32_t current_score,
+    int32_t upside_score,
+    int grade_rank)
+{
+    if (candidate == NULL) {
+        return 0;
+    }
+    return grade_rank >= 2
+        || candidate->score >= 72000
+        || current_score >= 70000
+        || upside_score >= 78000
+        || (candidate->salary >= 300000000 && current_score >= 60000);
+}
+
+static int kbo_fa_declaration_should_retry_after_down_year(
+    const KboFaDeclarationCandidate* candidate,
+    int32_t current_score,
+    int32_t upside_score,
+    int32_t form_gap,
+    int grade_rank)
+{
+    if (candidate == NULL) {
+        return 0;
+    }
+    int established_or_paid = grade_rank >= 2
+        || candidate->score >= 65000
+        || upside_score >= 76000
+        || candidate->salary >= 250000000;
+    return established_or_paid
+        && candidate->age <= 34u
+        && current_score <= 62000
+        && form_gap >= 14000
+        && candidate->score < 92000;
+}
+
+static int kbo_fa_declaration_should_stay_no_market(
+    const KboFaDeclarationCandidate* candidate,
+    int32_t current_score,
+    int32_t upside_score,
+    int grade_rank,
+    int player_is_good)
+{
+    if (candidate == NULL || player_is_good) {
+        return 0;
+    }
+
+    int fringe_player = grade_rank <= 1
+        && candidate->score < 64000
+        && current_score < 58000
+        && upside_score < 72000;
+    int expensive_aging_risk = grade_rank <= 1
+        && candidate->age >= 34u
+        && candidate->salary >= 300000000
+        && current_score < 62000;
+    int weak_low_salary_market = grade_rank == 0
+        && candidate->salary < 180000000
+        && candidate->score < 60000
+        && current_score < 56000;
+    return fringe_player || expensive_aging_risk || weak_low_salary_market;
+}
+
 static void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
 {
     if (candidate == NULL) {
@@ -236,12 +338,17 @@ static void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
         return;
     }
 
-    int32_t threshold = 68000;
-    if (strcmp(candidate->grade, "A") == 0) {
+    int grade_rank = kbo_fa_declaration_grade_rank(candidate->grade);
+    int32_t current_score = kbo_fa_declaration_current_market_score(candidate);
+    int32_t upside_score = kbo_fa_declaration_upside_score(candidate);
+    int32_t form_gap = upside_score > current_score ? upside_score - current_score : 0;
+
+    int32_t threshold = 70000;
+    if (grade_rank >= 3) {
         threshold = 50000;
-    } else if (strcmp(candidate->grade, "B") == 0) {
+    } else if (grade_rank == 2) {
         threshold = 56000;
-    } else if (strcmp(candidate->grade, "C") == 0) {
+    } else if (grade_rank == 1) {
         threshold = 64000;
     }
 
@@ -264,12 +371,64 @@ static void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
     }
 
     candidate->threshold = threshold;
-    candidate->declared = candidate->score >= threshold ? 1u : 0u;
+
+    int player_is_good = kbo_fa_declaration_player_is_good(
+        candidate,
+        current_score,
+        upside_score,
+        grade_rank);
+    if (kbo_fa_declaration_should_retry_after_down_year(
+            candidate,
+            current_score,
+            upside_score,
+            form_gap,
+            grade_rank)) {
+        candidate->declared = 0u;
+        snprintf(
+            candidate->decision_reason,
+            sizeof(candidate->decision_reason),
+            "ai_deferred_retry_after_down_year current=%d upside=%d gap=%d score=%d threshold=%d age=%u grade=%s salary=%d",
+            current_score,
+            upside_score,
+            form_gap,
+            candidate->score,
+            candidate->threshold,
+            (uint32_t)candidate->age,
+            candidate->grade[0] != '\0' ? candidate->grade : "UNKNOWN",
+            candidate->salary);
+        return;
+    }
+
+    if (kbo_fa_declaration_should_stay_no_market(
+            candidate,
+            current_score,
+            upside_score,
+            grade_rank,
+            player_is_good)) {
+        candidate->declared = 0u;
+        snprintf(
+            candidate->decision_reason,
+            sizeof(candidate->decision_reason),
+            "ai_deferred_no_market_stay_original current=%d upside=%d score=%d threshold=%d age=%u grade=%s salary=%d",
+            current_score,
+            upside_score,
+            candidate->score,
+            candidate->threshold,
+            (uint32_t)candidate->age,
+            candidate->grade[0] != '\0' ? candidate->grade : "UNKNOWN",
+            candidate->salary);
+        return;
+    }
+
+    candidate->declared = (player_is_good || candidate->score >= threshold || current_score >= threshold) ? 1u : 0u;
     snprintf(
         candidate->decision_reason,
         sizeof(candidate->decision_reason),
-        "%s score=%d threshold=%d age=%u grade=%s salary=%d",
-        candidate->declared ? "ai_declared" : "ai_deferred",
+        "%s current=%d upside=%d gap=%d score=%d threshold=%d age=%u grade=%s salary=%d",
+        candidate->declared ? "ai_declared_good_or_market_fit" : "ai_deferred_no_market_stay_original",
+        current_score,
+        upside_score,
+        form_gap,
         candidate->score,
         candidate->threshold,
         (uint32_t)candidate->age,
@@ -647,11 +806,18 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
 
     int declared = 0;
     int deferred = 0;
+    int deferred_retry = 0;
+    int deferred_no_market = 0;
     for (int i = 0; i < candidate_count; i++) {
         if (candidates[i].declared) {
             declared++;
         } else {
             deferred++;
+            if (strstr(candidates[i].decision_reason, "retry_after_down_year") != NULL) {
+                deferred_retry++;
+            } else if (strstr(candidates[i].decision_reason, "no_market_stay_original") != NULL) {
+                deferred_no_market++;
+            }
         }
     }
 
@@ -675,19 +841,38 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
             continue;
         }
         append_logf(
-            "KBO FA declaration decided player=%u name=%s team=%u case=%s grade=%s score=%d threshold=%d",
+            "KBO FA declaration decided player=%u name=%s team=%u case=%s grade=%s score=%d threshold=%d reason=%s",
             candidates[i].player_id,
             candidates[i].player_name,
             candidates[i].team_id,
             candidates[i].case_label,
             candidates[i].grade,
             candidates[i].score,
-            candidates[i].threshold);
+            candidates[i].threshold,
+            candidates[i].decision_reason);
         detail_logs++;
     }
 
+    int deferred_logs = 0;
+    for (int i = 0; i < candidate_count && deferred_logs < 40; i++) {
+        if (candidates[i].declared) {
+            continue;
+        }
+        append_logf(
+            "KBO FA declaration deferred player=%u name=%s team=%u case=%s grade=%s score=%d threshold=%d reason=%s",
+            candidates[i].player_id,
+            candidates[i].player_name,
+            candidates[i].team_id,
+            candidates[i].case_label,
+            candidates[i].grade,
+            candidates[i].score,
+            candidates[i].threshold,
+            candidates[i].decision_reason);
+        deferred_logs++;
+    }
+
     append_logf(
-        "KBO FA declaration event source=%s date=%u season=%u league=%u market_rows=%d market_candidates=%d active_scanned=%d active_candidates=%d candidates=%d declared=%d deferred=%d grades=%d csv=%s",
+        "KBO FA declaration event source=%s date=%u season=%u league=%u market_rows=%d market_candidates=%d active_scanned=%d active_candidates=%d candidates=%d declared=%d deferred=%d retry=%d no_market=%d grades=%d csv=%s",
         source != NULL ? source : "",
         event_yyyymmdd,
         season,
@@ -699,6 +884,8 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         candidate_count,
         declared,
         deferred,
+        deferred_retry,
+        deferred_no_market,
         grade_count,
         csv_path);
 
