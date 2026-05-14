@@ -2,9 +2,9 @@
 #include <windows.h>
 
 #include <stdint.h>
-#include <stdio.h>
 
 #include "../api/league_context_lookup.h"
+#include "named_scan/league_named_scan.h"
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../logging/core_log.h"
 
@@ -15,15 +15,17 @@ uintptr_t kbo_find_league_ptr_by_memory_scan(uint32_t league_id)
     static uint32_t cached_id_offset = 0;
     static ULONGLONG last_scan_ms = 0;
 
-    if (cached_ptr != 0 && cached_league_id == league_id
-            && kbo_league_candidate_matches_id(cached_ptr, league_id, cached_id_offset)) {
+    if (cached_ptr != 0
+            && cached_league_id == league_id
+            && (kbo_league_candidate_matches_id(cached_ptr, league_id, cached_id_offset)
+                || kbo_core_named_league_candidate_score(cached_ptr, league_id, NULL, 0u) >= KBO_CORE_NAMED_LEAGUE_SCAN_MIN_SCORE)) {
         return cached_ptr;
     }
     cached_ptr = 0;
     cached_league_id = 0;
     cached_id_offset = 0;
 
-    ULONGLONG now = GetTickCount64();
+    ULONGLONG now = (ULONGLONG)GetTickCount();
     if (now - last_scan_ms < 10000u) {
         return 0;
     }
@@ -87,11 +89,23 @@ uintptr_t kbo_find_league_ptr_by_memory_scan(uint32_t league_id)
         }
 
         address = end;
+#if UINTPTR_MAX > 0xffffffffu
         if (address >= (uintptr_t)0x0000800000000000ull) {
             break;
         }
+#endif
     }
 
     kbo_log_runtimef("KBO league ptr memory scan missed league_id=%u", league_id);
+
+    uintptr_t named_ptr = kbo_find_named_league_ptr_by_memory_scan_all(league_id);
+    if (named_ptr != 0u) {
+        cached_ptr = named_ptr;
+        cached_league_id = league_id;
+        cached_id_offset = *(uint32_t*)(named_ptr + OOTP27_KBO_LEAGUE_ID_OFFSET) == league_id
+            ? OOTP27_KBO_LEAGUE_ID_OFFSET
+            : OOTP27_KBO_LEAGUE_ID_OFFSET + 8u;
+        return named_ptr;
+    }
     return 0;
 }
