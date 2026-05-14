@@ -67,6 +67,7 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\core\news\templates\core_news_templates.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\custom_news_language.c") `
     (Join-Path $Root "src\core\core_flags\localappdata\localappdata_reader.c") `
+    (Join-Path $Root "src\core\core_flags\api\settings\economic_defaults.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\foreign_demand_baselines.c") `
     (Join-Path $Root "src\patch_helpers\bytes\patch_bytes.c") `
     (Join-Path $Root "src\fa_filing\fa_filing_parts\fa_filing_csv_parse.c") `

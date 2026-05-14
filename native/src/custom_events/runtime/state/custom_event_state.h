@@ -26,13 +26,5 @@ extern uintptr_t g_kbo_processed_event_ptrs[256];
 extern LONG g_kbo_processed_event_count;
 
 extern const char g_kbo_default_event_source[];
-extern const char g_kbo_foreign_priority_open_event_title[];
-extern const char g_kbo_foreign_priority_close_event_title[];
-extern const char g_kbo_military_selection_event_title[];
-extern const char g_kbo_asian_games_selection_event_title[];
-extern const char g_kbo_asian_games_departure_event_title[];
-extern const char g_kbo_asian_games_final_event_title[];
-extern const char g_kbo_cbt_exception_deadline_event_title[];
-extern const char g_kbo_cbt_announcement_event_title[];
 
 #endif

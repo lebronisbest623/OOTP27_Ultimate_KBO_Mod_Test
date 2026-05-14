@@ -25,21 +25,3 @@ LONG g_kbo_processed_event_count = 0;
 
 const char g_kbo_default_event_source[] = "custom_event_monitor";
 
-/* Legacy titles remain for old saves and missing-template recovery. New event titles come from news_templates/{ko,en}/custom_events.json. */
-const char g_kbo_foreign_priority_open_event_title[] =
-    "[KBO] Foreign Player Priority Negotiation Begins";
-const char g_kbo_foreign_priority_close_event_title[] =
-    "[KBO] Foreign Player Priority Negotiation Ends";
-const char g_kbo_military_selection_event_title[] =
-    "[KBO] Military Service Selection";
-const char g_kbo_asian_games_selection_event_title[] =
-    "[KBO] Asian Games Roster Selection";
-const char g_kbo_asian_games_departure_event_title[] =
-    "[KBO] Asian Games Player Departure";
-const char g_kbo_asian_games_final_event_title[] =
-    "[KBO] Asian Games Final";
-const char g_kbo_cbt_exception_deadline_event_title[] =
-    "[KBO CBT] Exception Player Deadline";
-const char g_kbo_cbt_announcement_event_title[] =
-    "[KBO CBT] Competitive Balance Tax Announcement";
-

@@ -1,0 +1,15 @@
+#ifndef KBO_CORE_FLAGS_ECONOMIC_DEFAULTS_H
+#define KBO_CORE_FLAGS_ECONOMIC_DEFAULTS_H
+
+#include <stdint.h>
+
+int32_t kbo_economic_default_foreign_fa_demand_baseline(int index);
+int32_t kbo_economic_default_asian_quota_fa_demand_baseline(int index);
+int32_t kbo_economic_default_asian_quota_salary_limit(void);
+int32_t kbo_economic_default_non_asian_quality_cap(int index);
+int32_t kbo_economic_default_asian_quality_cap(int index);
+int kbo_economic_default_foreign_fa_quality_cap_enabled(void);
+int kbo_economic_default_intl_established_fa_multiplier(void);
+int kbo_economic_default_asian_games_no_gold_odds_denominator(void);
+
+#endif

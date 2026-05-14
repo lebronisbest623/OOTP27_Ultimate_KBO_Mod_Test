@@ -59,13 +59,14 @@ static const char* kbo_news_template_normalize_language_dir(const char* language
     return language_dir != NULL && strcmp(language_dir, "en") == 0 ? "en" : "ko";
 }
 
-static int kbo_news_template_save_split_path_for_language(
+static int kbo_text_resource_save_path_for_language(
+    const char* resource_dir,
     const char* language_dir,
     const char* file_name,
     char* out,
     size_t out_size)
 {
-    if (file_name == NULL || out == NULL || out_size == 0u) {
+    if (resource_dir == NULL || resource_dir[0] == '\0' || file_name == NULL || out == NULL || out_size == 0u) {
         return 0;
     }
     char relative[160] = {0};
@@ -73,10 +74,24 @@ static int kbo_news_template_save_split_path_for_language(
         relative,
         sizeof(relative),
         "%s\\%s\\%s",
-        KBO_NEWS_TEMPLATES_DIR,
+        resource_dir,
         kbo_news_template_normalize_language_dir(language_dir),
         file_name);
     return kbo_get_save_scoped_data_file(relative, out, out_size);
+}
+
+static int kbo_news_template_save_split_path_for_language(
+    const char* language_dir,
+    const char* file_name,
+    char* out,
+    size_t out_size)
+{
+    return kbo_text_resource_save_path_for_language(
+        KBO_NEWS_TEMPLATES_DIR,
+        language_dir,
+        file_name,
+        out,
+        out_size);
 }
 
 static int kbo_news_template_save_split_path(const char* file_name, char* out, size_t out_size)
@@ -103,13 +118,14 @@ static int kbo_news_template_global_file_path(const char* file_name, char* out, 
     return out[0] != '\0';
 }
 
-static int kbo_news_template_global_split_path_for_language(
+static int kbo_text_resource_global_path_for_language(
+    const char* resource_dir,
     const char* language_dir,
     const char* file_name,
     char* out,
     size_t out_size)
 {
-    if (file_name == NULL || out == NULL || out_size == 0u) {
+    if (resource_dir == NULL || resource_dir[0] == '\0' || file_name == NULL || out == NULL || out_size == 0u) {
         return 0;
     }
     char relative[160] = {0};
@@ -117,10 +133,24 @@ static int kbo_news_template_global_split_path_for_language(
         relative,
         sizeof(relative),
         "%s\\%s\\%s",
-        KBO_NEWS_TEMPLATES_DIR,
+        resource_dir,
         kbo_news_template_normalize_language_dir(language_dir),
         file_name);
     return kbo_news_template_global_file_path(relative, out, out_size);
+}
+
+static int kbo_news_template_global_split_path_for_language(
+    const char* language_dir,
+    const char* file_name,
+    char* out,
+    size_t out_size)
+{
+    return kbo_text_resource_global_path_for_language(
+        KBO_NEWS_TEMPLATES_DIR,
+        language_dir,
+        file_name,
+        out,
+        out_size);
 }
 
 static int kbo_news_template_global_split_path(const char* file_name, char* out, size_t out_size)
@@ -211,138 +241,6 @@ int kbo_news_text_ends_with_newline(const char* text)
     return len > 0u && (text[len - 1u] == '\n' || text[len - 1u] == '\r');
 }
 
-static int kbo_news_template_hex_value(char ch)
-{
-    if (ch >= '0' && ch <= '9') {
-        return ch - '0';
-    }
-    if (ch >= 'a' && ch <= 'f') {
-        return ch - 'a' + 10;
-    }
-    if (ch >= 'A' && ch <= 'F') {
-        return ch - 'A' + 10;
-    }
-    return -1;
-}
-
-static int kbo_news_template_put_char(char** cursor, size_t* remaining, char ch)
-{
-    if (cursor == NULL || *cursor == NULL || remaining == NULL || *remaining == 0u) {
-        return 0;
-    }
-    **cursor = ch;
-    (*cursor)++;
-    (*remaining)--;
-    **cursor = '\0';
-    return 1;
-}
-
-static int kbo_news_template_put_utf8(char** cursor, size_t* remaining, unsigned int codepoint)
-{
-    if (codepoint == 0u) {
-        codepoint = '?';
-    }
-    if (codepoint <= 0x7Fu) {
-        return kbo_news_template_put_char(cursor, remaining, (char)codepoint);
-    }
-    if (codepoint <= 0x7FFu) {
-        return kbo_news_template_put_char(cursor, remaining, (char)(0xC0u | (codepoint >> 6)))
-            && kbo_news_template_put_char(cursor, remaining, (char)(0x80u | (codepoint & 0x3Fu)));
-    }
-    return kbo_news_template_put_char(cursor, remaining, (char)(0xE0u | (codepoint >> 12)))
-        && kbo_news_template_put_char(cursor, remaining, (char)(0x80u | ((codepoint >> 6) & 0x3Fu)))
-        && kbo_news_template_put_char(cursor, remaining, (char)(0x80u | (codepoint & 0x3Fu)));
-}
-
-static int kbo_news_template_json_string_value(const char* start, const char* end, char* out, size_t out_size)
-{
-    if (start == NULL || end == NULL || out == NULL || out_size == 0u) {
-        return 0;
-    }
-    out[0] = '\0';
-    start = kbo_json_skip_ws(start, end);
-    if (start >= end || *start != '"') {
-        return 0;
-    }
-
-    const char* stop = kbo_json_find_string_end(start, end);
-    if (stop == NULL || stop > end) {
-        return 0;
-    }
-
-    char* cursor = out;
-    size_t remaining = out_size - 1u;
-    for (const char* p = start + 1; p < stop; p++) {
-        if (*p != '\\') {
-            if (!kbo_news_template_put_char(&cursor, &remaining, *p)) {
-                return 0;
-            }
-            continue;
-        }
-
-        p++;
-        if (p >= stop) {
-            return 0;
-        }
-        switch (*p) {
-        case '"':
-        case '\\':
-        case '/':
-            if (!kbo_news_template_put_char(&cursor, &remaining, *p)) {
-                return 0;
-            }
-            break;
-        case 'b':
-            if (!kbo_news_template_put_char(&cursor, &remaining, '\b')) {
-                return 0;
-            }
-            break;
-        case 'f':
-            if (!kbo_news_template_put_char(&cursor, &remaining, '\f')) {
-                return 0;
-            }
-            break;
-        case 'n':
-            if (!kbo_news_template_put_char(&cursor, &remaining, '\n')) {
-                return 0;
-            }
-            break;
-        case 'r':
-            if (!kbo_news_template_put_char(&cursor, &remaining, '\r')) {
-                return 0;
-            }
-            break;
-        case 't':
-            if (!kbo_news_template_put_char(&cursor, &remaining, '\t')) {
-                return 0;
-            }
-            break;
-        case 'u': {
-            if (stop - p < 5) {
-                return 0;
-            }
-            unsigned int codepoint = 0u;
-            for (int i = 1; i <= 4; i++) {
-                int hex = kbo_news_template_hex_value(p[i]);
-                if (hex < 0) {
-                    return 0;
-                }
-                codepoint = (codepoint << 4) | (unsigned int)hex;
-            }
-            if (!kbo_news_template_put_utf8(&cursor, &remaining, codepoint)) {
-                return 0;
-            }
-            p += 4;
-            break;
-        }
-        default:
-            return 0;
-        }
-    }
-    *cursor = '\0';
-    return 1;
-}
-
 static char* kbo_news_template_read_json_file(const char* path, DWORD* out_size)
 {
     if (path == NULL || path[0] == '\0' || out_size == NULL) {
@@ -403,7 +301,7 @@ static int kbo_news_template_load_from_path(const char* path, const char* key, c
     const char* start = NULL;
     const char* end = NULL;
     int ok = kbo_find_json_value_span(json, json_size, key, &start, &end)
-        && kbo_news_template_json_string_value(start, end, out, out_size);
+        && kbo_json_string_value_at(start, end, out, out_size);
 
     HeapFree(GetProcessHeap(), 0, json);
     return ok;
@@ -527,6 +425,77 @@ int kbo_news_template_load_for_language(
         normalized_language_dir,
         has_save_split_path ? save_split_path : "",
         has_global_split_path ? global_split_path : "");
+    return 0;
+}
+
+int kbo_text_resource_load_for_language(
+    const char* resource_dir,
+    const char* language_dir,
+    const char* file_name,
+    const char* key,
+    char* out,
+    size_t out_size,
+    char* source_path,
+    size_t source_path_size,
+    const char* source)
+{
+    if (out == NULL || out_size == 0u || resource_dir == NULL || resource_dir[0] == '\0'
+            || file_name == NULL || file_name[0] == '\0' || key == NULL || key[0] == '\0') {
+        return 0;
+    }
+    out[0] = '\0';
+    if (source_path != NULL && source_path_size > 0u) {
+        source_path[0] = '\0';
+    }
+
+    char save_path[MAX_PATH] = {0};
+    char global_path[MAX_PATH] = {0};
+    const char* normalized_language_dir = kbo_news_template_normalize_language_dir(language_dir);
+    int has_save_path = kbo_text_resource_save_path_for_language(
+        resource_dir,
+        normalized_language_dir,
+        file_name,
+        save_path,
+        sizeof(save_path));
+    int has_global_path = kbo_text_resource_global_path_for_language(
+        resource_dir,
+        normalized_language_dir,
+        file_name,
+        global_path,
+        sizeof(global_path));
+
+    if (has_save_path && kbo_news_template_file_exists(save_path)) {
+        if (kbo_news_template_try_load_from_existing_path(
+                save_path,
+                key,
+                out,
+                out_size,
+                source_path,
+                source_path_size)) {
+            return 1;
+        }
+        append_logf(
+            "KBO text resource missing or invalid source=%s scope=save key=%s path=%s",
+            source != NULL ? source : "",
+            key,
+            save_path);
+    }
+    if (has_global_path && kbo_news_template_file_exists(global_path)) {
+        if (kbo_news_template_try_load_from_existing_path(
+                global_path,
+                key,
+                out,
+                out_size,
+                source_path,
+                source_path_size)) {
+            return 1;
+        }
+        append_logf(
+            "KBO text resource missing or invalid source=%s scope=global key=%s path=%s",
+            source != NULL ? source : "",
+            key,
+            global_path);
+    }
     return 0;
 }
 

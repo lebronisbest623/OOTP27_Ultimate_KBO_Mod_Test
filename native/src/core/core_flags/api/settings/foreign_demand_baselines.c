@@ -1,6 +1,7 @@
 #include "../flags_api.h"
 
 #include "../../localappdata/localappdata_reader.h"
+#include "economic_defaults.h"
 
 #include <stdint.h>
 
@@ -28,16 +29,7 @@ static const char* KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_KEYS[9] = {
     "asian_quota_fa_demand_superstar_salary"
 };
 
-static const int32_t KBO_FOREIGN_FA_DEMAND_BASELINE_DEFAULTS[9] = {
-    300000, 300000, 320000, 350000, 450000, 600000, 800000, 1000000, 1500000
-};
-
-static const int32_t KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_DEFAULTS[9] = {
-    80000, 100000, 120000, 150000, 200000, 300000, 450000, 650000, 900000
-};
-
 #define KBO_ASIAN_QUOTA_SALARY_LIMIT_KEY "asian_quota_salary_limit"
-#define KBO_ASIAN_QUOTA_SALARY_LIMIT_DEFAULT 200000
 
 int32_t kbo_clamp_foreign_fa_demand_baseline_value(int32_t value)
 {
@@ -55,9 +47,9 @@ int32_t kbo_get_foreign_fa_demand_baseline_value(int index)
     if (index < 0 || index >= 9) {
         return 0;
     }
-    int value = KBO_FOREIGN_FA_DEMAND_BASELINE_DEFAULTS[index];
+    int value = kbo_economic_default_foreign_fa_demand_baseline(index);
     if (!kbo_read_localappdata_json_int_value(KBO_FOREIGN_FA_DEMAND_BASELINE_KEYS[index], &value)) {
-        value = KBO_FOREIGN_FA_DEMAND_BASELINE_DEFAULTS[index];
+        value = kbo_economic_default_foreign_fa_demand_baseline(index);
     }
     return kbo_clamp_foreign_fa_demand_baseline_value(value);
 }
@@ -67,9 +59,9 @@ int32_t kbo_get_asian_quota_fa_demand_baseline_value(int index)
     if (index < 0 || index >= 9) {
         return 0;
     }
-    int value = KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_DEFAULTS[index];
+    int value = kbo_economic_default_asian_quota_fa_demand_baseline(index);
     if (!kbo_read_localappdata_json_int_value(KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_KEYS[index], &value)) {
-        value = KBO_ASIAN_QUOTA_FA_DEMAND_BASELINE_DEFAULTS[index];
+        value = kbo_economic_default_asian_quota_fa_demand_baseline(index);
     }
     return kbo_clamp_foreign_fa_demand_baseline_value(value);
 }
@@ -114,9 +106,9 @@ int32_t kbo_clamp_asian_quota_salary_limit_value(int32_t value)
 
 int32_t kbo_get_asian_quota_salary_limit(void)
 {
-    int value = KBO_ASIAN_QUOTA_SALARY_LIMIT_DEFAULT;
+    int value = kbo_economic_default_asian_quota_salary_limit();
     if (!kbo_read_localappdata_json_int_value(KBO_ASIAN_QUOTA_SALARY_LIMIT_KEY, &value)) {
-        value = KBO_ASIAN_QUOTA_SALARY_LIMIT_DEFAULT;
+        value = kbo_economic_default_asian_quota_salary_limit();
     }
     return kbo_clamp_asian_quota_salary_limit_value(value);
 }

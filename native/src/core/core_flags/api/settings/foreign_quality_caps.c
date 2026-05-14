@@ -1,6 +1,7 @@
 #include "../flags_api.h"
 
 #include "../../localappdata/localappdata_reader.h"
+#include "economic_defaults.h"
 
 #include <stdint.h>
 
@@ -10,14 +11,6 @@ static const char* KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_KEYS[KBO_FOREIGN_FA_NON_
     "foreign_fa_non_asian_pitcher_quality_cap",
     "foreign_fa_non_asian_hitter_quality_cap",
     "foreign_fa_non_asian_catcher_quality_cap"
-};
-
-static const int32_t KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULTS[KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_COUNT] = {
-    KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_STARTER,
-    KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_BULLPEN,
-    KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_PITCHER,
-    KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_HITTER,
-    KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_CATCHER
 };
 
 int32_t kbo_clamp_foreign_fa_quality_cap_value(int32_t value)
@@ -37,11 +30,11 @@ int32_t kbo_get_foreign_fa_non_asian_quality_cap_value(int index)
         return 0;
     }
 
-    int value = KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULTS[index];
+    int value = kbo_economic_default_non_asian_quality_cap(index);
     if (!kbo_read_localappdata_json_int_value(
             KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_KEYS[index],
             &value)) {
-        value = KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULTS[index];
+        value = kbo_economic_default_non_asian_quality_cap(index);
     }
     return kbo_clamp_foreign_fa_quality_cap_value(value);
 }

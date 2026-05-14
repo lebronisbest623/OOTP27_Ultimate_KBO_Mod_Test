@@ -15,64 +15,45 @@
 typedef struct KboCustomEventDefinition {
     KboCustomEventKind kind;
     const char* key;
-    const char* legacy_title;
 } KboCustomEventDefinition;
 
 static const KboCustomEventDefinition g_kbo_custom_event_definitions[] = {
     {
         KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_OPEN,
         "custom_event.foreign_priority.open.title",
-        g_kbo_foreign_priority_open_event_title,
     },
     {
         KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_CLOSE,
         "custom_event.foreign_priority.close.title",
-        g_kbo_foreign_priority_close_event_title,
     },
     {
         KBO_CUSTOM_EVENT_KIND_MILITARY_SELECTION,
         "custom_event.military.selection.title",
-        g_kbo_military_selection_event_title,
     },
     {
         KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION,
         "custom_event.asian_games.selection.title",
-        g_kbo_asian_games_selection_event_title,
     },
     {
         KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE,
         "custom_event.asian_games.departure.title",
-        g_kbo_asian_games_departure_event_title,
     },
     {
         KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL,
         "custom_event.asian_games.final.title",
-        g_kbo_asian_games_final_event_title,
     },
     {
         KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE,
         "custom_event.cbt.exception_deadline.title",
-        g_kbo_cbt_exception_deadline_event_title,
     },
     {
         KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
         "custom_event.cbt.announcement.title",
-        g_kbo_cbt_announcement_event_title,
     },
 };
 
 static INIT_ONCE g_kbo_custom_event_titles_once = INIT_ONCE_STATIC_INIT;
 static char g_kbo_custom_event_titles[KBO_CUSTOM_EVENT_KIND_COUNT][KBO_CUSTOM_EVENT_LANGUAGE_COUNT][KBO_CUSTOM_EVENT_TITLE_MAX];
-
-static const KboCustomEventDefinition* kbo_custom_event_definition_for_kind(KboCustomEventKind kind)
-{
-    for (size_t i = 0u; i < sizeof(g_kbo_custom_event_definitions) / sizeof(g_kbo_custom_event_definitions[0]); i++) {
-        if (g_kbo_custom_event_definitions[i].kind == kind) {
-            return &g_kbo_custom_event_definitions[i];
-        }
-    }
-    return NULL;
-}
 
 static int kbo_custom_event_language_index_from_dir(const char* language_dir)
 {
@@ -111,7 +92,7 @@ static BOOL CALLBACK kbo_custom_event_titles_init_once(
                     NULL,
                     0u,
                     "custom_event_title")) {
-                snprintf(title, KBO_CUSTOM_EVENT_TITLE_MAX, "%s", definition->legacy_title);
+                snprintf(title, KBO_CUSTOM_EVENT_TITLE_MAX, "%s", definition->key);
             }
         }
     }
@@ -126,12 +107,6 @@ static void kbo_custom_event_ensure_title_cache(void)
         kbo_custom_event_titles_init_once,
         NULL,
         NULL);
-}
-
-const char* kbo_custom_event_legacy_title_for_kind(KboCustomEventKind kind)
-{
-    const KboCustomEventDefinition* definition = kbo_custom_event_definition_for_kind(kind);
-    return definition != NULL ? definition->legacy_title : "";
 }
 
 int kbo_custom_event_title_for_kind(KboCustomEventKind kind, char* out, size_t out_size)
@@ -178,7 +153,7 @@ int kbo_custom_event_name_is_kind(const char* name, KboCustomEventKind kind)
         }
     }
 
-    return kbo_custom_event_name_equals_title(name, kbo_custom_event_legacy_title_for_kind(kind));
+    return 0;
 }
 
 int kbo_custom_event_name_is_open(const char* name)

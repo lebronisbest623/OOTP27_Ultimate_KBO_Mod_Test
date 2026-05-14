@@ -95,7 +95,6 @@ void kbo_ensure_asian_games_schedule_seeds_loaded(void)
         memset(g_kbo_asian_games_schedule_seeds, 0, sizeof(g_kbo_asian_games_schedule_seeds));
         g_kbo_asian_games_schedule_seed_count = 0;
         snprintf(g_kbo_asian_games_schedule_seed_loaded_key, sizeof(g_kbo_asian_games_schedule_seed_loaded_key), "%s", loaded_key);
-        kbo_add_builtin_asian_games_schedule_seeds_locked();
         kbo_import_asian_games_schedule_seed_file_locked(global_seed_path, "global_seed");
         kbo_import_asian_games_schedule_seed_file_locked(save_seed_path, "save_seed");
     }

@@ -1,0 +1,23 @@
+{
+  "projected_start_year": 2039,
+  "projected_end_year": 2200,
+  "cycle_years": 4,
+  "start_day_base": 10,
+  "start_day_span": 19,
+  "duration_days_base": 14,
+  "duration_days_span": 5,
+  "selection_lead_days_base": 42,
+  "selection_lead_days_span": 18,
+  "selection_fallback_month_day": 805,
+  "start_day_hash_salt": 31,
+  "duration_hash_salt": 43,
+  "selection_lead_hash_salt": 59,
+  "host_hash_salt": 17,
+  "host_max_count": 64,
+  "host_city_cooldown_years": 24,
+  "host_country_cooldown_years": 16,
+  "host_fallback_city_cooldown_years": 24,
+  "host_fallback_country_cooldown_years": 0,
+  "projected_status": "projected",
+  "projected_notes": "Projected post-2035 Asian Games schedule; override this year in asian_games_schedule_seed.csv when official dates are known."
+}

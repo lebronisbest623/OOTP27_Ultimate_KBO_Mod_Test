@@ -285,6 +285,17 @@
       "lifecycle": "Diagnostic"
     },
     {
+      "key": "enable_kbo_domestic_fa_market_investigation",
+      "defaultValue": false,
+      "importLegacy": true,
+      "lifecycle": "Diagnostic",
+      "ui": {
+        "label": "Domestic FA market investigation",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
       "key": "enable_intl_established_fa_quality_probe_patch",
       "defaultValue": true,
       "importLegacy": true,

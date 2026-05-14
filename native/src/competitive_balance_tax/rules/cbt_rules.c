@@ -10,10 +10,7 @@
 #include "../../core/core_flags/json/json_bool_parser.h"
 #include "../../core/logging/core_log.h"
 
-/* KBO CBT thresholds in USD (OOTP salary unit).
-   Use threshold_override in cbt_rules.json to override for your save. */
-typedef struct { uint32_t season; int32_t threshold; } KboCbtBuiltinRow;
-static const KboCbtBuiltinRow g_kbo_cbt_builtin[] = {
+static const KboCbtThresholdRow g_kbo_cbt_emergency_thresholds[] = {
     { 2023u,  8500000 },
     { 2024u,  8500000 },
     { 2025u,  9800000 },
@@ -21,7 +18,15 @@ static const KboCbtBuiltinRow g_kbo_cbt_builtin[] = {
     { 2027u, 10800000 },
     { 2028u, 11300000 },
 };
-#define KBO_CBT_BUILTIN_COUNT ((int)(sizeof(g_kbo_cbt_builtin) / sizeof(g_kbo_cbt_builtin[0])))
+#define KBO_CBT_EMERGENCY_THRESHOLD_COUNT ((uint32_t)(sizeof(g_kbo_cbt_emergency_thresholds) / sizeof(g_kbo_cbt_emergency_thresholds[0])))
+
+static void kbo_cbt_rules_load_emergency_thresholds(KboCbtRules* out)
+{
+    out->threshold_count = 0u;
+    for (uint32_t i = 0u; i < KBO_CBT_EMERGENCY_THRESHOLD_COUNT && i < KBO_CBT_THRESHOLD_MAX; i++) {
+        out->thresholds[out->threshold_count++] = g_kbo_cbt_emergency_thresholds[i];
+    }
+}
 
 static void kbo_cbt_rules_init_defaults(KboCbtRules* out)
 {
@@ -35,6 +40,96 @@ static void kbo_cbt_rules_init_defaults(KboCbtRules* out)
     out->tax_rate_3plus              = 150u;
     out->annual_increase_pct         = 5u;
     out->threshold_override          = 0;
+    kbo_cbt_rules_load_emergency_thresholds(out);
+}
+
+static int kbo_cbt_rules_add_threshold(KboCbtRules* out, uint32_t season, int32_t threshold)
+{
+    if (out == NULL || season == 0u || threshold <= 0 || out->threshold_count >= KBO_CBT_THRESHOLD_MAX) {
+        return 0;
+    }
+    for (uint32_t i = 0u; i < out->threshold_count; i++) {
+        if (out->thresholds[i].season == season) {
+            out->thresholds[i].threshold = threshold;
+            return 1;
+        }
+    }
+    out->thresholds[out->threshold_count].season = season;
+    out->thresholds[out->threshold_count].threshold = threshold;
+    out->threshold_count++;
+    return 1;
+}
+
+static void kbo_cbt_rules_parse_thresholds(KboCbtRules* out, const char* json, DWORD json_size)
+{
+    const char* start = NULL;
+    const char* end = NULL;
+    const char* array_start = NULL;
+    if (!kbo_find_json_value_span(json, json_size, "thresholds", &start, &end)
+            || start == NULL || end == NULL || start >= end) {
+        return;
+    }
+    array_start = kbo_json_skip_ws(start, end);
+    if (array_start >= end || *array_start != '[') {
+        return;
+    }
+
+    KboCbtThresholdRow parsed[KBO_CBT_THRESHOLD_MAX];
+    uint32_t parsed_count = 0u;
+    const char* p = start;
+    while (p < end && parsed_count < KBO_CBT_THRESHOLD_MAX) {
+        if (*p != '{') {
+            p++;
+            continue;
+        }
+        const char* object_start = p;
+        int depth = 0;
+        int in_string = 0;
+        int escaped = 0;
+        while (p < end) {
+            char ch = *p++;
+            if (in_string) {
+                if (escaped) {
+                    escaped = 0;
+                } else if (ch == '\\') {
+                    escaped = 1;
+                } else if (ch == '"') {
+                    in_string = 0;
+                }
+                continue;
+            }
+            if (ch == '"') {
+                in_string = 1;
+            } else if (ch == '{') {
+                depth++;
+            } else if (ch == '}') {
+                depth--;
+                if (depth == 0) {
+                    const char* object_end = p;
+                    int season = 0;
+                    int threshold = 0;
+                    DWORD object_size = (DWORD)(object_end - object_start);
+                    if (kbo_find_int_value_in_json(object_start, object_size, "season", &season)
+                            && kbo_find_int_value_in_json(object_start, object_size, "threshold", &threshold)
+                            && season > 0
+                            && threshold > 0) {
+                        parsed[parsed_count].season = (uint32_t)season;
+                        parsed[parsed_count].threshold = (int32_t)threshold;
+                        parsed_count++;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    if (parsed_count == 0u) {
+        return;
+    }
+
+    out->threshold_count = 0u;
+    for (uint32_t i = 0u; i < parsed_count; i++) {
+        kbo_cbt_rules_add_threshold(out, parsed[i].season, parsed[i].threshold);
+    }
 }
 
 static void kbo_cbt_rules_parse_json(KboCbtRules* out, const char* json, DWORD json_size)
@@ -67,6 +162,7 @@ static void kbo_cbt_rules_parse_json(KboCbtRules* out, const char* json, DWORD j
     if (kbo_find_int_value_in_json(json, json_size, "draft_penalty_stages", &v) && v > 0 && v <= 100) {
         out->draft_penalty_stages = (uint32_t)v;
     }
+    kbo_cbt_rules_parse_thresholds(out, json, json_size);
 }
 
 void kbo_cbt_rules_load(KboCbtRules* out)
@@ -122,24 +218,31 @@ int32_t kbo_cbt_get_threshold(const KboCbtRules* rules, uint32_t season)
         return rules->threshold_override;
     }
 
-    /* Look up the builtin table */
-    int32_t best = g_kbo_cbt_builtin[0].threshold;
+    if (rules->threshold_count == 0u) {
+        return 0;
+    }
+
+    int32_t best = rules->thresholds[0].threshold;
     uint32_t best_season = 0u;
-    for (int i = 0; i < KBO_CBT_BUILTIN_COUNT; i++) {
-        if (season == g_kbo_cbt_builtin[i].season) {
-            return g_kbo_cbt_builtin[i].threshold;
+    int32_t last_known_threshold = rules->thresholds[0].threshold;
+    uint32_t last_known = rules->thresholds[0].season;
+    for (uint32_t i = 0u; i < rules->threshold_count; i++) {
+        if (season == rules->thresholds[i].season) {
+            return rules->thresholds[i].threshold;
         }
-        if (g_kbo_cbt_builtin[i].season <= season && g_kbo_cbt_builtin[i].season >= best_season) {
-            best = g_kbo_cbt_builtin[i].threshold;
-            best_season = g_kbo_cbt_builtin[i].season;
+        if (rules->thresholds[i].season <= season && rules->thresholds[i].season >= best_season) {
+            best = rules->thresholds[i].threshold;
+            best_season = rules->thresholds[i].season;
+        }
+        if (rules->thresholds[i].season >= last_known) {
+            last_known = rules->thresholds[i].season;
+            last_known_threshold = rules->thresholds[i].threshold;
         }
     }
 
-    /* Apply annual increase for seasons beyond the last known entry */
-    uint32_t last_known = g_kbo_cbt_builtin[KBO_CBT_BUILTIN_COUNT - 1].season;
     if (season > last_known && rules->annual_increase_pct > 0u) {
         uint32_t years_past = season - last_known;
-        int32_t val = g_kbo_cbt_builtin[KBO_CBT_BUILTIN_COUNT - 1].threshold;
+        int32_t val = last_known_threshold;
         for (uint32_t y = 0u; y < years_past; y++) {
             val = val + (int32_t)((int64_t)val * (int32_t)rules->annual_increase_pct / 100LL);
         }

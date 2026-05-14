@@ -292,7 +292,34 @@ internal static partial class KboFlags
 
     public static int ReadKboIntlEstablishedFaMultiplier()
     {
-        return ReadKboIntSetting(GetKboFlagConfigPath(), "intl_established_fa_multiplier", defaultValue: 20, minValue: 1, maxValue: 20);
+        var defaultValue = ReadKboSeedIntDefault("economic_defaults.json", "intl_established_fa_multiplier", fallback: 20);
+        return ReadKboIntSetting(GetKboFlagConfigPath(), "intl_established_fa_multiplier", defaultValue, minValue: 1, maxValue: 20);
+    }
+
+    private static int ReadKboSeedIntDefault(string fileName, string key, int fallback)
+    {
+        var path = GetKboLocalDataPath(fileName);
+        if (!File.Exists(path))
+        {
+            return fallback;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                    && doc.RootElement.TryGetProperty(key, out var value)
+                    && TryReadJsonInt(value, out var parsed))
+            {
+                return parsed;
+            }
+        }
+        catch
+        {
+            return fallback;
+        }
+
+        return fallback;
     }
 
     internal static int ReadKboIntSetting(string configPath, string key, int defaultValue, int minValue, int maxValue)

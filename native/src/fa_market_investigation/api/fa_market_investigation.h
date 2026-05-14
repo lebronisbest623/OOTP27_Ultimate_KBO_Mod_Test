@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_FA_MARKET_INVESTIGATION_FA_MARKET_INVESTIGATION_H_
+#define KBOFIX_SRC_FA_MARKET_INVESTIGATION_FA_MARKET_INVESTIGATION_H_
+
+void start_kbo_domestic_fa_market_investigation_thread(void);
+
+#endif

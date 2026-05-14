@@ -1,5 +1,6 @@
 #include "../../runtime/common/custom_events_common.h"
 #include "builtin_and_projected.h"
+#include "projected_policy.h"
 #include <stdio.h>
 #include <string.h>
 #include "../../../core/dates/core_text_date.h"
@@ -164,10 +165,11 @@ static int kbo_asian_games_projected_host_is_available(
     uint32_t year,
     const char* city,
     const char* country,
+    const KboAsianGamesProjectedPolicy* policy,
     uint32_t city_cooldown_years,
     uint32_t country_cooldown_years)
 {
-    if (city == NULL || city[0] == '\0' || country == NULL || country[0] == '\0') {
+    if (city == NULL || city[0] == '\0' || country == NULL || country[0] == '\0' || policy == NULL) {
         return 0;
     }
 
@@ -183,9 +185,9 @@ static int kbo_asian_games_projected_host_is_available(
         }
     }
 
-    for (uint32_t previous_year = year - 4u;
-            previous_year >= 2039u && year - previous_year <= city_cooldown_years;
-            previous_year -= 4u) {
+    for (uint32_t previous_year = year > policy->cycle_years ? year - policy->cycle_years : 0u;
+            previous_year >= policy->projected_start_year && year - previous_year <= city_cooldown_years;
+            previous_year -= policy->cycle_years) {
         KboAsianGamesScheduleSeed previous;
         kbo_build_projected_asian_games_schedule(previous_year, &previous);
         if (kbo_asian_games_projected_host_conflicts_with_schedule(
@@ -197,7 +199,7 @@ static int kbo_asian_games_projected_host_is_available(
                 country_cooldown_years)) {
             return 0;
         }
-        if (previous_year < 2043u) {
+        if (previous_year < policy->projected_start_year + policy->cycle_years) {
             break;
         }
     }
@@ -208,21 +210,27 @@ static int kbo_asian_games_projected_host_is_available(
 static int kbo_choose_projected_asian_games_host_index(
     uint32_t year,
     const KboAsianGamesProjectedHost* hosts,
-    int host_count)
+    int host_count,
+    const KboAsianGamesProjectedPolicy* policy)
 {
-    if (hosts == NULL || host_count <= 0) {
+    if (hosts == NULL || host_count <= 0 || policy == NULL) {
         return -1;
     }
-    uint32_t start = kbo_asian_games_projected_hash(year, 17u) % (uint32_t)host_count;
+    uint32_t start = kbo_asian_games_projected_hash(year, policy->host_hash_salt) % (uint32_t)host_count;
     for (int pass = 0; pass < 2; pass++) {
-        uint32_t city_cooldown_years = pass == 0 ? 24u : 24u;
-        uint32_t country_cooldown_years = pass == 0 ? 16u : 0u;
+        uint32_t city_cooldown_years = pass == 0
+            ? policy->host_city_cooldown_years
+            : policy->host_fallback_city_cooldown_years;
+        uint32_t country_cooldown_years = pass == 0
+            ? policy->host_country_cooldown_years
+            : policy->host_fallback_country_cooldown_years;
         for (int offset = 0; offset < host_count; offset++) {
             int index = (int)((start + (uint32_t)offset) % (uint32_t)host_count);
             if (kbo_asian_games_projected_host_is_available(
                     year,
                     hosts[index].city,
                     hosts[index].country,
+                    policy,
                     city_cooldown_years,
                     country_cooldown_years)) {
                 return index;
@@ -245,14 +253,28 @@ int kbo_choose_projected_asian_games_host(
     out_city[0] = '\0';
     out_country[0] = '\0';
 
-    KboAsianGamesProjectedHost hosts[64];
-    int host_count = kbo_load_asian_games_projected_hosts(hosts, (int)(sizeof(hosts) / sizeof(hosts[0])));
-    int host_index = kbo_choose_projected_asian_games_host_index(year, hosts, host_count);
+    KboAsianGamesProjectedPolicy policy;
+    kbo_load_asian_games_projected_policy(&policy);
+    int capacity = (int)policy.host_max_count;
+    if (capacity <= 0) {
+        return 0;
+    }
+    KboAsianGamesProjectedHost* hosts = (KboAsianGamesProjectedHost*)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        (SIZE_T)capacity * sizeof(KboAsianGamesProjectedHost));
+    if (hosts == NULL) {
+        return 0;
+    }
+    int host_count = kbo_load_asian_games_projected_hosts(hosts, capacity);
+    int host_index = kbo_choose_projected_asian_games_host_index(year, hosts, host_count, &policy);
     if (host_index < 0) {
+        HeapFree(GetProcessHeap(), 0, hosts);
         return 0;
     }
 
     kbo_asian_games_schedule_copy_text(out_city, city_size, hosts[host_index].city);
     kbo_asian_games_schedule_copy_text(out_country, country_size, hosts[host_index].country);
+    HeapFree(GetProcessHeap(), 0, hosts);
     return 1;
 }

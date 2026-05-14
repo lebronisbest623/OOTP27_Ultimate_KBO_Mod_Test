@@ -23,7 +23,6 @@ int kbo_set_asian_quota_salary_limit(int32_t value);
 int kbo_get_foreign_fa_quality_cap_enabled_setting(void);
 int kbo_set_foreign_fa_quality_cap_enabled_setting(int enabled);
 
-#define KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_DEFAULT 7
 #define KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MIN 1
 #define KBO_ASIAN_GAMES_NO_GOLD_ODDS_DENOMINATOR_MAX 100
 int kbo_clamp_asian_games_no_gold_odds_denominator(int value);
@@ -37,11 +36,6 @@ int kbo_set_asian_games_no_gold_odds_denominator(int value);
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_HITTER 3
 #define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_CATCHER 4
 #define KBO_FOREIGN_FA_QUALITY_CAP_MAX 250000
-#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_STARTER 126500
-#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_BULLPEN 104500
-#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_PITCHER 115500
-#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_HITTER 121000
-#define KBO_FOREIGN_FA_NON_ASIAN_QUALITY_CAP_DEFAULT_CATCHER 88000
 int32_t kbo_clamp_foreign_fa_quality_cap_value(int32_t value);
 int32_t kbo_get_foreign_fa_non_asian_quality_cap_value(int index);
 int kbo_set_foreign_fa_non_asian_quality_cap_value(int index, int32_t value);

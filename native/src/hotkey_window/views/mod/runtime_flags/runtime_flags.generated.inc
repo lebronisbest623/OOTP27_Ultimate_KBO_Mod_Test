@@ -24,6 +24,7 @@
     { "enable_foreign_waiver_background_scanner", "Foreign waiver background scanner", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_foreign_ai_roster_management", "Enhanced foreign AI (Experimental)", 1, 0, NULL, KBO_MOD_FLAG_USER },
     { "enable_foreign_ai_controller", "Foreign AI Controller (Experimental)", 1, 0, NULL, KBO_MOD_FLAG_USER },
+    { "enable_kbo_domestic_fa_market_investigation", "Domestic FA market investigation", 1, 0, NULL, KBO_MOD_FLAG_DIAGNOSTIC },
     { "enable_intl_established_fa_quality_probe_patch", "International FA quality probe", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_kbo_ai_fa_fallback_patch", "AI FA fallback patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },
     { "enable_kbo_callup_foreign_limit_patch", "Foreign call-up limit patch", 1, 1, NULL, KBO_MOD_FLAG_RECOVERY },

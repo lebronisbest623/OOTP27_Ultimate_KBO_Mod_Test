@@ -4,13 +4,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../../../core/core_flags/localappdata/localappdata_reader.h"
 #include "../../../core/logging/core_log.h"
 #include "military_service_team_policy.h"
 
-#define KBO_DEFAULT_SANGMU_TEAM_ID 21u
+#define KBO_TEAM_POLICY_FALLBACK_SANGMU_TEAM_ID 21u
 
-static volatile LONG g_kbo_military_policy_sang_team_id = (LONG)KBO_DEFAULT_SANGMU_TEAM_ID;
+static volatile LONG g_kbo_military_policy_sang_team_id = (LONG)KBO_TEAM_POLICY_FALLBACK_SANGMU_TEAM_ID;
 static volatile LONG g_kbo_military_policy_override_loaded = 0;
+
+static int kbo_military_service_read_json_sangmu_team_id(uint32_t* out_value)
+{
+    if (out_value == NULL) {
+        return 0;
+    }
+    int value = 0;
+    if (kbo_read_localappdata_named_json_int_value("kbo_team_policy.json", "sangmu_team_id", &value)
+            && value > 0
+            && value <= 1000000) {
+        *out_value = (uint32_t)value;
+        return 1;
+    }
+    return 0;
+}
 
 void kbo_load_military_service_team_policy_override_once(void)
 {
@@ -21,15 +37,22 @@ void kbo_load_military_service_team_policy_override_once(void)
     char local[MAX_PATH] = {0};
     DWORD local_len = GetEnvironmentVariableA("LOCALAPPDATA", local, (DWORD)sizeof(local));
     if (local_len == 0 || local_len >= sizeof(local) || local[0] == '\0') {
-        append_logf("KBO military FA team policy fixed sangmu=%u source=default", KBO_DEFAULT_SANGMU_TEAM_ID);
+        append_logf("KBO military FA team policy fixed sangmu=%u source=fallback", KBO_TEAM_POLICY_FALLBACK_SANGMU_TEAM_ID);
         return;
+    }
+
+    uint32_t configured_sangmu_team_id = 0u;
+    if (kbo_military_service_read_json_sangmu_team_id(&configured_sangmu_team_id)) {
+        InterlockedExchange(&g_kbo_military_policy_sang_team_id, (LONG)configured_sangmu_team_id);
+        append_logf("KBO military FA team policy fixed sangmu=%u source=kbo_team_policy.json", configured_sangmu_team_id);
+    } else {
+        append_logf("KBO military FA team policy fixed sangmu=%u source=fallback", KBO_TEAM_POLICY_FALLBACK_SANGMU_TEAM_ID);
     }
 
     char path[MAX_PATH] = {0};
     snprintf(path, sizeof(path), "%s\\OOTP-KBO\\kbo_sangmu_team_id.txt", local);
     FILE* file = fopen(path, "rb");
     if (file == NULL) {
-        append_logf("KBO military FA team policy fixed sangmu=%u source=default", KBO_DEFAULT_SANGMU_TEAM_ID);
         return;
     }
 

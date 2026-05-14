@@ -28,13 +28,16 @@ public sealed class ReleasePackageIgnoreTests
     [InlineData("\"assets\\icons\\github-mark.png\"")]
     [InlineData("\"data\\seeds\\allstar_teams.csv\"")]
     [InlineData("\"data\\seeds\\asian_games_projected_hosts.csv\"")]
+    [InlineData("\"data\\seeds\\asian_games_projected_policy.json\"")]
     [InlineData("\"data\\seeds\\asian_games_schedule_seed.csv\"")]
     [InlineData("\"data\\seeds\\captain_seed.csv\"")]
     [InlineData("\"data\\seeds\\cbt_rules.json\"")]
     [InlineData("\"data\\seeds\\college_reputation_seed.csv\"")]
+    [InlineData("\"data\\seeds\\economic_defaults.json\"")]
     [InlineData("\"data\\seeds\\fa_rules.json\"")]
     [InlineData("\"data\\seeds\\foreign_injury_replacements_seed.csv\"")]
     [InlineData("\"data\\seeds\\high_school_reputation_seed.csv\"")]
+    [InlineData("\"data\\seeds\\kbo_team_policy.json\"")]
     [InlineData("\"data\\seeds\\military_service_seed.csv\"")]
     [InlineData("\"data\\seeds\\news_templates\\en\\asian_games.json\"")]
     [InlineData("\"data\\seeds\\news_templates\\en\\captain.json\"")]
@@ -52,6 +55,8 @@ public sealed class ReleasePackageIgnoreTests
     [InlineData("\"data\\seeds\\news_templates\\ko\\foreign_injury.json\"")]
     [InlineData("\"data\\seeds\\news_templates\\ko\\foreign_waiver.json\"")]
     [InlineData("\"data\\seeds\\news_templates\\ko\\military_service.json\"")]
+    [InlineData("\"data\\seeds\\ui_text\\en\\hotkey_window.json\"")]
+    [InlineData("\"data\\seeds\\ui_text\\ko\\hotkey_window.json\"")]
     public void ReleaseScript_ValidatesRequiredPayloadFiles(string requiredFileLiteral)
     {
         var script = File.ReadAllText(Path.Combine(FindRepoRoot(), "scripts", "release.ps1"));

@@ -3,6 +3,13 @@
 
 #include <stdint.h>
 
+#define KBO_CBT_THRESHOLD_MAX 32
+
+typedef struct KboCbtThresholdRow {
+    uint32_t season;
+    int32_t threshold;
+} KboCbtThresholdRow;
+
 typedef struct KboCbtRules {
     uint8_t  enabled;
     uint32_t top_player_count;
@@ -13,6 +20,8 @@ typedef struct KboCbtRules {
     uint32_t tax_rate_3plus;
     uint32_t annual_increase_pct;
     int32_t  threshold_override;
+    uint32_t threshold_count;
+    KboCbtThresholdRow thresholds[KBO_CBT_THRESHOLD_MAX];
 } KboCbtRules;
 
 void    kbo_cbt_rules_load(KboCbtRules* out);

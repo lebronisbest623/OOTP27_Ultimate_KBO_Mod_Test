@@ -10,11 +10,14 @@
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../import/import_and_load.h"
+#include "../projected/projected_policy.h"
 
 int kbo_get_asian_games_schedule_for_year(uint32_t year, KboAsianGamesScheduleSeed* out)
 {
     if (year < 1982u || year > 2200u) {
-        return 0;
+        if (!kbo_asian_games_year_is_projected(year)) {
+            return 0;
+        }
     }
     if (out != NULL) {
         memset(out, 0, sizeof(*out));
@@ -49,7 +52,9 @@ int kbo_get_next_asian_games_schedule(uint32_t from_year, KboAsianGamesScheduleS
     if (from_year < 1982u) {
         from_year = 1982u;
     }
-    if (from_year > 2200u) {
+    KboAsianGamesProjectedPolicy policy;
+    kbo_load_asian_games_projected_policy(&policy);
+    if (from_year > policy.projected_end_year) {
         return 0;
     }
 

@@ -19,6 +19,7 @@
 #include "../custom_events/runtime/monitor/custom_event_monitor.h"
 #include "../competitive_balance_tax/events/cbt_events.h"
 #include "../fa_requalification/fa_requalification.h"
+#include "../fa_market_investigation/api/fa_market_investigation.h"
 #include "../fa_salary_snapshot/threads/salary_snapshot_phase_events.h"
 #include "../fa_salary_snapshot/threads/salary_snapshot_thread.h"
 #include "../foreign/waiver_core/api/foreign_waiver_core.h"
