@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "foreign_retention_guard_internal.h"
+#include "../foreign_retention_guard_internal.h"
 
 int kbo_foreign_retention_guard_stamp_signed_state(
     uint8_t* player,

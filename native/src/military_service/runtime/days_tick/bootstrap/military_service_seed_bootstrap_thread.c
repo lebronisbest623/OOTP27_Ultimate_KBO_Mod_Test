@@ -4,17 +4,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../../core/core_flags/api/flags_api.h"
-#include "../../../core/dates/core_current_date.h"
-#include "../../../core/files/save_paths/core_save_paths.h"
-#include "../../../core/logging/core_log.h"
-#include "../../../core/runtime_tuning/runtime_tuning_policy.h"
-#include "../../../core/season/opening_day_storyline_guard.h"
-#include "../../../runtime_memory/runtime_memory.h"
-#include "../../../team/lookup/team_lookup.h"
-#include "../../calendar/military_service_date.h"
-#include "military_service_days_tick_internal.h"
-#include "military_service_tick.h"
+#include "../../../../core/core_flags/api/flags_api.h"
+#include "../../../../core/dates/core_current_date.h"
+#include "../../../../core/files/save_paths/core_save_paths.h"
+#include "../../../../core/logging/core_log.h"
+#include "../../../../core/runtime_tuning/runtime_tuning_policy.h"
+#include "../../../../core/season/opening_day_storyline_guard.h"
+#include "../../../../runtime_memory/runtime_memory.h"
+#include "../../../../team/lookup/team_lookup.h"
+#include "../../../calendar/military_service_date.h"
+#include "../military_service_days_tick_internal.h"
+#include "../military_service_tick.h"
 
 DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
 {

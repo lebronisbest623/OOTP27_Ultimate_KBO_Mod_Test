@@ -23,7 +23,7 @@
 #include "../selection/events/policy/military_selection_policy.h"
 #include "../selection/news/military_selection_news.h"
 #include "military_return_preview_news.h"
-#include "military_return_preview_news_helpers.h"
+#include "preview/military_return_preview_news_helpers.h"
 
 static volatile LONG g_kbo_military_return_preview_last_checked_date = 0;
 

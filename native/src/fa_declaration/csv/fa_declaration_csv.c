@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "fa_declaration_internal.h"
-#include "../fa_filing/fa_filing_parts/fa_filing_csv_write_helpers.h"
-#include "../core/logging/core_log.h"
+#include "../fa_declaration_internal.h"
+#include "../../fa_filing/fa_filing_parts/fa_filing_csv_write_helpers.h"
+#include "../../core/logging/core_log.h"
 
 int kbo_fa_declaration_append_csv(
     const KboFaDeclarationCandidate* candidates,

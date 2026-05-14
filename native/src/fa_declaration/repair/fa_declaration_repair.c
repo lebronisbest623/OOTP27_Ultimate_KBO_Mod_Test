@@ -5,16 +5,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "fa_declaration_internal.h"
-#include "../bootstrap/abi/ootp_offsets.h"
-#include "../core/core_flags/api/flags_api.h"
-#include "../core/csv/core_csv.h"
-#include "../core/dates/core_current_date.h"
-#include "../core/logging/core_log.h"
-#include "../foreign/common/dates/foreign_waiver_date.h"
-#include "../foreign/common/player_eval/foreign_waiver_player_eval.h"
-#include "../runtime_memory/runtime_memory.h"
-#include "../team/lookup/team_lookup.h"
+#include "../fa_declaration_internal.h"
+#include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../core/core_flags/api/flags_api.h"
+#include "../../core/csv/core_csv.h"
+#include "../../core/dates/core_current_date.h"
+#include "../../core/logging/core_log.h"
+#include "../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../runtime_memory/runtime_memory.h"
+#include "../../team/lookup/team_lookup.h"
 
 static int32_t kbo_fa_declaration_parse_i32_text(const char* text)
 {

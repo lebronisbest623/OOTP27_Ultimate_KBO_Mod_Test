@@ -25,7 +25,7 @@
 #include "../../team/names/team_string.h"
 #include "../api/captain_selection.h"
 #include "../season/captain_season.h"
-#include "../seed/captain_seed_parse.h"
+#include "../seed/parse/captain_seed_parse.h"
 
 #define KBO_CAPTAIN_MAX_TEAMS 64
 

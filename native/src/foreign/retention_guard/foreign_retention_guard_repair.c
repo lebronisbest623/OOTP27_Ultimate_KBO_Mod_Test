@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "foreign_retention_guard_internal.h"
-#include "foreign_retention_guard_repair_helpers.h"
+#include "repair/foreign_retention_guard_repair_helpers.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/logging/core_log.h"

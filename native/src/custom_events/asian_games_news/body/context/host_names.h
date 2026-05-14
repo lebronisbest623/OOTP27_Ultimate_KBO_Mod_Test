@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_CUSTOM_EVENTS_ASIAN_GAMES_NEWS_BODY_CONTEXT_HOST_NAMES_H_
+#define KBOFIX_SRC_CUSTOM_EVENTS_ASIAN_GAMES_NEWS_BODY_CONTEXT_HOST_NAMES_H_
+
+const char* kbo_asian_games_korean_host_name(const char* raw);
+
+#endif

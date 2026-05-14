@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../core/csv/core_csv.h"
+#include "../../../core/csv/core_csv.h"
 
 int kbo_captain_parse_u32_full_token(const char* text, uint32_t* out)
 {

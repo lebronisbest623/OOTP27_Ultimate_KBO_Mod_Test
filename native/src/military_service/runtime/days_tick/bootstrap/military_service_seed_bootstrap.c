@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "../../../amateur_player_quality/api/amateur_player_quality.h"
-#include "../../../core/files/save_paths/core_save_paths.h"
-#include "../../../core/logging/core_log.h"
-#include "../../../fa_market_classification/api/fa_market_classification.h"
-#include "../../../fa_requalification/fa_requalification.h"
-#include "../../../foreign/replacement_seed/api/foreign_replacement_seed.h"
-#include "../../seed/registry/military_seed_registry.h"
-#include "military_service_days_tick_internal.h"
+#include "../../../../amateur_player_quality/api/amateur_player_quality.h"
+#include "../../../../core/files/save_paths/core_save_paths.h"
+#include "../../../../core/logging/core_log.h"
+#include "../../../../fa_market_classification/api/fa_market_classification.h"
+#include "../../../../fa_requalification/fa_requalification.h"
+#include "../../../../foreign/replacement_seed/api/foreign_replacement_seed.h"
+#include "../../../seed/registry/military_seed_registry.h"
+#include "../military_service_days_tick_internal.h"
 
 void kbo_military_prewarm_save_scoped_bootstrap_files(const char* save_path)
 {

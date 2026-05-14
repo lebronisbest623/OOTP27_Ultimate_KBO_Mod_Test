@@ -15,7 +15,7 @@
 #include "../src/core/sql/escape/core_sql_escape.h"
 #include "../src/foreign/replacement_seed/parse/foreign_replacement_seed_parse.h"
 #include "../src/captain/season/captain_season.h"
-#include "../src/captain/seed/captain_seed_parse.h"
+#include "../src/captain/seed/parse/captain_seed_parse.h"
 #include "../src/patch_helpers/patch_helpers.h"
 
 int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)

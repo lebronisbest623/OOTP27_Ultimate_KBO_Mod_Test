@@ -3,11 +3,11 @@
 #include <stdint.h>
 
 #include "foreign_retention_guard_repair_helpers.h"
-#include "../../bootstrap/abi/ootp_offsets.h"
-#include "../../core/logging/core_log.h"
-#include "../../runtime_memory/runtime_memory.h"
-#include "../../team/assignment/roster_arrays/team_roster_arrays.h"
-#include "../common/player_eval/foreign_waiver_player_eval.h"
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../runtime_memory/runtime_memory.h"
+#include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
+#include "../../common/player_eval/foreign_waiver_player_eval.h"
 
 static volatile LONG g_kbo_foreign_retention_guard_repair_log_count = 0;
 

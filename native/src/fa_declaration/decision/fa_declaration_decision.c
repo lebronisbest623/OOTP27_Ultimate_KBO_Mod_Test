@@ -5,13 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "fa_declaration_internal.h"
-#include "../bootstrap/abi/ootp_offsets.h"
-#include "../fa_filing/fa_filing.h"
-#include "../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
-#include "../foreign/common/player_eval/foreign_waiver_player_eval.h"
-#include "../runtime_memory/runtime_memory.h"
-#include "../team/names/team_name_cache.h"
+#include "../fa_declaration_internal.h"
+#include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../fa_filing/fa_filing.h"
+#include "../../fa_salary_snapshot/grading/salary_snapshot_grade_rows.h"
+#include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../runtime_memory/runtime_memory.h"
+#include "../../team/names/team_name_cache.h"
 
 int kbo_fa_declaration_case_candidate(const char* case_label)
 {
