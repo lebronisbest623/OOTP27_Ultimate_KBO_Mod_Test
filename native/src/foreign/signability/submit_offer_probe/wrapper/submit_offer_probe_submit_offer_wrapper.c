@@ -35,16 +35,6 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                 InterlockedCompareExchange(&g_kbo_custom_foreign_policy_block_player_id, 0, 0),
                 InterlockedCompareExchange(&g_kbo_custom_foreign_policy_block_requester_team_id, 0, 0));
         }
-        if (player_id != 0u && kbo_military_submit_offer_should_block(screen_ptr, player_id, today)) {
-            return;
-        }
-        if (player_id != 0u && kbo_military_submit_offer_screen_should_block(
-                screen_ptr,
-                player_id,
-                today,
-                "submit_probe_screen")) {
-            return;
-        }
         if (player_id != 0u
                 && kbo_recent_custom_foreign_policy_block_matches(player_id, today, &requester_team_id)) {
             static LONG custom_submit_block_log_count = 0;

@@ -72,14 +72,6 @@ int kbo_enforce_foreign_waiver_signability(
         return original_signability;
     }
 
-    if (kbo_military_signability_should_block(
-            player_id,
-            requesting_team_id,
-            original_signability,
-            caller_rva)) {
-        return 0; /* OOTP signability enum: 0 = Impossible. */
-    }
-
     kbo_log_asian_quota_signability_probe(player, player_id, requesting_team_id, original_signability, caller_rva);
 
     uint32_t today = 0;

@@ -12,6 +12,47 @@
 #include "../api/foreign_waiver_decisions.h"
 #include "../internal/foreign_waiver_decisions_state_internal.h"
 
+static void kbo_audit_foreign_waiver_decision_record(
+    const char* decision,
+    const char* reason,
+    const char* source,
+    const char* action,
+    uint32_t team_id,
+    uint32_t player_id,
+    int score,
+    int forced,
+    int executed,
+    uint32_t date,
+    uint32_t window_start,
+    uint32_t window_end)
+{
+    KboLogFields fields;
+    kbo_log_fields_init(&fields);
+    kbo_log_field_str(&fields, "action", action != NULL ? action : "");
+    kbo_log_field_u32(&fields, "team_id", team_id);
+    kbo_log_field_u32(&fields, "player_id", player_id);
+    if (score != 0) {
+        kbo_log_field_i32(&fields, "score", score);
+    }
+    kbo_log_field_bool(&fields, "forced", forced);
+    kbo_log_field_bool(&fields, "executed", executed);
+    if (date != 0u) {
+        kbo_log_field_u32(&fields, "date", date);
+    }
+    if (window_start != 0u) {
+        kbo_log_field_u32(&fields, "window_start", window_start);
+    }
+    if (window_end != 0u) {
+        kbo_log_field_u32(&fields, "window_end", window_end);
+    }
+    kbo_rule_audit_emit_fields(
+        "foreign_waiver.decision_record",
+        decision,
+        reason,
+        source,
+        &fields);
+}
+
 int kbo_append_foreign_waiver_decision_record(
     const char* source,
     const char* action,
@@ -28,7 +69,19 @@ int kbo_append_foreign_waiver_decision_record(
 
     char path[MAX_PATH] = {0};
     if (!get_kbo_foreign_waiver_decisions_path(path, sizeof(path))) {
-        kbo_rule_audit_emitf("foreign_waiver.decision_record", "fail", "path_unavailable", source, "\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u", action, team_id, player_id);
+        kbo_audit_foreign_waiver_decision_record(
+            "fail",
+            "path_unavailable",
+            source,
+            action,
+            team_id,
+            player_id,
+            0,
+            0,
+            0,
+            0u,
+            0u,
+            0u);
         return 0;
     }
 
@@ -56,7 +109,19 @@ int kbo_append_foreign_waiver_decision_record(
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
-        kbo_rule_audit_emitf("foreign_waiver.decision_record", "fail", "open_failed", source, "\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u,\"date\":%u", action, team_id, player_id, today);
+        kbo_audit_foreign_waiver_decision_record(
+            "fail",
+            "open_failed",
+            source,
+            action,
+            team_id,
+            player_id,
+            0,
+            0,
+            0,
+            today,
+            0u,
+            0u);
         return 0;
     }
 
@@ -89,13 +154,10 @@ int kbo_append_foreign_waiver_decision_record(
 
     CloseHandle(file);
     InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
-    kbo_rule_audit_emitf(
-        "foreign_waiver.decision_record",
+    kbo_audit_foreign_waiver_decision_record(
         ok ? "write_record" : "fail",
         ok ? "decision_recorded" : "write_failed",
         source,
-        "\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u,\"score\":%d,"
-        "\"forced\":%d,\"executed\":%d,\"date\":%u,\"window_start\":%u,\"window_end\":%u",
         action,
         team_id,
         player_id,

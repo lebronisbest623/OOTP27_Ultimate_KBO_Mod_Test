@@ -192,6 +192,16 @@ foreach ($Fact in $SourceFacts) {
             -Suggestion "Make the thread owner observe kbo_runtime_threads_should_continue or kbo_runtime_sleep_should_continue." `
             -Data @{ helper = "kbo_runtime_threads_should_continue" }
     }
+
+    if ($Fact.Text -match '(?s)\bkbo_rule_audit_emitf\s*\([^;]*%s[^;]*\)') {
+        Add-Finding `
+            -Rule "native.logging.no-raw-string-audit-fields" `
+            -Severity "error" `
+            -Path $Fact.Path `
+            -Message "Rule audit string fields must use typed KboLogFields builders so JSON escaping stays correct." `
+            -Suggestion "Use kbo_log_field_str/u32/i32/etc. plus kbo_rule_audit_emit_fields instead of kbo_rule_audit_emitf with %s." `
+            -Data @{ helper = "kbo_rule_audit_emit_fields" }
+    }
 }
 
 if (Test-Path -LiteralPath $NativeShell) {

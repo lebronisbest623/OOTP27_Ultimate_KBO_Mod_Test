@@ -111,20 +111,6 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
             (void*)submit_control);
     }
 
-    if (player_id != 0u
-            && submit_control != 0
-            && sender_ptr == submit_control) {
-        uint32_t today = kbo_military_policy_current_yyyymmdd();
-        if (kbo_military_submit_offer_screen_should_block(
-                screen_ptr,
-                player_id,
-                today,
-                "offer_callback_submit")) {
-            KBO_PROFILE_END(profile_no_minor_offer_callback, "no_minor.offer_callback.military_blocked");
-            return 0;
-        }
-    }
-
     OotpFaOfferScreenCallbackProbeFn original_func = (OotpFaOfferScreenCallbackProbeFn)original_func_ptr;
     if (original_func != NULL) {
         result = original_func((void*)screen_ptr, (void*)sender_ptr, callback_id, value);

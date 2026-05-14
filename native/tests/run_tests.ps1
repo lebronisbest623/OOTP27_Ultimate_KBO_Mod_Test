@@ -77,6 +77,8 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\fa_filing\fa_filing_parts\fa_filing_csv_parse.c") `
     (Join-Path $Root "src\fa_salary_snapshot\csv\salary_snapshot_csv_parse.c") `
     (Join-Path $Root "src\core\files\atomic\core_atomic_file.c") `
+    (Join-Path $Root "src\core\logging\event\log_event.c") `
+    (Join-Path $Root "src\core\logging\rule_audit.c") `
     (Join-Path $Root "src\core\policy\core_policy.c") `
     (Join-Path $Root "src\military_service\players\loans\military_native_loan.c") `
     (Join-Path $Root "src\team\assignment\roster_arrays\team_roster_arrays.c") `

@@ -1,16 +1,7 @@
 #include "../hotkey_window_webview_internal.h"
-#include "../../../../military_service/players/team_policy/military_service_team_policy.h"
 
 int kbo_webview_team_action_allowed(uint32_t team_id, const char* source)
 {
-    if (team_id != 0u && kbo_team_id_is_military_service_team(team_id)) {
-        append_logf(
-            "webview team action blocked reason=military_service_team source=%s team=%u",
-            source != NULL ? source : "",
-            team_id);
-        return 0;
-    }
-
     if (kbo_get_allow_all_ui_team_actions_setting()) {
         return 1;
     }

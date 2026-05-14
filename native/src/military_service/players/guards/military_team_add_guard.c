@@ -82,7 +82,7 @@ int kbo_military_team_add_player_should_block(uintptr_t team_ptr, uintptr_t play
     uint32_t active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
     uint32_t team_league_id = *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
 
-    if (!kbo_team_ptr_is_military_service_team(team)) {
+    if (!kbo_team_id_is_military_service_team(team_id)) {
         int serving = active_index >= 0 || (military_active != 0u && days_left > 0);
         if (serving) {
             uint32_t original_team_id = 0u;

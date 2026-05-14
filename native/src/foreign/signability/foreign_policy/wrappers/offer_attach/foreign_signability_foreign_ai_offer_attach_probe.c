@@ -95,36 +95,6 @@ static void* kbo_offer_probe_resolve_rva(uint32_t rva)
     return kbo_resolve_build_specific_rva_ptr(exe, rva);
 }
 
-static int kbo_military_foreign_ai_offer_should_block(
-    uintptr_t player_ptr,
-    uint32_t requester_team_id,
-    const char* source)
-{
-    if (requester_team_id == 0u) {
-        return 0;
-    }
-
-    uint32_t player_id = 0u;
-    if (!kbo_fast_block_fa_candidate_before_original(
-            player_ptr,
-            (int32_t)requester_team_id,
-            source,
-            &player_id)) {
-        return 0;
-    }
-
-    static volatile LONG military_offer_log_count = 0;
-    LONG slot = InterlockedIncrement(&military_offer_log_count);
-    if (slot <= 300) {
-        append_logf(
-            "military service team AI offer blocked source=%s player=%u requester_team=%u",
-            source != NULL ? source : "",
-            player_id,
-            requester_team_id);
-    }
-    return 1;
-}
-
 static int kbo_foreign_ai_offer_attach_should_log(
     uint8_t* player,
     uint32_t player_id,
@@ -382,14 +352,6 @@ __declspec(noinline) void ootp_kbo_foreign_ai_offer_attach_probe_wrapper(
             && memory_range_readable((void*)offer_slot_ptr, sizeof(uintptr_t))) {
         offer_ptr = *(uintptr_t*)offer_slot_ptr;
     }
-    uint32_t offer_team_id = kbo_offer_probe_team_id_from_offer(offer_ptr);
-    if (kbo_military_foreign_ai_offer_should_block(
-            player_ptr,
-            offer_team_id,
-            "ai_offer_attach")) {
-        return;
-    }
-
     if (original_func != NULL) {
         original_func(player_ptr, offer_slot_ptr);
     }
@@ -407,12 +369,6 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_build_probe_wrapper(
 {
     KboOotpForeignAiOfferBuildFn original_func =
         (KboOotpForeignAiOfferBuildFn)kbo_offer_probe_resolve_rva(OOTP27_AI_FA_OFFER_BUILD_FUNC_RVA);
-    if (kbo_military_foreign_ai_offer_should_block(
-            player_ptr,
-            team_id > 0 ? (uint32_t)team_id : 0u,
-            "ai_offer_build")) {
-        return 0u;
-    }
 
     uintptr_t offer_ptr = 0;
     if (original_func != NULL) {
@@ -436,21 +392,6 @@ __declspec(noinline) uint8_t ootp_kbo_foreign_ai_offer_final_gate_probe_wrapper(
 {
     KboOotpForeignAiOfferFinalGateFn original_func =
         (KboOotpForeignAiOfferFinalGateFn)kbo_offer_probe_resolve_rva(OOTP27_AI_FA_OFFER_FINAL_GATE_FUNC_RVA);
-    uint32_t team_id = kbo_offer_probe_team_id_from_ptr(team_ptr);
-    if (kbo_military_foreign_ai_offer_should_block(
-            player_ptr,
-            team_id,
-            "ai_offer_final_gate")) {
-        return 0u;
-    }
-    uint32_t offer_team_id = kbo_offer_probe_team_id_from_offer(offer_ptr);
-    if (offer_team_id != team_id
-            && kbo_military_foreign_ai_offer_should_block(
-                player_ptr,
-                offer_team_id,
-                "ai_offer_final_gate_offer")) {
-        return 0u;
-    }
 
     uint8_t result = 0u;
     if (original_func != NULL) {

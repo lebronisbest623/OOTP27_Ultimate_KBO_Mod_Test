@@ -7,8 +7,6 @@
 #include "../../../../core/logging/core_log.h"
 #include "../../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
-#include "../../../../military_service/players/guards/military_team_add_guard.h"
-#include "../../../../military_service/players/team_policy/military_service_team_policy.h"
 #include "../../../../runtime_memory/runtime_memory.h"
 #include "../../../lookup/team_lookup.h"
 #include "../../team_add_player_guard.h"
@@ -76,25 +74,6 @@ static uint8_t kbo_ai_roster_context_flow_apply_rescue_team_add(
             || (before->selected.current_team_id == team_id
                 && before->selected.active_team_id == team_id
                 && before->selected.league_id == team_league_id)) {
-        return 0u;
-    }
-
-    if (kbo_team_ptr_is_military_service_team(active_team)
-            && kbo_military_team_add_player_should_block((uintptr_t)active_team, before->selected.ptr)) {
-        static volatile LONG military_rescue_block_log_count = 0;
-        LONG block_slot = InterlockedIncrement(&military_rescue_block_log_count);
-        if (block_slot <= 120) {
-            append_logf(
-                "KBO military AI roster rescue team-add blocked: context=%p slot_block=%p target_slot=%u team=%u player=%u current=%u active=%u league=%u",
-                (void*)context_ptr,
-                (void*)slot_block_ptr,
-                target_slot,
-                team_id,
-                before->selected.player_id,
-                before->selected.current_team_id,
-                before->selected.active_team_id,
-                before->selected.league_id);
-        }
         return 0u;
     }
 

@@ -196,19 +196,6 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
             insert_index);
     }
 
-    if (kbo_military_ai_fa_candidate_should_block(player_id, requester_team_id, insert_index)) {
-        insert_index = kbo_ai_fa_status_force_retained_market_candidates(
-            frame_ptr,
-            requester_team_id,
-            candidate_array,
-            insert_index);
-        return kbo_ai_fa_status_force_closed_replacement_market_candidates(
-            frame_ptr,
-            requester_team_id,
-            candidate_array,
-            insert_index);
-    }
-
     if (player_id != 0u
         && requester_team_id != 0u
         && kbo_get_foreign_waiver_current_yyyymmdd(&today)

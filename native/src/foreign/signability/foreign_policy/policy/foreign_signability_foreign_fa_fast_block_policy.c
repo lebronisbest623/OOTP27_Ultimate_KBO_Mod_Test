@@ -17,12 +17,6 @@ int kbo_fast_block_fa_candidate_before_original(
         return 0;
     }
 
-    uint32_t requester_team_id = (uint32_t)requesting_team_id;
-    if (kbo_military_fa_candidate_fast_block(player_ptr, requester_team_id, context, out_player_id)) {
-        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.military");
-        return 1;
-    }
-
     if (player_ptr == 0 || !kbo_player_pointer_plausible(player_ptr)
             || !memory_range_readable((void*)(player_ptr + OOTP27_PLAYER_ID_OFFSET), sizeof(uint32_t))) {
         KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.bad_player");
@@ -39,6 +33,7 @@ int kbo_fast_block_fa_candidate_before_original(
         return 0;
     }
 
+    uint32_t requester_team_id = (uint32_t)requesting_team_id;
     uint32_t today = 0u;
     if (!kbo_get_foreign_waiver_current_yyyymmdd(&today)) {
         KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.no_date");

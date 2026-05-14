@@ -9,8 +9,6 @@
 #include "../../core/logging/core_log.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
-#include "../../military_service/players/guards/military_team_add_guard.h"
-#include "../../military_service/players/team_policy/military_service_team_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../lookup/team_lookup.h"
 #include "ai_roster/internal/team_add_player_guard_ai_roster_internal.h"
@@ -132,51 +130,11 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
     uintptr_t slot_block_ptr = 0u;
     uintptr_t source_vector_ptr = 0u;
     int32_t source_count = -1;
-    uint32_t slot_team_id = 0u;
     if (context_ptr != 0u && slot_index >= 0 && slot_index < 64) {
         slot_block_ptr = kbo_ai_roster_context_slot_block(context_ptr, (uint16_t)slot_index);
-        slot_team_id = kbo_ai_roster_context_slot_team_id(context_ptr, (uint16_t)slot_index);
         if (slot_block_ptr != 0u) {
             source_vector_ptr = slot_block_ptr + KBO_AI_ROSTER_SLOT_BLOCK_CANDIDATE_VECTOR_OFFSET;
             source_count = kbo_pointer_vector_count(source_vector_ptr);
-        }
-    }
-
-    if (slot_team_id != 0u && result_ptr != 0u) {
-        uint8_t* slot_team = find_kbo_team_by_numeric_id_any_league(slot_team_id, 1);
-        if (slot_team != NULL
-                && kbo_team_ptr_is_military_service_team(slot_team)
-                && kbo_player_pointer_plausible(result_ptr)
-                && memory_range_readable((void*)result_ptr, OOTP27_PLAYER_SCAN_BYTES)
-                && !kbo_military_player_has_active_service_assignment(result_ptr, slot_team_id)) {
-            uint32_t player_id = 0u;
-            uint32_t current_team_id = 0u;
-            uint32_t active_team_id = 0u;
-            uint32_t current_league_id = 0u;
-            if (kbo_player_pointer_plausible(result_ptr)
-                    && memory_range_readable((void*)result_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
-                uint8_t* player = (uint8_t*)result_ptr;
-                player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
-                current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-                active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-                current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
-            }
-
-            static volatile LONG military_ai_select_block_log_count = 0;
-            LONG military_slot = InterlockedIncrement(&military_ai_select_block_log_count);
-            if (military_slot <= 300) {
-                append_logf(
-                    "KBO military AI roster select blocked: context=%p slot_index=%d depth_hint=%d slot_team=%u player=%u player_current=%u player_active=%u player_league=%u",
-                    (void*)context_ptr,
-                    slot_index,
-                    depth_hint,
-                    slot_team_id,
-                    player_id,
-                    current_team_id,
-                    active_team_id,
-                    current_league_id);
-            }
-            return 0u;
         }
     }
 
@@ -195,29 +153,6 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
     if (rescue_ptr == 0u || rescue_ptr == result_ptr) {
         return result_ptr;
     }
-    if (slot_team_id != 0u) {
-        uint8_t* slot_team = find_kbo_team_by_numeric_id_any_league(slot_team_id, 1);
-        if (slot_team != NULL
-                && kbo_team_ptr_is_military_service_team(slot_team)
-                && kbo_player_pointer_plausible(rescue_ptr)
-                && memory_range_readable((void*)rescue_ptr, OOTP27_PLAYER_SCAN_BYTES)
-                && !kbo_military_player_has_active_service_assignment(rescue_ptr, slot_team_id)) {
-            static volatile LONG military_ai_rescue_block_log_count = 0;
-            LONG military_slot = InterlockedIncrement(&military_ai_rescue_block_log_count);
-            if (military_slot <= 300) {
-                append_logf(
-                    "KBO military AI roster rescue select blocked: context=%p slot_index=%d depth_hint=%d slot_team=%u native=%p rescue=%p",
-                    (void*)context_ptr,
-                    slot_index,
-                    depth_hint,
-                    slot_team_id,
-                    (void*)result_ptr,
-                    (void*)rescue_ptr);
-            }
-            return result_ptr;
-        }
-    }
-
     uint32_t native_player_id = 0u;
     int native_foreign = 0;
     int32_t native_score_fe0 = 0;
@@ -343,31 +278,6 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
                 &release_pressure_effective,
                 &release_pressure_score,
                 &release_pressure_threshold);
-    }
-
-    if (slot_team_id != 0u && player_id != 0u) {
-        uint8_t* slot_team = find_kbo_team_by_numeric_id_any_league(slot_team_id, 1);
-        if (slot_team != NULL
-                && kbo_team_ptr_is_military_service_team(slot_team)
-                && kbo_military_team_add_player_should_block((uintptr_t)slot_team, player_ptr)) {
-            static volatile LONG military_ai_apply_block_log_count = 0;
-            LONG military_slot = InterlockedIncrement(&military_ai_apply_block_log_count);
-            if (military_slot <= 300) {
-                append_logf(
-                    "KBO military AI roster apply blocked: context=%p slot_index=%d target_slot=%d roster_code=%d slot_team=%u player=%u player_current=%u player_active=%u player_league=%u before_slot_player=%u",
-                    (void*)context_ptr,
-                    slot_index,
-                    target_slot,
-                    roster_code,
-                    slot_team_id,
-                    player_id,
-                    player_plausible ? *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) : 0u,
-                    player_plausible ? *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) : 0u,
-                    player_plausible ? *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET) : 0u,
-                    before_slot_player_id);
-            }
-            return;
-        }
     }
 
     if (original != NULL

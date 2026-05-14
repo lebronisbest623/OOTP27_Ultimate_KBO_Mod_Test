@@ -1,4 +1,5 @@
 #include "../internal/foreign_roster_audit_internal.h"
+#include "../../../core/logging/rule_audit.h"
 
 void audit_foreign_roster_state(const char* source, int write_snapshot)
 {
@@ -10,8 +11,15 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
         static volatile LONG no_vector_log_count = 0;
-        if (InterlockedIncrement(&no_vector_log_count) <= 5) {
+        LONG slot = InterlockedIncrement(&no_vector_log_count);
+        if (slot <= 5) {
             append_log_line("foreign roster audit: no player vector");
+            kbo_rule_audit_emit(
+                "foreign_roster.audit",
+                "skip",
+                "player_vector_unavailable",
+                source != NULL ? source : "foreign_roster_audit",
+                NULL);
         }
         return;
     }
@@ -196,6 +204,25 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
             active_cleared,
             write_snapshot_now,
             g_kbo_foreign_roster_audit_save_path);
+        kbo_rule_audit_emitf(
+            "foreign_roster.audit",
+            baseline_scan ? "baseline" : "record_changes",
+            baseline_scan ? "baseline_scan" : "state_changes",
+            source != NULL ? source : "foreign_roster_audit",
+            "\"scanned\":%d,\"foreign\":%d,\"rostered\":%d,\"active_retained\":%d,\"free\":%d,"
+            "\"changed\":%d,\"new_foreign\":%d,\"current_cleared\":%d,\"active_cleared\":%d,"
+            "\"snapshot\":%d,\"generation\":%u",
+            scanned,
+            foreign,
+            rostered,
+            active_retained,
+            free_or_unassigned,
+            changed,
+            new_foreign,
+            current_cleared,
+            active_cleared,
+            write_snapshot_now,
+            g_kbo_foreign_roster_audit_generation);
     }
 }
 

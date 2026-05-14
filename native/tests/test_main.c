@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #define KBO_FOREIGN_INJURY_SLOT_REGULAR 1
 #define KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA 2
 
@@ -39,6 +42,7 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/core/core_flags/keys/flag_key.h"
 #include "../src/fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
 #include "../src/fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
+#include "../src/core/logging/rule_audit.h"
 #include "../src/core/files/atomic/core_atomic_file.h"
 #include "../src/military_service/players/loans/military_native_loan.h"
 #include "../src/team/assignment/roster_arrays/team_roster_arrays.h"
@@ -937,6 +941,72 @@ static void test_military_native_loan_clear(void)
     printf("test_military_native_loan_clear: PASS\n");
 }
 
+static char g_rule_audit_test_dir[MAX_PATH] = {0};
+
+static void test_rule_audit_ndjson_sink(void)
+{
+    char temp_dir[MAX_PATH] = {0};
+    DWORD temp_len = GetTempPathA(sizeof(temp_dir), temp_dir);
+    assert(temp_len > 0 && temp_len < sizeof(temp_dir));
+    char suffix[64] = {0};
+    snprintf(suffix, sizeof(suffix), "kbo_rule_audit_test_%lu", (unsigned long)GetCurrentProcessId());
+    size_t temp_dir_len = strlen(temp_dir);
+    size_t suffix_len = strlen(suffix);
+    assert(temp_dir_len + suffix_len + 1u < sizeof(g_rule_audit_test_dir));
+    memcpy(g_rule_audit_test_dir, temp_dir, temp_dir_len);
+    memcpy(g_rule_audit_test_dir + temp_dir_len, suffix, suffix_len + 1u);
+    CreateDirectoryA(g_rule_audit_test_dir, NULL);
+
+    char audit_path[MAX_PATH] = {0};
+    const char audit_file_name[] = "\\rule_audit.ndjson";
+    size_t audit_dir_len = strlen(g_rule_audit_test_dir);
+    assert(audit_dir_len + sizeof(audit_file_name) <= sizeof(audit_path));
+    memcpy(audit_path, g_rule_audit_test_dir, audit_dir_len);
+    memcpy(audit_path + audit_dir_len, audit_file_name, sizeof(audit_file_name));
+    DeleteFileA(audit_path);
+
+    kbo_rule_audit_emitf(
+        "native.test",
+        "record",
+        "ok",
+        "native_tests",
+        "\"value\":%d",
+        7);
+
+    HANDLE file = CreateFileA(
+        audit_path,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    assert(file != INVALID_HANDLE_VALUE);
+
+    char buffer[2048] = {0};
+    DWORD bytes_read = 0;
+    BOOL read_ok = ReadFile(file, buffer, sizeof(buffer) - 1u, &bytes_read, NULL);
+    CloseHandle(file);
+    assert(read_ok && bytes_read > 0);
+    buffer[bytes_read] = '\0';
+
+    assert(strstr(buffer, "\"schema\":1") != NULL);
+    assert(strstr(buffer, "\"channel\":\"rule_audit\"") != NULL);
+    assert(strstr(buffer, "\"level\":\"INFO\"") != NULL);
+    assert(strstr(buffer, "\"domain\":\"native.test\"") != NULL);
+    assert(strstr(buffer, "\"event\":\"rule_decision\"") != NULL);
+    assert(strstr(buffer, "\"rule\":\"native.test\"") != NULL);
+    assert(strstr(buffer, "\"decision\":\"record\"") != NULL);
+    assert(strstr(buffer, "\"reason\":\"ok\"") != NULL);
+    assert(strstr(buffer, "\"source\":\"native_tests\"") != NULL);
+    assert(strstr(buffer, "\"value\":7") != NULL);
+    assert(strstr(buffer, "KBO_RULE_AUDIT") == NULL);
+
+    DeleteFileA(audit_path);
+    RemoveDirectoryA(g_rule_audit_test_dir);
+    g_rule_audit_test_dir[0] = '\0';
+}
+
 static void test_team_roster_arrays_contains_player(void)
 {
     size_t team_size = OOTP27_TEAM_PLAYER_IDS_3700_OFFSET
@@ -1402,6 +1472,7 @@ int main(void)
     test_fa_filing_csv_parse();
     test_salary_snapshot_csv_parse();
     test_core_atomic_file_round_trip();
+    test_rule_audit_ndjson_sink();
     test_military_native_loan_on_loan_predicate();
     test_military_native_loan_clear();
     test_team_roster_arrays_contains_player();
@@ -1428,6 +1499,20 @@ int kbo_get_save_scoped_data_file(const char* file_name, char* out, size_t out_s
         out[0] = '\0';
     }
     return 0;
+}
+
+int kbo_get_global_data_file(const char* file_name, char* out, size_t out_size)
+{
+    if (out != NULL && out_size > 0u) {
+        out[0] = '\0';
+    }
+    if (file_name == NULL || file_name[0] == '\0'
+            || g_rule_audit_test_dir[0] == '\0'
+            || out == NULL || out_size == 0u) {
+        return 0;
+    }
+    snprintf(out, out_size, "%s\\%s", g_rule_audit_test_dir, file_name);
+    return out[0] != '\0';
 }
 
 int memory_range_readable(const void* ptr, size_t size)
@@ -1465,6 +1550,12 @@ uint32_t read_u32_leading_number_from_file(const char* filename)
 {
     (void)filename;
     return 0u;
+}
+
+int read_kbo_localappdata_flag_file(const char* file_name)
+{
+    (void)file_name;
+    return 0;
 }
 
 void append_log_line(const char* line)

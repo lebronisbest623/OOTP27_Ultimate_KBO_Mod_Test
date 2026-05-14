@@ -1,4 +1,5 @@
 #include "../fa_requalification_internal.h"
+#include "../../core/logging/rule_audit.h"
 #include "../../core/runtime_tuning/runtime_tuning_policy.h"
 
 int kbo_restore_fa_requalification_team_control(
@@ -98,6 +99,23 @@ int kbo_restore_fa_requalification_team_control(
             old_active_team,
             old_league,
             league_id);
+        kbo_rule_audit_emitf(
+            "fa.requalification.team_control",
+            "restore",
+            "team_control_years_active",
+            source != NULL ? source : "fa_requalification",
+            "\"player_id\":%u,\"team_id\":%u,\"current_year\":%u,\"last_fa_year\":%u,"
+            "\"eligible_year\":%u,\"old_current_team_id\":%u,\"old_active_team_id\":%u,"
+            "\"old_league_id\":%u,\"league_id\":%u",
+            rec->player_id,
+            rec->original_team_id,
+            current_year,
+            rec->last_fa_year,
+            rec->last_fa_year + team_control_years,
+            old_current_team,
+            old_active_team,
+            old_league,
+            league_id);
     } else {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_skip_log_count);
         if (slot <= 120) {
@@ -171,6 +189,18 @@ void kbo_run_fa_requalification_once(const char* source)
         restored += kbo_restore_fa_requalification_team_control(&records[i], current_year, source);
     }
     append_logf("KBO FA requalification pass source=%s records=%d restored=%d today=%u", source != NULL ? source : "", count, restored, today);
+    if (restored > 0) {
+        kbo_rule_audit_emitf(
+            "fa.requalification.pass",
+            "restore",
+            "records_repaired",
+            source != NULL ? source : "fa_requalification",
+            "\"date\":%u,\"current_year\":%u,\"records\":%d,\"restored\":%d",
+            today,
+            current_year,
+            count,
+            restored);
+    }
 }
 
 DWORD WINAPI kbo_fa_requalification_thread(LPVOID parameter)

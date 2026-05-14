@@ -19,6 +19,34 @@
 #include "../internal/foreign_waiver_decisions_state_internal.h"
 #include "../internal/foreign_waiver_decisions_team_internal.h"
 
+static void kbo_audit_foreign_waiver_command(
+    const char* decision,
+    const char* reason,
+    const char* action,
+    int line_no,
+    uint32_t team_id,
+    uint32_t player_id,
+    uint32_t fallback_league)
+{
+    KboLogFields fields;
+    kbo_log_fields_init(&fields);
+    kbo_log_field_i32(&fields, "line", line_no);
+    if (action != NULL && action[0] != '\0') {
+        kbo_log_field_str(&fields, "action", action);
+    }
+    kbo_log_field_u32(&fields, "team_id", team_id);
+    kbo_log_field_u32(&fields, "player_id", player_id);
+    if (fallback_league != 0u) {
+        kbo_log_field_u32(&fields, "fallback_league", fallback_league);
+    }
+    kbo_rule_audit_emit_fields(
+        "foreign_waiver.command",
+        decision,
+        reason,
+        "user",
+        &fields);
+}
+
 static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
 {
     if (line == NULL || line[0] == '\0') {
@@ -77,7 +105,7 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
     uint32_t team_id = field_count > 1 ? kbo_csv_parse_u32_text(fields[1], 10) : 0u;
     uint32_t player_id = field_count > 2 ? kbo_csv_parse_u32_text(fields[2], 10) : 0u;
     if (team_id == 0u || player_id == 0u) {
-        kbo_rule_audit_emitf("foreign_waiver.command", "skip", "malformed_command", "user", "\"line\":%d,\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u", line_no, action_name, team_id, player_id);
+        kbo_audit_foreign_waiver_command("skip", "malformed_command", action_name, line_no, team_id, player_id, 0u);
         append_logf("foreign waiver command line %d malformed: %s", line_no, raw);
         return 0;
     }
@@ -89,7 +117,7 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
 
     uint8_t* destination_team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
     if (destination_team == NULL) {
-        kbo_rule_audit_emitf("foreign_waiver.command", "fail", "team_not_found", "user", "\"line\":%d,\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u", line_no, action_name, team_id, player_id);
+        kbo_audit_foreign_waiver_command("fail", "team_not_found", action_name, line_no, team_id, player_id, 0u);
         append_logf("foreign waiver command line %d failed: team=%u not found", line_no, team_id);
         return 0;
     }
@@ -98,13 +126,13 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
     uint32_t player_current_league = 0;
     uint8_t* player = kbo_find_player_by_id(player_id, &player_current_team, &player_current_league);
     if (player == NULL) {
-        kbo_rule_audit_emitf("foreign_waiver.command", "fail", "player_not_found", "user", "\"line\":%d,\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u", line_no, action_name, team_id, player_id);
+        kbo_audit_foreign_waiver_command("fail", "player_not_found", action_name, line_no, team_id, player_id, 0u);
         append_logf("foreign waiver command line %d failed: player=%u not found", line_no, player_id);
         return 0;
     }
 
     if (!kbo_original_club_priority_window_allows(player, team_id, action_name)) {
-        kbo_rule_audit_emitf("foreign_waiver.command", "skip", "priority_window_blocked", "user", "\"line\":%d,\"action\":\"%s\",\"team_id\":%u,\"player_id\":%u", line_no, action_name, team_id, player_id);
+        kbo_audit_foreign_waiver_command("skip", "priority_window_blocked", action_name, line_no, team_id, player_id, 0u);
         return 0;
     }
 
@@ -112,7 +140,7 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
         uint32_t destination_league = *(uint32_t*)(destination_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
         uint32_t fallback_league = player_current_league != 0 ? player_current_league : destination_league;
         if (!kbo_retain_foreign_player_rights(player, destination_team, fallback_league, player_id, team_id)) {
-            kbo_rule_audit_emitf("foreign_waiver.command", "fail", "retain_failed", "user", "\"line\":%d,\"team_id\":%u,\"player_id\":%u,\"fallback_league\":%u", line_no, team_id, player_id, fallback_league);
+            kbo_audit_foreign_waiver_command("fail", "retain_failed", action_name, line_no, team_id, player_id, fallback_league);
             append_logf("foreign waiver command line %d failed: action=%s team=%u player=%u",
                        line_no, action_name, team_id, player_id);
             return 0;
@@ -121,7 +149,7 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
         append_logf("foreign waiver command line %d executed: action=%s team=%u player=%u",
                    line_no, action_name, team_id, player_id);
         kbo_append_foreign_waiver_decision_record("user", "RETAIN", team_id, player_id, 0, 0, 1);
-        kbo_rule_audit_emitf("foreign_waiver.command", "retain", "user_command", "user", "\"line\":%d,\"team_id\":%u,\"player_id\":%u,\"fallback_league\":%u", line_no, team_id, player_id, fallback_league);
+        kbo_audit_foreign_waiver_command("retain", "user_command", action_name, line_no, team_id, player_id, fallback_league);
         return 1;
     }
 
@@ -130,12 +158,12 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
         append_logf("foreign waiver command line %d executed: action=%s team=%u player=%u",
                    line_no, action_name, team_id, player_id);
         kbo_append_foreign_waiver_decision_record("user", "SKIP", team_id, player_id, 0, 0, 1);
-        kbo_rule_audit_emitf("foreign_waiver.command", "skip_rights", "user_command", "user", "\"line\":%d,\"team_id\":%u,\"player_id\":%u", line_no, team_id, player_id);
+        kbo_audit_foreign_waiver_command("skip_rights", "user_command", action_name, line_no, team_id, player_id, 0u);
         return 1;
     }
 
     if (player_current_team == team_id) {
-        kbo_rule_audit_emitf("foreign_waiver.command", "noop", "player_already_on_team", "user", "\"line\":%d,\"team_id\":%u,\"player_id\":%u", line_no, team_id, player_id);
+        kbo_audit_foreign_waiver_command("noop", "player_already_on_team", action_name, line_no, team_id, player_id, 0u);
         append_logf("foreign waiver command line %d no-op: player=%u already on team=%u", line_no, player_id, team_id);
         return 1;
     }
@@ -143,12 +171,12 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
     uint32_t destination_league = *(uint32_t*)(destination_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
     uint32_t fallback_league = player_current_league != 0 ? player_current_league : destination_league;
     if (fallback_league == 0) {
-        kbo_rule_audit_emitf("foreign_waiver.command", "fail", "fallback_league_unavailable", "user", "\"line\":%d,\"team_id\":%u,\"player_id\":%u", line_no, team_id, player_id);
+        kbo_audit_foreign_waiver_command("fail", "fallback_league_unavailable", action_name, line_no, team_id, player_id, 0u);
         return 0;
     }
 
     if (!kbo_retain_foreign_player_rights(player, destination_team, fallback_league, player_id, team_id)) {
-        kbo_rule_audit_emitf("foreign_waiver.command", "fail", "claim_retain_failed", "user", "\"line\":%d,\"team_id\":%u,\"player_id\":%u,\"fallback_league\":%u", line_no, team_id, player_id, fallback_league);
+        kbo_audit_foreign_waiver_command("fail", "claim_retain_failed", action_name, line_no, team_id, player_id, fallback_league);
         append_logf("foreign waiver command line %d failed: action=%s team=%u player=%u",
                    line_no, action_name, team_id, player_id);
         return 0;
@@ -156,7 +184,7 @@ static int kbo_execute_foreign_waiver_claim(const char* line, int line_no)
     append_logf("foreign waiver command line %d executed: action=%s team=%u player=%u",
                line_no, action_name, team_id, player_id);
     kbo_append_foreign_waiver_decision_record("user", "RETAIN", team_id, player_id, 0, 0, 1);
-    kbo_rule_audit_emitf("foreign_waiver.command", "claim", "user_command", "user", "\"line\":%d,\"team_id\":%u,\"player_id\":%u,\"fallback_league\":%u", line_no, team_id, player_id, fallback_league);
+    kbo_audit_foreign_waiver_command("claim", "user_command", action_name, line_no, team_id, player_id, fallback_league);
     return 1;
 }
 

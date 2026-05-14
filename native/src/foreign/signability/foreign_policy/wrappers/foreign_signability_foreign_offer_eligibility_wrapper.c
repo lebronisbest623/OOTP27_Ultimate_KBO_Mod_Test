@@ -97,15 +97,6 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
 
     kbo_log_asian_quota_offer_probe(player, player_id, team_id, original_result, flag);
 
-    if (kbo_military_offer_eligibility_should_block(
-            player_ptr,
-            team_id,
-            flag,
-            original_result,
-            &player_id)) {
-        return 0;
-    }
-
     uint32_t today = 0u;
     uint32_t holder_team_id = 0u;
     if (player_id == 0u || !kbo_get_foreign_waiver_current_yyyymmdd(&today)) {

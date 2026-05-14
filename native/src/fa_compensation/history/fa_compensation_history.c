@@ -9,6 +9,7 @@
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/logging/rule_audit.h"
 #include "../../core/sql/history_transactions/core_sql_history_transactions.h"
 #include "../../fa_filing/fa_filing.h"
 #include "../../fa_market_classification/api/fa_market_classification.h"
@@ -269,6 +270,41 @@ int kbo_record_fa_compensation_signing(
             recorded.cash_only,
             recorded.protect_count,
             path);
+        kbo_rule_audit_emitf(
+            "fa.compensation.signing",
+            "record_compensation",
+            "compensable_fa_signed",
+            source != NULL ? source : "fa_signing",
+            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"player_id\":%u,\"signing_team_id\":%u,"
+            "\"original_team_id\":%u,\"previous_salary\":%d,\"cash_with_player\":%u,"
+            "\"cash_only\":%u,\"protect_count\":%u,\"requires_player\":%u",
+            recorded.signed_on_yyyymmdd,
+            recorded.season,
+            recorded.league_id,
+            recorded.player_id,
+            recorded.signing_team_id,
+            recorded.original_team_id,
+            recorded.previous_salary,
+            recorded.cash_with_player,
+            recorded.cash_only,
+            recorded.protect_count,
+            (uint32_t)recorded.requires_player_compensation);
+    } else {
+        kbo_rule_audit_emitf(
+            "fa.compensation.signing",
+            "fail",
+            "ledger_append_failed",
+            source != NULL ? source : "fa_signing",
+            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"player_id\":%u,\"signing_team_id\":%u,"
+            "\"original_team_id\":%u,\"previous_salary\":%d,\"cash_only\":%u",
+            recorded.signed_on_yyyymmdd,
+            recorded.season,
+            recorded.league_id,
+            recorded.player_id,
+            recorded.signing_team_id,
+            recorded.original_team_id,
+            recorded.previous_salary,
+            recorded.cash_only);
     }
     KBO_PROFILE_END(profile_fa_comp_record_signing, persisted ? "fa_comp.record_signing.persisted" : "fa_comp.record_signing.not_persisted");
     return persisted;

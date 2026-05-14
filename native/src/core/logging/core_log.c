@@ -2,6 +2,7 @@
 
 #include "../../bootstrap/profiling/profiler.h"
 #include "../files/save_paths/core_save_paths.h"
+#include "event/log_event.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -62,6 +63,7 @@ void append_log_line(const char* message)
     }
 
     CloseHandle(file);
+    kbo_log_runtime_message(KBO_LOG_LEVEL_INFO, "legacy", "message", message);
     if (profile_active) {
         kbo_profiler_end("log.append_line", &profile_start);
     }
