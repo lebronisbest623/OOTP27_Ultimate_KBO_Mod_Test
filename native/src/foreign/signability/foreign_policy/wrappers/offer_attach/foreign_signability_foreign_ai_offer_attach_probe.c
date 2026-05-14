@@ -80,12 +80,6 @@ static uint32_t kbo_offer_probe_team_id_from_ptr(uintptr_t team_ptr)
     return *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
 }
 
-static uint32_t kbo_offer_probe_team_id_from_offer(uintptr_t offer_ptr)
-{
-    int32_t team_id = kbo_offer_read_i32(offer_ptr, KBO_OFFER_TEAM_ID_OFFSET);
-    return team_id > 0 ? (uint32_t)team_id : 0u;
-}
-
 static void* kbo_offer_probe_resolve_rva(uint32_t rva)
 {
     HMODULE exe = GetModuleHandleA(NULL);
@@ -347,11 +341,6 @@ __declspec(noinline) void ootp_kbo_foreign_ai_offer_attach_probe_wrapper(
     uintptr_t original_func_ptr)
 {
     KboOotpForeignAiOfferAttachFn original_func = (KboOotpForeignAiOfferAttachFn)original_func_ptr;
-    uintptr_t offer_ptr = 0;
-    if (offer_slot_ptr != 0
-            && memory_range_readable((void*)offer_slot_ptr, sizeof(uintptr_t))) {
-        offer_ptr = *(uintptr_t*)offer_slot_ptr;
-    }
     if (original_func != NULL) {
         original_func(player_ptr, offer_slot_ptr);
     }
