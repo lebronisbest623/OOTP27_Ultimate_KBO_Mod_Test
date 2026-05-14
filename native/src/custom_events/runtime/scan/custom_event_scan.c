@@ -1,5 +1,6 @@
 #include "../common/custom_events_common.h"
 #include "custom_event_scan.h"
+#include <windows.h>
 #include <stdio.h>
 #include <string.h>
 #include "../../../bootstrap/abi/ootp_offsets.h"
@@ -16,6 +17,18 @@
 #include "../../../team/names/team_string.h"
 #include "../ledger/custom_event_ledger.h"
 #include "../runner/custom_event_runner.h"
+
+static volatile LONG64 g_kbo_custom_event_scan_deferred_log_ms = 0;
+
+static int kbo_custom_event_scan_should_log_deferred(void)
+{
+    ULONGLONG now = GetTickCount64();
+    LONG64 last = InterlockedCompareExchange64(&g_kbo_custom_event_scan_deferred_log_ms, 0, 0);
+    if (last > 0 && now >= (ULONGLONG)last && now - (ULONGLONG)last < 30000ull) {
+        return 0;
+    }
+    return InterlockedCompareExchange64(&g_kbo_custom_event_scan_deferred_log_ms, (LONG64)now, last) == last;
+}
 
 int scan_kbo_custom_events_once(const char* source)
 {
@@ -147,7 +160,7 @@ int scan_kbo_custom_events_once(const char* source)
         }
     }
 
-    if (triggered == 0 && deferred > 0) {
+    if (triggered == 0 && deferred > 0 && kbo_custom_event_scan_should_log_deferred()) {
         kbo_log_runtimef(
             "KBO custom event scan deferred source=%s current=%04u-%02u-%02u deferred=%d count=%d manager=%p vector=%p",
             source != NULL ? source : "",

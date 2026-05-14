@@ -16,6 +16,7 @@
 #include "../core/csv/core_csv.h"
 #include "../core/logging/core_log.h"
 #include "../core/logging/rule_audit.h"
+#include "../custom_events/runtime/dates/custom_event_dates.h"
 #include "../fa_filing/fa_filing.h"
 #include "../fa_filing/fa_filing_parts/fa_filing_csv_write_helpers.h"
 #include "../fa_market_classification/api/fa_market_classification.h"
@@ -351,8 +352,9 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
             &audit_fields);
     } while (0);
 
+    uint32_t news_yyyymmdd = kbo_custom_event_effective_news_date(event_yyyymmdd);
     kbo_emit_fa_declaration_summary_news(
-        event_yyyymmdd,
+        news_yyyymmdd,
         season,
         league_id,
         candidates,
@@ -363,7 +365,7 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         deferred_no_market,
         source != NULL ? source : "fa_declaration_event");
     kbo_emit_fa_declaration_retry_news(
-        event_yyyymmdd,
+        news_yyyymmdd,
         season,
         league_id,
         candidates,

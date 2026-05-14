@@ -13,9 +13,23 @@
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../schedules/independent/independent_team_acquisition_schedule.h"
 
+static volatile LONG64 g_kbo_custom_event_schedule_deferred_log_ms = 0;
+static volatile LONG64 g_kbo_custom_event_scan_deferred_log_ms = 0;
+
+static int kbo_custom_event_monitor_should_log_throttled(volatile LONG64* last_log_ms)
+{
+    ULONGLONG now = GetTickCount64();
+    LONG64 last = InterlockedCompareExchange64(last_log_ms, 0, 0);
+    if (last > 0 && now >= (ULONGLONG)last && now - (ULONGLONG)last < 30000ull) {
+        return 0;
+    }
+    return InterlockedCompareExchange64(last_log_ms, (LONG64)now, last) == last;
+}
+
 void kbo_custom_event_monitor_tick(
     uint32_t* last_scheduled_yyyymmdd,
     uint32_t* last_scanned_yyyymmdd,
+    uint32_t* last_fa_comp_yyyymmdd,
     const char* source)
 {
     uint32_t today_yyyymmdd = 0u;
@@ -46,7 +60,7 @@ void kbo_custom_event_monitor_tick(
                     && (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0 || independent_schedule > 0)) {
                 *last_scanned_yyyymmdd = 0u;
             }
-        } else {
+        } else if (kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_schedule_deferred_log_ms)) {
             kbo_log_runtimef(
                 "KBO custom event schedule deferred reason=state_not_ready today=%u foreign=%d asian=%d cbt=%d independent=%d",
                 today_yyyymmdd,
@@ -56,16 +70,18 @@ void kbo_custom_event_monitor_tick(
                 independent_schedule);
         }
     }
-    if (last_scanned_yyyymmdd != NULL && today_yyyymmdd != *last_scanned_yyyymmdd) {
-        int triggered = scan_kbo_custom_events_once(source);
+    int triggered = scan_kbo_custom_events_once(source);
+    if (triggered >= 0 && last_scanned_yyyymmdd != NULL) {
+        *last_scanned_yyyymmdd = today_yyyymmdd;
+    } else if (triggered < 0 && kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_scan_deferred_log_ms)) {
+        kbo_log_runtimef(
+            "KBO custom event monitor scan deferred reason=state_not_ready today=%u",
+            today_yyyymmdd);
+    }
+
+    if (last_fa_comp_yyyymmdd != NULL && today_yyyymmdd != *last_fa_comp_yyyymmdd) {
         kbo_process_due_fa_compensation_protected_lists(source);
-        if (triggered == 0) {
-            *last_scanned_yyyymmdd = today_yyyymmdd;
-        } else if (triggered < 0) {
-            kbo_log_runtimef(
-                "KBO custom event monitor scan deferred reason=state_not_ready today=%u",
-                today_yyyymmdd);
-        }
+        *last_fa_comp_yyyymmdd = today_yyyymmdd;
     }
 }
 
@@ -76,9 +92,11 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
 
     uint32_t last_scheduled_yyyymmdd = 0u;
     uint32_t last_scanned_yyyymmdd = 0u;
+    uint32_t last_fa_comp_yyyymmdd = 0u;
     kbo_custom_event_monitor_tick(
         &last_scheduled_yyyymmdd,
         &last_scanned_yyyymmdd,
+        &last_fa_comp_yyyymmdd,
         g_kbo_default_event_source);
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->custom_event_monitor_sleep_ms)) {
@@ -87,6 +105,7 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
         kbo_custom_event_monitor_tick(
             &last_scheduled_yyyymmdd,
             &last_scanned_yyyymmdd,
+            &last_fa_comp_yyyymmdd,
             g_kbo_default_event_source);
     }
     InterlockedExchange(&g_kbo_custom_event_monitor_started, 0);

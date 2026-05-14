@@ -6,6 +6,7 @@
 #include "../names/custom_event_names.h"
 #include "../lookup/custom_event_lookup.h"
 #include "../markers/custom_event_markers.h"
+#include "../dates/custom_event_dates.h"
 #include "../scan/custom_event_scan.h"
 #include "../dispatch/custom_event_dispatch.h"
 #include "../monitor/custom_event_monitor.h"

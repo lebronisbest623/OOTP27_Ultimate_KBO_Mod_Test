@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../custom_events/runtime/dates/custom_event_dates.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/assignment/assignment/team_assignment.h"
@@ -356,19 +357,22 @@ int run_kbo_custom_military_event(
         source);
     uint32_t event_yyyymmdd =
         event_year * 10000u + event_month * 100u + event_day;
+    uint32_t news_yyyymmdd = kbo_custom_event_effective_news_date(event_yyyymmdd);
     int news_created = 0;
     if (routed > 0) {
         news_created = kbo_emit_military_selection_news(
-            event_yyyymmdd,
+            news_yyyymmdd,
             news_entries,
             routed,
             source);
     }
     kbo_log_runtimef(
-        "KBO military selection reached source=%s event=%s year=%u routed=%d seeded=%d returned=%d refreshed=%d news=%d queued_left=%d",
+        "KBO military selection reached source=%s event=%s year=%u event_date=%u news_date=%u routed=%d seeded=%d returned=%d refreshed=%d news=%d queued_left=%d",
         source != NULL ? source : "",
         event_name != NULL ? event_name : "",
         event_year,
+        event_yyyymmdd,
+        news_yyyymmdd,
         routed,
         seeded,
         returned,

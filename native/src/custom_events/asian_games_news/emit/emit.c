@@ -4,7 +4,6 @@
 #include <string.h>
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/logging/core_log.h"
-#include "../../../core/dates/core_current_date.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
@@ -128,17 +127,6 @@ int kbo_emit_asian_games_news(uint32_t event_yyyymmdd, const char* template_pref
 
 uint32_t kbo_asian_games_effective_action_date(uint32_t event_yyyymmdd)
 {
-    uint32_t current_year = 0u;
-    uint32_t current_month = 0u;
-    uint32_t current_day = 0u;
-    if (!kbo_current_date_is_valid(&current_year, &current_month, &current_day)) {
-        return event_yyyymmdd;
-    }
-
-    uint32_t current_yyyymmdd = current_year * 10000u + current_month * 100u + current_day;
-    if (event_yyyymmdd == 0u || current_yyyymmdd > event_yyyymmdd) {
-        return current_yyyymmdd;
-    }
-    return event_yyyymmdd;
+    return kbo_custom_event_effective_news_date(event_yyyymmdd);
 }
 

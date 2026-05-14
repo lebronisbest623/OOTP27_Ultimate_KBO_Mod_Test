@@ -7,6 +7,7 @@
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/csv/core_csv.h"
+#include "../../custom_events/runtime/dates/custom_event_dates.h"
 #include "../../core/news/live/core_live_news.h"
 #include "../../core/news/templates/core_news_templates.h"
 #include "../../core/logging/core_log.h"
@@ -172,6 +173,7 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
         return 0;
     }
 
+    uint32_t news_yyyymmdd = kbo_custom_event_effective_news_date(event_yyyymmdd);
     char body[1024] = {0};
     kbo_load_foreign_waiver_rights();
     if (!kbo_build_foreign_waiver_result_body(body, sizeof(body), event_yyyymmdd, source)) {
@@ -216,9 +218,9 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
     }
 
     int created = create_kbo_native_live_news_with_body(
-        event_yyyymmdd / 10000u,
-        (event_yyyymmdd / 100u) % 100u,
-        event_yyyymmdd % 100u,
+        news_yyyymmdd / 10000u,
+        (news_yyyymmdd / 100u) % 100u,
+        news_yyyymmdd % 100u,
         league_id,
         OOTP27_EVENT_TYPE_CUSTOM_EVENT,
         title,
@@ -227,15 +229,17 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
     kbo_record_foreign_waiver_announcement_body(event_yyyymmdd, source, body);
     g_kbo_foreign_waiver_last_result_announcement = event_yyyymmdd;
     kbo_log_runtimef(
-        "foreign reserve rights: result announcement source=%s date=%u created=%d mode=file_recorded_native_news_disabled body=%s",
+        "foreign reserve rights: result announcement source=%s event_date=%u news_date=%u created=%d mode=file_recorded_native_news_disabled body=%s",
         source != NULL ? source : "",
         event_yyyymmdd,
+        news_yyyymmdd,
         created,
         body);
         do {
         KboLogFields audit_fields;
         kbo_log_fields_init(&audit_fields);
         kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+        kbo_log_field_u32(&audit_fields, "news_date", news_yyyymmdd);
         kbo_log_field_u32(&audit_fields, "league_id", league_id);
         kbo_log_field_i32(&audit_fields, "created", created);
         kbo_rule_audit_emit_fields(

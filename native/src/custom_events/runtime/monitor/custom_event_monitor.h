@@ -5,7 +5,11 @@
 #include <stdint.h>
 #include <windows.h>
 
-void kbo_custom_event_monitor_tick(uint32_t* last_scheduled_yyyymmdd, uint32_t* last_scanned_yyyymmdd, const char* source);
+void kbo_custom_event_monitor_tick(
+    uint32_t* last_scheduled_yyyymmdd,
+    uint32_t* last_scanned_yyyymmdd,
+    uint32_t* last_fa_comp_yyyymmdd,
+    const char* source);
 DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter);
 int start_kbo_custom_event_monitor(void);
 
