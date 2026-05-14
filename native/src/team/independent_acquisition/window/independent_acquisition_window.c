@@ -8,14 +8,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../bootstrap/abi/ootp_offsets.h"
-#include "../../core/core_league_context_parts/api/league_context_lookup.h"
-#include "../../custom_events/runtime/dates/custom_event_dates.h"
-#include "../../core/files/save_paths/core_save_paths.h"
-#include "../../core/logging/core_log.h"
-#include "../../core/news/live/core_live_news.h"
-#include "../../core/news/templates/core_news_templates.h"
-#include "../../foreign/common/policy/foreign_waiver_policy.h"
+#include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../../custom_events/runtime/dates/custom_event_dates.h"
+#include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/logging/core_log.h"
+#include "../../../core/news/live/core_live_news.h"
+#include "../../../core/news/templates/core_news_templates.h"
+#include "../../../foreign/common/policy/foreign_waiver_policy.h"
 
 static volatile LONG g_kbo_independent_team_acquisition_open_date = 0;
 

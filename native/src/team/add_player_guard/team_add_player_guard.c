@@ -14,7 +14,7 @@
 #include "../../runtime_memory/runtime_memory.h"
 #include "../assignment/org_query/team_org_assignment_query.h"
 #include "../lookup/team_lookup.h"
-#include "foreign_policy/team_add_player_guard_foreign_purchase_restore.h"
+#include "foreign_policy/purchase_restore/team_add_player_guard_foreign_purchase_restore.h"
 #include "foreign_policy/retention_trace/team_add_player_guard_foreign_retention_trace.h"
 #include "internal/team_add_player_guard_internal.h"
 #include "original_call/team_add_player_guard_original_call.h"

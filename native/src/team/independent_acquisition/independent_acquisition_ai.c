@@ -23,7 +23,7 @@
 #include "../classification/team_classification.h"
 #include "../control/team_human_control.h"
 #include "../lookup/team_lookup.h"
-#include "independent_acquisition_window.h"
+#include "window/independent_acquisition_window.h"
 
 static volatile LONG g_kbo_independent_acquisition_ai_last_run_date = 0;
 

@@ -9,7 +9,7 @@
 #include "../../../core/dates/core_text_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../runtime_memory/runtime_memory.h"
-#include "../../../team/independent_acquisition/independent_acquisition_window.h"
+#include "../../../team/independent_acquisition/window/independent_acquisition_window.h"
 #include "../names/custom_event_names.h"
 
 int kbo_dispatch_custom_event(

@@ -2,16 +2,16 @@
 #include <windows.h>
 #include <stdint.h>
 
-#include "../../../bootstrap/abi/ootp_offsets.h"
-#include "../../../core/logging/core_log.h"
-#include "../../../foreign/common/dates/foreign_waiver_date.h"
-#include "../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
-#include "../../../foreign/retention_guard/foreign_retention_guard.h"
-#include "../../../foreign/rights/query/foreign_waiver_rights_query.h"
-#include "../../../runtime_memory/runtime_memory.h"
-#include "../../assignment/assignment/team_assignment.h"
-#include "../../assignment/roster_arrays/team_roster_arrays.h"
-#include "../../lookup/team_lookup.h"
+#include "../../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../../core/logging/core_log.h"
+#include "../../../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../../../foreign/retention_guard/foreign_retention_guard.h"
+#include "../../../../foreign/rights/query/foreign_waiver_rights_query.h"
+#include "../../../../runtime_memory/runtime_memory.h"
+#include "../../../assignment/assignment/team_assignment.h"
+#include "../../../assignment/roster_arrays/team_roster_arrays.h"
+#include "../../../lookup/team_lookup.h"
 #include "team_add_player_guard_foreign_purchase_restore.h"
 
 static int kbo_team_add_restore_active_foreign_right_after_blocked_purchase(

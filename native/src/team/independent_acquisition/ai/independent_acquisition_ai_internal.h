@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "../independent_acquisition_window.h"
+#include "../window/independent_acquisition_window.h"
 #include "../../classification/team_classification.h"
 
 #define KBO_INDEPENDENT_ACQUISITION_REQUEST_FILE "independent_acquisition_requests.jsonl"
