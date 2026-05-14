@@ -12,6 +12,7 @@
 #include "../../../../controller/foreign_ai_controller.h"
 #include "../../../../quota/candidates/foreign_quota_retention_opportunity_probe.h"
 #include "../../../../rights/query/foreign_waiver_rights_query.h"
+#include "../../../../../military_service/selection/fa_policy/military_fa_policy.h"
 
 static int kbo_foreign_ai_offer_candidate_priority_enabled(void)
 {
@@ -120,8 +121,29 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_candidate_priority_wrap
     uintptr_t candidate_player_ptr)
 {
     if (candidate_player_ptr == 0
-            || !kbo_foreign_ai_offer_candidate_priority_enabled()
             || !memory_range_readable((void*)candidate_player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
+        return candidate_player_ptr;
+    }
+
+    uint32_t team_id = kbo_offer_candidate_priority_team_id(frame_ptr);
+    uint32_t candidate_id = 0u;
+    if (kbo_military_fa_candidate_fast_block(
+            candidate_player_ptr,
+            team_id,
+            "ai_offer_candidate_priority",
+            &candidate_id)) {
+        static volatile LONG military_candidate_log_count = 0;
+        LONG slot = InterlockedIncrement(&military_candidate_log_count);
+        if (slot <= 300) {
+            append_logf(
+                "military service team AI offer candidate skipped player=%u requester_team=%u",
+                candidate_id,
+                team_id);
+        }
+        return 0u;
+    }
+
+    if (!kbo_foreign_ai_offer_candidate_priority_enabled()) {
         return candidate_player_ptr;
     }
 
@@ -130,13 +152,12 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_candidate_priority_wrap
         return candidate_player_ptr;
     }
 
-    uint32_t team_id = kbo_offer_candidate_priority_team_id(frame_ptr);
     uint32_t today = 0u;
     if (team_id == 0u || !kbo_get_foreign_waiver_current_yyyymmdd(&today) || today == 0u) {
         return candidate_player_ptr;
     }
 
-    uint32_t candidate_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ID_OFFSET);
+    candidate_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ID_OFFSET);
     if (candidate_id == 0u) {
         return candidate_player_ptr;
     }

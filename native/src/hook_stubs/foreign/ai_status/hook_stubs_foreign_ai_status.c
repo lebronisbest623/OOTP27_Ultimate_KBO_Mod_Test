@@ -119,6 +119,11 @@ uint8_t* build_kbo_foreign_ai_offer_candidate_priority_stub(void* success_contin
         0,0,0,0,0,0,0,0,
         0xFF, 0xD0,                                     // call rax
         0x48, 0x83, 0xC4, 0x20,                         // add rsp,0x20
+        0x48, 0x85, 0xC0,                               // test rax,rax
+        0x75, 0x0D,                                     // jne have candidate
+        0x49, 0xBB,                                     // mov r11,skip_continuation
+        0,0,0,0,0,0,0,0,
+        0x41, 0xFF, 0xE3,                               // jmp r11
         0x49, 0x89, 0xC4,                               // mov r12,rax
         0x4C, 0x89, 0x65, 0xA0,                         // mov [rbp-0x60],r12
         0x41, 0x80, 0x7C, 0x24, 0x41, 0x00,             // cmp byte ptr [r12+0x41],0
@@ -134,8 +139,9 @@ uint8_t* build_kbo_foreign_ai_offer_candidate_priority_stub(void* success_contin
     };
 
     write_u64(&code[12], (uint64_t)(uintptr_t)&ootp_kbo_foreign_ai_offer_candidate_priority_wrapper);
-    write_u64(&code[47], (uint64_t)(uintptr_t)success_continuation);
-    write_u64(&code[60], (uint64_t)(uintptr_t)skip_continuation);
+    write_u64(&code[33], (uint64_t)(uintptr_t)skip_continuation);
+    write_u64(&code[65], (uint64_t)(uintptr_t)success_continuation);
+    write_u64(&code[78], (uint64_t)(uintptr_t)skip_continuation);
 
     uint8_t* memory = (uint8_t*)VirtualAlloc(NULL, sizeof(code), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     if (memory == NULL) {
