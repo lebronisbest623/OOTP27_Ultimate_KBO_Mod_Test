@@ -87,7 +87,19 @@ static int kbo_collect_fa_market_classifications_internal(
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        kbo_rule_audit_emitf("fa_market.classification.scan", "skip", "player_vector_unavailable", source, "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u", requested_league_id, league_id, today);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "requested_league_id", requested_league_id);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_u32(&audit_fields, "today", today);
+            kbo_rule_audit_emit_fields(
+                "fa_market.classification.scan",
+                "skip",
+                "player_vector_unavailable",
+                source,
+                &audit_fields);
+        } while (0);
         append_log_line("FA market classification: no player vector");
         return 0;
     }
@@ -115,7 +127,19 @@ static int kbo_collect_fa_market_classifications_internal(
         if (salary_grades != NULL) {
             HeapFree(GetProcessHeap(), 0, salary_grades);
         }
-        kbo_rule_audit_emitf("fa_market.classification.scan", "fail", "allocation_failed", source, "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u", requested_league_id, league_id, today);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "requested_league_id", requested_league_id);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_u32(&audit_fields, "today", today);
+            kbo_rule_audit_emit_fields(
+                "fa_market.classification.scan",
+                "fail",
+                "allocation_failed",
+                source,
+                &audit_fields);
+        } while (0);
         append_log_line("FA market classification: allocation failed");
         return 0;
     }
@@ -277,29 +301,30 @@ static int kbo_collect_fa_market_classifications_internal(
             (unsigned long long)total_ms);
     }
     if (!interactive_ui) {
-        kbo_rule_audit_emitf(
-            "fa_market.classification.scan",
-            row_count > 0 ? "classify" : "scan_empty",
-            row_count > 0 ? "candidates_classified" : "no_candidates",
-            source,
-            "\"requested_league_id\":%u,\"league_id\":%u,\"today\":%u,\"current_year\":%u,"
-            "\"rows\":%d,\"candidates\":%d,\"scanned\":%d,\"truncated\":%d,"
-            "\"seed_count\":%d,\"requalification_count\":%d,\"salary_snapshot\":%d,"
-            "\"write_csv\":%d,\"csv_written\":%d,\"total_ms\":%llu",
-            requested_league_id,
-            league_id,
-            today,
-            current_year,
-            row_count,
-            candidate_count,
-            scanned,
-            truncated,
-            seed_count,
-            requalification_count,
-            salary_grade_count,
-            write_csv,
-            summary != NULL ? summary->csv_written : 0,
-            (unsigned long long)total_ms);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "requested_league_id", requested_league_id);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_u32(&audit_fields, "today", today);
+            kbo_log_field_u32(&audit_fields, "current_year", current_year);
+            kbo_log_field_i32(&audit_fields, "rows", row_count);
+            kbo_log_field_i32(&audit_fields, "candidates", candidate_count);
+            kbo_log_field_i32(&audit_fields, "scanned", scanned);
+            kbo_log_field_i32(&audit_fields, "truncated", truncated);
+            kbo_log_field_i32(&audit_fields, "seed_count", seed_count);
+            kbo_log_field_i32(&audit_fields, "requalification_count", requalification_count);
+            kbo_log_field_i32(&audit_fields, "salary_snapshot", salary_grade_count);
+            kbo_log_field_i32(&audit_fields, "write_csv", write_csv);
+            kbo_log_field_i32(&audit_fields, "csv_written", summary != NULL ? summary->csv_written : 0);
+            kbo_log_field_u64(&audit_fields, "total_ms", (unsigned long long)total_ms);
+            kbo_rule_audit_emit_fields(
+                "fa_market.classification.scan",
+                row_count > 0 ? "classify" : "scan_empty",
+                row_count > 0 ? "candidates_classified" : "no_candidates",
+                source,
+                &audit_fields);
+        } while (0);
     }
 
     HeapFree(GetProcessHeap(), 0, seeds);

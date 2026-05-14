@@ -270,41 +270,46 @@ int kbo_record_fa_compensation_signing(
             recorded.cash_only,
             recorded.protect_count,
             path);
-        kbo_rule_audit_emitf(
-            "fa.compensation.signing",
-            "record_compensation",
-            "compensable_fa_signed",
-            source != NULL ? source : "fa_signing",
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"player_id\":%u,\"signing_team_id\":%u,"
-            "\"original_team_id\":%u,\"previous_salary\":%d,\"cash_with_player\":%u,"
-            "\"cash_only\":%u,\"protect_count\":%u,\"requires_player\":%u",
-            recorded.signed_on_yyyymmdd,
-            recorded.season,
-            recorded.league_id,
-            recorded.player_id,
-            recorded.signing_team_id,
-            recorded.original_team_id,
-            recorded.previous_salary,
-            recorded.cash_with_player,
-            recorded.cash_only,
-            recorded.protect_count,
-            (uint32_t)recorded.requires_player_compensation);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", recorded.signed_on_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "season", recorded.season);
+            kbo_log_field_u32(&audit_fields, "league_id", recorded.league_id);
+            kbo_log_field_u32(&audit_fields, "player_id", recorded.player_id);
+            kbo_log_field_u32(&audit_fields, "signing_team_id", recorded.signing_team_id);
+            kbo_log_field_u32(&audit_fields, "original_team_id", recorded.original_team_id);
+            kbo_log_field_i32(&audit_fields, "previous_salary", recorded.previous_salary);
+            kbo_log_field_u32(&audit_fields, "cash_with_player", recorded.cash_with_player);
+            kbo_log_field_u32(&audit_fields, "cash_only", recorded.cash_only);
+            kbo_log_field_u32(&audit_fields, "protect_count", recorded.protect_count);
+            kbo_log_field_u32(&audit_fields, "requires_player", (uint32_t)recorded.requires_player_compensation);
+            kbo_rule_audit_emit_fields(
+                "fa.compensation.signing",
+                "record_compensation",
+                "compensable_fa_signed",
+                source != NULL ? source : "fa_signing",
+                &audit_fields);
+        } while (0);
     } else {
-        kbo_rule_audit_emitf(
-            "fa.compensation.signing",
-            "fail",
-            "ledger_append_failed",
-            source != NULL ? source : "fa_signing",
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"player_id\":%u,\"signing_team_id\":%u,"
-            "\"original_team_id\":%u,\"previous_salary\":%d,\"cash_only\":%u",
-            recorded.signed_on_yyyymmdd,
-            recorded.season,
-            recorded.league_id,
-            recorded.player_id,
-            recorded.signing_team_id,
-            recorded.original_team_id,
-            recorded.previous_salary,
-            recorded.cash_only);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", recorded.signed_on_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "season", recorded.season);
+            kbo_log_field_u32(&audit_fields, "league_id", recorded.league_id);
+            kbo_log_field_u32(&audit_fields, "player_id", recorded.player_id);
+            kbo_log_field_u32(&audit_fields, "signing_team_id", recorded.signing_team_id);
+            kbo_log_field_u32(&audit_fields, "original_team_id", recorded.original_team_id);
+            kbo_log_field_i32(&audit_fields, "previous_salary", recorded.previous_salary);
+            kbo_log_field_u32(&audit_fields, "cash_only", recorded.cash_only);
+            kbo_rule_audit_emit_fields(
+                "fa.compensation.signing",
+                "fail",
+                "ledger_append_failed",
+                source != NULL ? source : "fa_signing",
+                &audit_fields);
+        } while (0);
     }
     KBO_PROFILE_END(profile_fa_comp_record_signing, persisted ? "fa_comp.record_signing.persisted" : "fa_comp.record_signing.not_persisted");
     return persisted;

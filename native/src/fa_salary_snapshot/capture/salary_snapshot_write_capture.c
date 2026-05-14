@@ -7,6 +7,7 @@
 
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../bootstrap/profiling/profiler.h"
+#include "../../core/files/atomic/core_atomic_file.h"
 #include "../../core/logging/core_log.h"
 #include "../../fa_market_classification/policy/fa_market_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
@@ -87,7 +88,8 @@ int kbo_fa_salary_snapshot_write_csv(
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("KBO FA salary snapshot failed open path=%s gle=%lu", path, GetLastError());
         return 0;
@@ -152,7 +154,10 @@ int kbo_fa_salary_snapshot_write_csv(
         WriteFile(file, "\r\n", 2, &written, NULL);
     }
 
-    CloseHandle(file);
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        append_logf("KBO FA salary snapshot atomic commit failed path=%s gle=%lu", path, GetLastError());
+        return 0;
+    }
     if (out_path != NULL && out_path_size > 0) {
         snprintf(out_path, out_path_size, "%s", path);
     }

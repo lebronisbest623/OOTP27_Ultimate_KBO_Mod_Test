@@ -16,23 +16,25 @@ void kbo_cbt_audit_process(
     int violations,
     int record_count)
 {
-    kbo_rule_audit_emitf(
-        "competitive_balance_tax.process",
-        decision,
-        reason,
-        source,
-        "\"season\":%u,\"news_date\":%u,\"threshold\":%d,\"grade_count\":%d,"
-        "\"team_count\":%d,\"exception_count\":%d,\"league_id\":%u,"
-        "\"violations\":%d,\"record_count\":%d",
-        season,
-        news_yyyymmdd,
-        threshold,
-        grade_count,
-        team_count,
-        exception_count,
-        league_id,
-        violations,
-        record_count);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "news_date", news_yyyymmdd);
+        kbo_log_field_i32(&audit_fields, "threshold", threshold);
+        kbo_log_field_i32(&audit_fields, "grade_count", grade_count);
+        kbo_log_field_i32(&audit_fields, "team_count", team_count);
+        kbo_log_field_i32(&audit_fields, "exception_count", exception_count);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "violations", violations);
+        kbo_log_field_i32(&audit_fields, "record_count", record_count);
+        kbo_rule_audit_emit_fields(
+            "competitive_balance_tax.process",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 void kbo_cbt_audit_team(
@@ -50,24 +52,26 @@ void kbo_cbt_audit_team(
     int draft_penalty,
     int32_t exception_credit)
 {
-    kbo_rule_audit_emitf(
-        "competitive_balance_tax.process.team",
-        decision,
-        reason,
-        source,
-        "\"season\":%u,\"team_id\":%u,\"payroll\":%d,\"threshold\":%d,"
-        "\"overage\":%d,\"tax_rate\":%u,\"tax_amount\":%d,\"consecutive\":%u,"
-        "\"draft_penalty\":%d,\"exception_credit\":%d",
-        season,
-        team_id,
-        payroll,
-        threshold,
-        overage,
-        tax_rate,
-        tax_amount,
-        consecutive_count,
-        draft_penalty,
-        exception_credit);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "team_id", team_id);
+        kbo_log_field_i32(&audit_fields, "payroll", payroll);
+        kbo_log_field_i32(&audit_fields, "threshold", threshold);
+        kbo_log_field_i32(&audit_fields, "overage", overage);
+        kbo_log_field_u32(&audit_fields, "tax_rate", tax_rate);
+        kbo_log_field_i32(&audit_fields, "tax_amount", tax_amount);
+        kbo_log_field_u32(&audit_fields, "consecutive", consecutive_count);
+        kbo_log_field_i32(&audit_fields, "draft_penalty", draft_penalty);
+        kbo_log_field_i32(&audit_fields, "exception_credit", exception_credit);
+        kbo_rule_audit_emit_fields(
+            "competitive_balance_tax.process.team",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 void kbo_cbt_audit_summary_news(
@@ -79,16 +83,20 @@ void kbo_cbt_audit_summary_news(
     int team_count,
     int violations)
 {
-    kbo_rule_audit_emitf(
-        "competitive_balance_tax.process.summary_news",
-        decision,
-        reason,
-        source,
-        "\"season\":%u,\"league_id\":%u,\"team_count\":%d,\"violations\":%d",
-        season,
-        league_id,
-        team_count,
-        violations);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "team_count", team_count);
+        kbo_log_field_i32(&audit_fields, "violations", violations);
+        kbo_rule_audit_emit_fields(
+            "competitive_balance_tax.process.summary_news",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 void kbo_cbt_audit_event_schedule(
@@ -107,26 +115,27 @@ void kbo_cbt_audit_event_schedule(
     int pruned_announcement,
     int ready)
 {
-    kbo_rule_audit_emitf(
-        "competitive_balance_tax.event_schedule",
-        decision,
-        reason,
-        source,
-        "\"season\":%u,\"date\":%u,\"league_id\":%u,\"opening_day\":%u,"
-        "\"deadline\":%u,\"announcement\":%u,\"created_deadline\":%d,"
-        "\"created_announcement\":%d,\"pruned_deadline\":%d,"
-        "\"pruned_announcement\":%d,\"ready\":%d",
-        season,
-        today_yyyymmdd,
-        league_id,
-        opening_day,
-        deadline,
-        announcement,
-        created_deadline,
-        created_announcement,
-        pruned_deadline,
-        pruned_announcement,
-        ready);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "date", today_yyyymmdd);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_u32(&audit_fields, "opening_day", opening_day);
+        kbo_log_field_u32(&audit_fields, "deadline", deadline);
+        kbo_log_field_u32(&audit_fields, "announcement", announcement);
+        kbo_log_field_i32(&audit_fields, "created_deadline", created_deadline);
+        kbo_log_field_i32(&audit_fields, "created_announcement", created_announcement);
+        kbo_log_field_i32(&audit_fields, "pruned_deadline", pruned_deadline);
+        kbo_log_field_i32(&audit_fields, "pruned_announcement", pruned_announcement);
+        kbo_log_field_i32(&audit_fields, "ready", ready);
+        kbo_rule_audit_emit_fields(
+            "competitive_balance_tax.event_schedule",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 void kbo_cbt_audit_event_handler(
@@ -136,12 +145,16 @@ void kbo_cbt_audit_event_handler(
     uint32_t event_yyyymmdd,
     uint32_t season)
 {
-    kbo_rule_audit_emitf(
-        "competitive_balance_tax.event_handler",
-        decision,
-        reason,
-        source,
-        "\"event_date\":%u,\"season\":%u",
-        event_yyyymmdd,
-        season);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "event_date", event_yyyymmdd);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_rule_audit_emit_fields(
+            "competitive_balance_tax.event_handler",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }

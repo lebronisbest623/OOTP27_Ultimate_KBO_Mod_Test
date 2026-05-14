@@ -114,7 +114,7 @@ static int kbo_log_fields_append_name(KboLogFields* fields, const char* name)
     return kbo_log_fields_append(fields, prefix);
 }
 
-void kbo_log_field_raw_json(KboLogFields* fields, const char* raw_json_members)
+static void kbo_log_field_raw_json(KboLogFields* fields, const char* raw_json_members)
 {
     if (fields == NULL || raw_json_members == NULL || raw_json_members[0] == '\0') {
         return;
@@ -124,6 +124,17 @@ void kbo_log_field_raw_json(KboLogFields* fields, const char* raw_json_members)
     }
     if (kbo_log_fields_append(fields, raw_json_members)) {
         fields->count++;
+    }
+}
+
+void kbo_log_fields_merge(KboLogFields* fields, const KboLogFields* other)
+{
+    if (fields == NULL || other == NULL || other->json[0] == '\0') {
+        return;
+    }
+    kbo_log_field_raw_json(fields, other->json);
+    if (other->truncated) {
+        fields->truncated = 1;
     }
 }
 
@@ -353,15 +364,6 @@ static int kbo_log_event_emit_raw_internal(const char* file_name, const char* ch
     return wrote_any;
 }
 
-int kbo_log_event_emit_raw(const char* file_name, const char* channel, KboLogLevel level,
-    const char* domain, const char* event, const char* decision, const char* reason,
-    const char* source, const char* fields_json, unsigned sink_flags, size_t max_bytes,
-    int archive_count, const char* mirror_prefix)
-{
-    return kbo_log_event_emit_raw_internal(file_name, channel, level, domain, event, decision, reason,
-        source, fields_json, sink_flags, max_bytes, archive_count, mirror_prefix, 0);
-}
-
 int kbo_log_event_emit(const char* file_name, const char* channel, KboLogLevel level,
     const char* domain, const char* event, const char* decision, const char* reason,
     const char* source, const KboLogFields* fields, unsigned sink_flags, size_t max_bytes,
@@ -372,12 +374,18 @@ int kbo_log_event_emit(const char* file_name, const char* channel, KboLogLevel l
         mirror_prefix, fields != NULL ? fields->truncated : 0);
 }
 
+void kbo_log_runtime_event(KboLogLevel level, const char* domain, const char* event,
+    const char* decision, const char* reason, const char* source, const KboLogFields* fields)
+{
+    kbo_log_event_emit(KBO_LOG_RUNTIME_FILE_NAME, "runtime", level, domain, event, decision, reason,
+        source, fields, KBO_LOG_SINK_GLOBAL, KBO_LOG_RUNTIME_MAX_BYTES,
+        KBO_LOG_DEFAULT_ARCHIVES, NULL);
+}
+
 void kbo_log_runtime_message(KboLogLevel level, const char* domain, const char* event, const char* message)
 {
     KboLogFields fields;
     kbo_log_fields_init(&fields);
     kbo_log_field_str(&fields, "message", message != NULL ? message : "");
-    kbo_log_event_emit(KBO_LOG_RUNTIME_FILE_NAME, "runtime", level, domain, event, NULL, NULL,
-        "append_log_line", &fields, KBO_LOG_SINK_GLOBAL, KBO_LOG_RUNTIME_MAX_BYTES,
-        KBO_LOG_DEFAULT_ARCHIVES, NULL);
+    kbo_log_runtime_event(level, domain, event, NULL, NULL, "append_log_line", &fields);
 }

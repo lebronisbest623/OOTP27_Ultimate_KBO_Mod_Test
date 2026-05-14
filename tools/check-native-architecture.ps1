@@ -193,14 +193,26 @@ foreach ($Fact in $SourceFacts) {
             -Data @{ helper = "kbo_runtime_threads_should_continue" }
     }
 
-    if ($Fact.Text -match '(?s)\bkbo_rule_audit_emitf\s*\([^;]*%s[^;]*\)') {
+    if ($Fact.Text -match '\bkbo_rule_audit_emitf\s*\(' -or $Fact.Text -match '\bkbo_rule_audit_emit\s*\(') {
         Add-Finding `
-            -Rule "native.logging.no-raw-string-audit-fields" `
+            -Rule "native.logging.no-raw-rule-audit-api" `
             -Severity "error" `
             -Path $Fact.Path `
-            -Message "Rule audit string fields must use typed KboLogFields builders so JSON escaping stays correct." `
-            -Suggestion "Use kbo_log_field_str/u32/i32/etc. plus kbo_rule_audit_emit_fields instead of kbo_rule_audit_emitf with %s." `
+            -Message "Rule audit events must use typed KboLogFields builders instead of raw JSON format helpers." `
+            -Suggestion "Build KboLogFields with kbo_log_field_str/u32/i32/etc. and call kbo_rule_audit_emit_fields." `
             -Data @{ helper = "kbo_rule_audit_emit_fields" }
+    }
+
+    $UsesRawLogApi = $Fact.Text -match '\bkbo_log_event_emit_raw\s*\(' `
+        -or $Fact.Text -match '\bkbo_log_field_raw_json\s*\('
+    if ($Fact.Path -ne "core/logging/event/log_event.c" -and $UsesRawLogApi) {
+        Add-Finding `
+            -Rule "native.logging.no-raw-json-log-api" `
+            -Severity "error" `
+            -Path $Fact.Path `
+            -Message "Structured logging callers must not inject raw JSON fields." `
+            -Suggestion "Use KboLogFields builders or kbo_log_fields_merge for already-built field sets." `
+            -Data @{ helper = "kbo_log_field_str" }
     }
 }
 

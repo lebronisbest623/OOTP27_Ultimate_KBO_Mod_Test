@@ -12,17 +12,21 @@ void kbo_captain_audit_preseason_selection(
     int row_count,
     int selected_count)
 {
-    kbo_rule_audit_emitf(
-        "captain.preseason.selection",
-        decision,
-        reason,
-        source,
-        "\"date\":%u,\"season\":%u,\"league_id\":%u,\"rows\":%d,\"selected\":%d",
-        date,
-        season,
-        league_id,
-        row_count,
-        selected_count);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", date);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "rows", row_count);
+        kbo_log_field_i32(&audit_fields, "selected", selected_count);
+        kbo_rule_audit_emit_fields(
+            "captain.preseason.selection",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 void kbo_captain_audit_preseason_bootstrap(
@@ -34,16 +38,20 @@ void kbo_captain_audit_preseason_bootstrap(
     uint32_t league_id,
     uint8_t phase)
 {
-    kbo_rule_audit_emitf(
-        "captain.preseason.bootstrap",
-        decision,
-        reason,
-        source,
-        "\"date\":%u,\"season\":%u,\"league_id\":%u,\"phase\":%u",
-        date,
-        season,
-        league_id,
-        (unsigned)phase);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", date);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_u32(&audit_fields, "phase", (unsigned)phase);
+        kbo_rule_audit_emit_fields(
+            "captain.preseason.bootstrap",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 void kbo_captain_audit_seed_startup(
@@ -58,18 +66,21 @@ void kbo_captain_audit_seed_startup(
     int csv_exists,
     int summary_rows)
 {
-    kbo_rule_audit_emitf(
-        "captain.seed_startup",
-        decision,
-        reason,
-        source,
-        "\"date\":%u,\"season\":%u,\"league_id\":%u,\"startup_window\":%d,"
-        "\"seed_available\":%d,\"csv_exists\":%d,\"summary_rows\":%d",
-        date,
-        season,
-        league_id,
-        startup_window,
-        seed_available,
-        csv_exists,
-        summary_rows);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", date);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "startup_window", startup_window);
+        kbo_log_field_i32(&audit_fields, "seed_available", seed_available);
+        kbo_log_field_i32(&audit_fields, "csv_exists", csv_exists);
+        kbo_log_field_i32(&audit_fields, "summary_rows", summary_rows);
+        kbo_rule_audit_emit_fields(
+            "captain.seed_startup",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }

@@ -60,7 +60,22 @@ int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryR
         current_team_id,
         active_team_id,
         original_team_id);
-    kbo_rule_audit_emitf("foreign_injury.replacement.player", "restore_active_replacement", "active_slot_player_off_roster", source, "\"team_id\":%u,\"player_id\":%u,\"added_arrays\":%d,\"before_current_team\":%u,\"before_active_team\":%u,\"before_original_team\":%u", rec->team_id, rec->replacement_player_id, added, current_team_id, active_team_id, original_team_id);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "team_id", rec->team_id);
+        kbo_log_field_u32(&audit_fields, "player_id", rec->replacement_player_id);
+        kbo_log_field_i32(&audit_fields, "added_arrays", added);
+        kbo_log_field_u32(&audit_fields, "before_current_team", current_team_id);
+        kbo_log_field_u32(&audit_fields, "before_active_team", active_team_id);
+        kbo_log_field_u32(&audit_fields, "before_original_team", original_team_id);
+        kbo_rule_audit_emit_fields(
+            "foreign_injury.replacement.player",
+            "restore_active_replacement",
+            "active_slot_player_off_roster",
+            source,
+            &audit_fields);
+    } while (0);
     return 1;
 }
 
@@ -213,6 +228,22 @@ int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t pla
         (uint32_t)old_contract_level,
         old_contract_status,
         current_non_kbo_assignment);
-    kbo_rule_audit_emitf("foreign_injury.replacement.player", "release_replacement", "injured_player_returned", source, "\"team_id\":%u,\"player_id\":%u,\"removed_arrays\":%d,\"before_current_team\":%u,\"before_active_team\":%u,\"before_original_team\":%u,\"non_kbo_repair\":%d", team_id, player_id, removed, current_team_id, active_team_id, original_team_id, current_non_kbo_assignment);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "team_id", team_id);
+        kbo_log_field_u32(&audit_fields, "player_id", player_id);
+        kbo_log_field_i32(&audit_fields, "removed_arrays", removed);
+        kbo_log_field_u32(&audit_fields, "before_current_team", current_team_id);
+        kbo_log_field_u32(&audit_fields, "before_active_team", active_team_id);
+        kbo_log_field_u32(&audit_fields, "before_original_team", original_team_id);
+        kbo_log_field_i32(&audit_fields, "non_kbo_repair", current_non_kbo_assignment);
+        kbo_rule_audit_emit_fields(
+            "foreign_injury.replacement.player",
+            "release_replacement",
+            "injured_player_returned",
+            source,
+            &audit_fields);
+    } while (0);
     return 1;
 }

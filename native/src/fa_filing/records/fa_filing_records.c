@@ -1,6 +1,7 @@
 #include "../fa_filing_internal.h"
 #include "../../build_verify/build_verify.h"
 #include "../../core/csv/core_csv.h"
+#include "../../core/files/atomic/core_atomic_file.h"
 
 int kbo_fa_filing_negative_cache_contains(uint32_t player_id)
 {
@@ -131,7 +132,8 @@ int kbo_write_fa_filing_records_unlocked(
         snprintf(out_path, out_path_size, "%s", path);
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("KBO FA filing csv open failed path=%s gle=%lu", path, GetLastError());
         return 0;
@@ -163,7 +165,10 @@ int kbo_write_fa_filing_records_unlocked(
         kbo_fa_filing_write_raw(file, "\r\n");
     }
 
-    CloseHandle(file);
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        append_logf("KBO FA filing csv atomic commit failed path=%s gle=%lu", path, GetLastError());
+        return 0;
+    }
     return 1;
 }
 

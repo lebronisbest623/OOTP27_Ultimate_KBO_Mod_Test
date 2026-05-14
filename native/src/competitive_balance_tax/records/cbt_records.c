@@ -7,6 +7,7 @@
 
 #include "cbt_records.h"
 #include "../../core/csv/core_csv.h"
+#include "../../core/files/atomic/core_atomic_file.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
@@ -79,8 +80,8 @@ int kbo_cbt_save_records(const KboCbtRecord* records, int count)
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ,
-        NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("CBT records open failed path=%s gle=%lu", path, GetLastError());
         return 0;
@@ -108,7 +109,10 @@ int kbo_cbt_save_records(const KboCbtRecord* records, int count)
         }
     }
 
-    CloseHandle(file);
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        append_logf("CBT records atomic commit failed path=%s gle=%lu", path, GetLastError());
+        return 0;
+    }
     return 1;
 }
 

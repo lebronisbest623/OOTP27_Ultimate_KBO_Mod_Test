@@ -78,7 +78,7 @@ void write_foreign_waiver_candidates(const char* source)
         }
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = CreateFileA(path, GENERIC_READ | FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("foreign waiver scanner: failed to open %s", path);
         return;
@@ -87,8 +87,6 @@ void write_foreign_waiver_candidates(const char* source)
     if (is_csv_empty(file)) {
         append_foreign_waiver_candidate_csv_header(file);
     }
-    SetFilePointer(file, 0, NULL, FILE_END);
-
     char date[16] = {0};
     if (!kbo_current_history_date(date, sizeof(date), 2000, source)) {
         strcpy_s(date, sizeof(date), "00000000");

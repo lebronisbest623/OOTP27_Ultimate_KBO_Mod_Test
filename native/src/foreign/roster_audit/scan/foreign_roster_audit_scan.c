@@ -14,7 +14,7 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
         LONG slot = InterlockedIncrement(&no_vector_log_count);
         if (slot <= 5) {
             append_log_line("foreign roster audit: no player vector");
-            kbo_rule_audit_emit(
+            kbo_rule_audit_emit_fields(
                 "foreign_roster.audit",
                 "skip",
                 "player_vector_unavailable",
@@ -185,7 +185,7 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
         CloseHandle(audit_file);
     }
     if (snapshot_file != INVALID_HANDLE_VALUE) {
-        CloseHandle(snapshot_file);
+        kbo_close_foreign_roster_snapshot_file(snapshot_file);
     }
 
     if (baseline_scan || changed > 0) {
@@ -204,25 +204,26 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
             active_cleared,
             write_snapshot_now,
             g_kbo_foreign_roster_audit_save_path);
-        kbo_rule_audit_emitf(
-            "foreign_roster.audit",
-            baseline_scan ? "baseline" : "record_changes",
-            baseline_scan ? "baseline_scan" : "state_changes",
-            source != NULL ? source : "foreign_roster_audit",
-            "\"scanned\":%d,\"foreign\":%d,\"rostered\":%d,\"active_retained\":%d,\"free\":%d,"
-            "\"changed\":%d,\"new_foreign\":%d,\"current_cleared\":%d,\"active_cleared\":%d,"
-            "\"snapshot\":%d,\"generation\":%u",
-            scanned,
-            foreign,
-            rostered,
-            active_retained,
-            free_or_unassigned,
-            changed,
-            new_foreign,
-            current_cleared,
-            active_cleared,
-            write_snapshot_now,
-            g_kbo_foreign_roster_audit_generation);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_i32(&audit_fields, "scanned", scanned);
+            kbo_log_field_i32(&audit_fields, "foreign", foreign);
+            kbo_log_field_i32(&audit_fields, "rostered", rostered);
+            kbo_log_field_i32(&audit_fields, "active_retained", active_retained);
+            kbo_log_field_i32(&audit_fields, "free", free_or_unassigned);
+            kbo_log_field_i32(&audit_fields, "changed", changed);
+            kbo_log_field_i32(&audit_fields, "new_foreign", new_foreign);
+            kbo_log_field_i32(&audit_fields, "current_cleared", current_cleared);
+            kbo_log_field_i32(&audit_fields, "active_cleared", active_cleared);
+            kbo_log_field_i32(&audit_fields, "snapshot", write_snapshot_now);
+            kbo_log_field_u32(&audit_fields, "generation", g_kbo_foreign_roster_audit_generation);
+            kbo_rule_audit_emit_fields(
+                "foreign_roster.audit",
+                baseline_scan ? "baseline" : "record_changes",
+                baseline_scan ? "baseline_scan" : "state_changes",
+                source != NULL ? source : "foreign_roster_audit",
+                &audit_fields);
+        } while (0);
     }
 }
-

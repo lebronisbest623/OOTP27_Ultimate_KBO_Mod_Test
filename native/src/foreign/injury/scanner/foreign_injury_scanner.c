@@ -7,13 +7,13 @@ static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
 void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
     if (!kbo_foreign_injury_replacement_enabled()) {
-        kbo_rule_audit_emit("foreign_injury.replacement.scan", "skip", "disabled", source, NULL);
+        kbo_rule_audit_emit_fields("foreign_injury.replacement.scan", "skip", "disabled", source, NULL);
         return;
     }
 
     uint32_t today = 0u;
     if (!kbo_get_current_yyyymmdd(&today)) {
-        kbo_rule_audit_emit("foreign_injury.replacement.scan", "skip", "date_unavailable", source, NULL);
+        kbo_rule_audit_emit_fields("foreign_injury.replacement.scan", "skip", "date_unavailable", source, NULL);
         return;
     }
 
@@ -22,7 +22,17 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
     if (!find_kbo_global_player_vector(&player_vector, &player_count, NULL)) {
-        kbo_rule_audit_emitf("foreign_injury.replacement.scan", "skip", "player_vector_unavailable", source, "\"date\":%u", today);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", today);
+            kbo_rule_audit_emit_fields(
+                "foreign_injury.replacement.scan",
+                "skip",
+                "player_vector_unavailable",
+                source,
+                &audit_fields);
+        } while (0);
         return;
     }
 
@@ -107,7 +117,22 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         if (created) {
             opened++;
             kbo_emit_foreign_injury_replacement_news(&created_rec, (int)days_left, "open");
-            kbo_rule_audit_emitf("foreign_injury.replacement.lifecycle", "open_slot", "injury_min_days_met", source, "\"date\":%u,\"team_id\":%u,\"league_id\":%u,\"injured_player_id\":%u,\"days_left\":%d,\"slot_type\":%u", today, created_rec.team_id, created_rec.league_id, created_rec.injured_player_id, (int)days_left, (uint32_t)created_rec.slot_type);
+                        do {
+                KboLogFields audit_fields;
+                kbo_log_fields_init(&audit_fields);
+                kbo_log_field_u32(&audit_fields, "date", today);
+                kbo_log_field_u32(&audit_fields, "team_id", created_rec.team_id);
+                kbo_log_field_u32(&audit_fields, "league_id", created_rec.league_id);
+                kbo_log_field_u32(&audit_fields, "injured_player_id", created_rec.injured_player_id);
+                kbo_log_field_i32(&audit_fields, "days_left", (int)days_left);
+                kbo_log_field_u32(&audit_fields, "slot_type", (uint32_t)created_rec.slot_type);
+                kbo_rule_audit_emit_fields(
+                    "foreign_injury.replacement.lifecycle",
+                    "open_slot",
+                    "injury_min_days_met",
+                    source,
+                    &audit_fields);
+            } while (0);
             append_logf(
                 "foreign injury replacement: opened source=%s team=%u player=%u league=%u days_left=%d slot=%s",
                 source != NULL ? source : "",
@@ -205,7 +230,21 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     kbo_unlock_foreign_injury_replacements();
 
     for (int i = 0; i < active_count; i++) {
-        kbo_rule_audit_emitf("foreign_injury.replacement.lifecycle", "activate_slot", "replacement_resolved", source, "\"date\":%u,\"team_id\":%u,\"league_id\":%u,\"injured_player_id\":%u,\"replacement_player_id\":%u", today, active_news[i].team_id, active_news[i].league_id, active_news[i].injured_player_id, active_news[i].replacement_player_id);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", today);
+            kbo_log_field_u32(&audit_fields, "team_id", active_news[i].team_id);
+            kbo_log_field_u32(&audit_fields, "league_id", active_news[i].league_id);
+            kbo_log_field_u32(&audit_fields, "injured_player_id", active_news[i].injured_player_id);
+            kbo_log_field_u32(&audit_fields, "replacement_player_id", active_news[i].replacement_player_id);
+            kbo_rule_audit_emit_fields(
+                "foreign_injury.replacement.lifecycle",
+                "activate_slot",
+                "replacement_resolved",
+                source,
+                &audit_fields);
+        } while (0);
         append_logf(
             "foreign injury replacement: activated source=%s team=%u injured=%u replacement=%u league=%u",
             source != NULL ? source : "",
@@ -217,7 +256,21 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
 
     for (int i = 0; i < closed_count; i++) {
         kbo_emit_foreign_injury_replacement_news(&closed_news[i], 0, "closed");
-        kbo_rule_audit_emitf("foreign_injury.replacement.lifecycle", "close_slot", "injured_player_returned", source, "\"date\":%u,\"team_id\":%u,\"league_id\":%u,\"injured_player_id\":%u,\"replacement_player_id\":%u", today, closed_news[i].team_id, closed_news[i].league_id, closed_news[i].injured_player_id, closed_news[i].replacement_player_id);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", today);
+            kbo_log_field_u32(&audit_fields, "team_id", closed_news[i].team_id);
+            kbo_log_field_u32(&audit_fields, "league_id", closed_news[i].league_id);
+            kbo_log_field_u32(&audit_fields, "injured_player_id", closed_news[i].injured_player_id);
+            kbo_log_field_u32(&audit_fields, "replacement_player_id", closed_news[i].replacement_player_id);
+            kbo_rule_audit_emit_fields(
+                "foreign_injury.replacement.lifecycle",
+                "close_slot",
+                "injured_player_returned",
+                source,
+                &audit_fields);
+        } while (0);
         append_logf(
             "foreign injury replacement: closed source=%s team=%u injured=%u replacement=%u league=%u",
             source != NULL ? source : "",
@@ -228,7 +281,21 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     }
 
     if (opened > 0 || active_count > 0 || closed_count > 0) {
-        kbo_rule_audit_emitf("foreign_injury.replacement.scan", "process", "lifecycle_changes", source, "\"date\":%u,\"scanned_foreign\":%d,\"opened\":%d,\"activated\":%d,\"closed\":%d", today, scanned, opened, active_count, closed_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", today);
+            kbo_log_field_i32(&audit_fields, "scanned_foreign", scanned);
+            kbo_log_field_i32(&audit_fields, "opened", opened);
+            kbo_log_field_i32(&audit_fields, "activated", active_count);
+            kbo_log_field_i32(&audit_fields, "closed", closed_count);
+            kbo_rule_audit_emit_fields(
+                "foreign_injury.replacement.scan",
+                "process",
+                "lifecycle_changes",
+                source,
+                &audit_fields);
+        } while (0);
         append_logf(
             "foreign injury replacement: scan source=%s scanned_foreign=%d opened=%d active=%d pending=%d closed=%d",
             source != NULL ? source : "",
@@ -274,4 +341,3 @@ void start_kbo_foreign_injury_replacement_thread(void)
         InterlockedExchange(&g_kbo_foreign_injury_replacement_thread_started, 0);
     }
 }
-

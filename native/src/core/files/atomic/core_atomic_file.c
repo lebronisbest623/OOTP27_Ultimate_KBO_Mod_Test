@@ -31,3 +31,13 @@ int kbo_atomic_commit(HANDLE file, const char* tmp_path, const char* dest_path)
     }
     return 1;
 }
+
+void kbo_atomic_abort(HANDLE file, const char* tmp_path)
+{
+    if (file != INVALID_HANDLE_VALUE) {
+        CloseHandle(file);
+    }
+    if (tmp_path != NULL && tmp_path[0] != '\0') {
+        DeleteFileA(tmp_path);
+    }
+}

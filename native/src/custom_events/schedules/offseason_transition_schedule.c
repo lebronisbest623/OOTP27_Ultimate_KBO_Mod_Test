@@ -28,21 +28,24 @@ static void kbo_audit_offseason_transition(
     uint32_t pending_anchor,
     int scheduled)
 {
-    kbo_rule_audit_emitf(
-        "custom_event.offseason_transition",
-        decision,
-        reason,
-        source,
-        "\"date\":%u,\"league_id\":%u,\"league_year\":%u,\"previous_phase\":%u,"
-        "\"phase\":%u,\"anchor_date\":%u,\"pending_anchor\":%u,\"scheduled\":%d",
-        today_yyyymmdd,
-        league_id,
-        league_year,
-        (unsigned)previous_phase,
-        (unsigned)phase,
-        anchor_yyyymmdd,
-        pending_anchor,
-        scheduled);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", today_yyyymmdd);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_u32(&audit_fields, "league_year", league_year);
+        kbo_log_field_u32(&audit_fields, "previous_phase", (unsigned)previous_phase);
+        kbo_log_field_u32(&audit_fields, "phase", (unsigned)phase);
+        kbo_log_field_u32(&audit_fields, "anchor_date", anchor_yyyymmdd);
+        kbo_log_field_u32(&audit_fields, "pending_anchor", pending_anchor);
+        kbo_log_field_i32(&audit_fields, "scheduled", scheduled);
+        kbo_rule_audit_emit_fields(
+            "custom_event.offseason_transition",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 int kbo_custom_event_phase_is_offseason(uint8_t phase)

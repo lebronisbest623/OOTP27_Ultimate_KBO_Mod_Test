@@ -1,5 +1,6 @@
 #include "../internal/captain_selection_internal.h"
 #include "../../core/csv/core_csv.h"
+#include "../../core/files/atomic/core_atomic_file.h"
 #include "parse/captain_selection_csv_parse.h"
 
 int kbo_captain_selection_csv_path(uint32_t season, char* out, size_t out_size)
@@ -115,14 +116,8 @@ int kbo_captain_write_selection_csv(
         return 0;
     }
 
-    HANDLE file = CreateFileA(
-        path,
-        GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("KBO captain selection csv open failed path=%s gle=%lu", path, GetLastError());
         return 0;
@@ -207,8 +202,12 @@ int kbo_captain_write_selection_csv(
         }
     }
 
-    CloseHandle(file);
     if (!ok) {
+        kbo_atomic_abort(file, tmp_path);
+        append_logf("KBO captain selection csv write failed path=%s", path);
+        return 0;
+    }
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
         append_logf("KBO captain selection csv write failed path=%s", path);
         return 0;
     }

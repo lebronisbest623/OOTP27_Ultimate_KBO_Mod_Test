@@ -11,17 +11,21 @@ void kbo_audit_fa_salary_snapshot_capture_skip(
     uint32_t league_id,
     int player_count)
 {
-    kbo_rule_audit_emitf(
-        "fa_salary_snapshot.capture",
-        "skip",
-        reason != NULL ? reason : "unknown",
-        source != NULL ? source : "fa_salary_snapshot",
-        "\"date\":%u,\"season\":%u,\"opening_day\":%u,\"league_id\":%u,\"player_count\":%d",
-        date,
-        season,
-        opening_day,
-        league_id,
-        player_count);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", date);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "opening_day", opening_day);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "player_count", player_count);
+        kbo_rule_audit_emit_fields(
+            "fa_salary_snapshot.capture",
+            "skip",
+            reason != NULL ? reason : "unknown",
+            source != NULL ? source : "fa_salary_snapshot",
+            &audit_fields);
+    } while (0);
 }
 
 void kbo_audit_fa_salary_snapshot_capture_result(
@@ -37,19 +41,22 @@ void kbo_audit_fa_salary_snapshot_capture_result(
     int salary_rows,
     int zero_salary_rows)
 {
-    kbo_rule_audit_emitf(
-        "fa_salary_snapshot.capture",
-        decision != NULL ? decision : "record",
-        reason != NULL ? reason : "capture_processed",
-        source != NULL ? source : "fa_salary_snapshot",
-        "\"date\":%u,\"season\":%u,\"opening_day\":%u,\"league_id\":%u,\"scanned\":%d,"
-        "\"rows\":%d,\"salary_rows\":%d,\"zero_salary_rows\":%d",
-        date,
-        season,
-        opening_day,
-        league_id,
-        scanned,
-        row_count,
-        salary_rows,
-        zero_salary_rows);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", date);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "opening_day", opening_day);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "scanned", scanned);
+        kbo_log_field_i32(&audit_fields, "rows", row_count);
+        kbo_log_field_i32(&audit_fields, "salary_rows", salary_rows);
+        kbo_log_field_i32(&audit_fields, "zero_salary_rows", zero_salary_rows);
+        kbo_rule_audit_emit_fields(
+            "fa_salary_snapshot.capture",
+            decision != NULL ? decision : "record",
+            reason != NULL ? reason : "capture_processed",
+            source != NULL ? source : "fa_salary_snapshot",
+            &audit_fields);
+    } while (0);
 }

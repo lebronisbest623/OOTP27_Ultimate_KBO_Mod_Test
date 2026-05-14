@@ -115,14 +115,12 @@ int kbo_save_asian_games_roster_csv(const char* source)
         }
     }
 
-    if (!ok || !kbo_atomic_commit(file, tmp_path, path)) {
-        if (ok) {
-            append_logf("KBO Asian Games roster csv save: atomic commit failed path=%s", path);
-        }
-        if (!ok) {
-            kbo_atomic_commit(file, tmp_path, path);
-            DeleteFileA(path);
-        }
+    if (!ok) {
+        kbo_atomic_abort(file, tmp_path);
+        return 0;
+    }
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        append_logf("KBO Asian Games roster csv save: atomic commit failed path=%s", path);
         return 0;
     }
     if (ok) {

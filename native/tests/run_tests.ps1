@@ -61,6 +61,7 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\military_service\calendar\military_service_date.c") `
     (Join-Path $Root "src\military_service\selection\events\policy\military_selection_policy.c") `
     (Join-Path $Root "src\military_service\seed\parse\military_service_seed_parse.c") `
+    (Join-Path $Root "src\military_service\players\team_policy\military_service_team_policy_parse.c") `
     (Join-Path $Root "src\core\dates\core_text_date.c") `
     (Join-Path $Root "src\core\sql\escape\core_sql_escape.c") `
     (Join-Path $Root "src\core\core_flags\keys\flag_key.c") `

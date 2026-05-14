@@ -114,15 +114,19 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         if (market_rows != NULL) { HeapFree(GetProcessHeap(), 0, market_rows); }
         if (salary_grades != NULL) { HeapFree(GetProcessHeap(), 0, salary_grades); }
         append_log_line("KBO FA declaration event skipped reason=allocation_failed");
-        kbo_rule_audit_emitf(
-            "fa.declaration.event",
-            "skip",
-            "allocation_failed",
-            source != NULL ? source : "fa_declaration_event",
-            "\"date\":%u,\"season\":%u,\"league_id\":%u",
-            event_yyyymmdd,
-            season,
-            league_id);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_rule_audit_emit_fields(
+                "fa.declaration.event",
+                "skip",
+                "allocation_failed",
+                source != NULL ? source : "fa_declaration_event",
+                &audit_fields);
+        } while (0);
         return -1;
     }
 
@@ -176,16 +180,20 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
             "KBO FA declaration event deferred source=%s date=%u reason=no_player_vector",
             source != NULL ? source : "",
             event_yyyymmdd);
-        kbo_rule_audit_emitf(
-            "fa.declaration.event",
-            "defer",
-            "player_vector_unavailable",
-            source != NULL ? source : "fa_declaration_event",
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"market_rows\":%d",
-            event_yyyymmdd,
-            season,
-            league_id,
-            market_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_i32(&audit_fields, "market_rows", market_count);
+            kbo_rule_audit_emit_fields(
+                "fa.declaration.event",
+                "defer",
+                "player_vector_unavailable",
+                source != NULL ? source : "fa_declaration_event",
+                &audit_fields);
+        } while (0);
         return -1;
     }
     if (active_added < 0) {
@@ -220,18 +228,22 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         HeapFree(GetProcessHeap(), 0, candidates);
         HeapFree(GetProcessHeap(), 0, market_rows);
         HeapFree(GetProcessHeap(), 0, salary_grades);
-        kbo_rule_audit_emitf(
-            "fa.declaration.event",
-            "fail",
-            "csv_write_failed",
-            source != NULL ? source : "fa_declaration_event",
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"candidates\":%d,\"declared\":%d,\"deferred\":%d",
-            event_yyyymmdd,
-            season,
-            league_id,
-            candidate_count,
-            declared,
-            deferred);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_i32(&audit_fields, "candidates", candidate_count);
+            kbo_log_field_i32(&audit_fields, "declared", declared);
+            kbo_log_field_i32(&audit_fields, "deferred", deferred);
+            kbo_rule_audit_emit_fields(
+                "fa.declaration.event",
+                "fail",
+                "csv_write_failed",
+                source != NULL ? source : "fa_declaration_event",
+                &audit_fields);
+        } while (0);
         return -1;
     }
 
@@ -314,28 +326,30 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         grade_count,
         retained_repaired,
         csv_path);
-    kbo_rule_audit_emitf(
-        "fa.declaration.event",
-        "record_decisions",
-        "declaration_window_processed",
-        source != NULL ? source : "fa_declaration_event",
-        "\"date\":%u,\"season\":%u,\"league_id\":%u,\"market_rows\":%d,\"market_candidates\":%d,"
-        "\"active_scanned\":%d,\"active_candidates\":%d,\"candidates\":%d,\"declared\":%d,"
-        "\"deferred\":%d,\"retry\":%d,\"no_market\":%d,\"grades\":%d,\"retained_repaired\":%d",
-        event_yyyymmdd,
-        season,
-        league_id,
-        market_count,
-        market_added,
-        active_scanned,
-        active_added,
-        candidate_count,
-        declared,
-        deferred,
-        deferred_retry,
-        deferred_no_market,
-        grade_count,
-        retained_repaired);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "market_rows", market_count);
+        kbo_log_field_i32(&audit_fields, "market_candidates", market_added);
+        kbo_log_field_i32(&audit_fields, "active_scanned", active_scanned);
+        kbo_log_field_i32(&audit_fields, "active_candidates", active_added);
+        kbo_log_field_i32(&audit_fields, "candidates", candidate_count);
+        kbo_log_field_i32(&audit_fields, "declared", declared);
+        kbo_log_field_i32(&audit_fields, "deferred", deferred);
+        kbo_log_field_i32(&audit_fields, "retry", deferred_retry);
+        kbo_log_field_i32(&audit_fields, "no_market", deferred_no_market);
+        kbo_log_field_i32(&audit_fields, "grades", grade_count);
+        kbo_log_field_i32(&audit_fields, "retained_repaired", retained_repaired);
+        kbo_rule_audit_emit_fields(
+            "fa.declaration.event",
+            "record_decisions",
+            "declaration_window_processed",
+            source != NULL ? source : "fa_declaration_event",
+            &audit_fields);
+    } while (0);
 
     kbo_emit_fa_declaration_summary_news(
         event_yyyymmdd,

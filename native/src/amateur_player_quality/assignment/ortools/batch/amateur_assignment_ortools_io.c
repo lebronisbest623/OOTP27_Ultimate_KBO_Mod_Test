@@ -55,7 +55,9 @@ int kbo_amateur_ortools_write_batch_request(
     int count,
     int incoming_batch)
 {
-    FILE* file = fopen(path, "wb");
+    char tmp_path[MAX_PATH] = {0};
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
+    FILE* file = fopen(tmp_path, "wb");
     if (file == NULL) {
         return 0;
     }
@@ -235,6 +237,10 @@ int kbo_amateur_ortools_write_batch_request(
     }
 
     fclose(file);
+    if (!MoveFileExA(tmp_path, path, MOVEFILE_REPLACE_EXISTING)) {
+        DeleteFileA(tmp_path);
+        return 0;
+    }
     return written_players > 0;
 }
 
@@ -306,4 +312,3 @@ void kbo_amateur_league_batch_clear(uint32_t league_id)
     g_kbo_amateur_deferred_team_add_count = 0;
     g_kbo_amateur_league_batch_last_tick = 0u;
 }
-

@@ -1,4 +1,5 @@
 #include "../internal/fa_market_policy_internal.h"
+#include "../../core/files/atomic/core_atomic_file.h"
 #include "../../core/logging/rule_audit.h"
 
 void kbo_fa_market_write_csv_text(HANDLE file, const char* text)
@@ -33,7 +34,18 @@ void kbo_write_fa_market_classification_csv(
 
     char path[MAX_PATH] = {0};
     if (!kbo_get_fa_market_classification_csv_path(path, sizeof(path))) {
-        kbo_rule_audit_emitf("fa_market.classification.csv", "fail", "path_unavailable", source, "\"league_id\":%u,\"rows\":%d", summary->league_id, row_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "league_id", summary->league_id);
+            kbo_log_field_i32(&audit_fields, "rows", row_count);
+            kbo_rule_audit_emit_fields(
+                "fa_market.classification.csv",
+                "fail",
+                "path_unavailable",
+                source,
+                &audit_fields);
+        } while (0);
         append_log_line("FA market classification: unable to resolve CSV path");
         return;
     }
@@ -46,9 +58,22 @@ void kbo_write_fa_market_classification_csv(
         CreateDirectoryA(dir, NULL);
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        kbo_rule_audit_emitf("fa_market.classification.csv", "fail", "open_failed", source, "\"league_id\":%u,\"rows\":%d,\"gle\":%lu", summary->league_id, row_count, GetLastError());
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "league_id", summary->league_id);
+            kbo_log_field_i32(&audit_fields, "rows", row_count);
+            kbo_log_field_u64(&audit_fields, "gle", GetLastError());
+            kbo_rule_audit_emit_fields(
+                "fa_market.classification.csv",
+                "fail",
+                "open_failed",
+                source,
+                &audit_fields);
+        } while (0);
         append_logf("FA market classification: failed to open CSV path=%s gle=%lu", path, GetLastError());
         return;
     }
@@ -131,7 +156,10 @@ void kbo_write_fa_market_classification_csv(
         kbo_fa_market_write_raw(file, "\r\n");
     }
 
-    CloseHandle(file);
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        append_logf("FA market classification: atomic commit failed path=%s gle=%lu", path, GetLastError());
+        return;
+    }
     append_logf(
         "FA market classification: rows=%d candidates=%d scanned=%d league=%u salary_snapshot=%d csv=%s",
         row_count,
@@ -140,5 +168,19 @@ void kbo_write_fa_market_classification_csv(
         summary->league_id,
         summary->salary_snapshot_count,
         path);
-    kbo_rule_audit_emitf("fa_market.classification.csv", "write_csv", "classification_exported", source, "\"league_id\":%u,\"rows\":%d,\"candidates\":%d,\"scanned\":%d,\"salary_snapshot\":%d", summary->league_id, row_count, summary->candidates, summary->scanned, summary->salary_snapshot_count);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "league_id", summary->league_id);
+        kbo_log_field_i32(&audit_fields, "rows", row_count);
+        kbo_log_field_i32(&audit_fields, "candidates", summary->candidates);
+        kbo_log_field_i32(&audit_fields, "scanned", summary->scanned);
+        kbo_log_field_i32(&audit_fields, "salary_snapshot", summary->salary_snapshot_count);
+        kbo_rule_audit_emit_fields(
+            "fa_market.classification.csv",
+            "write_csv",
+            "classification_exported",
+            source,
+            &audit_fields);
+    } while (0);
 }

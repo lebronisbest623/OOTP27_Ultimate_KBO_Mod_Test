@@ -82,6 +82,7 @@
       "label": "Military service",
       "files": [
         { "path": "military_service_policy.json", "source": "military_service/military_service_policy.json", "label": "Military service policy", "kind": "policy" },
+        { "path": "military_service_teams.csv", "source": "military_service/military_service_teams.csv", "label": "Military service teams", "kind": "policy" },
         { "path": "military_service_seed.csv", "source": "military_service/military_service_seed.csv", "label": "Military service seed", "kind": "seed" }
       ]
     },

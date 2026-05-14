@@ -37,6 +37,7 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 
 #include "../src/military_service/calendar/military_service_date.h"
 #include "../src/military_service/seed/parse/military_service_seed_parse.h"
+#include "../src/military_service/players/team_policy/military_service_team_policy_parse.h"
 #include "../src/allstar/csv/allstar_csv_parse.h"
 #include "../src/foreign/common/dates/foreign_waiver_date.h"
 #include "../src/core/core_flags/keys/flag_key.h"
@@ -310,6 +311,30 @@ static void test_military_seed_line_parse(void)
     assert(strcmp(seed.key, "98765") == 0);
     assert(seed.service_return_yyyymmdd == 20251231u);
     printf("test_military_seed_line_parse: PASS\n");
+}
+
+static void test_military_service_team_policy_parse(void)
+{
+    KboMilitaryServiceTeamPolicyRow row;
+
+    assert(!kbo_parse_military_service_team_policy_line(NULL, &row));
+    assert(!kbo_parse_military_service_team_policy_line("# team_csv_id,enabled", &row));
+    assert(!kbo_parse_military_service_team_policy_line("team_csv_id,enabled", &row));
+
+    assert(kbo_parse_military_service_team_policy_line("SANG,1", &row));
+    assert(strcmp(row.team_csv_id, "SANG") == 0);
+    assert(row.enabled == 1);
+
+    assert(kbo_parse_military_service_team_policy_line(" KPB , 0 ", &row));
+    assert(strcmp(row.team_csv_id, "KPB") == 0);
+    assert(row.enabled == 0);
+
+    assert(kbo_parse_military_service_team_policy_line("\"ALT\", enabled", &row));
+    assert(strcmp(row.team_csv_id, "ALT") == 0);
+    assert(row.enabled == 1);
+
+    assert(!kbo_parse_military_service_team_policy_line("BAD,maybe", &row));
+    printf("test_military_service_team_policy_parse: PASS\n");
 }
 
 static void test_allstar_csv_parse(void)
@@ -965,13 +990,16 @@ static void test_rule_audit_ndjson_sink(void)
     memcpy(audit_path + audit_dir_len, audit_file_name, sizeof(audit_file_name));
     DeleteFileA(audit_path);
 
-    kbo_rule_audit_emitf(
+    KboLogFields audit_fields;
+    kbo_log_fields_init(&audit_fields);
+    kbo_log_field_i32(&audit_fields, "value", 7);
+    kbo_log_field_str(&audit_fields, "note", "quote\"slash\\ok");
+    kbo_rule_audit_emit_fields(
         "native.test",
         "record",
         "ok",
         "native_tests",
-        "\"value\":%d",
-        7);
+        &audit_fields);
 
     HANDLE file = CreateFileA(
         audit_path,
@@ -1000,6 +1028,7 @@ static void test_rule_audit_ndjson_sink(void)
     assert(strstr(buffer, "\"reason\":\"ok\"") != NULL);
     assert(strstr(buffer, "\"source\":\"native_tests\"") != NULL);
     assert(strstr(buffer, "\"value\":7") != NULL);
+    assert(strstr(buffer, "\"note\":\"quote\\\"slash\\\\ok\"") != NULL);
     assert(strstr(buffer, "KBO_RULE_AUDIT") == NULL);
 
     DeleteFileA(audit_path);
@@ -1460,6 +1489,7 @@ int main(void)
     test_military_csv_parse();
     test_military_date_round_trip();
     test_military_seed_line_parse();
+    test_military_service_team_policy_parse();
     test_allstar_csv_parse();
     test_foreign_replacement_seed_parse();
     test_captain_seed_parse();

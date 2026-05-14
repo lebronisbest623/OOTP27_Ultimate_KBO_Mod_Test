@@ -217,11 +217,9 @@ int kbo_write_foreign_waiver_window(uint32_t start_yyyymmdd, uint32_t end_yyyymm
     int len = snprintf(line, sizeof(line), "%08u,%08u\r\n", start_yyyymmdd, end_yyyymmdd);
     DWORD written = 0;
     int ok = WriteFile(file, line, (DWORD)len, &written, NULL) && written == (DWORD)len;
-    if (!ok || !kbo_atomic_commit(file, tmp_path, path)) {
-        if (!ok) {
-            kbo_atomic_commit(file, tmp_path, path);
-            DeleteFileA(path);
-        }
+    if (!ok) {
+        kbo_atomic_abort(file, tmp_path);
+    } else if (!kbo_atomic_commit(file, tmp_path, path)) {
         ok = 0;
     }
 

@@ -1,4 +1,8 @@
 #include "../internal/foreign_roster_audit_internal.h"
+#include "../../../core/files/atomic/core_atomic_file.h"
+
+static char g_kbo_foreign_roster_snapshot_tmp_path[MAX_PATH];
+static char g_kbo_foreign_roster_snapshot_dest_path[MAX_PATH];
 
 int kbo_foreign_roster_audit_csv_empty(HANDLE file)
 {
@@ -214,19 +218,30 @@ HANDLE kbo_open_foreign_roster_snapshot_file(void)
         return INVALID_HANDLE_VALUE;
     }
 
-    HANDLE file = CreateFileA(
-        path,
-        GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("foreign roster audit: failed to open snapshot file path=%s gle=%lu", path, GetLastError());
         return INVALID_HANDLE_VALUE;
     }
+    snprintf(g_kbo_foreign_roster_snapshot_tmp_path, sizeof(g_kbo_foreign_roster_snapshot_tmp_path), "%s", tmp_path);
+    snprintf(g_kbo_foreign_roster_snapshot_dest_path, sizeof(g_kbo_foreign_roster_snapshot_dest_path), "%s", path);
     append_foreign_roster_snapshot_csv_header(file);
     return file;
+}
+
+void kbo_close_foreign_roster_snapshot_file(HANDLE file)
+{
+    if (file == INVALID_HANDLE_VALUE) {
+        return;
+    }
+    if (!kbo_atomic_commit(file, g_kbo_foreign_roster_snapshot_tmp_path, g_kbo_foreign_roster_snapshot_dest_path)) {
+        append_logf(
+            "foreign roster audit: failed to commit snapshot file path=%s gle=%lu",
+            g_kbo_foreign_roster_snapshot_dest_path,
+            GetLastError());
+    }
+    g_kbo_foreign_roster_snapshot_tmp_path[0] = '\0';
+    g_kbo_foreign_roster_snapshot_dest_path[0] = '\0';
 }
 

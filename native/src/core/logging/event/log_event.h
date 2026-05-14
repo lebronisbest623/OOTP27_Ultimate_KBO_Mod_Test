@@ -32,7 +32,7 @@ typedef struct KboLogFields {
 const char* kbo_log_level_text(KboLogLevel level);
 
 void kbo_log_fields_init(KboLogFields* fields);
-void kbo_log_field_raw_json(KboLogFields* fields, const char* raw_json_members);
+void kbo_log_fields_merge(KboLogFields* fields, const KboLogFields* other);
 void kbo_log_field_str(KboLogFields* fields, const char* name, const char* value);
 void kbo_log_field_bool(KboLogFields* fields, const char* name, int value);
 void kbo_log_field_u32(KboLogFields* fields, const char* name, uint32_t value);
@@ -40,21 +40,6 @@ void kbo_log_field_i32(KboLogFields* fields, const char* name, int32_t value);
 void kbo_log_field_u64(KboLogFields* fields, const char* name, uint64_t value);
 void kbo_log_field_i64(KboLogFields* fields, const char* name, int64_t value);
 void kbo_log_field_ptr(KboLogFields* fields, const char* name, const void* value);
-
-int kbo_log_event_emit_raw(
-    const char* file_name,
-    const char* channel,
-    KboLogLevel level,
-    const char* domain,
-    const char* event,
-    const char* decision,
-    const char* reason,
-    const char* source,
-    const char* fields_json,
-    unsigned sink_flags,
-    size_t max_bytes,
-    int archive_count,
-    const char* mirror_prefix);
 
 int kbo_log_event_emit(
     const char* file_name,
@@ -70,6 +55,15 @@ int kbo_log_event_emit(
     size_t max_bytes,
     int archive_count,
     const char* mirror_prefix);
+
+void kbo_log_runtime_event(
+    KboLogLevel level,
+    const char* domain,
+    const char* event,
+    const char* decision,
+    const char* reason,
+    const char* source,
+    const KboLogFields* fields);
 
 void kbo_log_runtime_message(
     KboLogLevel level,

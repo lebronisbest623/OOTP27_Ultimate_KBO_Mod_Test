@@ -11,16 +11,20 @@ int kbo_run_captain_inseason_repair_once(
     memset(current_rows, 0, sizeof(current_rows));
     int current_count = kbo_captain_load_selection_csv(season, current_rows, KBO_CAPTAIN_MAX_TEAMS);
     if (current_count <= 0) {
-        kbo_rule_audit_emitf(
-            "captain.inseason_repair",
-            "write_initial_selection",
-            "current_rows_unavailable",
-            source,
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"current_rows\":%d",
-            date,
-            season,
-            league_id,
-            current_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", date);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_i32(&audit_fields, "current_rows", current_count);
+            kbo_rule_audit_emit_fields(
+                "captain.inseason_repair",
+                "write_initial_selection",
+                "current_rows_unavailable",
+                source,
+                &audit_fields);
+        } while (0);
         return kbo_captain_write_initial_selection(
             date,
             season,
@@ -40,20 +44,23 @@ int kbo_run_captain_inseason_repair_once(
             &team_count,
             &missing_count,
             &departed_count)) {
-        kbo_rule_audit_emitf(
-            "captain.inseason_repair",
-            "skip",
-            "current_rows_valid",
-            source,
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"current_rows\":%d,"
-            "\"teams\":%d,\"missing\":%d,\"departed\":%d",
-            date,
-            season,
-            league_id,
-            current_count,
-            team_count,
-            missing_count,
-            departed_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", date);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_i32(&audit_fields, "current_rows", current_count);
+            kbo_log_field_i32(&audit_fields, "teams", team_count);
+            kbo_log_field_i32(&audit_fields, "missing", missing_count);
+            kbo_log_field_i32(&audit_fields, "departed", departed_count);
+            kbo_rule_audit_emit_fields(
+                "captain.inseason_repair",
+                "skip",
+                "current_rows_valid",
+                source,
+                &audit_fields);
+        } while (0);
         return 0;
     }
 
@@ -68,21 +75,24 @@ int kbo_run_captain_inseason_repair_once(
         KBO_CAPTAIN_MAX_TEAMS,
         &selected_count);
     if (candidate_count <= 0) {
-        kbo_rule_audit_emitf(
-            "captain.inseason_repair",
-            "skip",
-            "no_candidates",
-            source,
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"teams\":%d,"
-            "\"missing\":%d,\"departed\":%d,\"candidate_rows\":%d,\"selected\":%d",
-            date,
-            season,
-            league_id,
-            team_count,
-            missing_count,
-            departed_count,
-            candidate_count,
-            selected_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", date);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_i32(&audit_fields, "teams", team_count);
+            kbo_log_field_i32(&audit_fields, "missing", missing_count);
+            kbo_log_field_i32(&audit_fields, "departed", departed_count);
+            kbo_log_field_i32(&audit_fields, "candidate_rows", candidate_count);
+            kbo_log_field_i32(&audit_fields, "selected", selected_count);
+            kbo_rule_audit_emit_fields(
+                "captain.inseason_repair",
+                "skip",
+                "no_candidates",
+                source,
+                &audit_fields);
+        } while (0);
         append_logf(
             "KBO captain in-season repair skipped source=%s date=%u season=%u league_id=%u reason=no_candidates missing=%d departed=%d",
             source != NULL ? source : "",
@@ -132,25 +142,27 @@ int kbo_run_captain_inseason_repair_once(
                         "inseason_replacement:missing_row");
                 }
                 repaired_count++;
-                kbo_rule_audit_emitf(
-                    "captain.inseason_repair.team",
-                    "replace_captain",
-                    current_index >= 0 && current_rows[current_index].player_id != 0u
+                                do {
+                    KboLogFields audit_fields;
+                    kbo_log_fields_init(&audit_fields);
+                    kbo_log_field_u32(&audit_fields, "date", date);
+                    kbo_log_field_u32(&audit_fields, "season", season);
+                    kbo_log_field_u32(&audit_fields, "league_id", league_id);
+                    kbo_log_field_u32(&audit_fields, "team_id", team_id);
+                    kbo_log_field_u32(&audit_fields, "old_player_id", current_index >= 0 ? current_rows[current_index].player_id : 0u);
+                    kbo_log_field_u32(&audit_fields, "new_player_id", merged_rows[merged_count].player_id);
+                    kbo_log_field_i32(&audit_fields, "new_score", merged_rows[merged_count].score);
+                    kbo_log_field_i32(&audit_fields, "missing", missing_count);
+                    kbo_log_field_i32(&audit_fields, "departed", departed_count);
+                    kbo_rule_audit_emit_fields(
+                        "captain.inseason_repair.team",
+                        "replace_captain",
+                        current_index >= 0 && current_rows[current_index].player_id != 0u
                         ? "departed_current_captain"
                         : "missing_current_row",
-                    source,
-                    "\"date\":%u,\"season\":%u,\"league_id\":%u,\"team_id\":%u,"
-                    "\"old_player_id\":%u,\"new_player_id\":%u,\"new_score\":%d,"
-                    "\"missing\":%d,\"departed\":%d",
-                    date,
-                    season,
-                    league_id,
-                    team_id,
-                    current_index >= 0 ? current_rows[current_index].player_id : 0u,
-                    merged_rows[merged_count].player_id,
-                    merged_rows[merged_count].score,
-                    missing_count,
-                    departed_count);
+                        source,
+                        &audit_fields);
+                } while (0);
                 if (news_count < KBO_CAPTAIN_MAX_TEAMS) {
                     if (current_index >= 0) {
                         news_old_rows[news_count] = current_rows[current_index];
@@ -191,20 +203,23 @@ int kbo_run_captain_inseason_repair_once(
                     missing_count,
                     departed_count,
                     still_missing_count);
-                kbo_rule_audit_emitf(
-                    "captain.inseason_repair",
-                    "skip",
-                    "unresolved_no_changes",
-                    source,
-                    "\"date\":%u,\"season\":%u,\"league_id\":%u,\"teams\":%d,"
-                    "\"missing\":%d,\"departed\":%d,\"unresolved\":%d",
-                    date,
-                    season,
-                    league_id,
-                    team_count,
-                    missing_count,
-                    departed_count,
-                    still_missing_count);
+                                do {
+                    KboLogFields audit_fields;
+                    kbo_log_fields_init(&audit_fields);
+                    kbo_log_field_u32(&audit_fields, "date", date);
+                    kbo_log_field_u32(&audit_fields, "season", season);
+                    kbo_log_field_u32(&audit_fields, "league_id", league_id);
+                    kbo_log_field_i32(&audit_fields, "teams", team_count);
+                    kbo_log_field_i32(&audit_fields, "missing", missing_count);
+                    kbo_log_field_i32(&audit_fields, "departed", departed_count);
+                    kbo_log_field_i32(&audit_fields, "unresolved", still_missing_count);
+                    kbo_rule_audit_emit_fields(
+                        "captain.inseason_repair",
+                        "skip",
+                        "unresolved_no_changes",
+                        source,
+                        &audit_fields);
+                } while (0);
                 last_unresolved_date = date;
                 last_unresolved_season = season;
                 last_unresolved_league_id = league_id;
@@ -235,24 +250,26 @@ int kbo_run_captain_inseason_repair_once(
             departed_count,
             still_missing_count,
             csv_path);
-        kbo_rule_audit_emitf(
-            "captain.inseason_repair",
-            "write_selection_csv",
-            "repaired_captains",
-            source,
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"teams\":%d,"
-            "\"merged\":%d,\"repaired\":%d,\"missing\":%d,\"departed\":%d,"
-            "\"unresolved\":%d,\"news\":%d",
-            date,
-            season,
-            league_id,
-            team_count,
-            merged_count,
-            repaired_count,
-            missing_count,
-            departed_count,
-            still_missing_count,
-            news_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", date);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_i32(&audit_fields, "teams", team_count);
+            kbo_log_field_i32(&audit_fields, "merged", merged_count);
+            kbo_log_field_i32(&audit_fields, "repaired", repaired_count);
+            kbo_log_field_i32(&audit_fields, "missing", missing_count);
+            kbo_log_field_i32(&audit_fields, "departed", departed_count);
+            kbo_log_field_i32(&audit_fields, "unresolved", still_missing_count);
+            kbo_log_field_i32(&audit_fields, "news", news_count);
+            kbo_rule_audit_emit_fields(
+                "captain.inseason_repair",
+                "write_selection_csv",
+                "repaired_captains",
+                source,
+                &audit_fields);
+        } while (0);
         for (int i = 0; i < news_count; i++) {
             kbo_emit_captain_replacement_news(
                 date,
@@ -263,23 +280,25 @@ int kbo_run_captain_inseason_repair_once(
                 source != NULL ? source : "captain_inseason_repair");
         }
     } else {
-        kbo_rule_audit_emitf(
-            "captain.inseason_repair",
-            "fail",
-            "write_csv_failed",
-            source,
-            "\"date\":%u,\"season\":%u,\"league_id\":%u,\"teams\":%d,"
-            "\"merged\":%d,\"repaired\":%d,\"missing\":%d,\"departed\":%d,"
-            "\"unresolved\":%d",
-            date,
-            season,
-            league_id,
-            team_count,
-            merged_count,
-            repaired_count,
-            missing_count,
-            departed_count,
-            still_missing_count);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", date);
+            kbo_log_field_u32(&audit_fields, "season", season);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_log_field_i32(&audit_fields, "teams", team_count);
+            kbo_log_field_i32(&audit_fields, "merged", merged_count);
+            kbo_log_field_i32(&audit_fields, "repaired", repaired_count);
+            kbo_log_field_i32(&audit_fields, "missing", missing_count);
+            kbo_log_field_i32(&audit_fields, "departed", departed_count);
+            kbo_log_field_i32(&audit_fields, "unresolved", still_missing_count);
+            kbo_rule_audit_emit_fields(
+                "captain.inseason_repair",
+                "fail",
+                "write_csv_failed",
+                source,
+                &audit_fields);
+        } while (0);
     }
     return wrote;
 }

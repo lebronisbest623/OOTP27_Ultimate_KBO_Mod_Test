@@ -228,7 +228,19 @@ int kbo_append_foreign_waiver_user_decision(uint32_t team_id, uint32_t player_id
         return 0;
     }
     if (!kbo_is_foreign_waiver_negotiation_window_open()) {
-        kbo_rule_audit_emitf("foreign_waiver.user_decision", "block", "window_closed", "user", "\"team_id\":%u,\"player_id\":%u,\"retain\":%d", team_id, player_id, retain ? 1 : 0);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "team_id", team_id);
+            kbo_log_field_u32(&audit_fields, "player_id", player_id);
+            kbo_log_field_i32(&audit_fields, "retain", retain ? 1 : 0);
+            kbo_rule_audit_emit_fields(
+                "foreign_waiver.user_decision",
+                "block",
+                "window_closed",
+                "user",
+                &audit_fields);
+        } while (0);
         append_logf("foreign waiver decision: blocked by window state team=%u player=%u action=%s", team_id, player_id, retain ? "RETAIN" : "SKIP");
         return 0;
     }
@@ -361,7 +373,19 @@ void process_foreign_waiver_commands(void)
             CloseHandle(file);
         }
         append_logf("foreign waiver command: processed=%lu executed=%lu keep_len=%lu", used_commands, executed_commands, remain_len);
-        kbo_rule_audit_emitf("foreign_waiver.command_file", "process", "commands_consumed", "user", "\"used\":%lu,\"executed\":%lu,\"remaining_bytes\":%lu", used_commands, executed_commands, remain_len);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u64(&audit_fields, "used", used_commands);
+            kbo_log_field_u64(&audit_fields, "executed", executed_commands);
+            kbo_log_field_u64(&audit_fields, "remaining_bytes", remain_len);
+            kbo_rule_audit_emit_fields(
+                "foreign_waiver.command_file",
+                "process",
+                "commands_consumed",
+                "user",
+                &audit_fields);
+        } while (0);
         return;
     }
 }

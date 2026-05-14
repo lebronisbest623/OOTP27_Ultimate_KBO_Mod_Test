@@ -99,23 +99,25 @@ int kbo_restore_fa_requalification_team_control(
             old_active_team,
             old_league,
             league_id);
-        kbo_rule_audit_emitf(
-            "fa.requalification.team_control",
-            "restore",
-            "team_control_years_active",
-            source != NULL ? source : "fa_requalification",
-            "\"player_id\":%u,\"team_id\":%u,\"current_year\":%u,\"last_fa_year\":%u,"
-            "\"eligible_year\":%u,\"old_current_team_id\":%u,\"old_active_team_id\":%u,"
-            "\"old_league_id\":%u,\"league_id\":%u",
-            rec->player_id,
-            rec->original_team_id,
-            current_year,
-            rec->last_fa_year,
-            rec->last_fa_year + team_control_years,
-            old_current_team,
-            old_active_team,
-            old_league,
-            league_id);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "player_id", rec->player_id);
+            kbo_log_field_u32(&audit_fields, "team_id", rec->original_team_id);
+            kbo_log_field_u32(&audit_fields, "current_year", current_year);
+            kbo_log_field_u32(&audit_fields, "last_fa_year", rec->last_fa_year);
+            kbo_log_field_u32(&audit_fields, "eligible_year", rec->last_fa_year + team_control_years);
+            kbo_log_field_u32(&audit_fields, "old_current_team_id", old_current_team);
+            kbo_log_field_u32(&audit_fields, "old_active_team_id", old_active_team);
+            kbo_log_field_u32(&audit_fields, "old_league_id", old_league);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_rule_audit_emit_fields(
+                "fa.requalification.team_control",
+                "restore",
+                "team_control_years_active",
+                source != NULL ? source : "fa_requalification",
+                &audit_fields);
+        } while (0);
     } else {
         LONG slot = InterlockedIncrement(&g_kbo_fa_requalification_skip_log_count);
         if (slot <= 120) {
@@ -190,16 +192,20 @@ void kbo_run_fa_requalification_once(const char* source)
     }
     append_logf("KBO FA requalification pass source=%s records=%d restored=%d today=%u", source != NULL ? source : "", count, restored, today);
     if (restored > 0) {
-        kbo_rule_audit_emitf(
-            "fa.requalification.pass",
-            "restore",
-            "records_repaired",
-            source != NULL ? source : "fa_requalification",
-            "\"date\":%u,\"current_year\":%u,\"records\":%d,\"restored\":%d",
-            today,
-            current_year,
-            count,
-            restored);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", today);
+            kbo_log_field_u32(&audit_fields, "current_year", current_year);
+            kbo_log_field_i32(&audit_fields, "records", count);
+            kbo_log_field_i32(&audit_fields, "restored", restored);
+            kbo_rule_audit_emit_fields(
+                "fa.requalification.pass",
+                "restore",
+                "records_repaired",
+                source != NULL ? source : "fa_requalification",
+                &audit_fields);
+        } while (0);
     }
 }
 

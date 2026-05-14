@@ -138,7 +138,18 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
 {
     if (event_yyyymmdd == 0u || g_kbo_foreign_waiver_last_result_announcement == event_yyyymmdd
             || kbo_foreign_waiver_announcement_recorded(event_yyyymmdd)) {
-        kbo_rule_audit_emitf("foreign_waiver.results", "skip", "already_announced_or_bad_date", source, "\"date\":%u,\"last_date\":%u", event_yyyymmdd, g_kbo_foreign_waiver_last_result_announcement);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "last_date", g_kbo_foreign_waiver_last_result_announcement);
+            kbo_rule_audit_emit_fields(
+                "foreign_waiver.results",
+                "skip",
+                "already_announced_or_bad_date",
+                source,
+                &audit_fields);
+        } while (0);
         return 0;
     }
 
@@ -147,14 +158,35 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
         league_id = kbo_resolve_kbo_league_id();
     }
     if (league_id == 0u) {
-        kbo_rule_audit_emitf("foreign_waiver.results", "skip", "league_id_unavailable", source, "\"date\":%u", event_yyyymmdd);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+            kbo_rule_audit_emit_fields(
+                "foreign_waiver.results",
+                "skip",
+                "league_id_unavailable",
+                source,
+                &audit_fields);
+        } while (0);
         return 0;
     }
 
     char body[1024] = {0};
     kbo_load_foreign_waiver_rights();
     if (!kbo_build_foreign_waiver_result_body(body, sizeof(body), event_yyyymmdd, source)) {
-        kbo_rule_audit_emitf("foreign_waiver.results", "skip", "body_template_unavailable", source, "\"date\":%u,\"league_id\":%u", event_yyyymmdd, league_id);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_rule_audit_emit_fields(
+                "foreign_waiver.results",
+                "skip",
+                "body_template_unavailable",
+                source,
+                &audit_fields);
+        } while (0);
         append_logf(
             "foreign reserve rights: result announcement skipped source=%s date=%u reason=body_template_unavailable",
             source != NULL ? source : "",
@@ -164,7 +196,18 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
 
     char title[160] = {0};
     if (!kbo_news_template_render_key("foreign_waiver.results.title", NULL, 0, title, sizeof(title), source)) {
-        kbo_rule_audit_emitf("foreign_waiver.results", "skip", "title_template_unavailable", source, "\"date\":%u,\"league_id\":%u", event_yyyymmdd, league_id);
+                do {
+            KboLogFields audit_fields;
+            kbo_log_fields_init(&audit_fields);
+            kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+            kbo_log_field_u32(&audit_fields, "league_id", league_id);
+            kbo_rule_audit_emit_fields(
+                "foreign_waiver.results",
+                "skip",
+                "title_template_unavailable",
+                source,
+                &audit_fields);
+        } while (0);
         append_logf(
             "foreign reserve rights: result announcement skipped source=%s date=%u reason=title_template_unavailable",
             source != NULL ? source : "",
@@ -189,6 +232,18 @@ int kbo_announce_foreign_waiver_results(uint32_t event_yyyymmdd, const char* sou
         event_yyyymmdd,
         created,
         body);
-    kbo_rule_audit_emitf("foreign_waiver.results", created ? "emit_news" : "record_only", "result_announcement", source, "\"date\":%u,\"league_id\":%u,\"created\":%d", event_yyyymmdd, league_id, created);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", event_yyyymmdd);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_i32(&audit_fields, "created", created);
+        kbo_rule_audit_emit_fields(
+            "foreign_waiver.results",
+            created ? "emit_news" : "record_only",
+            "result_announcement",
+            source,
+            &audit_fields);
+    } while (0);
     return 1;
 }

@@ -3,9 +3,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/files/atomic/core_atomic_file.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/optimizer/kbo_optimizer.h"
@@ -22,11 +24,14 @@ static int kbo_military_write_ortools_request(
     int slots,
     int* out_considered)
 {
-    FILE* file = fopen(path, "wb");
-    if (file == NULL) {
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
+    if (file == INVALID_HANDLE_VALUE) {
         return 0;
     }
-    fputs("player_id,score,age,role,original_team_id,slots\r\n", file);
+    DWORD written = 0;
+    const char* header = "player_id,score,age,role,original_team_id,slots\r\n";
+    WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
     int considered = 0;
     LONG count = g_kbo_military_draft_candidate_count;
     if (count < 0) { count = 0; }
@@ -51,8 +56,10 @@ static int kbo_military_write_ortools_request(
             continue;
         }
         int score = kbo_military_draft_candidate_score(player);
-        fprintf(
-            file,
+        char line[128] = {0};
+        int len = snprintf(
+            line,
+            sizeof(line),
             "%u,%d,%u,%u,%u,%d\r\n",
             candidate->player_id,
             score,
@@ -60,9 +67,14 @@ static int kbo_military_write_ortools_request(
             (uint32_t)player[OOTP27_PLAYER_POSITION_GROUP_OFFSET],
             candidate->original_team_id,
             slots);
+        if (len > 0 && len < (int)sizeof(line)) {
+            WriteFile(file, line, (DWORD)len, &written, NULL);
+        }
         considered++;
     }
-    fclose(file);
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        return 0;
+    }
     if (out_considered != NULL) {
         *out_considered = considered;
     }

@@ -7,6 +7,7 @@
 #include "domestic_fa_market_investigation_scan.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/dates/core_text_date.h"
+#include "../../core/files/atomic/core_atomic_file.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../fa_market_classification/policy/fa_market_policy.h"
@@ -257,7 +258,8 @@ int kbo_domestic_fa_write_investigation_csv(
         return 0;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
         append_logf("domestic FA market investigation: failed to open CSV path=%s gle=%lu", path, GetLastError());
         return 0;
@@ -324,7 +326,10 @@ int kbo_domestic_fa_write_investigation_csv(
         kbo_domestic_fa_csv_raw(file, "\r\n");
     }
 
-    CloseHandle(file);
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        append_logf("domestic FA market investigation: atomic commit failed path=%s gle=%lu", path, GetLastError());
+        return 0;
+    }
     if (out_path != NULL && out_path_size > 0) {
         snprintf(out_path, out_path_size, "%s", path);
     }

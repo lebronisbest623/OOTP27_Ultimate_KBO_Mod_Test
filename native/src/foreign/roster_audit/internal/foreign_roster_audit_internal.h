@@ -68,6 +68,7 @@ void kbo_write_foreign_roster_snapshot_row(
     const char* source,
     const KboForeignRosterAuditState* state);
 HANDLE kbo_open_foreign_roster_snapshot_file(void);
+void kbo_close_foreign_roster_snapshot_file(HANDLE file);
 void audit_foreign_roster_state(const char* source, int write_snapshot);
 DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter);
 void start_kbo_foreign_roster_daily_audit_thread(void);

@@ -34,7 +34,9 @@ static int kbo_asian_games_write_ortools_request(
     const uint32_t* required_orgs,
     int required_org_count)
 {
-    FILE* file = fopen(path, "wb");
+    char tmp_path[MAX_PATH] = {0};
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
+    FILE* file = fopen(tmp_path, "wb");
     if (file == NULL) {
         return 0;
     }
@@ -61,6 +63,10 @@ static int kbo_asian_games_write_ortools_request(
             required);
     }
     fclose(file);
+    if (!MoveFileExA(tmp_path, path, MOVEFILE_REPLACE_EXISTING)) {
+        DeleteFileA(tmp_path);
+        return 0;
+    }
     return 1;
 }
 

@@ -10,25 +10,26 @@ void kbo_audit_foreign_priority_schedule(
 {
     KboForeignPriorityEventAudit empty = {0};
     const KboForeignPriorityEventAudit* a = audit != 0 ? audit : &empty;
-    kbo_rule_audit_emitf(
-        "custom_event.foreign_priority.schedule",
-        decision,
-        reason,
-        source,
-        "\"date\":%u,\"league_id\":%u,\"anchor_date\":%u,\"open_date\":%u,"
-        "\"close_date\":%u,\"fa_declaration_date\":%u,\"military_selection_date\":%u,"
-        "\"created_open\":%d,\"created_close\":%d,\"created_fa_declaration\":%d,"
-        "\"created_military\":%d,\"ready\":%d",
-        a->today,
-        a->league_id,
-        a->anchor_date,
-        a->open_date,
-        a->close_date,
-        a->fa_declaration_date,
-        a->military_selection_date,
-        a->created_open,
-        a->created_close,
-        a->created_fa_declaration,
-        a->created_military,
-        a->ready);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", a->today);
+        kbo_log_field_u32(&audit_fields, "league_id", a->league_id);
+        kbo_log_field_u32(&audit_fields, "anchor_date", a->anchor_date);
+        kbo_log_field_u32(&audit_fields, "open_date", a->open_date);
+        kbo_log_field_u32(&audit_fields, "close_date", a->close_date);
+        kbo_log_field_u32(&audit_fields, "fa_declaration_date", a->fa_declaration_date);
+        kbo_log_field_u32(&audit_fields, "military_selection_date", a->military_selection_date);
+        kbo_log_field_i32(&audit_fields, "created_open", a->created_open);
+        kbo_log_field_i32(&audit_fields, "created_close", a->created_close);
+        kbo_log_field_i32(&audit_fields, "created_fa_declaration", a->created_fa_declaration);
+        kbo_log_field_i32(&audit_fields, "created_military", a->created_military);
+        kbo_log_field_i32(&audit_fields, "ready", a->ready);
+        kbo_rule_audit_emit_fields(
+            "custom_event.foreign_priority.schedule",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }

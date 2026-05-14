@@ -16,24 +16,26 @@ static void kbo_captain_audit_maintenance(
     int seed_startup,
     int calendar_preseason_start)
 {
-    kbo_rule_audit_emitf(
-        "captain.maintenance",
-        decision,
-        reason,
-        source,
-        "\"date\":%u,\"season\":%u,\"league_id\":%u,\"league_season\":%u,\"phase\":%u,"
-        "\"csv_exists\":%d,\"calendar_recovery\":%d,\"calendar_preseason\":%d,"
-        "\"seed_startup\":%d,\"calendar_preseason_start\":%d",
-        date,
-        season,
-        league_id,
-        league_season,
-        (unsigned)phase,
-        csv_exists,
-        calendar_recovery,
-        calendar_preseason,
-        seed_startup,
-        calendar_preseason_start);
+        do {
+        KboLogFields audit_fields;
+        kbo_log_fields_init(&audit_fields);
+        kbo_log_field_u32(&audit_fields, "date", date);
+        kbo_log_field_u32(&audit_fields, "season", season);
+        kbo_log_field_u32(&audit_fields, "league_id", league_id);
+        kbo_log_field_u32(&audit_fields, "league_season", league_season);
+        kbo_log_field_u32(&audit_fields, "phase", (unsigned)phase);
+        kbo_log_field_i32(&audit_fields, "csv_exists", csv_exists);
+        kbo_log_field_i32(&audit_fields, "calendar_recovery", calendar_recovery);
+        kbo_log_field_i32(&audit_fields, "calendar_preseason", calendar_preseason);
+        kbo_log_field_i32(&audit_fields, "seed_startup", seed_startup);
+        kbo_log_field_i32(&audit_fields, "calendar_preseason_start", calendar_preseason_start);
+        kbo_rule_audit_emit_fields(
+            "captain.maintenance",
+            decision,
+            reason,
+            source,
+            &audit_fields);
+    } while (0);
 }
 
 int kbo_run_captain_selection_maintenance_once(const char* source)
