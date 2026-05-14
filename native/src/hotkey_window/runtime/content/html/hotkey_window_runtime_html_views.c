@@ -178,14 +178,14 @@ void kbo_webview_append_main_tabs(KboWindowTextBuffer* buffer)
     }
     static const int main_views[] = {
         KBO_HUB_VIEW_MOD_INFO,
-        KBO_HUB_VIEW_MILITARY,
-        KBO_HUB_VIEW_FUTURES_LEAGUE,
         KBO_HUB_VIEW_ASIAN_QUOTA,
-        KBO_HUB_VIEW_ASIAN_GAMES,
+        KBO_HUB_VIEW_FUTURES_LEAGUE,
         KBO_HUB_VIEW_FA_CASES,
+        KBO_HUB_VIEW_MILITARY,
+        KBO_HUB_VIEW_ASIAN_GAMES,
         KBO_HUB_VIEW_CBT,
-        KBO_HUB_VIEW_SETTINGS,
-        KBO_HUB_VIEW_REPUTATION
+        KBO_HUB_VIEW_REPUTATION,
+        KBO_HUB_VIEW_SETTINGS
     };
     for (size_t i = 0; i < sizeof(main_views) / sizeof(main_views[0]); i++) {
         int view = main_views[i];
