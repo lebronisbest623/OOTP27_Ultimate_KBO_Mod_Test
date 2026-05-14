@@ -1,0 +1,8 @@
+#ifndef KBOFIX_SRC_CUSTOM_EVENTS_RUNTIME_DATES_CUSTOM_EVENT_DATES_H_
+#define KBOFIX_SRC_CUSTOM_EVENTS_RUNTIME_DATES_CUSTOM_EVENT_DATES_H_
+
+#include <stdint.h>
+
+uint32_t kbo_custom_event_effective_news_date(uint32_t event_yyyymmdd);
+
+#endif

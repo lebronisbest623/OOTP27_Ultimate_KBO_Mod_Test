@@ -5,15 +5,106 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
+#include "../../custom_events/runtime/dates/custom_event_dates.h"
+#include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../core/news/live/core_live_news.h"
 #include "../../core/news/templates/core_news_templates.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
 
 static volatile LONG g_kbo_independent_team_acquisition_open_date = 0;
+
+#define KBO_INDEPENDENT_TEAM_ACQUISITION_WINDOW_FILE "independent_acquisition_window.txt"
+
+static int kbo_independent_team_acquisition_window_path(char* out, size_t out_size)
+{
+    return kbo_get_save_scoped_data_file(
+        KBO_INDEPENDENT_TEAM_ACQUISITION_WINDOW_FILE,
+        out,
+        out_size);
+}
+
+static void kbo_independent_team_acquisition_persist_open_date(
+    uint32_t event_yyyymmdd,
+    const char* source)
+{
+    char path[MAX_PATH] = {0};
+    if (event_yyyymmdd == 0u
+            || !kbo_independent_team_acquisition_window_path(path, sizeof(path))) {
+        return;
+    }
+
+    char text[32] = {0};
+    snprintf(text, sizeof(text), "%u\r\n", event_yyyymmdd);
+    HANDLE file = CreateFileA(
+        path,
+        GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        kbo_log_runtimef(
+            "KBO independent futures acquisition window persist skipped source=%s date=%u gle=%lu path=%s",
+            source != NULL ? source : "",
+            event_yyyymmdd,
+            (unsigned long)GetLastError(),
+            path);
+        return;
+    }
+
+    DWORD written = 0u;
+    DWORD len = (DWORD)strlen(text);
+    if (!WriteFile(file, text, len, &written, NULL) || written != len) {
+        kbo_log_runtimef(
+            "KBO independent futures acquisition window persist failed source=%s date=%u gle=%lu path=%s",
+            source != NULL ? source : "",
+            event_yyyymmdd,
+            (unsigned long)GetLastError(),
+            path);
+    }
+    CloseHandle(file);
+}
+
+static uint32_t kbo_independent_team_acquisition_load_open_date(void)
+{
+    char path[MAX_PATH] = {0};
+    if (!kbo_independent_team_acquisition_window_path(path, sizeof(path))) {
+        return 0u;
+    }
+
+    HANDLE file = CreateFileA(
+        path,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        return 0u;
+    }
+
+    char text[32] = {0};
+    DWORD read = 0u;
+    int ok = ReadFile(file, text, sizeof(text) - 1u, &read, NULL) && read > 0u;
+    CloseHandle(file);
+    if (!ok) {
+        return 0u;
+    }
+
+    unsigned long value = strtoul(text, NULL, 10);
+    if (value < 19820101ul || value > 22001231ul) {
+        return 0u;
+    }
+    return (uint32_t)value;
+}
 
 static uint32_t kbo_independent_team_acquisition_event_league_id(void)
 {
@@ -123,18 +214,33 @@ int kbo_handle_independent_team_acquisition_open_event(
     LONG previous = InterlockedExchange(
         &g_kbo_independent_team_acquisition_open_date,
         (LONG)event_yyyymmdd);
+    kbo_independent_team_acquisition_persist_open_date(event_yyyymmdd, source);
+    uint32_t news_yyyymmdd = kbo_custom_event_effective_news_date(event_yyyymmdd);
     kbo_log_runtimef(
-        "KBO independent futures acquisition window opened source=%s date=%u previous=%u",
+        "KBO independent futures acquisition window opened source=%s event_date=%u news_date=%u previous=%u",
         source != NULL ? source : "",
         event_yyyymmdd,
+        news_yyyymmdd,
         (uint32_t)previous);
-    return kbo_emit_independent_team_acquisition_open_news(event_yyyymmdd, source) ? 1 : 0;
+    return kbo_emit_independent_team_acquisition_open_news(news_yyyymmdd, source) ? 1 : 0;
 }
 
 uint32_t kbo_independent_team_acquisition_window_open_date(void)
 {
-    return (uint32_t)InterlockedCompareExchange(
+    uint32_t cached = (uint32_t)InterlockedCompareExchange(
         &g_kbo_independent_team_acquisition_open_date,
         0,
         0);
+    if (cached != 0u) {
+        return cached;
+    }
+
+    uint32_t loaded = kbo_independent_team_acquisition_load_open_date();
+    if (loaded != 0u) {
+        InterlockedCompareExchange(
+            &g_kbo_independent_team_acquisition_open_date,
+            (LONG)loaded,
+            0);
+    }
+    return loaded;
 }

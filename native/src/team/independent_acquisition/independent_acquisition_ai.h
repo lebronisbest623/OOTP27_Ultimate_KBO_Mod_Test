@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_TEAM_INDEPENDENT_ACQUISITION_AI_H_
+#define KBOFIX_SRC_TEAM_INDEPENDENT_ACQUISITION_AI_H_
+
+int kbo_run_independent_team_acquisition_ai(const char* source);
+
+#endif

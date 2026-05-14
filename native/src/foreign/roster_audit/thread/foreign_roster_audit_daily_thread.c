@@ -1,5 +1,6 @@
 #include "../internal/foreign_roster_audit_internal.h"
 #include "../../../team/add_player_guard/team_add_player_guard_ai_roster.h"
+#include "../../../team/independent_acquisition/independent_acquisition_ai.h"
 #include "../../injury/api/foreign_injury.h"
 #include "../../retention_guard/foreign_retention_guard.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
@@ -32,6 +33,7 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
             "foreign_roster_daily_date_change",
             today);
         kbo_run_foreign_ai_roster_daily_callup("foreign_roster_daily_date_change");
+        kbo_run_independent_team_acquisition_ai("foreign_roster_daily_date_change");
         kbo_foreign_injury_replacement_scan_once("foreign_roster_daily_date_change");
         kbo_foreign_retention_guard_repair("foreign_roster_daily_date_change");
         uint32_t season = today / 10000u;
