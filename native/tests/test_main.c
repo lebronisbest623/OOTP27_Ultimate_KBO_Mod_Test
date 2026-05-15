@@ -1291,6 +1291,19 @@ static void test_foreign_injury_inactive_roster_long_term_basis(void)
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, -1, min_days, 1));
     assert(kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 42, min_days, 1));
 
+    assert(!kbo_foreign_injury_active_record_has_roster_basis(KBO_FOREIGN_INJURY_STATUS_OPEN, 3001u, 1));
+    assert(!kbo_foreign_injury_active_record_has_roster_basis(KBO_FOREIGN_INJURY_STATUS_ACTIVE, 0u, 1));
+    assert(!kbo_foreign_injury_active_record_has_roster_basis(KBO_FOREIGN_INJURY_STATUS_ACTIVE, 3001u, 0));
+    assert(kbo_foreign_injury_active_record_has_roster_basis(KBO_FOREIGN_INJURY_STATUS_ACTIVE, 3001u, 1));
+
+    assert(kbo_foreign_injury_return_state_allows_close(0u, 0, 0u, 1, 0));
+    assert(!kbo_foreign_injury_return_state_allows_close(1u, 0, 0u, 1, 0));
+    assert(!kbo_foreign_injury_return_state_allows_close(0u, 3, 0u, 1, 0));
+    assert(!kbo_foreign_injury_return_state_allows_close(0u, 0, 1u, 1, 0));
+    assert(!kbo_foreign_injury_return_state_allows_close(0u, 0, 0u, 0, 0));
+    assert(!kbo_foreign_injury_return_state_allows_close(0u, 0, 0u, 0, 1));
+    assert(!kbo_foreign_injury_return_state_allows_close(0u, 0, 0u, 1, 1));
+
     printf("test_foreign_injury_inactive_roster_long_term_basis: PASS\n");
 }
 

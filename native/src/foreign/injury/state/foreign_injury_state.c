@@ -90,6 +90,30 @@ int kbo_foreign_injury_duration_meets_minimum(int16_t days_left, int min_days)
     return min_days > 0 && days_left >= min_days;
 }
 
+int kbo_foreign_injury_active_record_has_roster_basis(
+    uint8_t status,
+    uint32_t replacement_player_id,
+    int inactive_roster_present)
+{
+    return status == KBO_FOREIGN_INJURY_STATUS_ACTIVE
+        && replacement_player_id != 0u
+        && inactive_roster_present;
+}
+
+int kbo_foreign_injury_return_state_allows_close(
+    uint8_t injury_active,
+    int16_t days_left,
+    uint8_t loan_active,
+    int active_roster_present,
+    int inactive_roster_present)
+{
+    return injury_active == 0u
+        && days_left <= 0
+        && loan_active == 0u
+        && active_roster_present
+        && !inactive_roster_present;
+}
+
 static int kbo_foreign_injury_state_record_has_minimum_injury_basis(
     const KboForeignInjuryReplacement* rec)
 {
@@ -124,6 +148,12 @@ static int kbo_foreign_injury_state_record_has_minimum_injury_basis(
         rec->injured_player_id,
         rec->team_id,
         today);
+    if (kbo_foreign_injury_active_record_has_roster_basis(
+            rec->status,
+            rec->replacement_player_id,
+            inactive_roster_present)) {
+        return 1;
+    }
     return kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(
         injury_active,
         days_left,

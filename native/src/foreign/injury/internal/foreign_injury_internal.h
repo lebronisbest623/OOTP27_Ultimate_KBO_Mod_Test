@@ -68,6 +68,16 @@ int kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(
     int min_days,
     int inactive_roster_present);
 int kbo_foreign_injury_duration_meets_minimum(int16_t days_left, int min_days);
+int kbo_foreign_injury_active_record_has_roster_basis(
+    uint8_t status,
+    uint32_t replacement_player_id,
+    int inactive_roster_present);
+int kbo_foreign_injury_return_state_allows_close(
+    uint8_t injury_active,
+    int16_t days_left,
+    uint8_t loan_active,
+    int active_roster_present,
+    int inactive_roster_present);
 int kbo_foreign_injury_player_on_inactive_replacement_roster(
     uint8_t* player,
     uint32_t player_id,
