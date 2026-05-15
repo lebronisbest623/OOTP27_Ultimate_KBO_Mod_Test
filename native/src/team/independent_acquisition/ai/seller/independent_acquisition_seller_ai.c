@@ -87,6 +87,82 @@ static uint32_t kbo_independent_acquisition_seller_tiebreaker(
     return value;
 }
 
+static uint32_t kbo_independent_acquisition_date_serial(uint32_t yyyymmdd)
+{
+    if (yyyymmdd == 0u) {
+        return 0u;
+    }
+    return kbo_date_serial(
+        yyyymmdd / 10000u,
+        (yyyymmdd / 100u) % 100u,
+        yyyymmdd % 100u);
+}
+
+static int kbo_independent_acquisition_seller_pacing_deferred(
+    uint32_t today,
+    const KboIndependentAcquisitionQueuedRequest* request,
+    int seller_transfers,
+    int seller_transfer_limit,
+    uint32_t* out_window_age_days,
+    uint32_t* out_target_day,
+    uint32_t* out_request_age_days,
+    uint32_t* out_days_remaining)
+{
+    if (request == NULL || seller_transfer_limit <= 1 || seller_transfers < 0) {
+        return 0;
+    }
+
+    uint32_t today_serial = kbo_independent_acquisition_date_serial(today);
+    uint32_t open_serial = kbo_independent_acquisition_date_serial(
+        kbo_independent_team_acquisition_window_open_date());
+    uint32_t request_serial = kbo_independent_acquisition_date_serial(request->date);
+    if (today_serial == 0u || open_serial == 0u || today_serial < open_serial) {
+        return 0;
+    }
+
+    uint32_t window_age_days = today_serial - open_serial;
+    uint32_t request_age_days =
+        request_serial != 0u && today_serial >= request_serial ? today_serial - request_serial : 0u;
+    uint32_t window_days =
+        kbo_foreign_player_policy()->pending_offer_ttl_days > 0
+            ? (uint32_t)kbo_foreign_player_policy()->pending_offer_ttl_days
+            : 45u;
+    uint32_t days_remaining = window_age_days < window_days ? window_days - window_age_days : 0u;
+    uint32_t remaining_transfers = seller_transfer_limit > seller_transfers
+        ? (uint32_t)(seller_transfer_limit - seller_transfers)
+        : 0u;
+    if (remaining_transfers <= 1u || days_remaining <= remaining_transfers * 3u) {
+        return 0;
+    }
+
+    uint32_t pacing_span = window_days > 10u ? window_days - 6u : window_days;
+    uint32_t base_day = 2u + ((uint32_t)seller_transfers * pacing_span) / (uint32_t)seller_transfer_limit;
+    uint32_t jitter = kbo_independent_acquisition_seller_tiebreaker(
+        request->season,
+        request) % 4u;
+    uint32_t target_day = base_day + jitter;
+    if (request_age_days >= 10u && target_day > 2u) {
+        target_day -= 2u;
+    }
+    if (request_age_days >= 18u) {
+        return 0;
+    }
+
+    if (out_window_age_days != NULL) {
+        *out_window_age_days = window_age_days;
+    }
+    if (out_target_day != NULL) {
+        *out_target_day = target_day;
+    }
+    if (out_request_age_days != NULL) {
+        *out_request_age_days = request_age_days;
+    }
+    if (out_days_remaining != NULL) {
+        *out_days_remaining = days_remaining;
+    }
+    return window_age_days < target_day;
+}
+
 int kbo_run_independent_team_acquisition_seller_ai(
     uint32_t today,
     const uintptr_t* player_snapshot,
@@ -107,6 +183,7 @@ int kbo_run_independent_team_acquisition_seller_ai(
     int decided = 0;
     int transferred = 0;
     int limit_blocked = 0;
+    int pacing_deferred = 0;
     for (int i = 0; i < request_count; i++) {
         KboIndependentAcquisitionQueuedRequest* group = &queue[i];
         if (group->player_id == 0u) {
@@ -203,7 +280,37 @@ int kbo_run_independent_team_acquisition_seller_ai(
         if (seller_limit_reached) {
             limit_blocked++;
         }
+        uint32_t window_age_days = 0u;
+        uint32_t target_day = 0u;
+        uint32_t request_age_days = 0u;
+        uint32_t days_remaining = 0u;
+        int pacing_blocked = !seller_limit_reached
+            && kbo_independent_acquisition_seller_pacing_deferred(
+                today,
+                &selected,
+                seller_transfers,
+                seller_transfer_limit,
+                &window_age_days,
+                &target_day,
+                &request_age_days,
+                &days_remaining);
+        if (pacing_blocked) {
+            pacing_deferred++;
+            kbo_log_runtimef(
+                "independent acquisition seller AI deferred source=%s reason=market_pacing seller=%u player=%u buyer=%u seller_transfers=%d seller_transfer_limit=%d window_age_days=%u target_day=%u request_age_days=%u days_remaining=%u",
+                source != NULL ? source : "",
+                selected.seller_team_id,
+                selected.player_id,
+                selected.buyer_team_id,
+                seller_transfers,
+                seller_transfer_limit,
+                window_age_days,
+                target_day,
+                request_age_days,
+                days_remaining);
+        }
         if (!seller_limit_reached
+                && !pacing_blocked
                 && player != NULL
                 && buyer_team != NULL
                 && memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
@@ -247,7 +354,8 @@ int kbo_run_independent_team_acquisition_seller_ai(
                 source);
         }
 
-        if (kbo_independent_acquisition_append_decision(today, &selected, moved, old_cash, new_cash, source)) {
+        if (!pacing_blocked
+                && kbo_independent_acquisition_append_decision(today, &selected, moved, old_cash, new_cash, source)) {
             decided++;
             if (moved) {
                 transferred++;
@@ -274,13 +382,14 @@ int kbo_run_independent_team_acquisition_seller_ai(
     }
 
     kbo_log_runtimef(
-        "independent acquisition seller AI summary source=%s today=%u queued=%d decided=%d transferred=%d limit_blocked=%d seller_transfer_limit=%d",
+        "independent acquisition seller AI summary source=%s today=%u queued=%d decided=%d transferred=%d limit_blocked=%d pacing_deferred=%d seller_transfer_limit=%d",
         source != NULL ? source : "",
         today,
         request_count,
         decided,
         transferred,
         limit_blocked,
+        pacing_deferred,
         seller_transfer_limit);
     return transferred;
 }
