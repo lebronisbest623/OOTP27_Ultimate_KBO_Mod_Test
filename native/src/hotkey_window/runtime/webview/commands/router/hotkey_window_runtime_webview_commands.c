@@ -12,5 +12,6 @@ int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
     if (kbo_webview_handle_mod_settings_command(cmd)) { return 1; }
     if (kbo_webview_handle_event_and_fa_command(cmd)) { return 1; }
     if (kbo_webview_handle_settings_command(cmd)) { return 1; }
+    if (kbo_webview_handle_player_hover_command(cmd, hwnd)) { return 1; }
     return kbo_webview_handle_selection_dropdown_command(cmd, hwnd) ? 1 : 1;
 }

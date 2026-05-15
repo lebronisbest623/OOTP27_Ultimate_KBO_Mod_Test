@@ -10,9 +10,7 @@ static void kbo_webview_append_player_id_attrs(KboWindowTextBuffer* buffer, uint
     if (buffer == NULL || player_id == 0u) {
         return;
     }
-    kbo_window_text_appendf(buffer, " title='");
-    kbo_html_append_escaped(buffer, kbo_hub_text("OOTP \xec\x84\xa0\xec\x88\x98 ID", "OOTP player ID"));
-    kbo_window_text_appendf(buffer, ": %u' data-player-id='%u'", player_id, player_id);
+    kbo_window_text_appendf(buffer, " data-player-id='%u' data-kbo-player-hover='1'", player_id);
 }
 
 static int kbo_webview_player_is_selected_team_captain(uint32_t player_id)

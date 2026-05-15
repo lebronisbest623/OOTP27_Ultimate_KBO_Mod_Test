@@ -37,6 +37,31 @@ DWORD WINAPI patch_thread(LPVOID parameter)
         return 0;
     }
 
+    if (!read_kbo_localappdata_flag_file("disable_kbo_player_hover_manager_probe.txt")) {
+        install_kbo_player_hover_manager_probe_patch();
+    } else {
+        kbo_log_runtime_line("KBO player hover manager probe disabled: disable_kbo_player_hover_manager_probe is true");
+    }
+    if (!read_kbo_localappdata_flag_file("disable_kbo_player_tooltip_text_append_probe.txt")) {
+        install_kbo_player_tooltip_text_append_probe_patch();
+    } else {
+        kbo_log_runtime_line("KBO player tooltip text append probe disabled: disable_kbo_player_tooltip_text_append_probe is true");
+    }
+    if (!read_kbo_localappdata_flag_file("disable_kbo_player_tooltip_string_format_probe.txt")) {
+        install_kbo_player_tooltip_string_format_probe_patch();
+    } else {
+        kbo_log_runtime_line("KBO player tooltip string format probe disabled: disable_kbo_player_tooltip_string_format_probe is true");
+    }
+    if (!read_kbo_localappdata_flag_file("disable_kbo_player_tooltip_rating_common_probe.txt")) {
+        install_kbo_player_tooltip_rating_common_probe_patch();
+    } else {
+        kbo_log_runtime_line("KBO player tooltip rating common probe disabled: disable_kbo_player_tooltip_rating_common_probe is true");
+    }
+    if (!read_kbo_localappdata_flag_file("disable_kbo_player_tooltip_rating_panel_ctor_probe.txt")) {
+        install_kbo_player_tooltip_rating_panel_ctor_probe_patch();
+    } else {
+        kbo_log_runtime_line("KBO player tooltip rating panel ctor probe disabled: disable_kbo_player_tooltip_rating_panel_ctor_probe is true");
+    }
     install_kbo_early_foreign_policy_hooks_once("presave_bootstrap");
     install_kbo_early_no_minor_contract_hooks_once("presave_bootstrap");
     int foreign_ai_roster_management =

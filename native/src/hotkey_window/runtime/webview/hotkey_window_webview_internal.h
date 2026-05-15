@@ -33,6 +33,7 @@ int kbo_webview_handle_mod_settings_command(const char* cmd);
 int kbo_webview_handle_event_and_fa_command(const char* cmd);
 int kbo_webview_handle_settings_command(const char* cmd);
 int kbo_webview_handle_selection_dropdown_command(const char* cmd, HWND hwnd);
+int kbo_webview_handle_player_hover_command(const char* cmd, HWND hwnd);
 HRESULT STDMETHODCALLTYPE kbo_webview_nav_qi(ICoreWebView2NavigationStartingEventHandler* This, REFIID riid, void** ppv);
 ULONG STDMETHODCALLTYPE kbo_webview_nav_addref(ICoreWebView2NavigationStartingEventHandler* This);
 ULONG STDMETHODCALLTYPE kbo_webview_nav_release(ICoreWebView2NavigationStartingEventHandler* This);

@@ -1,0 +1,10 @@
+#ifndef KBOFIX_SRC_PATCH_INSTALLERS_HOTKEY_WINDOW_PLAYER_HOVER_H_
+#define KBOFIX_SRC_PATCH_INSTALLERS_HOTKEY_WINDOW_PLAYER_HOVER_H_
+
+int install_kbo_player_hover_manager_probe_patch(void);
+int install_kbo_player_tooltip_text_append_probe_patch(void);
+int install_kbo_player_tooltip_string_format_probe_patch(void);
+int install_kbo_player_tooltip_rating_common_probe_patch(void);
+int install_kbo_player_tooltip_rating_panel_ctor_probe_patch(void);
+
+#endif

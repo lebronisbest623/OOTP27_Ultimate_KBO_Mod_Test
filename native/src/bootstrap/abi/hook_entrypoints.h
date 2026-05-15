@@ -20,6 +20,43 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
     uintptr_t player_list_ptr,
     int32_t player_count,
     uintptr_t source_team_ptr);
+__declspec(noinline) int ootp_kbo_player_hover_manager_probe_wrapper(
+    uintptr_t manager_ptr,
+    uintptr_t original_func_ptr);
+__declspec(noinline) void* ootp_kbo_player_tooltip_text_append_probe_wrapper(
+    const char* text,
+    uint8_t mode,
+    char* out,
+    uint8_t flags,
+    uintptr_t arg5,
+    uintptr_t arg6,
+    uintptr_t arg7,
+    uintptr_t arg8,
+    uintptr_t arg9,
+    uintptr_t arg10);
+__declspec(noinline) void* ootp_kbo_player_tooltip_string_format_probe_wrapper(
+    void* text_object,
+    const char* format,
+    uintptr_t arg3,
+    uintptr_t arg4,
+    uintptr_t arg5,
+    uintptr_t arg6,
+    uintptr_t arg7,
+    uintptr_t arg8,
+    uintptr_t arg9,
+    uintptr_t arg10);
+__declspec(noinline) uint8_t ootp_kbo_player_tooltip_rating_common_probe_wrapper(
+    void* container,
+    uint16_t column,
+    uint16_t row,
+    uint16_t displayed_rating,
+    uint8_t is_potential,
+    uint8_t mirror_flag);
+__declspec(noinline) void* ootp_kbo_player_tooltip_rating_panel_ctor_probe_wrapper(
+    void* panel_object,
+    uint16_t current_rating,
+    uint16_t potential_rating,
+    uint8_t potential_only);
 __declspec(noinline) void ootp_kbo_cbt_draft_order_create_wrapper(
     uintptr_t draft_state,
     uint8_t random_flag,

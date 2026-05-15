@@ -1,0 +1,13 @@
+#ifndef KBOFIX_SRC_HOOK_STUBS_HOTKEY_WINDOW_PLAYER_HOVER_H_
+#define KBOFIX_SRC_HOOK_STUBS_HOTKEY_WINDOW_PLAYER_HOVER_H_
+
+#include <stdint.h>
+#include <windows.h>
+
+uint8_t* build_kbo_player_hover_manager_probe_detour_stub(void* original_trampoline);
+uint8_t* build_kbo_player_tooltip_text_append_probe_detour_stub(void);
+uint8_t* build_kbo_player_tooltip_string_format_probe_detour_stub(void);
+uint8_t* build_kbo_player_tooltip_rating_common_probe_detour_stub(void);
+uint8_t* build_kbo_player_tooltip_rating_panel_ctor_probe_detour_stub(void);
+
+#endif
