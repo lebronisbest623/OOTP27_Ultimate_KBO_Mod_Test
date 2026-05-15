@@ -1,5 +1,6 @@
 #include "../../internal/foreign_signability_internal.h"
 #include "../../../../../build_verify/build_verify.h"
+#include "../../../../../fa_market_investigation/probe/domestic_fa_offer_probe.h"
 
 #define KBO_OFFER_READABLE_BYTES 0xE0u
 #define KBO_OFFER_MAJOR_FLAG_OFFSET 0x08u
@@ -111,7 +112,19 @@ static int kbo_foreign_ai_offer_attach_should_log(
         *out_holder_team_id = holder_team_id;
     }
 
-    return has_holder || kbo_player_is_foreign_for_kbo_rights(player);
+    if (has_holder || kbo_player_is_foreign_for_kbo_rights(player)) {
+        return 1;
+    }
+
+    return kbo_domestic_fa_offer_probe_should_log_player(player);
+}
+
+static int32_t kbo_offer_probe_player_value_score(uint8_t* player)
+{
+    if (kbo_domestic_fa_offer_probe_should_log_player(player)) {
+        return kbo_domestic_fa_offer_probe_value_score(player);
+    }
+    return kbo_foreign_waiver_value_score(player);
 }
 
 static void kbo_log_foreign_ai_offer_attach(
@@ -153,7 +166,7 @@ static void kbo_log_foreign_ai_offer_attach(
     uint8_t position_group = *(uint8_t*)(player + OOTP27_PLAYER_POSITION_GROUP_OFFSET);
     uint8_t position_role = *(uint8_t*)(player + OOTP27_PLAYER_POSITION_ROLE_OFFSET);
     int32_t demand_salary = *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET);
-    int32_t score = kbo_foreign_waiver_value_score(player);
+    int32_t score = kbo_offer_probe_player_value_score(player);
     int32_t selected_offer_id = *(int32_t*)(player + KBO_PLAYER_SELECTED_OFFER_ID_OFFSET);
 
     kbo_log_runtimef(
@@ -213,8 +226,12 @@ static int kbo_foreign_ai_offer_decision_should_log(
         return 1;
     }
 
-    return read_kbo_localappdata_flag_file("enable_kbo_custom_foreign_offer_logs.txt")
-        && kbo_player_is_foreign_for_kbo_rights(player);
+    if (read_kbo_localappdata_flag_file("enable_kbo_custom_foreign_offer_logs.txt")
+            && kbo_player_is_foreign_for_kbo_rights(player)) {
+        return 1;
+    }
+
+    return kbo_domestic_fa_offer_probe_should_log_player(player);
 }
 
 static void kbo_log_foreign_ai_offer_build(
@@ -257,7 +274,7 @@ static void kbo_log_foreign_ai_offer_build(
         *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET),
         *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET),
         *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET),
-        kbo_foreign_waiver_value_score(player),
+        kbo_offer_probe_player_value_score(player),
         (void*)flag_ptr,
         flag_ptr != 0 && memory_range_readable((void*)flag_ptr, sizeof(uint8_t)) ? (uint32_t)*(uint8_t*)flag_ptr : 0u,
         (void*)offer_ptr,
@@ -318,7 +335,7 @@ static void kbo_log_foreign_ai_offer_final_gate(
         *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET),
         *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET),
         *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET),
-        kbo_foreign_waiver_value_score(player),
+        kbo_offer_probe_player_value_score(player),
         (void*)offer_ptr,
         (uint32_t)kbo_offer_read_u8(offer_ptr, KBO_OFFER_MAJOR_FLAG_OFFSET),
         (uint32_t)kbo_offer_read_u8(offer_ptr, KBO_OFFER_MINOR_FLAG_OFFSET),

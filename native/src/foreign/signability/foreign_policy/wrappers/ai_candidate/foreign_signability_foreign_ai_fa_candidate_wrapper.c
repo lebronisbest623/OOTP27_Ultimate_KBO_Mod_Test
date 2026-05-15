@@ -1,4 +1,5 @@
 #include "../../internal/foreign_signability_internal.h"
+#include "../../../../../fa_market_investigation/probe/domestic_fa_offer_probe.h"
 #include "../candidate_array/foreign_signability_ai_fa_candidate_array.h"
 #include "../retained_candidates/foreign_signability_foreign_ai_fa_retained_candidates.h"
 
@@ -281,11 +282,21 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
         requester_team_id,
         candidate_array,
         insert_index);
+    int32_t before_insert_index = insert_index;
     insert_index = kbo_ai_fa_status_insert_candidate_ptr(
         frame_ptr,
         candidate_array,
         insert_index,
         player_ptr);
+    if (today == 0u) {
+        kbo_get_foreign_waiver_current_yyyymmdd(&today);
+    }
+    kbo_domestic_fa_offer_probe_log_candidate(
+        (uint8_t*)player_ptr,
+        requester_team_id,
+        before_insert_index,
+        insert_index,
+        today);
     return kbo_ai_fa_status_force_closed_replacement_market_candidates(
         frame_ptr,
         requester_team_id,
