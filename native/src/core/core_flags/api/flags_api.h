@@ -67,5 +67,7 @@ void kbo_register_runtime_thread(HANDLE thread, const char* label);
 void kbo_shutdown_runtime_threads(uint32_t timeout_ms);
 int kbo_runtime_threads_should_continue(void);
 int kbo_runtime_sleep_should_continue(uint32_t total_ms);
+int kbo_runtime_save_in_progress(void);
+int kbo_runtime_pause_for_save_if_needed(const char* label);
 
 #endif

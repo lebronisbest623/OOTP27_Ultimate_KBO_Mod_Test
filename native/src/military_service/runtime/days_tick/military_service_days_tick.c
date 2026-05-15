@@ -15,6 +15,7 @@
 #include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../../fa_market_classification/api/fa_market_classification.h"
 #include "../../../foreign/replacement_seed/api/foreign_replacement_seed.h"
+#include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../military_service.h"
 #include "../../players/loans/military_active_loan.h"
@@ -36,6 +37,9 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
     if (!kbo_fix_enabled()) {
         return 0;
     }
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "military_days_tick")) {
+        return 0;
+    }
 
     uint32_t today_serial = kbo_current_date_serial();
     if (today_serial == 0) {
@@ -52,6 +56,37 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
     if (!find_kbo_global_player_vector(&player_vector, &player_count, &vector_offset)) {
         return 0;
     }
+    if (player_vector == 0u || player_count <= 0 || player_count > 200000) {
+        return 0;
+    }
+    SIZE_T player_vector_bytes = (SIZE_T)player_count * sizeof(uintptr_t);
+    if (!memory_range_readable((void*)player_vector, player_vector_bytes)) {
+        return 0;
+    }
+    uintptr_t* player_snapshot = (uintptr_t*)HeapAlloc(GetProcessHeap(), 0, player_vector_bytes);
+    if (player_snapshot == NULL) {
+        return 0;
+    }
+    SIZE_T bytes_read = 0u;
+    if (!ReadProcessMemory(
+            GetCurrentProcess(),
+            (LPCVOID)player_vector,
+            player_snapshot,
+            player_vector_bytes,
+            &bytes_read)
+            || bytes_read != player_vector_bytes) {
+        HeapFree(GetProcessHeap(), 0, player_snapshot);
+        return 0;
+    }
+    if (kbo_runtime_save_in_progress()) {
+        kbo_log_runtimef(
+            "KBO military service day tick aborted source=%s reason=save_in_progress stage=after_player_snapshot date_serial=%u count=%d",
+            source != NULL ? source : "",
+            today_serial,
+            player_count);
+        HeapFree(GetProcessHeap(), 0, player_snapshot);
+        return 0;
+    }
 
     kbo_update_amateur_reputation_from_team_records(source);
 
@@ -60,6 +95,7 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
     uint32_t sang_id = sang != NULL ? *(uint32_t*)(sang + OOTP27_KBO_TEAM_ID_OFFSET) : 0;
     uint32_t kpb_id  = kpb  != NULL ? *(uint32_t*)(kpb  + OOTP27_KBO_TEAM_ID_OFFSET) : 0;
     if (sang_id == 0 && kpb_id == 0) {
+        HeapFree(GetProcessHeap(), 0, player_snapshot);
         return 0;
     }
     int seeded_assignments = 0;
@@ -67,6 +103,15 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
     int source_allows_seed_assignment = !source_is_daily_tick;
     int source_allows_roster_mutation = !source_is_daily_tick
         || kbo_military_daily_roster_mutation_window_ready(today_serial, player_count);
+    if (kbo_runtime_save_in_progress()) {
+        kbo_log_runtimef(
+            "KBO military service day tick aborted source=%s reason=save_in_progress stage=before_seed_assignment date_serial=%u count=%d",
+            source != NULL ? source : "",
+            today_serial,
+            player_count);
+        HeapFree(GetProcessHeap(), 0, player_snapshot);
+        return 0;
+    }
     if (source_allows_seed_assignment) {
         seeded_assignments = kbo_apply_military_service_seed_assignments(sang, kpb, source);
     }
@@ -83,9 +128,20 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
     int deferred_returns = 0;
     int deferred_invalid_releases = 0;
     int return_preview_news = 0;
+    int aborted_for_save = 0;
 
     for (int32_t i = 0; i < player_count; i++) {
-        uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
+        if ((i & 127) == 0 && kbo_runtime_save_in_progress()) {
+            aborted_for_save = 1;
+            kbo_log_runtimef(
+                "KBO military service day tick aborted source=%s reason=save_in_progress stage=player_loop date_serial=%u scanned=%d count=%d",
+                source != NULL ? source : "",
+                today_serial,
+                (int)i,
+                player_count);
+            break;
+        }
+        uintptr_t player_ptr = player_snapshot[i];
         if (!kbo_player_pointer_plausible(player_ptr)) {
             continue;
         }
@@ -252,7 +308,16 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
         monitored++;
     }
 
-    return_preview_news = kbo_emit_military_return_preview_news_if_due(today_serial, source);
+    if (!aborted_for_save && !kbo_runtime_save_in_progress()) {
+        return_preview_news = kbo_emit_military_return_preview_news_if_due(today_serial, source);
+    } else if (!aborted_for_save) {
+        aborted_for_save = 1;
+        kbo_log_runtimef(
+            "KBO military service day tick aborted source=%s reason=save_in_progress stage=before_return_preview date_serial=%u count=%d",
+            source != NULL ? source : "",
+            today_serial,
+            player_count);
+    }
 
     LONG log_index = InterlockedIncrement(&g_military_days_tick_log_count);
     if (seeded_assignments > 0
@@ -263,11 +328,12 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
             || return_preview_news > 0
             || deferred_returns > 0
             || deferred_invalid_releases > 0
+            || aborted_for_save
             || log_index <= 20) {
         kbo_log_runtimef(
             "KBO military service day tick source=%s date_serial=%u"
             " seeded=%d tracked=%d newly_registered=%d monitored=%d managed=%d returned=%d invalid_released=%d"
-            " return_preview_news=%d deferred_returns=%d deferred_invalid=%d count=%d vector_off=0x%x",
+            " return_preview_news=%d deferred_returns=%d deferred_invalid=%d aborted_for_save=%d count=%d vector_off=0x%x",
             source != NULL ? source : "",
             today_serial,
             seeded_assignments,
@@ -276,9 +342,11 @@ int kbo_tick_military_service_days(const char* source, int* out_seeded_assignmen
             return_preview_news,
             deferred_returns,
             deferred_invalid_releases,
+            aborted_for_save,
             player_count, vector_offset);
     }
 
+    HeapFree(GetProcessHeap(), 0, player_snapshot);
     return returned;
 }
 

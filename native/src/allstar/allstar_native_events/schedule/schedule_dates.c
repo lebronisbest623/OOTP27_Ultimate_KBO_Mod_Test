@@ -9,9 +9,57 @@
 #include "../../../core/dates/core_text_date.h"
 #include "../../../runtime_memory/runtime_memory.h"
 
+static int kbo_allstar_schedule_memory_executable(const void* address)
+{
+    if (address == NULL) {
+        return 0;
+    }
+
+    MEMORY_BASIC_INFORMATION mbi;
+    if (VirtualQuery(address, &mbi, sizeof(mbi)) == 0 || mbi.State != MEM_COMMIT) {
+        return 0;
+    }
+
+    DWORD protect = mbi.Protect & 0xffu;
+    return protect == PAGE_EXECUTE
+        || protect == PAGE_EXECUTE_READ
+        || protect == PAGE_EXECUTE_READWRITE
+        || protect == PAGE_EXECUTE_WRITECOPY;
+}
+
+static int kbo_allstar_date_slot_looks_like_serializer_callback(uint8_t* league, uint32_t offset, uintptr_t* out_slot, uintptr_t* out_callback)
+{
+    if (out_slot != NULL) {
+        *out_slot = 0;
+    }
+    if (out_callback != NULL) {
+        *out_callback = 0;
+    }
+    if (league == NULL || !memory_range_readable(league + offset, sizeof(uintptr_t))) {
+        return 0;
+    }
+
+    uintptr_t slot = *(uintptr_t*)(league + offset);
+    if (out_slot != NULL) {
+        *out_slot = slot;
+    }
+    if (slot < 0x10000u || !memory_range_readable((void*)(slot + 0x10u), sizeof(uintptr_t))) {
+        return 0;
+    }
+
+    uintptr_t callback = *(uintptr_t*)(slot + 0x10u);
+    if (out_callback != NULL) {
+        *out_callback = callback;
+    }
+    return kbo_allstar_schedule_memory_executable((void*)callback);
+}
+
 int kbo_allstar_schedule_date_ready(uint8_t* league)
 {
     if (league == NULL || !memory_range_readable(league + OOTP27_ALLSTAR_DATE_YEAR_OFFSET, 8u)) {
+        return 0;
+    }
+    if (kbo_allstar_date_slot_looks_like_serializer_callback(league, OOTP27_ALLSTAR_DATE_YEAR_OFFSET, NULL, NULL)) {
         return 0;
     }
 
@@ -24,6 +72,9 @@ int kbo_allstar_schedule_date_ready(uint8_t* league)
 int kbo_allstar_season_start_date_ready(uint8_t* league)
 {
     if (league == NULL || !memory_range_readable(league + OOTP27_SEASON_START_DATE_YEAR_OFFSET, 8u)) {
+        return 0;
+    }
+    if (kbo_allstar_date_slot_looks_like_serializer_callback(league, OOTP27_SEASON_START_DATE_YEAR_OFFSET, NULL, NULL)) {
         return 0;
     }
 
@@ -306,6 +357,48 @@ int seed_kbo_allstar_schedule_dates(uintptr_t league_ptr, const char* source)
             source != NULL ? source : "",
             league,
             league_year);
+        return 0;
+    }
+
+    uintptr_t season_slot = 0;
+    uintptr_t season_callback = 0;
+    if (kbo_allstar_date_slot_looks_like_serializer_callback(
+            league,
+            OOTP27_SEASON_START_DATE_YEAR_OFFSET,
+            &season_slot,
+            &season_callback)) {
+        static volatile LONG s_unsafe_skip_log_count = 0;
+        LONG log_index = InterlockedIncrement(&s_unsafe_skip_log_count);
+        if (log_index <= 80) {
+            kbo_log_runtimef(
+                "KBO all-star schedule dates skipped source=%s league=%p offset=0x%x slot=%p callback=%p reason=target_slot_is_serializer_callback",
+                source != NULL ? source : "",
+                league,
+                OOTP27_SEASON_START_DATE_YEAR_OFFSET,
+                (void*)season_slot,
+                (void*)season_callback);
+        }
+        return 0;
+    }
+
+    uintptr_t allstar_slot = 0;
+    uintptr_t allstar_callback = 0;
+    if (kbo_allstar_date_slot_looks_like_serializer_callback(
+            league,
+            OOTP27_ALLSTAR_DATE_YEAR_OFFSET,
+            &allstar_slot,
+            &allstar_callback)) {
+        static volatile LONG s_unsafe_allstar_skip_log_count = 0;
+        LONG log_index = InterlockedIncrement(&s_unsafe_allstar_skip_log_count);
+        if (log_index <= 80) {
+            kbo_log_runtimef(
+                "KBO all-star schedule dates skipped source=%s league=%p offset=0x%x slot=%p callback=%p reason=target_slot_is_serializer_callback",
+                source != NULL ? source : "",
+                league,
+                OOTP27_ALLSTAR_DATE_YEAR_OFFSET,
+                (void*)allstar_slot,
+                (void*)allstar_callback);
+        }
         return 0;
     }
 

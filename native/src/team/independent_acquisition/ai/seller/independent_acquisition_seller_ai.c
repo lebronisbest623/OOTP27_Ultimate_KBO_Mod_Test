@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "../../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../../core/core_flags/api/flags_api.h"
 #include "../../../../core/dates/core_text_date.h"
 #include "../../../../core/logging/core_log.h"
 #include "../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
@@ -163,6 +164,23 @@ static int kbo_independent_acquisition_seller_pacing_deferred(
     return window_age_days < target_day;
 }
 
+static int kbo_independent_acquisition_seller_abort_if_save(
+    const char* source,
+    const char* stage,
+    uint32_t today)
+{
+    if (!kbo_runtime_save_in_progress()) {
+        return 0;
+    }
+
+    kbo_log_runtimef(
+        "independent acquisition seller AI aborted source=%s reason=save_in_progress stage=%s today=%u",
+        source != NULL ? source : "",
+        stage != NULL ? stage : "",
+        today);
+    return 1;
+}
+
 int kbo_run_independent_team_acquisition_seller_ai(
     uint32_t today,
     const uintptr_t* player_snapshot,
@@ -175,6 +193,11 @@ int kbo_run_independent_team_acquisition_seller_ai(
             "independent acquisition seller AI skipped source=%s today=%u reason=already_running",
             source != NULL ? source : "",
             today);
+        return 0;
+    }
+
+    if (kbo_independent_acquisition_seller_abort_if_save(source, "after_lock", today)) {
+        InterlockedExchange(&seller_ai_running, 0);
         return 0;
     }
 
@@ -194,9 +217,57 @@ int kbo_run_independent_team_acquisition_seller_ai(
     int transferred = 0;
     int limit_blocked = 0;
     int pacing_deferred = 0;
+    int abort_for_save = 0;
     for (int i = 0; i < request_count; i++) {
+        if (kbo_independent_acquisition_seller_abort_if_save(source, "request_loop", today)) {
+            abort_for_save = 1;
+            break;
+        }
         KboIndependentAcquisitionQueuedRequest* group = &queue[i];
         if (group->player_id == 0u) {
+            continue;
+        }
+        int seller_transfers = kbo_independent_acquisition_transferred_count(
+            group->season,
+            group->seller_team_id);
+        int seller_limit_reached = seller_transfers >= seller_transfer_limit;
+        if (seller_limit_reached) {
+            limit_blocked++;
+        }
+        uint32_t window_age_days = 0u;
+        uint32_t target_day = 0u;
+        uint32_t request_age_days = 0u;
+        uint32_t days_remaining = 0u;
+        int pacing_blocked = !seller_limit_reached
+            && kbo_independent_acquisition_seller_pacing_deferred(
+                today,
+                group,
+                seller_transfers,
+                seller_transfer_limit,
+                &window_age_days,
+                &target_day,
+                &request_age_days,
+                &days_remaining);
+        if (pacing_blocked) {
+            pacing_deferred++;
+            kbo_log_runtimef(
+                "independent acquisition seller AI deferred source=%s reason=market_pacing seller=%u player=%u buyer=%u seller_transfers=%d seller_transfer_limit=%d window_age_days=%u target_day=%u request_age_days=%u days_remaining=%u",
+                source != NULL ? source : "",
+                group->seller_team_id,
+                group->player_id,
+                group->buyer_team_id,
+                seller_transfers,
+                seller_transfer_limit,
+                window_age_days,
+                target_day,
+                request_age_days,
+                days_remaining);
+            for (int j = i + 1; j < request_count; j++) {
+                if (queue[j].player_id == group->player_id
+                        && queue[j].seller_team_id == group->seller_team_id) {
+                    queue[j].player_id = 0u;
+                }
+            }
             continue;
         }
         uintptr_t player_ptr = kbo_independent_acquisition_find_player_snapshot(
@@ -209,6 +280,11 @@ int kbo_run_independent_team_acquisition_seller_ai(
         int best_buyer_transfers = 0;
         uint32_t best_tiebreaker = 0u;
         for (int j = i; j < request_count; j++) {
+            if ((j & 7) == 0
+                    && kbo_independent_acquisition_seller_abort_if_save(source, "buyer_fit_loop", today)) {
+                abort_for_save = 1;
+                break;
+            }
             if (queue[j].player_id != group->player_id
                     || queue[j].seller_team_id != group->seller_team_id) {
                 continue;
@@ -264,6 +340,9 @@ int kbo_run_independent_team_acquisition_seller_ai(
                 best_tiebreaker = tiebreaker;
             }
         }
+        if (abort_for_save) {
+            break;
+        }
         KboIndependentAcquisitionQueuedRequest selected = *best;
         for (int j = i + 1; j < request_count; j++) {
             if (queue[j].player_id == group->player_id
@@ -283,41 +362,9 @@ int kbo_run_independent_team_acquisition_seller_ai(
             cash_cost = kbo_independent_acquisition_cash_cost_for_player(player);
             selected.cash_cost = cash_cost;
         }
-        int seller_transfers = kbo_independent_acquisition_transferred_count(
-            selected.season,
-            selected.seller_team_id);
-        int seller_limit_reached = seller_transfers >= seller_transfer_limit;
-        if (seller_limit_reached) {
-            limit_blocked++;
-        }
-        uint32_t window_age_days = 0u;
-        uint32_t target_day = 0u;
-        uint32_t request_age_days = 0u;
-        uint32_t days_remaining = 0u;
-        int pacing_blocked = !seller_limit_reached
-            && kbo_independent_acquisition_seller_pacing_deferred(
-                today,
-                &selected,
-                seller_transfers,
-                seller_transfer_limit,
-                &window_age_days,
-                &target_day,
-                &request_age_days,
-                &days_remaining);
-        if (pacing_blocked) {
-            pacing_deferred++;
-            kbo_log_runtimef(
-                "independent acquisition seller AI deferred source=%s reason=market_pacing seller=%u player=%u buyer=%u seller_transfers=%d seller_transfer_limit=%d window_age_days=%u target_day=%u request_age_days=%u days_remaining=%u",
-                source != NULL ? source : "",
-                selected.seller_team_id,
-                selected.player_id,
-                selected.buyer_team_id,
-                seller_transfers,
-                seller_transfer_limit,
-                window_age_days,
-                target_day,
-                request_age_days,
-                days_remaining);
+        if (kbo_independent_acquisition_seller_abort_if_save(source, "before_assignment", today)) {
+            abort_for_save = 1;
+            break;
         }
         if (!seller_limit_reached
                 && !pacing_blocked
@@ -364,8 +411,11 @@ int kbo_run_independent_team_acquisition_seller_ai(
                 source);
         }
 
-        if (!pacing_blocked
-                && kbo_independent_acquisition_append_decision(today, &selected, moved, old_cash, new_cash, source)) {
+        if (kbo_independent_acquisition_seller_abort_if_save(source, "before_append_decision", today)) {
+            abort_for_save = 1;
+            break;
+        }
+        if (kbo_independent_acquisition_append_decision(today, &selected, moved, old_cash, new_cash, source)) {
             decided++;
             if (moved) {
                 transferred++;
@@ -392,7 +442,7 @@ int kbo_run_independent_team_acquisition_seller_ai(
     }
 
     kbo_log_runtimef(
-        "independent acquisition seller AI summary source=%s today=%u queued=%d decided=%d transferred=%d limit_blocked=%d pacing_deferred=%d seller_transfer_limit=%d",
+        "independent acquisition seller AI summary source=%s today=%u queued=%d decided=%d transferred=%d limit_blocked=%d pacing_deferred=%d seller_transfer_limit=%d aborted_for_save=%d",
         source != NULL ? source : "",
         today,
         request_count,
@@ -400,7 +450,8 @@ int kbo_run_independent_team_acquisition_seller_ai(
         transferred,
         limit_blocked,
         pacing_deferred,
-        seller_transfer_limit);
+        seller_transfer_limit,
+        abort_for_save);
     InterlockedExchange(&seller_ai_running, 0);
     return transferred;
 }

@@ -5,13 +5,22 @@
 #include <windows.h>
 
 #include "../allstar_league_context/allstar_league_context.h"
-#include "../allstar_native_events/generation/event_generation.h"
 #include "../allstar_native_events/schedule/schedule_dates.h"
 #include "../team_patch/allstar_team_patch.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
 #include "../../core/runtime_tuning/runtime_tuning_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
+
+static void kbo_allstar_prepare_for_native_hooks(uintptr_t league_ptr, uint32_t league_id, const char* source)
+{
+    InterlockedExchangePointer(
+        (PVOID volatile*)&g_allstar_schedule_import_league_ptr,
+        (PVOID)league_ptr);
+    seed_kbo_allstar_schedule_dates(league_ptr, source);
+    patch_kbo_allstar_team_names_for_league_id(league_id, source);
+    patch_kbo_allstar_team_names_for_known_exhibition_teams(source);
+}
 
 static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
 {
@@ -31,15 +40,12 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
         if (captured != 0
                 && enable_kbo_allstar_raw_flags_if_kbo_context(captured, "startup_retry_captured_raw")) {
             kbo_log_runtimef(
-                "KBO all-star force retry using captured raw league attempt=%d league_id=%u league=%p",
+                "KBO all-star force retry prepared captured raw league attempt=%d league_id=%u league=%p mode=hook_driven",
                 attempt,
                 league_id,
                 (void*)captured);
-            seed_kbo_allstar_schedule_dates(captured, "startup_retry_captured_raw");
-            if (run_kbo_allstar_native_event_generation(captured, "startup_retry_captured_raw")) {
-                kbo_log_runtime_line("KBO all-star force retry completed by captured raw league");
-                return 0;
-            }
+            kbo_allstar_prepare_for_native_hooks(captured, league_id, "startup_retry_captured_raw");
+            return 0;
         }
 
         patch_kbo_allstar_team_names_for_league_id(league_id, "startup_retry");
@@ -49,10 +55,8 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
         if (league_ptr != 0) {
             kbo_log_runtimef("KBO all-star force retry found league attempt=%d league_id=%u league=%p", attempt, league_id, (void*)league_ptr);
             enable_kbo_allstar_flags(league_ptr, "startup_retry");
-            InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
-            seed_kbo_allstar_schedule_dates(league_ptr, "startup_retry");
-            run_kbo_allstar_native_event_generation(league_ptr, "startup_retry");
-            kbo_log_runtime_line("KBO all-star force retry completed");
+            kbo_allstar_prepare_for_native_hooks(league_ptr, league_id, "startup_retry");
+            kbo_log_runtime_line("KBO all-star force retry prepared hook-driven league");
             return 0;
         }
 
@@ -64,10 +68,8 @@ static DWORD WINAPI kbo_allstar_force_retry_thread(LPVOID parameter)
                 attempt,
                 league_id,
                 (void*)league_ptr);
-            InterlockedExchangePointer((PVOID volatile*)&g_allstar_schedule_import_league_ptr, (PVOID)league_ptr);
-            seed_kbo_allstar_schedule_dates(league_ptr, "startup_retry_core_fallback");
-            run_kbo_allstar_native_event_generation(league_ptr, "startup_retry_core_fallback");
-            kbo_log_runtime_line("KBO all-star force retry completed by core fallback");
+            kbo_allstar_prepare_for_native_hooks(league_ptr, league_id, "startup_retry_core_fallback");
+            kbo_log_runtime_line("KBO all-star force retry prepared hook-driven core fallback");
             return 0;
         }
 

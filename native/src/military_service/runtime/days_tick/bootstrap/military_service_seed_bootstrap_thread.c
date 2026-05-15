@@ -40,6 +40,9 @@ DWORD WINAPI kbo_military_seed_bootstrap_thread(LPVOID parameter)
             }
             continue;
         }
+        if (!kbo_runtime_pause_for_save_if_needed("military_seed_bootstrap")) {
+            break;
+        }
 
         if (_stricmp(last_save_path, save_path) != 0) {
             snprintf(last_save_path, sizeof(last_save_path), "%s", save_path);

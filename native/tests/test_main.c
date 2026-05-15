@@ -42,6 +42,7 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/military_service/players/team_policy/military_service_team_policy_parse.h"
 #include "../src/team/classification/parse/team_classification_seed_parse.h"
 #include "../src/allstar/csv/allstar_csv_parse.h"
+#include "../src/allstar/allstar_native_events/schedule/schedule_dates.h"
 #include "../src/foreign/common/dates/foreign_waiver_date.h"
 #include "../src/core/core_flags/keys/flag_key.h"
 #include "../src/fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
@@ -489,6 +490,39 @@ static void test_allstar_csv_parse(void)
     assert(year == 0u);
     assert(side == 0u);
     printf("test_allstar_csv_parse: PASS\n");
+}
+
+static void kbo_test_allstar_schedule_callback_placeholder(void)
+{
+}
+
+static void test_allstar_schedule_date_slots_ignore_serializer_callbacks(void)
+{
+    uint8_t* league = (uint8_t*)VirtualAlloc(NULL, 0x900u, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    uint8_t* descriptor = (uint8_t*)VirtualAlloc(NULL, 0x20u, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    assert(league != NULL);
+    assert(descriptor != NULL);
+
+    *(uint16_t*)(league + OOTP27_SEASON_START_DATE_YEAR_OFFSET) = 2026u;
+    league[OOTP27_SEASON_START_DATE_DAY_OFFSET] = 28u;
+    league[OOTP27_SEASON_START_DATE_MONTH_OFFSET] = 3u;
+    assert(kbo_allstar_season_start_date_ready(league));
+
+    *(uint16_t*)(league + OOTP27_ALLSTAR_DATE_YEAR_OFFSET) = 2026u;
+    league[OOTP27_ALLSTAR_DATE_DAY_OFFSET] = 11u;
+    league[OOTP27_ALLSTAR_DATE_MONTH_OFFSET] = 7u;
+    assert(kbo_allstar_schedule_date_ready(league));
+
+    *(uintptr_t*)(descriptor + 0x10u) = (uintptr_t)&kbo_test_allstar_schedule_callback_placeholder;
+    *(uintptr_t*)(league + OOTP27_SEASON_START_DATE_YEAR_OFFSET) = (uintptr_t)descriptor;
+    assert(!kbo_allstar_season_start_date_ready(league));
+
+    *(uintptr_t*)(league + OOTP27_ALLSTAR_DATE_YEAR_OFFSET) = (uintptr_t)descriptor;
+    assert(!kbo_allstar_schedule_date_ready(league));
+
+    VirtualFree(descriptor, 0, MEM_RELEASE);
+    VirtualFree(league, 0, MEM_RELEASE);
+    printf("test_allstar_schedule_date_slots_ignore_serializer_callbacks: PASS\n");
 }
 
 static void test_foreign_replacement_seed_parse(void)
@@ -1334,6 +1368,10 @@ static void test_foreign_injury_inactive_roster_long_term_basis(void)
     assert(!kbo_foreign_injury_expected_end_reached(20260419, 20260420));
     assert(kbo_foreign_injury_expected_end_reached(20260420, 20260420));
     assert(kbo_foreign_injury_expected_end_reached(20260421, 20260420));
+    assert(!kbo_foreign_injury_expected_end_pending(0, 20260420));
+    assert(kbo_foreign_injury_expected_end_pending(20260419, 20260420));
+    assert(!kbo_foreign_injury_expected_end_pending(20260420, 20260420));
+    assert(!kbo_foreign_injury_expected_end_pending(20260421, 20260420));
 
     assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_OFFSEASON_RESET));
     assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_OFFSEASON_STARTED));
@@ -1654,6 +1692,7 @@ int main(void)
     test_military_service_team_policy_parse();
     test_team_classification_seed_parse();
     test_allstar_csv_parse();
+    test_allstar_schedule_date_slots_ignore_serializer_callbacks();
     test_foreign_replacement_seed_parse();
     test_captain_seed_parse();
     test_captain_effective_season();
@@ -1714,7 +1753,30 @@ int kbo_get_global_data_file(const char* file_name, char* out, size_t out_size)
 
 int memory_range_readable(const void* ptr, size_t size)
 {
-    return ptr != NULL && size > 0u;
+    if (ptr == NULL || size == 0u) {
+        return 0;
+    }
+
+    uintptr_t start = (uintptr_t)ptr;
+    uintptr_t end = start + size;
+    if (start < 0x10000u || end <= start) {
+        return 0;
+    }
+
+    MEMORY_BASIC_INFORMATION mbi;
+    if (VirtualQuery(ptr, &mbi, sizeof(mbi)) == 0 || mbi.State != MEM_COMMIT) {
+        return 0;
+    }
+
+    DWORD protect = mbi.Protect & 0xffu;
+    int readable = protect == PAGE_READONLY
+        || protect == PAGE_READWRITE
+        || protect == PAGE_WRITECOPY
+        || protect == PAGE_EXECUTE_READ
+        || protect == PAGE_EXECUTE_READWRITE
+        || protect == PAGE_EXECUTE_WRITECOPY;
+    uintptr_t region_end = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
+    return readable && end <= region_end;
 }
 
 int kbo_foreign_injury_player_on_inactive_replacement_roster(

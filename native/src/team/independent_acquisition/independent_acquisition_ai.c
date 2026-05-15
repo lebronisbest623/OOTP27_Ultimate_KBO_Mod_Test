@@ -26,6 +26,8 @@
 #include "../lookup/team_lookup.h"
 #include "window/independent_acquisition_window.h"
 
+extern volatile LONG g_kbo_runtime_date_stable_ready;
+
 static volatile LONG g_kbo_independent_acquisition_ai_last_run_date = 0;
 static volatile LONG g_kbo_independent_acquisition_ai_running = 0;
 
@@ -47,6 +49,35 @@ static int kbo_independent_acquisition_claim_daily_run(uint32_t today)
         &g_kbo_independent_acquisition_ai_last_run_date,
         (LONG)today,
         last) == last;
+}
+
+static void kbo_independent_acquisition_release_daily_run(uint32_t today)
+{
+    if (today == 0u) {
+        return;
+    }
+
+    InterlockedCompareExchange(
+        &g_kbo_independent_acquisition_ai_last_run_date,
+        0,
+        (LONG)today);
+}
+
+static int kbo_independent_acquisition_abort_if_save(
+    const char* source,
+    const char* stage,
+    uint32_t today)
+{
+    if (!kbo_runtime_save_in_progress()) {
+        return 0;
+    }
+
+    kbo_log_runtimef(
+        "independent acquisition AI aborted source=%s reason=save_in_progress stage=%s today=%u",
+        source != NULL ? source : "",
+        stage != NULL ? stage : "",
+        today);
+    return 1;
 }
 
 static int kbo_independent_acquisition_window_active(uint32_t today)
@@ -112,11 +143,39 @@ static int kbo_independent_acquisition_window_active(uint32_t today)
     return 1;
 }
 
+static int kbo_independent_acquisition_buyer_has_pending_request(
+    const KboIndependentAcquisitionQueuedRequest* requests,
+    int request_count,
+    uint32_t buyer_team_id)
+{
+    if (requests == NULL || request_count <= 0 || buyer_team_id == 0u) {
+        return 0;
+    }
+    for (int i = 0; i < request_count; i++) {
+        if (requests[i].buyer_team_id == buyer_team_id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int kbo_run_independent_team_acquisition_ai(const char* source)
 {
     if (!kbo_fix_enabled()
             || !kbo_custom_foreign_policy_enabled()
             || read_kbo_localappdata_flag_file("disable_independent_acquisition_ai.txt")) {
+        return 0;
+    }
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "independent_acquisition_ai")) {
+        return 0;
+    }
+    if (InterlockedCompareExchange(&g_kbo_runtime_date_stable_ready, 0, 0) == 0) {
+        static volatile LONG skipped_unstable_log_count = 0;
+        if (InterlockedIncrement(&skipped_unstable_log_count) <= 40) {
+            kbo_log_runtimef(
+                "independent acquisition AI skipped source=%s reason=date_not_stable",
+                source != NULL ? source : "");
+        }
         return 0;
     }
 
@@ -128,10 +187,22 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
     }
 
     int result = 0;
+    int abort_for_save = 0;
+    int claimed_today = 0;
+    int completed_daily_run = 0;
     uintptr_t* snapshot = NULL;
     uint32_t today = 0u;
+    if (kbo_independent_acquisition_abort_if_save(source, "after_lock", today)) {
+        abort_for_save = 1;
+        goto cleanup;
+    }
+
     if (!kbo_get_current_yyyymmdd(&today)
             || !kbo_independent_acquisition_window_active(today)) {
+        goto cleanup;
+    }
+    if (kbo_independent_acquisition_abort_if_save(source, "after_date", today)) {
+        abort_for_save = 1;
         goto cleanup;
     }
 
@@ -161,6 +232,11 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
     int available_seller_count = 0;
     int capped_sellers = 0;
     for (int i = 0; i < seller_count; i++) {
+        if ((i & 3) == 0
+                && kbo_independent_acquisition_abort_if_save(source, "seller_limit_scan", today)) {
+            abort_for_save = 1;
+            goto cleanup;
+        }
         int transfers = kbo_independent_acquisition_transferred_count(season, sellers[i].team_id);
         if (transfers >= seller_transfer_limit) {
             capped_sellers++;
@@ -179,6 +255,10 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
             seller_count,
             available_seller_count,
             capped_sellers);
+    }
+    if (kbo_independent_acquisition_abort_if_save(source, "before_player_snapshot", today)) {
+        abort_for_save = 1;
+        goto cleanup;
     }
 
     uintptr_t player_vector = 0u;
@@ -207,6 +287,10 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
             || bytes_read != player_vector_bytes) {
         goto cleanup;
     }
+    if (kbo_independent_acquisition_abort_if_save(source, "after_player_snapshot", today)) {
+        abort_for_save = 1;
+        goto cleanup;
+    }
 
     uint32_t kbo_league_id = kbo_get_foreign_waiver_league_id();
     if (kbo_league_id == 0u) {
@@ -221,18 +305,40 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         KBO_INDEPENDENT_ACQUISITION_MAX_BUYERS,
         &scanned,
         &unreadable);
+    if (kbo_independent_acquisition_abort_if_save(source, "before_daily_claim", today)) {
+        abort_for_save = 1;
+        goto cleanup;
+    }
     if (!kbo_independent_acquisition_claim_daily_run(today)) {
         goto cleanup;
     }
+    claimed_today = 1;
 
     int requested = 0;
     int refreshed_pending = 0;
     int considered_buyers = 0;
     int skipped_human = 0;
+    KboIndependentAcquisitionQueuedRequest pending_requests[KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE];
+    int pending_request_count = kbo_independent_acquisition_load_requests(
+        season,
+        pending_requests,
+        KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE);
     for (int i = 0; i < buyer_count; i++) {
+        if ((i & 3) == 0
+                && kbo_independent_acquisition_abort_if_save(source, "buyer_loop", today)) {
+            abort_for_save = 1;
+            goto cleanup;
+        }
         uint32_t buyer_team_id = buyer_team_ids[i];
         if (kbo_team_is_human_controlled(buyer_team_id, "independent_acquisition_ai")) {
             skipped_human++;
+            continue;
+        }
+        if (kbo_independent_acquisition_buyer_has_pending_request(
+                pending_requests,
+                pending_request_count,
+                buyer_team_id)) {
+            refreshed_pending++;
             continue;
         }
 
@@ -270,30 +376,33 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         if (seller == NULL) {
             continue;
         }
+        if (kbo_independent_acquisition_abort_if_save(source, "before_append_request", today)) {
+            abort_for_save = 1;
+            goto cleanup;
+        }
 
-        int existing_request = kbo_independent_acquisition_request_exists(
-            today / 10000u,
-            buyer.team_id,
-            candidate.seller_team_id,
-            candidate.player_id);
-        int request_available = existing_request
-            || kbo_independent_acquisition_append_request(today, &candidate, &buyer, seller, source);
+        int request_available = kbo_independent_acquisition_append_request(
+            today,
+            &candidate,
+            &buyer,
+            seller,
+            source);
         if (request_available) {
             char request_score_text[32] = {0};
             snprintf(request_score_text, sizeof(request_score_text), "%" PRId64, (int64_t)candidate.request_score);
+            if (kbo_independent_acquisition_abort_if_save(source, "before_pending_offer_record", today)) {
+                abort_for_save = 1;
+                goto cleanup;
+            }
             kbo_record_custom_foreign_pending_offer(
                 buyer.team_id,
                 (uint8_t*)candidate.player_ptr,
                 today);
-            if (existing_request) {
-                refreshed_pending++;
-            } else {
-                requested++;
-            }
+            requested++;
             kbo_log_runtimef(
                 "independent acquisition AI request source=%s action=%s buyer=%u seller=%u seller_csv=%s player=%u score=%s value=%d cash_cost=%d cash_available=%d effective=%u->%u limit=%u slot=%s",
                 source != NULL ? source : "",
-                existing_request ? "refresh_pending" : "new",
+                "new",
                 buyer.team_id,
                 candidate.seller_team_id,
                 seller->team_csv_id,
@@ -324,14 +433,22 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         player_count,
         scanned,
         unreadable);
+    if (kbo_independent_acquisition_abort_if_save(source, "before_seller_ai", today)) {
+        abort_for_save = 1;
+        goto cleanup;
+    }
     int transferred = kbo_run_independent_team_acquisition_seller_ai(
         today,
         snapshot,
         player_count,
         source);
     result = requested + transferred;
+    completed_daily_run = 1;
 
 cleanup:
+    if (abort_for_save && claimed_today && !completed_daily_run) {
+        kbo_independent_acquisition_release_daily_run(today);
+    }
     if (snapshot != NULL) {
         HeapFree(GetProcessHeap(), 0, snapshot);
     }

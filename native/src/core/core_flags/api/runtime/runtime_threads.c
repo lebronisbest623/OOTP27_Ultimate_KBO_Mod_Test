@@ -1,10 +1,12 @@
 #include "../flags_api.h"
 
 #include "../../localappdata/localappdata_reader.h"
+#include "../../../files/save_paths/core_save_paths.h"
 #include "../../../logging/core_log.h"
 #include "../../../sync/spin_lock.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <windows.h>
 
 static volatile LONG g_kbo_runtime_threads_stop_requested = 0;
@@ -18,6 +20,107 @@ typedef struct KboRuntimeThreadEntry {
 } KboRuntimeThreadEntry;
 
 static KboRuntimeThreadEntry g_kbo_runtime_threads[KBO_RUNTIME_THREAD_MAX];
+
+static int kbo_runtime_get_file_write_time(const char* path, FILETIME* out_time)
+{
+    if (out_time != NULL) {
+        memset(out_time, 0, sizeof(*out_time));
+    }
+    if (path == NULL || path[0] == '\0' || out_time == NULL) {
+        return 0;
+    }
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (!GetFileAttributesExA(path, GetFileExInfoStandard, &data)
+            || (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0u) {
+        return 0;
+    }
+    *out_time = data.ftLastWriteTime;
+    return 1;
+}
+
+static ULONGLONG kbo_runtime_filetime_u64(FILETIME time)
+{
+    ULARGE_INTEGER value;
+    value.LowPart = time.dwLowDateTime;
+    value.HighPart = time.dwHighDateTime;
+    return value.QuadPart;
+}
+
+int kbo_runtime_save_in_progress(void)
+{
+    char save_path[MAX_PATH] = {0};
+    if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
+        return 0;
+    }
+
+    char started_path[MAX_PATH] = {0};
+    char completed_path[MAX_PATH] = {0};
+    int started_written = snprintf(
+        started_path,
+        sizeof(started_path),
+        "%s\\flag_save_started.dat",
+        save_path);
+    int completed_written = snprintf(
+        completed_path,
+        sizeof(completed_path),
+        "%s\\flag_save_completed.dat",
+        save_path);
+    if (started_written <= 0 || (size_t)started_written >= sizeof(started_path)
+            || completed_written <= 0 || (size_t)completed_written >= sizeof(completed_path)) {
+        return 0;
+    }
+
+    FILETIME started_time = {0};
+    if (!kbo_runtime_get_file_write_time(started_path, &started_time)) {
+        return 0;
+    }
+
+    FILETIME now_time = {0};
+    GetSystemTimeAsFileTime(&now_time);
+    ULONGLONG started = kbo_runtime_filetime_u64(started_time);
+    ULONGLONG now = kbo_runtime_filetime_u64(now_time);
+    FILETIME process_created = {0};
+    FILETIME ignored_exit = {0};
+    FILETIME ignored_kernel = {0};
+    FILETIME ignored_user = {0};
+    if (GetProcessTimes(
+            GetCurrentProcess(),
+            &process_created,
+            &ignored_exit,
+            &ignored_kernel,
+            &ignored_user)
+            && started < kbo_runtime_filetime_u64(process_created)) {
+        return 0;
+    }
+    const ULONGLONG stale_save_started_100ns = 15ull * 60ull * 1000ull * 10000ull;
+    if (now > started && now - started > stale_save_started_100ns) {
+        return 0;
+    }
+
+    FILETIME completed_time = {0};
+    if (!kbo_runtime_get_file_write_time(completed_path, &completed_time)) {
+        return 1;
+    }
+
+    return kbo_runtime_filetime_u64(completed_time) < started;
+}
+
+int kbo_runtime_pause_for_save_if_needed(const char* label)
+{
+    const char* thread_label = label != NULL ? label : "runtime";
+    int logged = 0;
+    while (kbo_runtime_threads_should_continue() && kbo_runtime_save_in_progress()) {
+        if (!logged) {
+            kbo_log_runtimef("KBO runtime paused for save label=\"%s\"", thread_label);
+            logged = 1;
+        }
+        Sleep(500);
+    }
+    if (logged) {
+        kbo_log_runtimef("KBO runtime resumed after save label=\"%s\"", thread_label);
+    }
+    return kbo_runtime_threads_should_continue();
+}
 
 static int kbo_should_log_runtime_thread_registration(void)
 {
@@ -173,5 +276,5 @@ int kbo_runtime_sleep_should_continue(uint32_t total_ms)
         Sleep(step);
         elapsed += step;
     }
-    return kbo_runtime_threads_should_continue();
+    return kbo_runtime_pause_for_save_if_needed("runtime sleep");
 }
