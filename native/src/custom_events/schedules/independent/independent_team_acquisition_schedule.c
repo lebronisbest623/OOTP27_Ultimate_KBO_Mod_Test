@@ -101,6 +101,15 @@ static int kbo_independent_team_acquisition_resolve_start_date(
 
     uint32_t expected_year = today / 10000u;
     uint32_t start_date = 0u;
+    if (kbo_fa_salary_snapshot_load_schedule_opening_day(expected_year, &start_date)
+            && kbo_independent_team_acquisition_start_matches_year(start_date, expected_year)) {
+        *out_start_date = start_date;
+        if (out_start_source != NULL) {
+            *out_start_source = "schedule_file";
+        }
+        return 1;
+    }
+
     if (kbo_independent_team_acquisition_read_league_start_date(anchor_league_id, &start_date)
             && kbo_independent_team_acquisition_start_matches_year(start_date, expected_year)) {
         *out_start_date = start_date;
@@ -117,15 +126,6 @@ static int kbo_independent_team_acquisition_resolve_start_date(
         *out_start_date = start_date;
         if (out_start_source != NULL) {
             *out_start_source = "event_memory";
-        }
-        return 1;
-    }
-
-    if (kbo_fa_salary_snapshot_load_schedule_opening_day(expected_year, &start_date)
-            && kbo_independent_team_acquisition_start_matches_year(start_date, expected_year)) {
-        *out_start_date = start_date;
-        if (out_start_source != NULL) {
-            *out_start_source = "schedule_file";
         }
         return 1;
     }

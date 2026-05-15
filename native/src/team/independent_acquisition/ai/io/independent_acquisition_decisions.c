@@ -236,6 +236,83 @@ int kbo_independent_acquisition_transferred_count(
     return count;
 }
 
+int kbo_independent_acquisition_buyer_transferred_count(
+    uint32_t season,
+    uint32_t buyer_team_id)
+{
+    if (season == 0u || buyer_team_id == 0u) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_independent_acquisition_decision_path(path, sizeof(path))) {
+        return 0;
+    }
+
+    HANDLE file = CreateFileA(
+        path,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+
+    DWORD high = 0u;
+    DWORD size = GetFileSize(file, &high);
+    if (size == INVALID_FILE_SIZE || high != 0u || size == 0u || size > 4u * 1024u * 1024u) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    char* buffer = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)size + 1u);
+    if (buffer == NULL) {
+        CloseHandle(file);
+        return 0;
+    }
+
+    DWORD read = 0u;
+    int count = 0;
+    if (ReadFile(file, buffer, size, &read, NULL) && read > 0u) {
+        buffer[read] = '\0';
+        char* cursor = buffer;
+        char* end = buffer + read;
+        while (cursor < end) {
+            char* line_end = cursor;
+            while (line_end < end && *line_end != '\r' && *line_end != '\n') {
+                line_end++;
+            }
+            char saved = *line_end;
+            *line_end = '\0';
+
+            uint32_t row_season = 0u;
+            uint32_t row_buyer_team_id = 0u;
+            uint32_t transferred = 0u;
+            if (kbo_independent_acquisition_json_u32(cursor, "season", &row_season)
+                    && kbo_independent_acquisition_json_u32(cursor, "buyer_team_id", &row_buyer_team_id)
+                    && kbo_independent_acquisition_json_u32(cursor, "transferred", &transferred)
+                    && row_season == season
+                    && row_buyer_team_id == buyer_team_id
+                    && transferred != 0u) {
+                count++;
+            }
+
+            *line_end = saved;
+            while (line_end < end && (*line_end == '\r' || *line_end == '\n')) {
+                line_end++;
+            }
+            cursor = line_end;
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, buffer);
+    CloseHandle(file);
+    return count;
+}
+
 static void kbo_independent_acquisition_json_append_escaped(
     char* out,
     size_t out_size,

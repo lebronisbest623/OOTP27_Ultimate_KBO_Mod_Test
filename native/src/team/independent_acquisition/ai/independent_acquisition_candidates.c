@@ -186,6 +186,16 @@ static int64_t kbo_independent_acquisition_score_candidate(
 
     score += (int64_t)kbo_read_player_i16(player, OOTP27_PLAYER_OVERALL_VALUE_OFFSET) * 120;
     score += (int64_t)kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET) * 80;
+
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    uint32_t scouting_mix = buyer->team_id * 1103515245u
+        ^ player_id * 2654435761u
+        ^ (pitcher ? 0x9e3779b9u : 0x7f4a7c15u)
+        ^ (asian ? 0x85ebca6bu : 0xc2b2ae35u);
+    scouting_mix ^= scouting_mix >> 16;
+    scouting_mix *= 2246822519u;
+    scouting_mix ^= scouting_mix >> 13;
+    score += (int64_t)(scouting_mix % 7000u);
     return score;
 }
 

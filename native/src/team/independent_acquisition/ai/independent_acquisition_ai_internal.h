@@ -118,6 +118,9 @@ int kbo_independent_acquisition_decision_exists(
 int kbo_independent_acquisition_transferred_count(
     uint32_t season,
     uint32_t seller_team_id);
+int kbo_independent_acquisition_buyer_transferred_count(
+    uint32_t season,
+    uint32_t buyer_team_id);
 int kbo_independent_acquisition_append_decision(
     uint32_t today,
     const KboIndependentAcquisitionQueuedRequest* request,

@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "../../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../../core/dates/core_text_date.h"
 #include "../../../../core/logging/core_log.h"
 #include "../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../../../foreign/common/policy/foreign_player_policy.h"
@@ -65,6 +66,27 @@ static int64_t kbo_independent_acquisition_seller_fit_score(
         effective_limit);
 }
 
+static uint32_t kbo_independent_acquisition_seller_tiebreaker(
+    uint32_t today,
+    const KboIndependentAcquisitionQueuedRequest* request)
+{
+    if (request == NULL) {
+        return 0u;
+    }
+
+    uint32_t value = today
+        ^ (request->buyer_team_id * 1103515245u)
+        ^ (request->seller_team_id * 2246822519u)
+        ^ (request->player_id * 3266489917u)
+        ^ (request->date * 668265263u);
+    value ^= value >> 16;
+    value *= 2246822519u;
+    value ^= value >> 13;
+    value *= 3266489917u;
+    value ^= value >> 16;
+    return value;
+}
+
 int kbo_run_independent_team_acquisition_seller_ai(
     uint32_t today,
     const uintptr_t* player_snapshot,
@@ -97,6 +119,8 @@ int kbo_run_independent_team_acquisition_seller_ai(
         uint8_t* player = (uint8_t*)player_ptr;
         KboIndependentAcquisitionQueuedRequest* best = group;
         int64_t best_fit_score = INT64_MIN;
+        int best_buyer_transfers = 0;
+        uint32_t best_tiebreaker = 0u;
         for (int j = i; j < request_count; j++) {
             if (queue[j].player_id != group->player_id
                     || queue[j].seller_team_id != group->seller_team_id) {
@@ -113,10 +137,44 @@ int kbo_run_independent_team_acquisition_seller_ai(
                 player,
                 candidate_team,
                 candidate_cash_cost);
-            if (fit_score > best_fit_score
-                    || (fit_score == best_fit_score && queue[j].request_score > best->request_score)) {
+            int buyer_transfers = kbo_independent_acquisition_buyer_transferred_count(
+                queue[j].season,
+                queue[j].buyer_team_id);
+            int64_t adjusted_fit_score = fit_score == INT64_MIN
+                ? INT64_MIN
+                : fit_score - ((int64_t)buyer_transfers * 1000000ll);
+            if (adjusted_fit_score != INT64_MIN && today >= queue[j].date) {
+                uint32_t today_serial = kbo_date_serial(
+                    today / 10000u,
+                    (today / 100u) % 100u,
+                    today % 100u);
+                uint32_t request_serial = kbo_date_serial(
+                    queue[j].date / 10000u,
+                    (queue[j].date / 100u) % 100u,
+                    queue[j].date % 100u);
+                if (today_serial != 0u && request_serial != 0u && today_serial >= request_serial) {
+                    uint32_t request_age_days = today_serial - request_serial;
+                    if (request_age_days > 30u) {
+                        request_age_days = 30u;
+                    }
+                    adjusted_fit_score += (int64_t)request_age_days * 2500ll;
+                }
+            }
+            uint32_t tiebreaker = kbo_independent_acquisition_seller_tiebreaker(today, &queue[j]);
+            int best_penalty = best_buyer_transfers;
+            if (adjusted_fit_score > best_fit_score
+                    || (adjusted_fit_score == best_fit_score && buyer_transfers < best_penalty)
+                    || (adjusted_fit_score == best_fit_score
+                        && buyer_transfers == best_penalty
+                        && queue[j].request_score > best->request_score)
+                    || (adjusted_fit_score == best_fit_score
+                        && buyer_transfers == best_penalty
+                        && queue[j].request_score == best->request_score
+                        && tiebreaker > best_tiebreaker)) {
                 best = &queue[j];
-                best_fit_score = fit_score;
+                best_fit_score = adjusted_fit_score;
+                best_buyer_transfers = buyer_transfers;
+                best_tiebreaker = tiebreaker;
             }
         }
         for (int j = i + 1; j < request_count; j++) {
@@ -196,12 +254,15 @@ int kbo_run_independent_team_acquisition_seller_ai(
             char request_score_text[32] = {0};
             snprintf(request_score_text, sizeof(request_score_text), "%" PRId64, (int64_t)best->request_score);
             kbo_log_runtimef(
-                "independent acquisition seller AI decision source=%s seller=%u player=%u buyer=%u score=%s cash_cost=%d old_cash=%d new_cash=%d transferred=%d seller_transfers=%d seller_transfer_limit=%d",
+                "independent acquisition seller AI decision source=%s seller=%u player=%u buyer=%u score=%s adjusted_fit=%lld buyer_transfers=%d tiebreaker=%u cash_cost=%d old_cash=%d new_cash=%d transferred=%d seller_transfers=%d seller_transfer_limit=%d",
                 source != NULL ? source : "",
                 best->seller_team_id,
                 best->player_id,
                 best->buyer_team_id,
                 request_score_text,
+                (long long)best_fit_score,
+                best_buyer_transfers,
+                best_tiebreaker,
                 cash_cost,
                 old_cash,
                 new_cash,
