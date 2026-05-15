@@ -13,6 +13,7 @@
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/news/live/core_live_news.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/season/phase/season_phase.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/names/team_name_cache.h"
@@ -199,6 +200,20 @@ int kbo_foreign_injury_duration_text_meets_minimum(
         *out_days = best_days;
     }
     return best_days >= min_days;
+}
+
+int kbo_foreign_injury_expected_end_reached(
+    uint32_t today_yyyymmdd,
+    uint32_t expected_end_yyyymmdd)
+{
+    return today_yyyymmdd != 0u
+        && expected_end_yyyymmdd != 0u
+        && today_yyyymmdd >= expected_end_yyyymmdd;
+}
+
+int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase)
+{
+    return effective_phase == KBO_SEASON_PHASE_REGULAR_SEASON;
 }
 
 int kbo_foreign_injury_active_record_has_roster_basis(

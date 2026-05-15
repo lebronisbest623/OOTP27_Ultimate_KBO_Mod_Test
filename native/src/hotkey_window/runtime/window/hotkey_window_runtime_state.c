@@ -39,6 +39,7 @@ int g_kbo_hub_selected_cbt_subview = 0;
 int g_kbo_hub_selected_futures_subview = 0;
 int g_kbo_hub_fa_market_page = 0;
 int g_kbo_hub_fa_market_filter = 0;
+int g_kbo_hub_fa_market_position_filter = 0;
 int g_kbo_hub_fa_market_report_size = 300;
 uint32_t g_kbo_hub_selected_fa_compensation_player_id = 0u;
 uint32_t g_kbo_hub_selected_military_results_year = 0;

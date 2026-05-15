@@ -209,12 +209,9 @@ int kbo_independent_acquisition_transferred_count(
             uint32_t row_season = 0u;
             uint32_t row_seller_team_id = 0u;
             uint32_t transferred = 0u;
-            if (kbo_independent_acquisition_parse_decision_line(
-                    cursor,
-                    &row_season,
-                    &row_seller_team_id,
-                    NULL,
-                    &transferred)
+            if (kbo_independent_acquisition_json_u32(cursor, "season", &row_season)
+                    && kbo_independent_acquisition_json_u32(cursor, "seller_team_id", &row_seller_team_id)
+                    && kbo_independent_acquisition_json_u32(cursor, "transferred", &transferred)
                     && row_season == season
                     && row_seller_team_id == seller_team_id
                     && transferred != 0u) {

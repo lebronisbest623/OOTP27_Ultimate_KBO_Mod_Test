@@ -19,6 +19,7 @@
 #include "ui_fa_views.h"
 #include "../../support/roster/cells/ui_roster_cells.h"
 #include "../../support/text/buffer/ui_text_buffer.h"
+#include "../../ui_html_helpers/position_helpers.h"
 
 void kbo_webview_append_fa_cases_view(KboWindowTextBuffer* buffer, uint32_t selected_league_id);
 int kbo_fa_compensation_record_is_final(const KboFaCompensationRecord* rec);

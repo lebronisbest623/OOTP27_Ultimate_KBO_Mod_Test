@@ -109,12 +109,13 @@ int kbo_fa_compensation_build_market_row(
 
     char ignored_path[MAX_PATH] = {0};
     int seed_count = kbo_load_fa_market_seed_cases(seeds, KBO_FA_MARKET_SEED_MAX, ignored_path, sizeof(ignored_path));
-    int salary_grade_count = kbo_fa_salary_snapshot_load_grade_rows(
+    int salary_grade_count = kbo_fa_salary_snapshot_load_fa_market_grade_rows(
         current_year,
         salary_grades,
         KBO_FA_SALARY_SNAPSHOT_GRADE_MAX,
         ignored_path,
-        sizeof(ignored_path));
+        sizeof(ignored_path),
+        NULL);
 
     KboFaMarketHistoryCase history;
     memset(&history, 0, sizeof(history));

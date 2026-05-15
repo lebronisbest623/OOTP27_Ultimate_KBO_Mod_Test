@@ -18,7 +18,9 @@
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../team/lookup/team_lookup.h"
 #include "fa_compensation_history.h"
+#include "../finance/fa_compensation_cash_transfer.h"
 #include "../market/fa_compensation_market.h"
+#include "../news/fa_compensation_news_transfer.h"
 #include "../records/fa_compensation_records.h"
 #include "../state/fa_compensation_state.h"
 
@@ -258,6 +260,15 @@ int kbo_record_fa_compensation_signing(
         KBO_PROFILE_BEGIN(profile_fa_comp_history);
         kbo_fa_compensation_record_history(&recorded);
         KBO_PROFILE_END(profile_fa_comp_history, "fa_comp.record_signing.history");
+        if (!recorded.requires_player_compensation) {
+            kbo_apply_fa_compensation_cash_transfer(
+                &recorded,
+                recorded.cash_only,
+                recorded.signed_on_yyyymmdd,
+                "CASH_ONLY_SIGNING",
+                source != NULL ? source : "fa_signing");
+            kbo_emit_fa_compensation_cash_only_news(&recorded, recorded.signed_on_yyyymmdd);
+        }
         kbo_log_runtimef(
             "KBO FA compensation recorded player=%u name=%s grade=%s signing_team=%u original_team=%u salary=%d cash_with_player=%u cash_only=%u protect=%u ledger=%s",
             recorded.player_id,

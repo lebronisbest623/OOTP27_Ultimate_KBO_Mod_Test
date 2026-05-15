@@ -24,6 +24,20 @@ uint32_t kbo_custom_foreign_policy_extra_slots_for_candidate(
         return 0u;
     }
 
+    uint32_t today = 0u;
+    kbo_get_foreign_waiver_current_yyyymmdd(&today);
+    uint32_t league_id = kbo_get_foreign_waiver_league_id();
+    if (league_id == 0u) {
+        league_id = kbo_resolve_kbo_league_id();
+    }
+    if (!kbo_foreign_injury_replacement_in_season_window(
+            league_id,
+            today,
+            "foreign_policy.candidate_extra_slot",
+            "candidate_extra_slot")) {
+        return 0u;
+    }
+
     uint32_t injured_player_id = 0u;
     if (kbo_player_is_asian_quota_candidate(candidate)
             && kbo_team_has_foreign_injury_slot_for_candidate(

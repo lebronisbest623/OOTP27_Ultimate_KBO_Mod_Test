@@ -37,6 +37,10 @@ const char* kbo_season_phase_label(uint8_t phase);
 int kbo_season_phase_is_offseason(uint8_t phase);
 int kbo_season_phase_can_enter_offseason(uint8_t phase);
 int kbo_season_phase_is_preseason_or_regular(uint8_t phase);
+int kbo_season_phase_site_is_offseason_transition(uint32_t site_rva);
+int kbo_season_phase_info_has_today_offseason_transition_capture(
+    const KboSeasonPhaseInfo* info,
+    uint32_t today_yyyymmdd);
 
 uint8_t kbo_season_phase_effective_from_values(
     uint32_t today_yyyymmdd,

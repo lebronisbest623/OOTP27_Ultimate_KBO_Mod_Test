@@ -14,5 +14,13 @@
   "fa_compensation.history.transfer": "[G]Joined Team #{original_team_id} as the KBO FA compensation player for {fa_player_name}.",
   "fa_compensation.history.transfer.variants": 2,
   "fa_compensation.history.transfer.v1": "[G]Joined Team #{original_team_id} as the KBO FA compensation player for {fa_player_name}.",
-  "fa_compensation.history.transfer.v2": "[G]Moved to Team #{original_team_id} through the KBO FA compensation process for {fa_player_name}."
+  "fa_compensation.history.transfer.v2": "[G]Moved to Team #{original_team_id} through the KBO FA compensation process for {fa_player_name}.",
+  "fa_compensation.cash_only.title": "{player_name} FA compensation set as cash",
+  "fa_compensation.cash_only.title.variants": 2,
+  "fa_compensation.cash_only.title.v1": "{player_name} FA compensation set as cash",
+  "fa_compensation.cash_only.title.v2": "Cash closes {player_name} compensation case",
+  "fa_compensation.cash_only.body": "The compensation tied to {fa_player_link}'s free-agent move has been set as cash. {original_team_link} will receive {cash_text} from {signing_team_link} under Grade {grade} rules.\n\nThis case does not require a protected list or compensation-player selection; the compensation is recorded as cash only.",
+  "fa_compensation.cash_only.body.variants": 2,
+  "fa_compensation.cash_only.body.v1": "The compensation tied to {fa_player_link}'s free-agent move has been set as cash. {original_team_link} will receive {cash_text} from {signing_team_link} under Grade {grade} rules.\n\nThis case does not require a protected list or compensation-player selection; the compensation is recorded as cash only.",
+  "fa_compensation.cash_only.body.v2": "{signing_team_link}'s signing of {fa_player_link} now has its KBO compensation attached. {original_team_link} receives {cash_text}, with the move handled as Grade {grade} compensation.\n\nNo player-selection process opens for this case; the record closes with cash compensation."
 }

@@ -1,5 +1,6 @@
 #include "season_phase.h"
 
+#include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../dates/core_text_date.h"
 
 static int kbo_season_phase_date_valid(uint32_t yyyymmdd)
@@ -61,6 +62,23 @@ int kbo_season_phase_is_preseason_or_regular(uint8_t phase)
 {
     return phase == KBO_SEASON_PHASE_PRESEASON
         || phase == KBO_SEASON_PHASE_REGULAR_SEASON;
+}
+
+int kbo_season_phase_site_is_offseason_transition(uint32_t site_rva)
+{
+    return site_rva == OOTP27_SEASON_PHASE_WRITE_1_RVA
+        || site_rva == OOTP27_SEASON_PHASE_WRITE_0_RVA;
+}
+
+int kbo_season_phase_info_has_today_offseason_transition_capture(
+    const KboSeasonPhaseInfo* info,
+    uint32_t today_yyyymmdd)
+{
+    return info != NULL
+        && info->capture_valid
+        && info->capture_date == today_yyyymmdd
+        && kbo_season_phase_is_offseason(info->captured_phase)
+        && kbo_season_phase_site_is_offseason_transition(info->capture_site_rva);
 }
 
 uint8_t kbo_season_phase_effective_from_values(

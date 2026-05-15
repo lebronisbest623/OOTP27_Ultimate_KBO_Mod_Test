@@ -9,6 +9,7 @@
 #include "../../fa_rules/fa_rules.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../decisions/fa_compensation_decisions.h"
+#include "../finance/fa_compensation_cash_transfer.h"
 #include "fa_compensation_due.h"
 #include "fa_compensation_due_ortools.h"
 #include "../news/fa_compensation_news_transfer.h"
@@ -216,6 +217,14 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
             task_count++;
             continue;
         }
+        if (rec->status == KBO_FA_COMPENSATION_STATUS_PENDING
+                && !rec->requires_player_compensation
+                && rec->cash_only > 0u) {
+            tasks[task_count].rec = *rec;
+            tasks[task_count].action = KBO_FA_COMPENSATION_DUE_TASK_RECORD_CASH;
+            task_count++;
+            continue;
+        }
         if (rec->status != KBO_FA_COMPENSATION_STATUS_PENDING
                 || !rec->requires_player_compensation
                 || rec->protect_count == 0u
@@ -241,8 +250,14 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
 
         if (tasks[t].action == KBO_FA_COMPENSATION_DUE_TASK_RECORD_CASH) {
             KboFaCompensationDecisionRow decision;
-            if (kbo_load_latest_fa_compensation_decision(task_rec.player_id, &decision)
+            int cash_recorded = 0;
+            if (!task_rec.requires_player_compensation) {
+                cash_recorded = task_rec.cash_only > 0u;
+            } else if (kbo_load_latest_fa_compensation_decision(task_rec.player_id, &decision)
                     && strcmp(decision.action, "CASH_ONLY") == 0) {
+                cash_recorded = 1;
+            }
+            if (cash_recorded) {
                 kbo_log_runtimef(
                     "KBO FA compensation cash-only recorded fa_player=%u original_team=%u signing_team=%u cash_only=%u source=%s",
                     task_rec.player_id,
@@ -250,6 +265,12 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
                     task_rec.signing_team_id,
                     task_rec.cash_only,
                     source != NULL ? source : "");
+                kbo_apply_fa_compensation_cash_transfer(
+                    &task_rec,
+                    task_rec.cash_only,
+                    today,
+                    task_rec.requires_player_compensation ? "CASH_ONLY_DECISION" : "CASH_ONLY_SIGNING",
+                    source != NULL ? source : "fa_compensation_due");
                 new_status = KBO_FA_COMPENSATION_STATUS_CASH_ONLY_RECORDED;
                 changed = 1;
             }
@@ -264,6 +285,12 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
                 selected.score = decision.selected_player_score;
                 snprintf(selected.player_name, sizeof(selected.player_name), "%s", decision.selected_player_name);
                 if (kbo_transfer_fa_compensation_player_to_original_team(&task_rec, &selected, today, source)) {
+                    kbo_apply_fa_compensation_cash_transfer(
+                        &task_rec,
+                        task_rec.cash_with_player,
+                        today,
+                        "PLAYER_PLUS_CASH",
+                        source != NULL ? source : "fa_compensation_due");
                     kbo_emit_fa_compensation_player_selected_news(&task_rec, &selected, today);
                     new_status = KBO_FA_COMPENSATION_STATUS_PLAYER_TRANSFERRED;
                     changed = 1;

@@ -10,6 +10,10 @@ void kbo_emit_fa_compensation_player_selected_news(
     const KboFaProtectedCandidate* selected,
     uint32_t decided_yyyymmdd);
 
+void kbo_emit_fa_compensation_cash_only_news(
+    const KboFaCompensationRecord* rec,
+    uint32_t decided_yyyymmdd);
+
 int kbo_transfer_fa_compensation_player_to_original_team(
     const KboFaCompensationRecord* rec,
     const KboFaProtectedCandidate* selected,

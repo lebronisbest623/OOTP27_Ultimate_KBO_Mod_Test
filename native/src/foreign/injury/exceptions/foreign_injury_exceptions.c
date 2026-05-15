@@ -3,7 +3,9 @@
 #include <stdint.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../runtime_memory/runtime_memory.h"
+#include "../../common/dates/foreign_waiver_date.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../../common/policy/foreign_waiver_policy.h"
 #include "../api/foreign_injury.h"
@@ -27,6 +29,20 @@ int kbo_foreign_injury_replacement_signing_exception_available(
             || candidate == NULL
             || !memory_range_readable(candidate, OOTP27_PLAYER_SCAN_BYTES)
             || !kbo_player_is_foreign_for_kbo_rights(candidate)) {
+        return 0;
+    }
+
+    uint32_t today = 0u;
+    kbo_get_foreign_waiver_current_yyyymmdd(&today);
+    uint32_t league_id = kbo_get_foreign_waiver_league_id();
+    if (league_id == 0u) {
+        league_id = kbo_resolve_kbo_league_id();
+    }
+    if (!kbo_foreign_injury_replacement_in_season_window(
+            league_id,
+            today,
+            "foreign_injury.signing_exception",
+            "signing_exception")) {
         return 0;
     }
 
@@ -91,6 +107,20 @@ int kbo_foreign_injury_replacement_callup_exception_available(
 
     uint32_t team_id = *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
     if (team_id == 0u) {
+        return 0;
+    }
+
+    uint32_t today = 0u;
+    kbo_get_foreign_waiver_current_yyyymmdd(&today);
+    uint32_t league_id = kbo_get_foreign_waiver_league_id();
+    if (league_id == 0u) {
+        league_id = kbo_resolve_kbo_league_id();
+    }
+    if (!kbo_foreign_injury_replacement_in_season_window(
+            league_id,
+            today,
+            "foreign_injury.callup_exception",
+            "callup_exception")) {
         return 0;
     }
 

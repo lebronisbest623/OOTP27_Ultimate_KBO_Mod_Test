@@ -210,6 +210,48 @@ int kbo_fa_salary_snapshot_load_grade_rows(
     return count;
 }
 
+int kbo_fa_salary_snapshot_load_fa_market_grade_rows(
+    uint32_t current_year,
+    KboFaSalarySnapshotGrade* rows,
+    int max_rows,
+    char* out_path,
+    size_t out_path_size,
+    uint32_t* out_grade_season)
+{
+    if (out_grade_season != NULL) {
+        *out_grade_season = 0u;
+    }
+
+    int count = kbo_fa_salary_snapshot_load_grade_rows(
+        current_year,
+        rows,
+        max_rows,
+        out_path,
+        out_path_size);
+    if (count > 0) {
+        if (out_grade_season != NULL) {
+            *out_grade_season = current_year;
+        }
+        return count;
+    }
+
+    if (current_year <= 1982u) {
+        return count;
+    }
+
+    uint32_t previous_year = current_year - 1u;
+    count = kbo_fa_salary_snapshot_load_grade_rows(
+        previous_year,
+        rows,
+        max_rows,
+        out_path,
+        out_path_size);
+    if (count > 0 && out_grade_season != NULL) {
+        *out_grade_season = previous_year;
+    }
+    return count;
+}
+
 const KboFaSalarySnapshotGrade* kbo_find_fa_salary_snapshot_grade(
     const KboFaSalarySnapshotGrade* rows,
     int row_count,

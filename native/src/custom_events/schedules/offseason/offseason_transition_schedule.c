@@ -285,6 +285,8 @@ int kbo_custom_event_monitor_check_offseason_transition(
     int transitioned_to_offseason = had_previous
         && kbo_custom_event_phase_can_enter_offseason(g_kbo_custom_event_last_seen_league_phase)
         && kbo_custom_event_phase_is_offseason(phase);
+    transitioned_to_offseason = transitioned_to_offseason
+        || kbo_season_phase_info_has_today_offseason_transition_capture(&phase_info, today_yyyymmdd);
 
     if (!same_league
             || g_kbo_custom_event_last_phase_date != today_yyyymmdd

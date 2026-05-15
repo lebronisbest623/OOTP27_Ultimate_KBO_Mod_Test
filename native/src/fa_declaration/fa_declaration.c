@@ -248,30 +248,9 @@ int kbo_handle_fa_declaration_event(uint32_t event_yyyymmdd, const char* source)
         return -1;
     }
 
-    int retained_repaired = 0;
-    for (int i = 0; i < candidate_count; i++) {
-        if (candidates[i].declared || candidates[i].player_ptr == 0u) {
-            continue;
-        }
-        KboFaDeclarationDecision decision;
-        memset(&decision, 0, sizeof(decision));
-        decision.player_id = candidates[i].player_id;
-        decision.declaration_date = candidates[i].declaration_date;
-        decision.season = candidates[i].season;
-        decision.declared = 0u;
-        decision.team_id = candidates[i].team_id;
-        decision.league_id = candidates[i].league_id;
-        decision.contract_level = candidates[i].contract_level;
-        decision.salary = candidates[i].salary;
-        decision.fa_demand = candidates[i].fa_demand;
-        decision.score = candidates[i].score;
-        retained_repaired += kbo_fa_declaration_repair_retained_contract_salary(
-            (uint8_t*)candidates[i].player_ptr,
-            season,
-            &decision,
-            0,
-            source != NULL ? source : "fa_declaration_event");
-    }
+    int retained_repaired = kbo_fa_declaration_repair_retained_contracts_for_season(
+        season,
+        source != NULL ? source : "fa_declaration_event");
 
     int detail_logs = 0;
     for (int i = 0; i < candidate_count && detail_logs < 40; i++) {

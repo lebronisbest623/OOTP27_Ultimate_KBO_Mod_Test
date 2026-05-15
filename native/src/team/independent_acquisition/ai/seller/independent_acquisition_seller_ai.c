@@ -177,6 +177,7 @@ int kbo_run_independent_team_acquisition_seller_ai(
                 best_tiebreaker = tiebreaker;
             }
         }
+        KboIndependentAcquisitionQueuedRequest selected = *best;
         for (int j = i + 1; j < request_count; j++) {
             if (queue[j].player_id == group->player_id
                     && queue[j].seller_team_id == group->seller_team_id) {
@@ -184,20 +185,20 @@ int kbo_run_independent_team_acquisition_seller_ai(
             }
         }
 
-        uint8_t* buyer_team = find_kbo_team_by_numeric_id_any_league(best->buyer_team_id, 1);
-        uint8_t* seller_team = find_kbo_team_by_numeric_id_any_league(best->seller_team_id, 1);
+        uint8_t* buyer_team = find_kbo_team_by_numeric_id_any_league(selected.buyer_team_id, 1);
+        uint8_t* seller_team = find_kbo_team_by_numeric_id_any_league(selected.seller_team_id, 1);
         int moved = 0;
         int cash_charged = 0;
         int32_t old_cash = 0;
         int32_t new_cash = 0;
-        int32_t cash_cost = best->cash_cost;
+        int32_t cash_cost = selected.cash_cost;
         if (cash_cost <= 0 && player != NULL) {
             cash_cost = kbo_independent_acquisition_cash_cost_for_player(player);
-            best->cash_cost = cash_cost;
+            selected.cash_cost = cash_cost;
         }
         int seller_transfers = kbo_independent_acquisition_transferred_count(
-            best->season,
-            best->seller_team_id);
+            selected.season,
+            selected.seller_team_id);
         int seller_limit_reached = seller_transfers >= seller_transfer_limit;
         if (seller_limit_reached) {
             limit_blocked++;
@@ -208,15 +209,15 @@ int kbo_run_independent_team_acquisition_seller_ai(
                 && memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
                 && memory_range_readable(buyer_team, OOTP27_KBO_TEAM_READABLE_BYTES)
                 && kbo_independent_acquisition_player_status_ok(player)
-                && kbo_player_current_assignment_matches_team_or_affiliate(player, best->seller_team_id)
-                && !kbo_player_current_assignment_matches_team_or_affiliate(player, best->buyer_team_id)
+                && kbo_player_current_assignment_matches_team_or_affiliate(player, selected.seller_team_id)
+                && !kbo_player_current_assignment_matches_team_or_affiliate(player, selected.buyer_team_id)
                 && kbo_independent_acquisition_team_has_cash(buyer_team, cash_cost)) {
             int pre = 0;
             int reg = 0;
             int attach = 0;
             uint32_t buyer_league_id = *(uint32_t*)(buyer_team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET);
             kbo_assign_player_to_team_like_ootp(player, buyer_team, buyer_league_id, &pre, &reg, &attach);
-            moved = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) == best->buyer_team_id;
+            moved = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) == selected.buyer_team_id;
             if (moved) {
                 cash_charged = kbo_independent_acquisition_charge_team_cash(
                         buyer_team,
@@ -227,8 +228,8 @@ int kbo_run_independent_team_acquisition_seller_ai(
                     kbo_log_runtimef(
                         "independent acquisition seller AI cash charge failed source=%s buyer=%u player=%u cost=%d",
                         source != NULL ? source : "",
-                        best->buyer_team_id,
-                        best->player_id,
+                        selected.buyer_team_id,
+                        selected.player_id,
                         cash_cost);
                 }
             }
@@ -239,14 +240,14 @@ int kbo_run_independent_team_acquisition_seller_ai(
                 player,
                 buyer_team,
                 seller_team,
-                best->player_id,
-                best->buyer_team_id,
-                best->seller_team_id,
+                selected.player_id,
+                selected.buyer_team_id,
+                selected.seller_team_id,
                 cash_cost,
                 source);
         }
 
-        if (kbo_independent_acquisition_append_decision(today, best, moved, old_cash, new_cash, source)) {
+        if (kbo_independent_acquisition_append_decision(today, &selected, moved, old_cash, new_cash, source)) {
             decided++;
             if (moved) {
                 transferred++;
@@ -256,9 +257,9 @@ int kbo_run_independent_team_acquisition_seller_ai(
             kbo_log_runtimef(
                 "independent acquisition seller AI decision source=%s seller=%u player=%u buyer=%u score=%s adjusted_fit=%lld buyer_transfers=%d tiebreaker=%u cash_cost=%d old_cash=%d new_cash=%d transferred=%d seller_transfers=%d seller_transfer_limit=%d",
                 source != NULL ? source : "",
-                best->seller_team_id,
-                best->player_id,
-                best->buyer_team_id,
+                selected.seller_team_id,
+                selected.player_id,
+                selected.buyer_team_id,
                 request_score_text,
                 (long long)best_fit_score,
                 best_buyer_transfers,

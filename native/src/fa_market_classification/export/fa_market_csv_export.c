@@ -140,12 +140,14 @@ static int kbo_collect_fa_market_classifications_internal(
     char seed_path[MAX_PATH] = {0};
     char salary_snapshot_path[MAX_PATH] = {0};
     int seed_count = kbo_load_fa_market_seed_cases(seeds, KBO_FA_MARKET_SEED_MAX, seed_path, sizeof(seed_path));
-    int salary_grade_count = kbo_fa_salary_snapshot_load_grade_rows(
+    uint32_t salary_grade_season = 0u;
+    int salary_grade_count = kbo_fa_salary_snapshot_load_fa_market_grade_rows(
         current_year,
         salary_grades,
         KBO_FA_SALARY_SNAPSHOT_GRADE_MAX,
         salary_snapshot_path,
-        sizeof(salary_snapshot_path));
+        sizeof(salary_snapshot_path),
+        &salary_grade_season);
     KboFaRules fa_rules;
     kbo_fa_rules_load(&fa_rules);
     if (summary != NULL) {
@@ -192,6 +194,8 @@ static int kbo_collect_fa_market_classifications_internal(
         row->retired_flag = player[OOTP27_PLAYER_RETIRED_FLAG_OFFSET];
         row->contract_level = player[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET];
         row->dfa = player[OOTP27_PLAYER_DFA_FLAG_OFFSET];
+        row->position_group = player[OOTP27_PLAYER_POSITION_GROUP_OFFSET];
+        row->position_role = player[OOTP27_PLAYER_POSITION_ROLE_OFFSET];
         row->fa_demand = *(int32_t*)(player + OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET);
         row->foreign_player = kbo_player_is_foreign_for_kbo_rights(player) ? 1u : 0u;
         row->draft_class = player[OOTP27_PLAYER_DRAFT_CLASS_OFFSET];
@@ -293,6 +297,7 @@ static int kbo_collect_fa_market_classifications_internal(
             kbo_log_field_u32(&audit_fields, "league_id", league_id);
             kbo_log_field_u32(&audit_fields, "today", today);
             kbo_log_field_u32(&audit_fields, "current_year", current_year);
+            kbo_log_field_u32(&audit_fields, "salary_grade_season", salary_grade_season);
             kbo_log_field_i32(&audit_fields, "rows", row_count);
             kbo_log_field_i32(&audit_fields, "candidates", candidate_count);
             kbo_log_field_i32(&audit_fields, "scanned", scanned);

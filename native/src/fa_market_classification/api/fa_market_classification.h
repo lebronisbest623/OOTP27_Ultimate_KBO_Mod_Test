@@ -35,6 +35,8 @@ typedef struct KboFaMarketClassification {
     uint8_t dfa;
     uint8_t foreign_player;
     uint8_t retired_flag;
+    uint8_t position_group;
+    uint8_t position_role;
     uint8_t draft_class;
     uint8_t draft_subtype;
     uint8_t draft_eligible;

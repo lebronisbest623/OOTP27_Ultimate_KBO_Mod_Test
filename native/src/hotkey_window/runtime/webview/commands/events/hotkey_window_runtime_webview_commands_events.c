@@ -57,6 +57,25 @@ int kbo_webview_handle_event_and_fa_command(const char* cmd)
         kbo_webview_navigate_current();
         return 1;
     }
+    if (strncmp(cmd, "fa-market/position/", 19) == 0) {
+        if (!kbo_hub_selected_league_is_kbo()) {
+            g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+            g_kbo_hub_open_dropdown = 0;
+            kbo_webview_navigate_current();
+            return 1;
+        }
+        int position_filter = atoi(cmd + 19);
+        if (position_filter < 0 || position_filter > 14) {
+            position_filter = 0;
+        }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_FA_CASES;
+        g_kbo_hub_selected_fa_subview = KBO_HUB_FA_SUBVIEW_MARKET;
+        g_kbo_hub_fa_market_position_filter = position_filter;
+        g_kbo_hub_fa_market_page = 0;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
     if (strncmp(cmd, "fa-market/report/", 17) == 0) {
         if (!kbo_hub_selected_league_is_kbo()) {
             g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;

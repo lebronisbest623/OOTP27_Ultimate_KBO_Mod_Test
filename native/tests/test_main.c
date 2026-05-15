@@ -12,6 +12,7 @@
 #define KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA 2
 
 #include "../src/core/dates/core_text_date.h"
+#include "../src/bootstrap/abi/ootp_offsets.h"
 #include "../src/core/season/phase/season_phase.h"
 #include "../src/core/core_flags/json/json_bool_parser.h"
 #include "../src/core/news/templates/core_news_templates.h"
@@ -652,6 +653,17 @@ static void test_season_phase_effective_rules(void)
         0u,
         &corrected) == KBO_SEASON_PHASE_REGULAR_SEASON);
     assert(!corrected);
+
+    KboSeasonPhaseInfo info = {0};
+    info.capture_valid = 1;
+    info.capture_date = 20261020u;
+    info.captured_phase = KBO_SEASON_PHASE_OFFSEASON_STARTED;
+    info.capture_site_rva = OOTP27_SEASON_PHASE_WRITE_1_RVA;
+    assert(kbo_season_phase_info_has_today_offseason_transition_capture(&info, 20261020u));
+    info.capture_site_rva = OOTP27_SEASON_PHASE_INIT_0A_RVA;
+    assert(!kbo_season_phase_info_has_today_offseason_transition_capture(&info, 20261020u));
+    info.capture_site_rva = OOTP27_SEASON_PHASE_WRITE_1_RVA;
+    assert(!kbo_season_phase_info_has_today_offseason_transition_capture(&info, 20261021u));
 
     printf("test_season_phase_effective_rules: PASS\n");
 }
@@ -1305,6 +1317,18 @@ static void test_foreign_injury_inactive_roster_long_term_basis(void)
         min_days,
         &evidence_days));
     assert(evidence_days == 14);
+
+    assert(!kbo_foreign_injury_expected_end_reached(0, 20260420));
+    assert(!kbo_foreign_injury_expected_end_reached(20260419, 20260420));
+    assert(kbo_foreign_injury_expected_end_reached(20260420, 20260420));
+    assert(kbo_foreign_injury_expected_end_reached(20260421, 20260420));
+
+    assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_OFFSEASON_RESET));
+    assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_OFFSEASON_STARTED));
+    assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_PRESEASON));
+    assert(kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_REGULAR_SEASON));
+    assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_POSTSEASON));
+    assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_UNKNOWN));
 
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(0u, 0, min_days, 1));
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 8, min_days, 1));

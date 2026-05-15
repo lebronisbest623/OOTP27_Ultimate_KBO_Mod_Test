@@ -44,6 +44,15 @@ int kbo_foreign_injury_duration_text_meets_minimum(
     const char* text,
     int min_days,
     int* out_days);
+int kbo_foreign_injury_expected_end_reached(
+    uint32_t today_yyyymmdd,
+    uint32_t expected_end_yyyymmdd);
+int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase);
+int kbo_foreign_injury_replacement_in_season_window(
+    uint32_t league_id,
+    uint32_t today_yyyymmdd,
+    const char* source,
+    const char* context);
 int kbo_foreign_injury_active_record_has_roster_basis(
     uint8_t status,
     uint32_t replacement_player_id,

@@ -58,6 +58,20 @@ int kbo_attach_foreign_injury_replacement_after_signing(
         return 0;
     }
 
+    uint32_t today = 0u;
+    kbo_get_current_yyyymmdd(&today);
+    uint32_t league_id = kbo_get_foreign_waiver_league_id();
+    if (league_id == 0u) {
+        league_id = kbo_resolve_kbo_league_id();
+    }
+    if (!kbo_foreign_injury_replacement_in_season_window(
+            league_id,
+            today,
+            source,
+            "attach_signed_replacement")) {
+        return 0;
+    }
+
     KboForeignInjuryReplacement updated_rec;
     memset(&updated_rec, 0, sizeof(updated_rec));
     int changed = 0;
@@ -99,8 +113,6 @@ int kbo_attach_foreign_injury_replacement_after_signing(
         return 0;
     }
 
-    uint32_t today = 0u;
-    kbo_get_current_yyyymmdd(&today);
     if (changed) {
         int days_left = 0;
         uint8_t* injured = kbo_find_player_by_id(updated_rec.injured_player_id, NULL, NULL);
