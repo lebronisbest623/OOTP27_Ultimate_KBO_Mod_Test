@@ -42,7 +42,7 @@ int kbo_foreign_injury_resolve_player_team_assignment(
     uint32_t configured_league_id,
     uint32_t* out_team_id,
     uint32_t* out_league_id);
-int kbo_foreign_injury_injured_player_returned_to_top_team(
+int kbo_foreign_injury_injured_player_returned_to_org_roster(
     const KboForeignInjuryReplacement* rec,
     uint8_t* injured);
 uint32_t kbo_foreign_injury_resolve_replacement_for_record(const KboForeignInjuryReplacement* rec);

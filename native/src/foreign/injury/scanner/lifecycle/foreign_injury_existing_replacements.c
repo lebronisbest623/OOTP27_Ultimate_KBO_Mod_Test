@@ -102,24 +102,10 @@ void kbo_foreign_injury_process_existing_replacements(
             }
         }
 
-        int returned_to_top_team = kbo_foreign_injury_injured_player_returned_to_top_team(rec, injured);
-        if (returned_to_top_team && expected_end_pending) {
-            LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_return_wait_log_count);
-            if (log_slot <= 80 || (log_slot % 100) == 0) {
-                kbo_log_runtimef(
-                    "foreign injury replacement: waiting expected-end before close source=%s team=%u injured=%u replacement=%u today=%u expected_end=%u",
-                    source != NULL ? source : "",
-                    rec->team_id,
-                    rec->injured_player_id,
-                    rec->replacement_player_id,
-                    today,
-                    rec->expected_end_yyyymmdd);
-            }
-            continue;
-        }
-        int expected_end_due = !returned_to_top_team
+        int returned_to_org_roster = kbo_foreign_injury_injured_player_returned_to_org_roster(rec, injured);
+        int expected_end_due = !returned_to_org_roster
             && kbo_foreign_injury_expected_end_reached(today, rec->expected_end_yyyymmdd);
-        if (!returned_to_top_team && !expected_end_due) {
+        if (!returned_to_org_roster && !expected_end_due) {
             if (injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] == 0u) {
                 LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_return_wait_log_count);
                 if (log_slot <= 80 || (log_slot % 100) == 0) {
