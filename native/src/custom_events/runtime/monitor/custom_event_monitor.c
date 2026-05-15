@@ -12,6 +12,7 @@
 #include "../../../bootstrap/profiling/profiler.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../foreign/common/dates/foreign_waiver_date.h"
+#include "../../../core/season/phase/capture/season_phase_capture.h"
 #include "../../schedules/independent/independent_team_acquisition_schedule.h"
 #include "../calendar/custom_event_calendar_due.h"
 
@@ -107,6 +108,10 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
     uint32_t observed_yyyymmdd = 0u;
     uint32_t fast_processed_yyyymmdd = 0u;
     int observed_stable_ticks = 0;
+    LONG last_phase_capture_sequence = InterlockedCompareExchange(
+        &g_kbo_season_phase_capture_event_published_sequence,
+        0,
+        0);
     DWORD last_periodic_tick = GetTickCount();
     if (kbo_runtime_pause_for_save_if_needed("custom_event_monitor")) {
         kbo_custom_event_monitor_tick(
@@ -144,6 +149,21 @@ DWORD WINAPI kbo_custom_event_monitor_thread(LPVOID parameter)
                 last_periodic_tick = GetTickCount();
                 continue;
             }
+        }
+
+        LONG phase_capture_sequence = InterlockedCompareExchange(
+            &g_kbo_season_phase_capture_event_published_sequence,
+            0,
+            0);
+        if (has_date && phase_capture_sequence != last_phase_capture_sequence) {
+            last_phase_capture_sequence = phase_capture_sequence;
+            kbo_custom_event_monitor_tick(
+                &last_scheduled_yyyymmdd,
+                &last_scanned_yyyymmdd,
+                &last_fa_comp_yyyymmdd,
+                "custom_event_monitor_phase_pulse");
+            last_periodic_tick = GetTickCount();
+            continue;
         }
 
         DWORD now = GetTickCount();

@@ -35,14 +35,8 @@ static void kbo_fa_rights_append_row(KboWindowTextBuffer* buffer, const KboFaDec
 {
     char team_abbrev[16] = "-";
     char salary_text[32] = "-";
-    char score_text[48] = "-";
     kbo_hub_copy_team_abbrev_by_id(row->team_id, team_abbrev, sizeof(team_abbrev), "-");
     kbo_fa_market_format_salary(row->salary, salary_text, sizeof(salary_text));
-    if (row->threshold > 0) {
-        snprintf(score_text, sizeof(score_text), "%d / %d", row->score, row->threshold);
-    } else {
-        snprintf(score_text, sizeof(score_text), "%d", row->score);
-    }
 
     kbo_window_text_appendf(buffer, "<tr>");
     kbo_fa_rights_append_status_cell(buffer, row);
@@ -50,60 +44,34 @@ static void kbo_fa_rights_append_row(KboWindowTextBuffer* buffer, const KboFaDec
     kbo_window_text_appendf(buffer, "<td>");
     kbo_html_append_escaped(buffer, team_abbrev);
     kbo_window_text_appendf(buffer, "</td><td>");
-    kbo_html_append_escaped(buffer, kbo_fa_market_display_case_label(row->case_label));
-    kbo_window_text_appendf(buffer, "</td><td>");
     kbo_html_append_escaped(buffer, kbo_fa_market_display_grade(row->grade));
     kbo_window_text_appendf(buffer, "</td><td class='roEntry' data-sort-value='%d'>", row->salary);
     kbo_html_append_escaped(buffer, salary_text);
-    kbo_window_text_appendf(buffer, "</td><td data-sort-value='%d'>", row->score);
-    kbo_html_append_escaped(buffer, score_text);
-    kbo_window_text_appendf(buffer, "</td><td>%u</td><td>", (uint32_t)row->declaration_date);
-    kbo_html_append_escaped(buffer, row->decision_reason[0] != '\0' ? row->decision_reason : row->reason);
     kbo_window_text_appendf(buffer, "</td></tr>");
 }
 
-static void kbo_fa_rights_append_group(
+static void kbo_fa_rights_append_table(
     KboWindowTextBuffer* buffer,
     const KboFaDeclarationReportRow* rows,
     const int* indices,
-    int index_count,
-    int declared,
-    const char* title)
+    int index_count)
 {
-    int group_count = 0;
-    for (int i = 0; i < index_count; i++) {
-        const KboFaDeclarationReportRow* row = &rows[indices[i]];
-        if ((row->declared ? 1 : 0) == declared) {
-            group_count++;
-        }
-    }
-
-    kbo_window_text_appendf(
-        buffer,
-        "<div class='rosterTopBar'><div class='rosterTopText'>");
-    kbo_html_append_escaped(buffer, title);
-    kbo_window_text_appendf(buffer, " %d명</div></div>", group_count);
+    kbo_window_text_appendf(buffer, "<div class='rosterTopBar'><div class='rosterTopText'>권리 행사 대상 %d명</div></div>", index_count);
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable faRightsExerciseTable'><thead><tr>"
         "<th data-sort-type='text'>상태</th>"
         "<th class='roName' data-sort-type='text'>선수</th>"
         "<th data-sort-type='text'>원소속</th>"
-        "<th data-sort-type='text'>자격</th>"
         "<th data-sort-type='number'>등급</th>"
         "<th class='roEntry' data-sort-type='number'>연봉</th>"
-        "<th data-sort-type='number'>점수</th>"
-        "<th data-sort-type='number'>기준일</th>"
-        "<th data-sort-type='text'>판정</th>"
         "</tr></thead><tbody>");
-    if (group_count == 0) {
-        kbo_window_text_appendf(buffer, "<tr><td colspan='9'>해당하는 선수가 없습니다.</td></tr>");
+    if (index_count == 0) {
+        kbo_window_text_appendf(buffer, "<tr><td colspan='5'>해당하는 선수가 없습니다.</td></tr>");
     } else {
         for (int i = 0; i < index_count; i++) {
             const KboFaDeclarationReportRow* row = &rows[indices[i]];
-            if ((row->declared ? 1 : 0) == declared) {
-                kbo_fa_rights_append_row(buffer, row);
-            }
+            kbo_fa_rights_append_row(buffer, row);
         }
     }
     kbo_window_text_appendf(buffer, "</tbody></table></section>");
@@ -169,8 +137,7 @@ void kbo_webview_append_fa_rights_exercise_view(KboWindowTextBuffer* buffer, uin
         return;
     }
 
-    kbo_fa_rights_append_group(buffer, rows, indices, index_count, 1, "선언한 선수");
-    kbo_fa_rights_append_group(buffer, rows, indices, index_count, 0, "선언하지 않은 선수");
+    kbo_fa_rights_append_table(buffer, rows, indices, index_count);
     kbo_window_text_appendf(buffer, "</div>");
     HeapFree(GetProcessHeap(), 0, rows);
 }

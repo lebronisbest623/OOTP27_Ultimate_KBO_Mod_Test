@@ -161,10 +161,12 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
     char open_title[160] = {0};
     char close_title[160] = {0};
     char fa_declaration_title[160] = {0};
+    char intl_established_fa_title[160] = {0};
     char military_title[160] = {0};
     if (!kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_OPEN, open_title, sizeof(open_title))
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_FOREIGN_PRIORITY_CLOSE, close_title, sizeof(close_title))
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_FA_DECLARATION, fa_declaration_title, sizeof(fa_declaration_title))
+            || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA, intl_established_fa_title, sizeof(intl_established_fa_title))
             || !kbo_custom_event_title_for_kind(KBO_CUSTOM_EVENT_KIND_MILITARY_SELECTION, military_title, sizeof(military_title))) {
         kbo_audit_foreign_priority_schedule("fail", "title_unavailable", source, &audit);
         kbo_log_runtimef(
@@ -186,6 +188,10 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
         league_id,
         fa_declaration_date,
         KBO_CUSTOM_EVENT_KIND_FA_DECLARATION);
+    int intl_established_fa_exists = kbo_custom_event_exists_by_kind_for_date(
+        league_id,
+        fa_declaration_date,
+        KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA);
     int military_exists = military_selection_date == 0u
         || kbo_custom_event_exists_by_kind_for_date(
             league_id,
@@ -195,6 +201,7 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
             && open_exists
             && close_exists
             && fa_declaration_exists
+            && intl_established_fa_exists
             && military_exists) {
         static uint32_t last_logged_already_scheduled = 0u;
         if (last_logged_already_scheduled != offseason_starts_yyyymmdd) {
@@ -249,6 +256,19 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
             source != NULL ? source : g_kbo_default_event_source);
     }
 
+    int created_intl_established_fa = 0;
+    if (!intl_established_fa_exists) {
+        created_intl_established_fa = create_kbo_league_event(
+            fa_declaration_date / 10000u,
+            (fa_declaration_date / 100u) % 100u,
+            fa_declaration_date % 100u,
+            league_id,
+            OOTP27_EVENT_TYPE_CUSTOM_EVENT,
+            intl_established_fa_title,
+            0,
+            source != NULL ? source : g_kbo_default_event_source);
+    }
+
     int created_military = 0;
     if (military_selection_date != 0u
             && !military_exists) {
@@ -280,10 +300,21 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
             league_id,
             fa_declaration_date,
             KBO_CUSTOM_EVENT_KIND_FA_DECLARATION);
+    intl_established_fa_exists = intl_established_fa_exists
+        || created_intl_established_fa
+        || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            fa_declaration_date,
+            KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA);
     kbo_prune_duplicate_custom_events_by_kind_for_date(
         league_id,
         fa_declaration_date,
         KBO_CUSTOM_EVENT_KIND_FA_DECLARATION,
+        source);
+    kbo_prune_duplicate_custom_events_by_kind_for_date(
+        league_id,
+        fa_declaration_date,
+        KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA,
         source);
     military_exists = military_selection_date == 0u
         || military_exists
@@ -296,30 +327,32 @@ int kbo_schedule_foreign_priority_custom_events_at_anchor(
     audit.created_close = created_close;
     audit.created_fa_declaration = created_fa_declaration;
     audit.created_military = created_military;
-    audit.ready = open_exists && close_exists && fa_declaration_exists && military_exists;
+    audit.ready = open_exists && close_exists && fa_declaration_exists && intl_established_fa_exists && military_exists;
 
     kbo_log_runtimef(
-        "KBO custom event schedule source=%s season_end=%u anchor=%u open=%u close=%u fa_declaration=%u military=%u created_open=%d created_close=%d created_fa_declaration=%d created_military=%d ready=%d",
+        "KBO custom event schedule source=%s season_end=%u anchor=%u open=%u close=%u fa_declaration=%u intl_established_fa=%u military=%u created_open=%d created_close=%d created_fa_declaration=%d created_intl_established_fa=%d created_military=%d ready=%d",
         source != NULL ? source : "",
         offseason_starts_yyyymmdd,
         anchor_date,
         open_date,
         close_date,
         fa_declaration_date,
+        fa_declaration_date,
         military_selection_date,
         created_open,
         created_close,
         created_fa_declaration,
+        created_intl_established_fa,
         created_military,
-        open_exists && close_exists && fa_declaration_exists && military_exists);
+        open_exists && close_exists && fa_declaration_exists && intl_established_fa_exists && military_exists);
 
-    if (!(open_exists && close_exists && fa_declaration_exists && military_exists)) {
+    if (!(open_exists && close_exists && fa_declaration_exists && intl_established_fa_exists && military_exists)) {
         kbo_audit_foreign_priority_schedule("fail", "events_not_ready", source, &audit);
         return -1;
     }
     g_kbo_foreign_priority_last_scheduled_date = offseason_starts_yyyymmdd;
-    kbo_audit_foreign_priority_schedule(created_open || created_close || created_fa_declaration || created_military ? "schedule" : "ready", "created_or_existing_events", source, &audit);
-    return created_open || created_close || created_fa_declaration || created_military;
+    kbo_audit_foreign_priority_schedule(created_open || created_close || created_fa_declaration || created_intl_established_fa || created_military ? "schedule" : "ready", "created_or_existing_events", source, &audit);
+    return created_open || created_close || created_fa_declaration || created_intl_established_fa || created_military;
 }
 
 int kbo_schedule_foreign_priority_custom_events_for_anchor(

@@ -35,6 +35,8 @@ const char* kbo_custom_event_kind_key(KboCustomEventKind kind)
         return "cbt_announcement";
     case KBO_CUSTOM_EVENT_KIND_FA_DECLARATION:
         return "fa_declaration";
+    case KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA:
+        return "intl_established_fa";
     case KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN:
         return "independent_team_acquisition_open";
     default:
@@ -331,6 +333,11 @@ int kbo_custom_event_name_is_cbt_announcement(const char* name)
 int kbo_custom_event_name_is_fa_declaration(const char* name)
 {
     return kbo_custom_event_name_is_kind(name, KBO_CUSTOM_EVENT_KIND_FA_DECLARATION);
+}
+
+int kbo_custom_event_name_is_intl_established_fa(const char* name)
+{
+    return kbo_custom_event_name_is_kind(name, KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA);
 }
 
 int kbo_custom_event_name_is_independent_team_acquisition_open(const char* name)

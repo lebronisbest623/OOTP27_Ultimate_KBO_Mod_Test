@@ -139,6 +139,43 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
             }
             return;
         }
+        if (fa_declaration_decision_found && decision.declared != 0u) {
+            static LONG fa_declaration_pass_log_count = 0;
+            LONG slot = InterlockedIncrement(&fa_declaration_pass_log_count);
+            if (slot <= 120) {
+                kbo_log_runtimef(
+                    "KBO FA declaration transition allowed player=%u original_team=%u team_league=%u declaration_date=%u declaration_season=%u today=%u declared_salary=%d demand=%d old_offer=%d caller_rva=0x%llx",
+                    player_id,
+                    original_team_id,
+                    original_team_league_id,
+                    decision.declaration_date,
+                    decision.season,
+                    today,
+                    decision.salary,
+                    decision.fa_demand,
+                    old_offer,
+                    (unsigned long long)caller_rva);
+            }
+            if (original_func != NULL) {
+                original_func(team_ptr, player_ptr, notify);
+            }
+            if (memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
+                uint32_t post_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+                if (post_current_team_id == 0u) {
+                    kbo_record_fa_filing_transition(
+                        (uintptr_t)player_ptr,
+                        player_id,
+                        today,
+                        original_team_id,
+                        original_team_league_id,
+                        (uint32_t)caller_rva,
+                        notify,
+                        contract_level,
+                        "fa_declaration_declared_transition");
+                }
+            }
+            return;
+        }
     }
     int direct_block_candidate = contract_level != 0u
         && old_offer <= 0

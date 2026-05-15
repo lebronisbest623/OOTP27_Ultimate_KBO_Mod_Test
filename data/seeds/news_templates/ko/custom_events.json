@@ -7,5 +7,6 @@
   "custom_event.asian_games.final.title": "아시안게임 야구 결승",
   "custom_event.cbt.exception_deadline.title": "경쟁균형세 예외 선수 지정 마감",
   "custom_event.cbt.announcement.title": "경쟁균형세 집계 발표",
-  "custom_event.fa.declaration.title": "FA 선언 마감"
+  "custom_event.fa.declaration.title": "FA 선언 마감",
+  "custom_event.intl_established_fa.title": "국제 FA 명단 공개"
 }

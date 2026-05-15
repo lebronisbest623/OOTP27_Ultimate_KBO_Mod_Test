@@ -203,20 +203,59 @@ static int kbo_fa_declaration_grade_rank(const char* grade)
     return 0;
 }
 
-static int kbo_fa_declaration_player_is_good(
+static int32_t kbo_fa_declaration_age_threshold_adjustment(uint16_t age)
+{
+    if (age >= 41u) { return 62000; }
+    if (age >= 40u) { return 52000; }
+    if (age >= 39u) { return 42000; }
+    if (age >= 38u) { return 34000; }
+    if (age >= 37u) { return 26000; }
+    if (age >= 36u) { return 16000; }
+    if (age >= 34u) { return 8000; }
+    if (age >= 29u && age <= 31u) { return -4000; }
+    return 0;
+}
+
+static int32_t kbo_fa_declaration_market_score(
+    const KboFaDeclarationCandidate* candidate,
+    int32_t current_score,
+    int32_t upside_score)
+{
+    if (candidate == NULL) {
+        return 0;
+    }
+    return ((candidate->score * 45) + (current_score * 40) + (upside_score * 15)) / 100;
+}
+
+static int kbo_fa_declaration_elite_market_fit(
     const KboFaDeclarationCandidate* candidate,
     int32_t current_score,
     int32_t upside_score,
+    int32_t market_score,
     int grade_rank)
 {
     if (candidate == NULL) {
         return 0;
     }
+    if (candidate->age >= 39u) {
+        return (grade_rank >= 2 && market_score >= 105000)
+            || candidate->score >= 125000
+            || current_score >= 112000;
+    }
+    if (candidate->age >= 37u) {
+        return (grade_rank >= 2 && market_score >= 98000)
+            || candidate->score >= 115000
+            || current_score >= 105000;
+    }
+    if (candidate->age >= 34u) {
+        return (grade_rank >= 2 && market_score >= 78000)
+            || market_score >= 98000
+            || current_score >= 96000;
+    }
     return grade_rank >= 2
-        || candidate->score >= 72000
-        || current_score >= 70000
-        || upside_score >= 78000
-        || (candidate->salary >= 300000000 && current_score >= 60000);
+        || market_score >= 76000
+        || current_score >= 72000
+        || upside_score >= 82000;
 }
 
 static int kbo_fa_declaration_should_retry_after_down_year(
@@ -245,9 +284,9 @@ static int kbo_fa_declaration_should_stay_no_market(
     int32_t current_score,
     int32_t upside_score,
     int grade_rank,
-    int player_is_good)
+    int elite_market_fit)
 {
-    if (candidate == NULL || player_is_good) {
+    if (candidate == NULL || elite_market_fit) {
         return 0;
     }
 
@@ -305,17 +344,11 @@ void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
         threshold = 64000;
     }
 
-    if (candidate->age >= 37u) {
-        threshold += 20000;
-    } else if (candidate->age >= 34u) {
-        threshold += 8000;
-    } else if (candidate->age >= 29u && candidate->age <= 31u) {
-        threshold -= 4000;
-    }
+    threshold += kbo_fa_declaration_age_threshold_adjustment(candidate->age);
 
     if (candidate->salary >= 700000000) {
         threshold += 8000;
-    } else if (candidate->salary > 0 && candidate->salary <= 120000000) {
+    } else if (candidate->salary > 0 && candidate->salary <= 120000000 && candidate->age < 34u) {
         threshold -= 3000;
     }
 
@@ -325,10 +358,15 @@ void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
 
     candidate->threshold = threshold;
 
-    int player_is_good = kbo_fa_declaration_player_is_good(
+    int32_t market_score = kbo_fa_declaration_market_score(
+        candidate,
+        current_score,
+        upside_score);
+    int elite_market_fit = kbo_fa_declaration_elite_market_fit(
         candidate,
         current_score,
         upside_score,
+        market_score,
         grade_rank);
     if (kbo_fa_declaration_should_retry_after_down_year(
             candidate,
@@ -340,9 +378,10 @@ void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
         snprintf(
             candidate->decision_reason,
             sizeof(candidate->decision_reason),
-            "ai_deferred_retry_after_down_year current=%d upside=%d gap=%d score=%d threshold=%d age=%u grade=%s salary=%d",
+            "ai_retry_down cur=%d up=%d market=%d gap=%d score=%d th=%d age=%u grade=%s sal=%d",
             current_score,
             upside_score,
+            market_score,
             form_gap,
             candidate->score,
             candidate->threshold,
@@ -357,14 +396,15 @@ void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
             current_score,
             upside_score,
             grade_rank,
-            player_is_good)) {
+            elite_market_fit)) {
         candidate->declared = 0u;
         snprintf(
             candidate->decision_reason,
             sizeof(candidate->decision_reason),
-            "ai_deferred_no_market_stay_original current=%d upside=%d score=%d threshold=%d age=%u grade=%s salary=%d",
+            "ai_no_market cur=%d up=%d market=%d score=%d th=%d age=%u grade=%s sal=%d",
             current_score,
             upside_score,
+            market_score,
             candidate->score,
             candidate->threshold,
             (uint32_t)candidate->age,
@@ -373,14 +413,15 @@ void kbo_fa_declaration_decide(KboFaDeclarationCandidate* candidate)
         return;
     }
 
-    candidate->declared = (player_is_good || candidate->score >= threshold || current_score >= threshold) ? 1u : 0u;
+    candidate->declared = (elite_market_fit || market_score >= threshold) ? 1u : 0u;
     snprintf(
         candidate->decision_reason,
         sizeof(candidate->decision_reason),
-        "%s current=%d upside=%d gap=%d score=%d threshold=%d age=%u grade=%s salary=%d",
-        candidate->declared ? "ai_declared_good_or_market_fit" : "ai_deferred_no_market_stay_original",
+        "%s cur=%d up=%d market=%d gap=%d score=%d th=%d age=%u grade=%s sal=%d",
+        candidate->declared ? "ai_declared_market" : "ai_no_market",
         current_score,
         upside_score,
+        market_score,
         form_gap,
         candidate->score,
         candidate->threshold,

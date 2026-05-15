@@ -1,0 +1,6 @@
+{
+  "intl_established_fa.summary.title": "{season}시즌 국제 FA 명단 공개",
+  "intl_established_fa.summary.body": "{season}시즌 국제 FA 풀이 열렸습니다. 이번 생성 기준으로 시장에서 확인되는 후보는 {total_count}명입니다.\n\n새 국제 FA 풀은 FA 파일링 일정과 맞물려 각 구단의 외국인 선수 보강 검토에 들어갑니다. 당장 계약이 확정된 것은 아니지만, 스카우트 부서가 비교표를 다시 펼칠 만한 이름들이 올라왔습니다.\n\n주요 후보\n{player_list}\n구단들은 포지션, 나이, 아시아 쿼터 여부, 예상 몸값을 함께 놓고 접근 순서를 정할 전망입니다.",
+  "intl_established_fa.player_line": "{rank}. {player_link}, {position}, {age}세, {quota}, 평가 {score}",
+  "intl_established_fa.none": "- 아직 확인된 주요 후보 없음"
+}

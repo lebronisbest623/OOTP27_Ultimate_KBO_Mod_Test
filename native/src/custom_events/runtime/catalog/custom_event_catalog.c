@@ -35,6 +35,8 @@ static const char* kbo_custom_event_catalog_key_for_kind(KboCustomEventKind kind
         return "event.cbt_announcement.title_key";
     case KBO_CUSTOM_EVENT_KIND_FA_DECLARATION:
         return "event.fa_declaration.title_key";
+    case KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA:
+        return "event.intl_established_fa.title_key";
     case KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN:
         return "event.independent_team_acquisition_open.title_key";
     default:
@@ -63,6 +65,8 @@ static const char* kbo_custom_event_default_title_key(KboCustomEventKind kind)
         return "custom_event.cbt.announcement.title";
     case KBO_CUSTOM_EVENT_KIND_FA_DECLARATION:
         return "custom_event.fa.declaration.title";
+    case KBO_CUSTOM_EVENT_KIND_INTL_ESTABLISHED_FA:
+        return "custom_event.intl_established_fa.title";
     case KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN:
         return "independent_acquisition.open.title";
     default:

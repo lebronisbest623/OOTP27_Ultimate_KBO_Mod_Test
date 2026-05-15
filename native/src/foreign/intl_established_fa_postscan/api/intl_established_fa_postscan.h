@@ -10,6 +10,7 @@ void kbo_intl_established_fa_postscan_schedule(
     uint32_t primary_league_id,
     uint32_t fallback_league_id);
 void start_kbo_intl_established_fa_postscan_thread(void);
+int kbo_handle_intl_established_fa_event(uint32_t event_yyyymmdd, const char* source);
 int kbo_intl_established_fa_pitcher_role_is_bullpen(uint8_t position_role);
 const char* kbo_intl_established_fa_quality_policy_label(
     int asian_quota,
