@@ -17,6 +17,7 @@ void kbo_foreign_injury_process_existing_replacements(
 
     KboForeignInjuryClosedNews closed_news[16];
     int closed_count = 0;
+    int invalid_closed_count = 0;
     KboForeignInjuryReplacement active_news[16];
     int active_count = 0;
     int changed = 0;
@@ -34,6 +35,43 @@ void kbo_foreign_injury_process_existing_replacements(
         }
         uint8_t* injured = kbo_find_player_by_id(rec->injured_player_id, NULL, NULL);
         if (injured == NULL || !memory_range_readable(injured, OOTP27_PLAYER_SCAN_BYTES)) {
+            continue;
+        }
+        if (uses_slot && !kbo_foreign_injury_record_has_minimum_injury_basis(rec)) {
+            uint32_t replacement_player_id = kbo_foreign_injury_resolve_replacement_for_record(rec);
+            if (replacement_player_id != 0u) {
+                rec->replacement_player_id = replacement_player_id;
+                kbo_foreign_injury_release_replacement_player(
+                    rec->team_id,
+                    replacement_player_id,
+                    source);
+            }
+            rec->converted = 0u;
+            rec->status = KBO_FOREIGN_INJURY_STATUS_CLOSED;
+            invalid_closed_count++;
+            changed = 1;
+            do {
+                KboLogFields audit_fields;
+                kbo_log_fields_init(&audit_fields);
+                kbo_log_field_u32(&audit_fields, "date", today);
+                kbo_log_field_u32(&audit_fields, "team_id", rec->team_id);
+                kbo_log_field_u32(&audit_fields, "league_id", rec->league_id);
+                kbo_log_field_u32(&audit_fields, "injured_player_id", rec->injured_player_id);
+                kbo_log_field_u32(&audit_fields, "replacement_player_id", rec->replacement_player_id);
+                kbo_rule_audit_emit_fields(
+                    "foreign_injury.replacement.lifecycle",
+                    "close_slot",
+                    "invalid_no_long_term_injury_basis",
+                    source,
+                    &audit_fields);
+            } while (0);
+            kbo_log_runtimef(
+                "foreign injury replacement: closed invalid slot source=%s team=%u injured=%u replacement=%u league=%u reason=no_long_term_injury_basis",
+                source != NULL ? source : "",
+                rec->team_id,
+                rec->injured_player_id,
+                rec->replacement_player_id,
+                rec->league_id);
             continue;
         }
         if (uses_slot) {
@@ -164,6 +202,6 @@ void kbo_foreign_injury_process_existing_replacements(
         *out_active_count = active_count;
     }
     if (out_closed_count != NULL) {
-        *out_closed_count = closed_count;
+        *out_closed_count = closed_count + invalid_closed_count;
     }
 }

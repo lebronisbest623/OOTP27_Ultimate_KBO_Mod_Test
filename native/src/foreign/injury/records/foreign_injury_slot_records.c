@@ -176,18 +176,11 @@ int kbo_foreign_injury_record_has_minimum_injury_basis(const KboForeignInjuryRep
     if (!kbo_player_current_assignment_matches_team_or_affiliate(injured, rec->team_id)) {
         return 0;
     }
-    if (rec->expected_end_yyyymmdd != 0u) {
-        return 1;
-    }
-
     uint8_t injury_active = injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
     int16_t days_left = *(int16_t*)(injured + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
     int min_days = kbo_foreign_player_policy()->injury_replacement_min_days;
     if (kbo_foreign_injury_duration_meets_minimum(days_left, min_days)) {
         return 1;
-    }
-    if (days_left > 0) {
-        return 0;
     }
 
     uint32_t today = 0u;
@@ -197,11 +190,19 @@ int kbo_foreign_injury_record_has_minimum_injury_basis(const KboForeignInjuryRep
         rec->injured_player_id,
         rec->team_id,
         today);
-    if (kbo_foreign_injury_active_record_has_roster_basis(
-            rec->status,
-            rec->replacement_player_id,
-            inactive_roster_present)) {
+    int message_days = 0;
+    if (inactive_roster_present
+            && kbo_foreign_injury_recent_message_has_long_term_injury(
+                rec->injured_player_id,
+                min_days,
+                &message_days)) {
         return 1;
+    }
+    if (rec->expected_end_yyyymmdd != 0u && (injury_active != 0u || days_left > 0)) {
+        return 1;
+    }
+    if (days_left > 0) {
+        return 0;
     }
     return kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(
         injury_active,

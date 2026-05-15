@@ -1,8 +1,6 @@
 #include "foreign_injury_scanner_internal.h"
 #include "../../common/policy/foreign_player_policy.h"
 
-#define KBO_FOREIGN_INJURY_PENDING_INACTIVE_GRACE_DAYS 1u
-
 static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
 static LONG g_kbo_foreign_injury_below_min_log_count = 0;
 
@@ -93,15 +91,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             days_left,
             min_days,
             inactive_roster_present);
-        int pending_inactive_days = 0;
-        int pending_inactive_eligible = 0;
-        if (!direct_injury_eligible && !inactive_roster_eligible && !message_injury_eligible && inactive_roster_present) {
-            pending_inactive_days = kbo_foreign_injury_note_pending_inactive(player_id, team_id, today);
-            pending_inactive_eligible = pending_inactive_days >= (int)KBO_FOREIGN_INJURY_PENDING_INACTIVE_GRACE_DAYS;
-        } else {
-            kbo_foreign_injury_clear_pending_inactive(player_id);
-        }
-        if (!direct_injury_eligible && !inactive_roster_eligible && !message_injury_eligible && !pending_inactive_eligible) {
+        if (!direct_injury_eligible && !inactive_roster_eligible && !message_injury_eligible) {
             if (injury_active != 0u || days_left > 0 || inactive_roster_present) {
                 LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_below_min_log_count);
                 if (log_slot <= 80 || (log_slot % 250) == 0) {
@@ -130,7 +120,6 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                         kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_present ? 1u : 0u);
                         kbo_log_field_u32(&audit_fields, "assignment", has_assignment ? 1u : 0u);
                         kbo_log_field_i32(&audit_fields, "message_evidence_days", message_evidence_days);
-                        kbo_log_field_i32(&audit_fields, "pending_inactive_days", pending_inactive_days);
                         kbo_rule_audit_emit_fields(
                             "foreign_injury.replacement.lifecycle",
                             "skip_candidate",
@@ -193,7 +182,6 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             continue;
         }
         if (!slot_opening_allowed) {
-            kbo_foreign_injury_clear_pending_inactive(player_id);
             continue;
         }
         KboForeignInjuryReplacement created_rec;
@@ -202,7 +190,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         int updated_expected_end = 0;
         KboForeignInjuryReplacement updated_rec;
         memset(&updated_rec, 0, sizeof(updated_rec));
-        uint32_t candidate_expected_end = (direct_injury_eligible || message_injury_eligible || pending_inactive_eligible)
+        uint32_t candidate_expected_end = (direct_injury_eligible || message_injury_eligible)
             ? kbo_add_days_yyyymmdd(today, (uint32_t)effective_days_left)
             : 0u;
         kbo_lock_foreign_injury_replacements();
@@ -268,7 +256,6 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 kbo_log_field_i32(&audit_fields, "effective_days_left", effective_days_left);
                 kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_present ? 1u : 0u);
                 kbo_log_field_i32(&audit_fields, "message_evidence_days", message_evidence_days);
-                kbo_log_field_i32(&audit_fields, "pending_inactive_days", pending_inactive_days);
                 kbo_log_field_u32(&audit_fields, "expected_end", created_rec.expected_end_yyyymmdd);
                 kbo_log_field_u32(&audit_fields, "slot_type", (uint32_t)created_rec.slot_type);
                 kbo_rule_audit_emit_fields(
@@ -278,7 +265,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                         ? "injury_min_days_met"
                         : (message_injury_eligible
                             ? "inactive_roster_long_term_injury_news"
-                            : (pending_inactive_eligible ? "inactive_roster_pending_diagnosis_grace" : "inactive_roster_long_term_il")),
+                            : "inactive_roster_long_term_il"),
                     source,
                     &audit_fields);
             } while (0);
@@ -290,7 +277,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 created_rec.league_id,
                 (int)days_left,
                 effective_days_left,
-                direct_injury_eligible ? "injury_fields" : (message_injury_eligible ? "injury_news" : (pending_inactive_eligible ? "inactive_pending" : "inactive_roster")),
+                direct_injury_eligible ? "injury_fields" : (message_injury_eligible ? "injury_news" : "inactive_roster"),
                 kbo_foreign_injury_slot_label(created_rec.slot_type));
         }
     }

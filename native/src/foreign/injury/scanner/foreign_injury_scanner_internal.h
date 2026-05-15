@@ -60,11 +60,6 @@ void kbo_foreign_injury_emit_closed_news_batch(
 int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryReplacement* rec, const char* source);
 int kbo_foreign_injury_release_replacement_player(uint32_t team_id, uint32_t player_id, const char* source);
 int kbo_foreign_injury_release_injured_player(uint32_t team_id, uint32_t player_id, const char* source);
-void kbo_foreign_injury_clear_pending_inactive(uint32_t player_id);
-int kbo_foreign_injury_note_pending_inactive(
-    uint32_t player_id,
-    uint32_t team_id,
-    uint32_t today_yyyymmdd);
 void kbo_foreign_injury_process_existing_replacements(
     uint32_t today,
     const char* source,
