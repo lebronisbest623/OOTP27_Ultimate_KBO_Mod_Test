@@ -4,11 +4,22 @@
 static LONG g_kbo_foreign_injury_return_wait_log_count = 0;
 static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
 static LONG g_kbo_foreign_injury_below_min_log_count = 0;
+static int kbo_foreign_injury_replacement_scan_source_is_read_only(const char* source)
+{
+    return source != NULL && (strcmp(source, "foreign_policy_webview") == 0
+        || strcmp(source, "foreign_policy_text") == 0 || strcmp(source, "hotkey_text") == 0
+        || strcmp(source, "foreign_slot_cache") == 0);
+}
 
 void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
     if (!kbo_foreign_injury_replacement_enabled()) {
         kbo_rule_audit_emit_fields("foreign_injury.replacement.scan", "skip", "disabled", source, NULL);
+        return;
+    }
+
+    if (kbo_foreign_injury_replacement_scan_source_is_read_only(source)) {
+        kbo_ensure_foreign_injury_replacements_loaded();
         return;
     }
 
@@ -60,7 +71,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         uint8_t injury_active = player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
         int16_t days_left = *(int16_t*)(player + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET);
         int min_days = kbo_foreign_player_policy()->injury_replacement_min_days;
-        int direct_injury_eligible = injury_active != 0u && days_left >= min_days;
+        int direct_injury_eligible = kbo_foreign_injury_duration_meets_minimum(days_left, min_days);
 
         uint32_t team_id = 0u;
         uint32_t league_id = 0u;
@@ -73,7 +84,11 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         int inactive_roster_present = !direct_injury_eligible && has_assignment
             ? kbo_foreign_injury_player_on_inactive_replacement_roster(player, player_id, team_id, today)
             : 0;
-        int inactive_roster_eligible = inactive_roster_present && days_left <= 0;
+        int inactive_roster_eligible = kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(
+            injury_active,
+            days_left,
+            min_days,
+            inactive_roster_present);
         if (!direct_injury_eligible && !inactive_roster_eligible) {
             if (injury_active != 0u || days_left > 0 || inactive_roster_present) {
                 LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_below_min_log_count);

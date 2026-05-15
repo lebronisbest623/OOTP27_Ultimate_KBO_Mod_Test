@@ -61,7 +61,13 @@ int kbo_foreign_injury_status_uses_slot(uint8_t status);
 uint8_t kbo_foreign_injury_slot_type_for_player(uint8_t* player);
 int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id);
 int kbo_foreign_injury_player_excluded_from_foreign_count(uint32_t team_id, uint32_t player_id);
-/* OOTP may zero raw injury days for season-ending IL moves; inactive roster is a guarded second source. */
+/* Inactive roster only corroborates a known long-term injury; it is never a duration source by itself. */
+int kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(
+    uint8_t injury_active,
+    int16_t days_left,
+    int min_days,
+    int inactive_roster_present);
+int kbo_foreign_injury_duration_meets_minimum(int16_t days_left, int min_days);
 int kbo_foreign_injury_player_on_inactive_replacement_roster(
     uint8_t* player,
     uint32_t player_id,

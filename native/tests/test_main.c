@@ -12,6 +12,7 @@
 #define KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA 2
 
 #include "../src/core/dates/core_text_date.h"
+#include "../src/core/season/phase/season_phase.h"
 #include "../src/core/core_flags/json/json_bool_parser.h"
 #include "../src/core/news/templates/core_news_templates.h"
 #include "../src/core/csv/core_csv.h"
@@ -588,6 +589,71 @@ static void test_captain_effective_season(void)
     assert(kbo_captain_effective_season(20270310u, 0u) == 2027u);
     assert(kbo_captain_effective_season(20271310u, 2026u) == 2026u);
     printf("test_captain_effective_season: PASS\n");
+}
+
+static void test_season_phase_effective_rules(void)
+{
+    int corrected = 0;
+    assert(kbo_season_phase_effective_from_values(
+        20260310u,
+        2026u,
+        KBO_SEASON_PHASE_OFFSEASON_RESET,
+        20260328u,
+        0u,
+        &corrected) == KBO_SEASON_PHASE_PRESEASON);
+    assert(corrected);
+
+    corrected = 0;
+    assert(kbo_season_phase_effective_from_values(
+        20260528u,
+        2026u,
+        KBO_SEASON_PHASE_OFFSEASON_RESET,
+        20260328u,
+        0u,
+        &corrected) == KBO_SEASON_PHASE_REGULAR_SEASON);
+    assert(corrected);
+
+    corrected = 0;
+    assert(kbo_season_phase_effective_from_values(
+        20261012u,
+        2026u,
+        KBO_SEASON_PHASE_OFFSEASON_RESET,
+        20260328u,
+        0u,
+        &corrected) == KBO_SEASON_PHASE_POSTSEASON);
+    assert(corrected);
+
+    corrected = 0;
+    assert(kbo_season_phase_effective_from_values(
+        20261012u,
+        2027u,
+        KBO_SEASON_PHASE_POSTSEASON,
+        20270328u,
+        0u,
+        &corrected) == KBO_SEASON_PHASE_OFFSEASON_RESET);
+    assert(corrected);
+
+    corrected = 0;
+    assert(kbo_season_phase_effective_from_values(
+        20261020u,
+        2026u,
+        KBO_SEASON_PHASE_POSTSEASON,
+        20260328u,
+        20261020u,
+        &corrected) == KBO_SEASON_PHASE_OFFSEASON_RESET);
+    assert(corrected);
+
+    corrected = 0;
+    assert(kbo_season_phase_effective_from_values(
+        20260701u,
+        2026u,
+        KBO_SEASON_PHASE_REGULAR_SEASON,
+        20260328u,
+        0u,
+        &corrected) == KBO_SEASON_PHASE_REGULAR_SEASON);
+    assert(!corrected);
+
+    printf("test_season_phase_effective_rules: PASS\n");
 }
 
 static void test_core_csv_parse(void)
@@ -1208,6 +1274,26 @@ static void test_foreign_injury_status_label(void)
     printf("test_foreign_injury_status_label: PASS\n");
 }
 
+static void test_foreign_injury_inactive_roster_long_term_basis(void)
+{
+    const int min_days = 42;
+
+    assert(!kbo_foreign_injury_duration_meets_minimum(0, min_days));
+    assert(!kbo_foreign_injury_duration_meets_minimum(41, min_days));
+    assert(kbo_foreign_injury_duration_meets_minimum(42, min_days));
+    assert(kbo_foreign_injury_duration_meets_minimum(1239, min_days));
+    assert(!kbo_foreign_injury_duration_meets_minimum(-1, min_days));
+
+    assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(0u, 0, min_days, 1));
+    assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 8, min_days, 1));
+    assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 0, min_days, 0));
+    assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 0, min_days, 1));
+    assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, -1, min_days, 1));
+    assert(kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 42, min_days, 1));
+
+    printf("test_foreign_injury_inactive_roster_long_term_basis: PASS\n");
+}
+
 static void test_foreign_injury_foreign_count_exclusion(void)
 {
     memset(g_kbo_foreign_injury_replacements, 0, sizeof(g_kbo_foreign_injury_replacements));
@@ -1500,6 +1586,7 @@ int main(void)
     test_foreign_replacement_seed_parse();
     test_captain_seed_parse();
     test_captain_effective_season();
+    test_season_phase_effective_rules();
     test_core_csv_parse();
     test_masked_pattern_matching();
     test_patch_bytes_writers();
@@ -1517,6 +1604,7 @@ int main(void)
     test_player_is_foreign_for_kbo_rights();
     test_foreign_injury_slot_label();
     test_foreign_injury_status_label();
+    test_foreign_injury_inactive_roster_long_term_basis();
     test_foreign_injury_foreign_count_exclusion();
     test_amateur_assignment_policy();
     printf("All tests passed.\n");
