@@ -101,12 +101,19 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 min_days,
                 &message_evidence_days)
             : 0;
+        int sql_evidence_days = 0;
+        int sql_injury_eligible = !direct_injury_eligible && inactive_roster_present
+            ? kbo_foreign_injury_recent_sql_has_long_term_injury(
+                player_id,
+                min_days,
+                &sql_evidence_days)
+            : 0;
         int inactive_roster_eligible = kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(
             injury_active,
             days_left,
             min_days,
             inactive_roster_present);
-        if (!direct_injury_eligible && !inactive_roster_eligible && !message_injury_eligible) {
+        if (!direct_injury_eligible && !inactive_roster_eligible && !message_injury_eligible && !sql_injury_eligible) {
             if (injury_active != 0u || days_left > 0 || inactive_roster_present) {
                 LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_below_min_log_count);
                 if (log_slot <= 80 || (log_slot % 250) == 0) {
@@ -135,6 +142,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                         kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_present ? 1u : 0u);
                         kbo_log_field_u32(&audit_fields, "assignment", has_assignment ? 1u : 0u);
                         kbo_log_field_i32(&audit_fields, "message_evidence_days", message_evidence_days);
+                        kbo_log_field_i32(&audit_fields, "sql_evidence_days", sql_evidence_days);
                         kbo_rule_audit_emit_fields(
                             "foreign_injury.replacement.lifecycle",
                             "skip_candidate",
@@ -167,6 +175,9 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         int effective_days_left = days_left;
         if (!direct_injury_eligible && message_injury_eligible && message_evidence_days > effective_days_left) {
             effective_days_left = message_evidence_days;
+        }
+        if (!direct_injury_eligible && sql_injury_eligible && sql_evidence_days > effective_days_left) {
+            effective_days_left = sql_evidence_days;
         }
         if (effective_days_left < min_days) {
             effective_days_left = min_days;
@@ -205,12 +216,12 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         int updated_expected_end = 0;
         KboForeignInjuryReplacement updated_rec;
         memset(&updated_rec, 0, sizeof(updated_rec));
-        uint32_t candidate_expected_end = (direct_injury_eligible || message_injury_eligible)
+        uint32_t candidate_expected_end = (direct_injury_eligible || message_injury_eligible || sql_injury_eligible)
             ? kbo_add_days_yyyymmdd(today, (uint32_t)effective_days_left)
             : 0u;
         kbo_lock_foreign_injury_replacements();
         int existing = kbo_find_foreign_injury_replacement_locked(player_id, 0);
-        if (existing >= 0 && message_injury_eligible && candidate_expected_end != 0u) {
+        if (existing >= 0 && (message_injury_eligible || sql_injury_eligible) && candidate_expected_end != 0u) {
             KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[existing];
             if (rec->status != KBO_FOREIGN_INJURY_STATUS_CLOSED
                     && (rec->expected_end_yyyymmdd == 0u || candidate_expected_end > rec->expected_end_yyyymmdd)) {
@@ -244,10 +255,11 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 kbo_log_field_u32(&audit_fields, "injured_player_id", updated_rec.injured_player_id);
                 kbo_log_field_u32(&audit_fields, "expected_end", updated_rec.expected_end_yyyymmdd);
                 kbo_log_field_i32(&audit_fields, "message_evidence_days", message_evidence_days);
+                kbo_log_field_i32(&audit_fields, "sql_evidence_days", sql_evidence_days);
                 kbo_rule_audit_emit_fields(
                     "foreign_injury.replacement.lifecycle",
                     "update_slot",
-                    "message_expected_end_refined",
+                    sql_injury_eligible ? "sql_expected_end_refined" : "message_expected_end_refined",
                     source,
                     &audit_fields);
             } while (0);
@@ -271,6 +283,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 kbo_log_field_i32(&audit_fields, "effective_days_left", effective_days_left);
                 kbo_log_field_u32(&audit_fields, "inactive_roster", inactive_roster_present ? 1u : 0u);
                 kbo_log_field_i32(&audit_fields, "message_evidence_days", message_evidence_days);
+                kbo_log_field_i32(&audit_fields, "sql_evidence_days", sql_evidence_days);
                 kbo_log_field_u32(&audit_fields, "expected_end", created_rec.expected_end_yyyymmdd);
                 kbo_log_field_u32(&audit_fields, "slot_type", (uint32_t)created_rec.slot_type);
                 kbo_rule_audit_emit_fields(
@@ -278,9 +291,11 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                     "open_slot",
                     direct_injury_eligible
                         ? "injury_min_days_met"
-                        : (message_injury_eligible
+                        : (sql_injury_eligible
+                            ? "inactive_roster_long_term_injury_sql"
+                            : (message_injury_eligible
                             ? "inactive_roster_long_term_injury_news"
-                            : "inactive_roster_long_term_il"),
+                            : "inactive_roster_long_term_il")),
                     source,
                     &audit_fields);
             } while (0);
@@ -292,7 +307,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 created_rec.league_id,
                 (int)days_left,
                 effective_days_left,
-                direct_injury_eligible ? "injury_fields" : (message_injury_eligible ? "injury_news" : "inactive_roster"),
+                direct_injury_eligible ? "injury_fields" : (sql_injury_eligible ? "injury_sql" : (message_injury_eligible ? "injury_news" : "inactive_roster")),
                 kbo_foreign_injury_slot_label(created_rec.slot_type));
         }
     }
