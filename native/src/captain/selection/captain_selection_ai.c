@@ -256,6 +256,9 @@ int kbo_captain_select_for_preseason(
     if (out_selected_count != NULL) {
         *out_selected_count = 0;
     }
+    if (!kbo_runtime_pause_for_save_if_needed("captain_selection_ai")) {
+        return 0;
+    }
     if (rows == NULL || max_rows <= 0 || league_id == 0u || season < 1982u || season > 2200u) {
         return 0;
     }
@@ -320,6 +323,16 @@ int kbo_captain_select_for_preseason(
     int scanned_players = 0;
     int selected_count = 0;
     for (int32_t i = 0; i < player_count; i++) {
+        if ((i & 127) == 0 && kbo_runtime_save_in_progress()) {
+            HeapFree(GetProcessHeap(), 0, player_snapshot);
+            kbo_log_runtimef(
+                "KBO captain selection aborted reason=save_in_progress date=%u season=%u league_id=%u scanned=%d",
+                date,
+                season,
+                league_id,
+                scanned_players);
+            return 0;
+        }
         uintptr_t player_ptr = player_snapshot[i];
         if (!kbo_player_pointer_plausible(player_ptr)
                 || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {

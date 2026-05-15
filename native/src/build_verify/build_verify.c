@@ -76,6 +76,12 @@ void* kbo_resolve_build_specific_rva_ptr(HMODULE exe, uint32_t steam_rva)
             case OOTP27_NEWS_STRING_ENSURE_RVA: rva = 0x005C5AA0u; break;
             case OOTP27_CREATE_MESSAGE_CORE_RVA: rva = 0x011DCDE0u; break;
             case OOTP27_UI_OPERATOR_NEW_RVA: rva = 0x024872C4u; break;
+            case OOTP27_PLAYER_TOOLTIP_HOVER_MANAGER_RVA: rva = 0x00F51670u; break;
+            case OOTP27_PLAYER_TOOLTIP_FACTORY_RVA: rva = 0x019F7A50u; break;
+            case OOTP27_PLAYER_TOOLTIP_RENDER_RVA: rva = 0x019FBE60u; break;
+            case OOTP27_PLAYER_TOOLTIP_TEXT_APPEND_RVA: rva = 0x01B08BD0u; break;
+            case OOTP27_PLAYER_TOOLTIP_STRING_FORMAT_RVA: rva = 0x01B99470u; break;
+            case OOTP27_PLAYER_TOOLTIP_CURRENT_GLOBAL_RVA: rva = 0x02E227B0u; break;
             case OOTP27_LEAGUE_FINANCIALS_LOOKUP_RVA: rva = 0x00414330u; break;
             case OOTP27_ALLSTAR_TEAM_SETUP_FUNC_RVA: rva = 0x0031F09Cu; break;
             case OOTP27_ALLSTAR_CANDIDATE_REBUILD_FUNC_RVA: rva = 0x00539340u; break;

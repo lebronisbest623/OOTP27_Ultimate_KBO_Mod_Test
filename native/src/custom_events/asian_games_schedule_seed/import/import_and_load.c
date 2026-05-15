@@ -24,8 +24,8 @@ int kbo_import_asian_games_schedule_seed_file_locked(const char* path, const cha
     }
 
     while (kbo_csv_reader_next_row(reader)) {
-        char fields[11][128];
-        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 11);
+        char fields[12][128];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 12);
         KboAsianGamesScheduleSeed seed;
         if (kbo_parse_asian_games_schedule_seed_fields(fields, field_count, &seed)) {
             kbo_add_asian_games_schedule_seed_locked(&seed);

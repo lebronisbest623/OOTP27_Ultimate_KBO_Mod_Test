@@ -1,9 +1,13 @@
 #include "../internal/captain_selection_internal.h"
+#include "../../bootstrap/profiling/profiler.h"
 #include "../../core/runtime_tuning/runtime_tuning_policy.h"
 
 int kbo_run_captain_preseason_selection_once(const char* source)
 {
     if (!kbo_fix_enabled()) {
+        return 0;
+    }
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "captain_preseason_selection")) {
         return 0;
     }
 
@@ -55,7 +59,12 @@ DWORD WINAPI kbo_captain_preseason_selection_thread(LPVOID parameter)
     kbo_log_runtime_line("KBO captain selection maintenance thread started");
 
     while (kbo_runtime_threads_should_continue()) {
+        if (!kbo_runtime_pause_for_save_if_needed("captain_selection_thread")) {
+            break;
+        }
+        KBO_PROFILE_BEGIN(profile_captain_selection_thread_tick);
         kbo_run_captain_selection_maintenance_once("captain_selection_thread");
+        KBO_PROFILE_END(profile_captain_selection_thread_tick, "captain.selection_thread.tick");
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->captain_selection_thread_sleep_ms)) {
             break;
         }

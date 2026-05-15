@@ -64,7 +64,7 @@
   "asian_games.complete_roster_header": "\n\nFinal roster:\n",
   "asian_games.roster_group_header": "\n{role_group}\n",
   "asian_games.player_blurb": "{separator}{player_link}{team_prefix}{team_link}{role_suffix}",
-  "asian_games.roster_line": "- {player_link}, {team_link}{wildcard_text}, age {age}\n",
+  "asian_games.roster_line": "- {player_link}, {team_link}{wildcard_text}, age {age}, {military_status}\n",
   "asian_games.replacement.title": "Korea adjusts {tournament_label} roster before departure",
   "asian_games.replacement.title.variants": 2,
   "asian_games.replacement.title.v1": "Korea adjusts {tournament_label} roster before departure",

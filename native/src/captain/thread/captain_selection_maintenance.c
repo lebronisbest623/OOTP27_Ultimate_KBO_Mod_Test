@@ -1,4 +1,5 @@
 #include "../internal/captain_selection_internal.h"
+#include "../../bootstrap/profiling/profiler.h"
 #include "../../core/logging/rule_audit.h"
 
 static void kbo_captain_audit_maintenance(
@@ -40,24 +41,34 @@ static void kbo_captain_audit_maintenance(
 
 int kbo_run_captain_selection_maintenance_once(const char* source)
 {
+    KBO_PROFILE_BEGIN(profile_captain_selection_maintenance);
     if (!kbo_fix_enabled()) {
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.disabled");
+        return 0;
+    }
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "captain_selection_maintenance")) {
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.save_pause_abort");
         return 0;
     }
 
     uint32_t date = 0;
     if (!kbo_captain_current_yyyymmdd(&date)) {
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.no_date");
         return 0;
     }
 
     char save_path[MAX_PATH] = {0};
     if (!kbo_get_current_save_path(save_path, sizeof(save_path))) {
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.no_save");
         return 0;
     }
 
     uint32_t league_id = kbo_resolve_kbo_league_id();
     KboSeasonPhaseInfo phase_info;
     if (!kbo_season_phase_resolve(league_id, date, 0u, &phase_info)) {
-        return kbo_captain_run_seed_startup_without_league_ptr(date, league_id, source);
+        int result = kbo_captain_run_seed_startup_without_league_ptr(date, league_id, source);
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.no_league_ptr_seed_startup");
+        return result;
     }
 
     uintptr_t league_ptr = phase_info.league_ptr;
@@ -65,6 +76,7 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
     uint8_t phase = phase_info.effective_phase;
     uint32_t season = kbo_captain_effective_season(date, league_season);
     if (season < 1982u || season > 2200u) {
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.invalid_season");
         return 0;
     }
 
@@ -107,6 +119,7 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
             && csv_exists == last_thread_csv_exists
             && calendar_recovery == last_thread_calendar_recovery
             && calendar_preseason == last_thread_calendar_preseason) {
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.same_state");
         return 0;
     }
     if (source != NULL && strcmp(source, "captain_selection_thread") == 0) {
@@ -164,12 +177,14 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
             calendar_preseason,
             seed_startup,
             calendar_preseason_start);
-        return kbo_captain_write_missing_selection_csv(
+        int result = kbo_captain_write_missing_selection_csv(
             date,
             season,
             league_id,
             phase,
             source != NULL ? source : "captain_preseason_start");
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.write_phase_preseason");
+        return result;
     }
     if ((seed_startup || calendar_preseason_start) && !csv_exists) {
         kbo_captain_audit_maintenance(
@@ -186,7 +201,7 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
             calendar_preseason,
             seed_startup,
             calendar_preseason_start);
-        return kbo_captain_write_missing_selection_csv(
+        int result = kbo_captain_write_missing_selection_csv(
             date,
             season,
             league_id,
@@ -194,6 +209,8 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
             source != NULL
                 ? source
                 : (seed_startup ? "captain_seed_startup" : "captain_calendar_preseason_start"));
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.write_calendar_preseason");
+        return result;
     }
     if (phase == 3u) {
         if (!csv_exists) {
@@ -211,12 +228,14 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
                 calendar_preseason,
                 seed_startup,
                 calendar_preseason_start);
-            return kbo_captain_write_missing_selection_csv(
+            int result = kbo_captain_write_missing_selection_csv(
                 date,
                 season,
                 league_id,
                 phase,
                 source != NULL ? source : "captain_missed_preseason_recovery");
+            KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.write_regular_missing");
+            return result;
         }
         kbo_captain_audit_maintenance(
             "inseason_repair",
@@ -232,11 +251,13 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
             calendar_preseason,
             seed_startup,
             calendar_preseason_start);
-        return kbo_run_captain_inseason_repair_once(
+        int result = kbo_run_captain_inseason_repair_once(
             date,
             season,
             league_id,
             source != NULL ? source : "captain_inseason_thread");
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.inseason_repair_regular");
+        return result;
     }
     if (calendar_recovery) {
         if (!csv_exists) {
@@ -254,6 +275,7 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
                 calendar_preseason,
                 seed_startup,
                 calendar_preseason_start);
+            KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.recovery_missing_csv");
             return 0;
         }
         kbo_captain_audit_maintenance(
@@ -270,11 +292,13 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
             calendar_preseason,
             seed_startup,
             calendar_preseason_start);
-        return kbo_run_captain_inseason_repair_once(
+        int result = kbo_run_captain_inseason_repair_once(
             date,
             season,
             league_id,
             source != NULL ? source : "captain_calendar_year_repair");
+        KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.inseason_repair_recovery");
+        return result;
     }
     kbo_captain_audit_maintenance(
         "skip",
@@ -290,5 +314,6 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
         calendar_preseason,
         seed_startup,
         calendar_preseason_start);
+    KBO_PROFILE_END(profile_captain_selection_maintenance, "captain.maintenance.no_trigger");
     return 0;
 }

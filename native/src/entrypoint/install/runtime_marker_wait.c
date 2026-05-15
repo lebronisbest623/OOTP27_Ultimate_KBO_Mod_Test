@@ -50,6 +50,7 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
             }
 
             if (stable_date_ticks >= tuning->runtime_marker_wait_stable_ticks) {
+                InterlockedExchange(&g_kbo_runtime_date_stable_ready, 1);
                 install_kbo_full_runtime_after_roster_marker(instance);
                 return 0;
             }

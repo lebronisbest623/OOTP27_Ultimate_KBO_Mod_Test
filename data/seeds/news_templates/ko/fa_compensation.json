@@ -22,5 +22,5 @@
   "fa_compensation.cash_only.body": "{fa_player_link}의 FA 이적은 선수 이동 없이 현금 보상으로 마무리됐습니다. {original_team_link}는 {signing_team_link}로부터 {cash_text}를 받습니다. 등급은 {grade}입니다.\n\n새 얼굴이 합류하지는 않지만, {original_team_link}에는 다음 움직임에 쓸 여지가 생겼습니다. {signing_team_link}는 FA 영입의 대가를 돈으로 치르고 전력 보강을 완성했습니다.",
   "fa_compensation.cash_only.body.variants": 2,
   "fa_compensation.cash_only.body.v1": "{fa_player_link}의 FA 이적은 선수 이동 없이 현금 보상으로 마무리됐습니다. {original_team_link}는 {signing_team_link}로부터 {cash_text}를 받습니다. 등급은 {grade}입니다.\n\n새 얼굴이 합류하지는 않지만, {original_team_link}에는 다음 움직임에 쓸 여지가 생겼습니다. {signing_team_link}는 FA 영입의 대가를 돈으로 치르고 전력 보강을 완성했습니다.",
-  "fa_compensation.cash_only.body.v2": "{signing_team_link}가 {fa_player_link}를 품으면서 {original_team_link}에는 현금 보상이 돌아갑니다. 금액은 {cash_text}, 등급은 {grade}입니다.\n\n선수 한 명이 오가는 장면은 없었습니다. 대신 남겨진 팀은 확보한 자금을 바탕으로 다음 보강 방향을 다시 잡게 됐습니다."
+  "fa_compensation.cash_only.body.v2": "{signing_team_link}가 {fa_player_link}를 품으면서 {original_team_link}에는 현금 보상이 돌아갑니다. 금액은 {cash_text}, 등급은 {grade}입니다.\n\n선수 이동은 없었지만 이야기가 끝난 것은 아닙니다. {original_team_link}는 확보한 자금을 바탕으로 다음 보강 방향을 다시 잡게 됐습니다."
 }

@@ -98,6 +98,33 @@ int kbo_get_next_asian_games_schedule(uint32_t from_year, KboAsianGamesScheduleS
     return 0;
 }
 
+int kbo_get_asian_games_schedule_seed_list(KboAsianGamesScheduleSeed* out, int max_count)
+{
+    if (out == NULL || max_count <= 0) {
+        return 0;
+    }
+    memset(out, 0, sizeof(*out) * (size_t)max_count);
+
+    kbo_ensure_asian_games_schedule_seeds_loaded();
+    kbo_lock_asian_games_schedule_seeds();
+    int count = 0;
+    for (int i = 0; i < g_kbo_asian_games_schedule_seed_count && count < max_count; i++) {
+        out[count++] = g_kbo_asian_games_schedule_seeds[i];
+    }
+    kbo_unlock_asian_games_schedule_seeds();
+
+    for (int i = 0; i < count; i++) {
+        for (int j = i + 1; j < count; j++) {
+            if (out[j].year < out[i].year) {
+                KboAsianGamesScheduleSeed tmp = out[i];
+                out[i] = out[j];
+                out[j] = tmp;
+            }
+        }
+    }
+    return count;
+}
+
 int kbo_asian_games_schedule_has_event_dates(const KboAsianGamesScheduleSeed* schedule)
 {
     return schedule != NULL

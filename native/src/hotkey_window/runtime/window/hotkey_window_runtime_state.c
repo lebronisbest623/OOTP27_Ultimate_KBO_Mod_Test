@@ -35,6 +35,7 @@ int g_kbo_hub_selected_foreign_subview = 0;
 int g_kbo_hub_selected_agames_subview = 0;
 int g_kbo_hub_selected_military_subview = 0;
 int g_kbo_hub_selected_fa_subview = 0;
+int g_kbo_hub_selected_fa_compensation_subview = 0;
 int g_kbo_hub_selected_cbt_subview = 0;
 int g_kbo_hub_selected_futures_subview = 0;
 int g_kbo_hub_fa_market_page = 0;

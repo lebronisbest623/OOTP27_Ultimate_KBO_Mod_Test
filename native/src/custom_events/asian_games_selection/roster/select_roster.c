@@ -119,6 +119,7 @@ int kbo_select_asian_games_roster(uint32_t event_yyyymmdd, const char* source)
         candidate->entry.age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);
         candidate->entry.role = player[OOTP27_PLAYER_POSITION_GROUP_OFFSET];
         candidate->entry.wildcard = 0u;
+        candidate->entry.military_unserved = 1u;
         candidate->entry.old_restricted = 0u;
         candidate->entry.old_secondary_restricted = 0u;
         candidate->entry.old_injury_active = 0u;

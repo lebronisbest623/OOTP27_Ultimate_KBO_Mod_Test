@@ -25,6 +25,9 @@ static DWORD WINAPI kbo_foreign_waiver_scanner_thread(LPVOID parameter)
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->foreign_waiver_scanner_sleep_ms)) {
             break;
         }
+        if (!kbo_runtime_pause_for_save_if_needed("foreign_waiver_scanner")) {
+            break;
+        }
         KBO_PROFILE_BEGIN(profile_foreign_waiver_scanner_tick);
         tick++;
         uint32_t today = 0u;

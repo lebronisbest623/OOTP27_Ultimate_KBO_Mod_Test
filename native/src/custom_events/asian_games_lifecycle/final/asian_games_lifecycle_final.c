@@ -167,9 +167,6 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] = entry->old_secondary_restricted;
         player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] = entry->old_injury_active;
         kbo_set_military_days_left(player, entry->old_injury_days_left);
-        if (player[OOTP27_PLAYER_MILITARY_EXEMPT_OFFSET] == 0u) {
-            player[OOTP27_PLAYER_MILITARY_EXEMPT_OFFSET] = 1u;
-        }
 
         entry->returned = 1u;
         returned++;
@@ -202,6 +199,11 @@ int kbo_asian_games_finalize_selected_players(uint32_t event_yyyymmdd, const cha
         missing,
         no_team);
     kbo_save_asian_games_roster_csv(source);
+    kbo_append_asian_games_tournament_history(
+        event_yyyymmdd / 10000u,
+        event_yyyymmdd,
+        final_result,
+        source);
     return returned;
 }
 

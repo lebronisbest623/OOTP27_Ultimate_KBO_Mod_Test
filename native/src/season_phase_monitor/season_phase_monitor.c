@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "../bootstrap/abi/ootp_offsets.h"
+#include "../bootstrap/profiling/profiler.h"
 #include "../core/dates/core_current_date.h"
 #include "../core/core_flags/api/flags_api.h"
 #include "../core/core_league_context_parts/api/league_context_lookup.h"
@@ -315,6 +316,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             continue;
         }
 
+        KBO_PROFILE_BEGIN(profile_season_phase_monitor_tick);
         uint32_t year = 0;
         uint32_t month = 0;
         uint32_t day = 0;
@@ -324,6 +326,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             }
             last_league_ptr = 0;
             last_date = 0u;
+            KBO_PROFILE_END(profile_season_phase_monitor_tick, "season_phase.monitor.no_date");
             continue;
         }
         uint32_t date_key = year * 10000u + month * 100u + day;
@@ -340,6 +343,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             }
             last_league_ptr = 0;
             last_league_id = league_id;
+            KBO_PROFILE_END(profile_season_phase_monitor_tick, "season_phase.monitor.no_league");
             continue;
         }
 
@@ -374,6 +378,7 @@ static DWORD WINAPI kbo_season_phase_monitor_thread(LPVOID parameter)
             last_phase = phase;
             last_phase_year = phase_year;
         }
+        KBO_PROFILE_END(profile_season_phase_monitor_tick, "season_phase.monitor.tick");
     }
     kbo_log_runtime_line("KBO season phase monitor stopped");
     InterlockedExchange(&g_kbo_season_phase_monitor_started, 0);

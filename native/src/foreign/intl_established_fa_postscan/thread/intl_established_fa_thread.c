@@ -3,6 +3,9 @@
 
 void kbo_intl_established_fa_postscan_try_run(void)
 {
+    if (!kbo_runtime_pause_for_save_if_needed("intl_established_fa_postscan")) {
+        return;
+    }
     if (InterlockedCompareExchange(&g_kbo_intl_established_fa_postscan.pending, 2, 1) != 1) {
         return;
     }

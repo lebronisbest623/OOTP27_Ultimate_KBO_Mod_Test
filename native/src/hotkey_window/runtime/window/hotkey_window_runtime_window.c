@@ -17,7 +17,7 @@ void kbo_refresh_hotkey_window_layout(HWND hwnd)
     kbo_layout_hotkey_window(hwnd);
     kbo_refresh_hotkey_window();
     if (InterlockedCompareExchange(&g_kbo_webview_ready, 0, 0) != 0) {
-        kbo_webview_navigate_current();
+        kbo_webview_navigate_current_immediate();
     }
     InvalidateRect(hwnd, NULL, TRUE);
 }
@@ -265,6 +265,13 @@ LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM wparam, 
     case KBO_WM_REFRESH_HUB:
         kbo_refresh_hotkey_window_layout(hwnd);
         kbo_log_runtimef("KBO F2 hub refreshed by request hwnd=%p", (void*)hwnd);
+        return 0;
+
+    case KBO_WM_SHOW_HUB_CONTENT:
+        if (IsWindowVisible(hwnd)) {
+            kbo_refresh_hotkey_window_layout(hwnd);
+            kbo_log_runtimef("KBO F2 hub content loaded after loading screen hwnd=%p", (void*)hwnd);
+        }
         return 0;
 
     case WM_CLOSE:

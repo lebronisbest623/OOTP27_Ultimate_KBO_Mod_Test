@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../fa_declaration/fa_declaration.h"
 #include "../../../fa_filing/fa_filing.h"
@@ -28,6 +29,13 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
     uint8_t notify,
     OotpArbitrationNonTenderFn original_func)
 {
+    if (kbo_runtime_save_in_progress()) {
+        if (original_func != NULL) {
+            original_func(team_ptr, player_ptr, notify);
+        }
+        return;
+    }
+
     if (player_ptr == NULL || !memory_range_readable(player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
         if (original_func != NULL) {
             original_func(team_ptr, player_ptr, notify);

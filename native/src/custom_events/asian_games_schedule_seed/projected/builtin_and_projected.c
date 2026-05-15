@@ -124,6 +124,10 @@ void kbo_build_projected_asian_games_schedule(uint32_t year, KboAsianGamesSchedu
     out->final_date = out->tournament_end;
     out->auto_schedule = 1u;
     kbo_asian_games_schedule_copy_text(
+        out->final_result,
+        sizeof(out->final_result),
+        "예정");
+    kbo_asian_games_schedule_copy_text(
         out->notes,
         sizeof(out->notes),
         policy.projected_notes);

@@ -124,6 +124,7 @@ int kbo_asian_games_find_replacement_for_entry(
             best_entry.age = age;
             best_entry.role = role;
             best_entry.wildcard = wildcard ? 1u : 0u;
+            best_entry.military_unserved = 1u;
             best_entry.score = score;
             best_entry.player_ptr = player_ptr;
             best_score = score;

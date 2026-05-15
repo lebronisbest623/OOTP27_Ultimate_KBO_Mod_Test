@@ -33,8 +33,7 @@ int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* 
             || row->foreign_player
             || row->current_team_id != 0u
             || row->retired_flag != 0u
-            || row->draft_eligible != 0u
-            || row->original_team_id == 0u) {
+            || row->draft_eligible != 0u) {
         return 0;
     }
 
@@ -48,7 +47,12 @@ int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* 
     if (original_league_id == independent_league_id) {
         return 1;
     }
-    return original_league_id == 0u && row->draft_league_id == independent_league_id;
+    if (row->active_team_id != 0u
+            && kbo_fa_market_get_team_league_id(row->active_team_id) == independent_league_id) {
+        return 1;
+    }
+    return row->current_league_id == independent_league_id
+        || row->draft_league_id == independent_league_id;
 }
 
 void kbo_fa_market_set_history_reason(
@@ -123,24 +127,24 @@ uint32_t kbo_fa_market_display_grade_sort_rank(const char* grade)
     return 4u;
 }
 
+static int kbo_fa_market_case_uses_original_team(const char* case_label)
+{
+    return case_label != NULL
+        && (strcmp(case_label, "KBO_FA_APPROVED") == 0
+            || strcmp(case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0
+            || strcmp(case_label, "KBO_FA_DEFERRED") == 0
+            || strcmp(case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0);
+}
+
 uint32_t kbo_fa_market_display_team_id(const KboFaMarketClassification* row)
 {
     if (row == NULL) {
         return 0u;
     }
-    if (row->fa_grade_snapshot_team_id != 0u) {
-        return row->fa_grade_snapshot_team_id;
-    }
     if (row->rights_team_id != 0u) {
         return row->rights_team_id;
     }
-    if (row->original_team_id != 0u
-            && (strcmp(row->case_label, "KBO_FA_APPROVED") == 0
-                || strcmp(row->case_label, "KBO_FA_ELIGIBLE_NOT_APPROVED") == 0
-                || strcmp(row->case_label, "KBO_FA_DEFERRED") == 0
-                || strcmp(row->case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0
-                || strcmp(row->case_label, "DOMESTIC_RELEASED_NON_FA") == 0
-                || strcmp(row->case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0)) {
+    if (row->original_team_id != 0u && kbo_fa_market_case_uses_original_team(row->case_label)) {
         return row->original_team_id;
     }
     return row->current_team_id;

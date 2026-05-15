@@ -46,10 +46,42 @@ const char* kbo_fa_compensation_decision_label(
     return "현금 보상";
 }
 
-void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32_t selected_compensation_player_id)
+static const char* kbo_fa_compensation_subview_label(int subview)
+{
+    switch (subview) {
+    case KBO_HUB_FA_COMP_SUBVIEW_LEDGER:     return "장부";
+    case KBO_HUB_FA_COMP_SUBVIEW_BOARD:      return "보상 보드";
+    case KBO_HUB_FA_COMP_SUBVIEW_CANDIDATES: return "선수 후보";
+    default:                                 return "";
+    }
+}
+
+static void kbo_webview_append_fa_compensation_subtabs(KboWindowTextBuffer* buffer, int selected_subview)
+{
+    kbo_window_text_appendf(buffer, "<nav class='faCompTabs'>");
+    for (int i = 0; i < KBO_HUB_FA_COMP_SUBVIEW_COUNT; i++) {
+        kbo_window_text_appendf(
+            buffer,
+            "<a class='faCompTab %s' href='kbo://fa-comp/view/%d'>",
+            i == selected_subview ? "active" : "",
+            i);
+        kbo_html_append_escaped(buffer, kbo_fa_compensation_subview_label(i));
+        kbo_window_text_appendf(buffer, "</a>");
+    }
+    kbo_window_text_appendf(buffer, "</nav>");
+}
+
+void kbo_webview_append_fa_compensation_view(
+    KboWindowTextBuffer* buffer,
+    int selected_compensation_subview,
+    uint32_t selected_compensation_player_id)
 {
     if (buffer == NULL) {
         return;
+    }
+    if (selected_compensation_subview < 0
+            || selected_compensation_subview >= KBO_HUB_FA_COMP_SUBVIEW_COUNT) {
+        selected_compensation_subview = KBO_HUB_FA_COMP_SUBVIEW_LEDGER;
     }
 
     KboFaCompensationRecord* records = (KboFaCompensationRecord*)HeapAlloc(
@@ -95,8 +127,9 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
     }
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights faCompensation'>");
+    kbo_webview_append_fa_compensation_subtabs(buffer, selected_compensation_subview);
 
-    if (detail_rec != NULL) {
+    if (selected_compensation_subview == KBO_HUB_FA_COMP_SUBVIEW_BOARD && detail_rec != NULL) {
         KboFaCompensationDecisionRow board_decision;
         int board_has_decision = kbo_load_latest_fa_compensation_decision(detail_rec->player_id, &board_decision);
         int board_detail_rows = kbo_fa_compensation_debug_row_count(debug_rows, debug_count, detail_rec->player_id);
@@ -184,13 +217,14 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
             kbo_window_text_appendf(buffer, "<a class='rightsTextAction cashOnly' href='kbo://fa-comp/cash-only/%u'>현금 보상</a>", detail_rec->player_id);
         }
         kbo_window_text_appendf(buffer, "</div></div></section>");
-    } else {
+    } else if (selected_compensation_subview == KBO_HUB_FA_COMP_SUBVIEW_BOARD) {
         kbo_window_text_appendf(
             buffer,
             "<section class='faCompBoard faCompBoardEmpty'><div class='faCompBoardLead'><div class='faCompBoardTitle'>FA 보상</div>"
             "<div class='faCompBoardSummary'>검토할 선수 보상 건이 없습니다.</div></div></section>");
     }
 
+    if (selected_compensation_subview == KBO_HUB_FA_COMP_SUBVIEW_LEDGER) {
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap faCompLedgerWrap'><table class='ootpRosterTable faCompTable'><thead><tr>"
@@ -260,8 +294,9 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
         kbo_window_text_appendf(buffer, "<tr><td colspan='10' class='roEmptyMessage'>출력이 일부만 표시됩니다. 전체 내역은 fa_compensation.csv에서 확인하세요.</td></tr>");
     }
     kbo_window_text_appendf(buffer, "</tbody></table></section>");
+    }
 
-    if (detail_rec != NULL) {
+    if (selected_compensation_subview == KBO_HUB_FA_COMP_SUBVIEW_CANDIDATES && detail_rec != NULL) {
         KboFaCompensationDecisionRow decision;
         int has_decision = kbo_load_latest_fa_compensation_decision(detail_rec->player_id, &decision);
         int is_final = kbo_fa_compensation_record_is_final(detail_rec);
@@ -323,7 +358,7 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
             kbo_window_text_appendf(buffer, "<tr><td colspan='6' class='roEmptyMessage'>보호 명단이 아직 제출되지 않았습니다.</td></tr>");
         }
         kbo_window_text_appendf(buffer, "</tbody></table></section>");
-    } else {
+    } else if (selected_compensation_subview == KBO_HUB_FA_COMP_SUBVIEW_CANDIDATES) {
         kbo_window_text_appendf(buffer, "<section class='tablewrap rosterTableWrap faCompLists'><table class='ootpRosterTable'><tbody><tr><td class='roEmptyMessage'>사용 가능한 선수 보상 보드가 없습니다.</td></tr></tbody></table></section>");
     }
 

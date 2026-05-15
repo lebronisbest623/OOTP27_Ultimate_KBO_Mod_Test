@@ -11,6 +11,7 @@
 #include "../../../fa_compensation/history/fa_compensation_history.h"
 #include "../../../fa_compensation/records/fa_compensation_records.h"
 #include "../../../fa_compensation/state/fa_compensation_state.h"
+#include "../../../fa_declaration/fa_declaration.h"
 #include "../../../fa_market_classification/api/fa_market_classification.h"
 #include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/dates/core_current_date.h"
@@ -31,10 +32,15 @@ const char* kbo_fa_compensation_decision_label(
     const KboFaCompensationRecord* rec,
     const KboFaCompensationDecisionRow* decision,
     int has_decision);
-void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32_t selected_compensation_player_id);
+void kbo_webview_append_fa_compensation_view(
+    KboWindowTextBuffer* buffer,
+    int selected_compensation_subview,
+    uint32_t selected_compensation_player_id);
+void kbo_webview_append_fa_rights_exercise_view(KboWindowTextBuffer* buffer, uint32_t selected_league_id);
 void kbo_webview_append_fa_view(
     KboWindowTextBuffer* buffer,
     int selected_fa_subview,
+    int selected_fa_compensation_subview,
     uint32_t selected_compensation_player_id,
     uint32_t selected_league_id);
 

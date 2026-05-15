@@ -22,6 +22,16 @@ int kbo_get_asian_games_roster_csv_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("asian_games_roster.csv", out, out_size);
 }
 
+int kbo_get_asian_games_tournament_history_csv_path(char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+
+    return kbo_get_save_scoped_data_file("asian_games_tournament_history.csv", out, out_size);
+}
+
 void kbo_clear_asian_games_roster_memory(const char* source)
 {
     memset(g_kbo_asian_games_roster, 0, sizeof(g_kbo_asian_games_roster));
@@ -68,7 +78,7 @@ int kbo_save_asian_games_roster_csv(const char* source)
         return 0;
     }
 
-    const char* header = "year,index,player_id,original_team_id,original_league_id,departure_date,return_date,age,role,wildcard,old_restricted,old_secondary_restricted,old_injury_active,old_injury_days_left,departed,returned,exempted,score,tournament_result\r\n";
+    const char* header = "year,index,player_id,original_team_id,original_league_id,departure_date,return_date,age,role,wildcard,military_unserved,old_restricted,old_secondary_restricted,old_injury_active,old_injury_days_left,departed,returned,exempted,score,tournament_result\r\n";
     DWORD written = 0;
     WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
 
@@ -79,7 +89,7 @@ int kbo_save_asian_games_roster_csv(const char* source)
         int len = snprintf(
             line,
             sizeof(line),
-            "%u,%ld,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d,%u\r\n",
+            "%u,%ld,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%d,%u\r\n",
             g_kbo_asian_games_roster_year,
             i + 1,
             entry->player_id,
@@ -90,6 +100,7 @@ int kbo_save_asian_games_roster_csv(const char* source)
             (uint32_t)entry->age,
             (uint32_t)entry->role,
             (uint32_t)entry->wildcard,
+            (uint32_t)entry->military_unserved,
             (uint32_t)entry->old_restricted,
             (uint32_t)entry->old_secondary_restricted,
             (uint32_t)entry->old_injury_active,
@@ -145,8 +156,8 @@ int kbo_load_asian_games_roster_csv(const char* source)
     uint8_t loaded_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
 
     while (loaded_count < KBO_ASIAN_GAMES_ROSTER_SIZE && kbo_csv_reader_next_row(reader)) {
-        char fields[19][64];
-        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 19);
+        char fields[20][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 20);
         if (field_count < 18
                 || fields[0][0] == '\0'
                 || _stricmp(fields[0], "year") == 0) {
@@ -160,9 +171,14 @@ int kbo_load_asian_games_roster_csv(const char* source)
         }
 
         KboAsianGamesRosterEntry* entry = &loaded[loaded_count++];
-        uint32_t tournament_result = field_count >= 19 ? kbo_csv_parse_u32_text(fields[18], 10) : 0u;
+        int has_military_unserved = field_count >= 20;
+        int old_restricted_field = has_military_unserved ? 11 : 10;
+        int tournament_result_field = has_military_unserved ? 19 : 18;
+        uint32_t tournament_result = field_count > tournament_result_field
+            ? kbo_csv_parse_u32_text(fields[tournament_result_field], 10)
+            : 0u;
         loaded_year = year;
-        if (field_count >= 19
+        if (field_count > tournament_result_field
                 && (tournament_result == KBO_ASIAN_GAMES_RESULT_GOLD
                     || tournament_result == KBO_ASIAN_GAMES_RESULT_NO_GOLD)) {
             loaded_result = (uint8_t)tournament_result;
@@ -175,14 +191,17 @@ int kbo_load_asian_games_roster_csv(const char* source)
         entry->age = (uint16_t)kbo_csv_parse_u32_text(fields[7], 10);
         entry->role = (uint8_t)kbo_csv_parse_u32_text(fields[8], 10);
         entry->wildcard = (uint8_t)kbo_csv_parse_u32_text(fields[9], 10);
-        entry->old_restricted = (uint8_t)kbo_csv_parse_u32_text(fields[10], 10);
-        entry->old_secondary_restricted = (uint8_t)kbo_csv_parse_u32_text(fields[11], 10);
-        entry->old_injury_active = (uint8_t)kbo_csv_parse_u32_text(fields[12], 10);
-        entry->old_injury_days_left = (int16_t)strtol(fields[13], NULL, 10);
-        entry->departed = (uint8_t)kbo_csv_parse_u32_text(fields[14], 10);
-        entry->returned = (uint8_t)kbo_csv_parse_u32_text(fields[15], 10);
-        entry->exempted = (uint8_t)kbo_csv_parse_u32_text(fields[16], 10);
-        entry->score = (int32_t)strtol(fields[17], NULL, 10);
+        entry->military_unserved = has_military_unserved
+            ? (uint8_t)kbo_csv_parse_u32_text(fields[10], 10)
+            : 1u;
+        entry->old_restricted = (uint8_t)kbo_csv_parse_u32_text(fields[old_restricted_field], 10);
+        entry->old_secondary_restricted = (uint8_t)kbo_csv_parse_u32_text(fields[old_restricted_field + 1], 10);
+        entry->old_injury_active = (uint8_t)kbo_csv_parse_u32_text(fields[old_restricted_field + 2], 10);
+        entry->old_injury_days_left = (int16_t)strtol(fields[old_restricted_field + 3], NULL, 10);
+        entry->departed = (uint8_t)kbo_csv_parse_u32_text(fields[old_restricted_field + 4], 10);
+        entry->returned = (uint8_t)kbo_csv_parse_u32_text(fields[old_restricted_field + 5], 10);
+        entry->exempted = (uint8_t)kbo_csv_parse_u32_text(fields[old_restricted_field + 6], 10);
+        entry->score = (int32_t)strtol(fields[old_restricted_field + 7], NULL, 10);
         entry->player_ptr = 0;
     }
 
@@ -199,4 +218,136 @@ int kbo_load_asian_games_roster_csv(const char* source)
     snprintf(g_kbo_asian_games_roster_save_path, sizeof(g_kbo_asian_games_roster_save_path), "%s", path);
     kbo_log_runtimef("KBO Asian Games roster csv load source=%s year=%u count=%d result=%u path=%s", source != NULL ? source : "", loaded_year, loaded_count, (uint32_t)g_kbo_asian_games_result, path);
     return loaded_count;
+}
+
+int kbo_load_asian_games_tournament_history(
+    KboAsianGamesTournamentHistoryEntry* out,
+    int max_count,
+    const char* source)
+{
+    if (out == NULL || max_count <= 0) {
+        return 0;
+    }
+    memset(out, 0, sizeof(*out) * (size_t)max_count);
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_get_asian_games_tournament_history_csv_path(path, sizeof(path))) {
+        return 0;
+    }
+
+    KboCsvReader* reader = kbo_csv_reader_open(path);
+    if (reader == NULL) {
+        return 0;
+    }
+
+    int count = 0;
+    while (count < max_count && kbo_csv_reader_next_row(reader)) {
+        char fields[3][64];
+        int field_count = kbo_csv_reader_read_trimmed_fields(reader, (char*)fields, sizeof(fields[0]), 3);
+        if (field_count < 3
+                || fields[0][0] == '\0'
+                || _stricmp(fields[0], "year") == 0) {
+            continue;
+        }
+
+        uint32_t year = kbo_csv_parse_u32_text(fields[0], 10);
+        uint32_t final_date = kbo_csv_parse_u32_text(fields[1], 10);
+        uint32_t result = kbo_csv_parse_u32_text(fields[2], 10);
+        if (year == 0u || final_date == 0u
+                || (result != KBO_ASIAN_GAMES_RESULT_GOLD
+                    && result != KBO_ASIAN_GAMES_RESULT_NO_GOLD)) {
+            continue;
+        }
+
+        out[count].year = year;
+        out[count].final_date = final_date;
+        out[count].result = (uint8_t)result;
+        count++;
+    }
+
+    kbo_csv_reader_close(reader);
+    kbo_log_runtimef("KBO Asian Games tournament history load source=%s count=%d path=%s", source != NULL ? source : "", count, path);
+    return count;
+}
+
+int kbo_append_asian_games_tournament_history(
+    uint32_t year,
+    uint32_t final_date,
+    uint8_t result,
+    const char* source)
+{
+    if (year == 0u || final_date == 0u
+            || (result != KBO_ASIAN_GAMES_RESULT_GOLD
+                && result != KBO_ASIAN_GAMES_RESULT_NO_GOLD)) {
+        return 0;
+    }
+
+    char path[MAX_PATH] = {0};
+    if (!kbo_get_asian_games_tournament_history_csv_path(path, sizeof(path))) {
+        return 0;
+    }
+
+    KboAsianGamesTournamentHistoryEntry entries[128];
+    int count = kbo_load_asian_games_tournament_history(
+        entries,
+        (int)(sizeof(entries) / sizeof(entries[0])),
+        source);
+    int found = 0;
+    for (int i = 0; i < count; i++) {
+        if (entries[i].year == year) {
+            entries[i].final_date = final_date;
+            entries[i].result = result;
+            found = 1;
+            break;
+        }
+    }
+    if (!found && count < (int)(sizeof(entries) / sizeof(entries[0]))) {
+        entries[count].year = year;
+        entries[count].final_date = final_date;
+        entries[count].result = result;
+        count++;
+    }
+
+    char tmp_path[MAX_PATH] = {0};
+    HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
+    if (file == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+
+    DWORD written = 0;
+    const char* header = "year,final_date,result\r\n";
+    WriteFile(file, header, (DWORD)strlen(header), &written, NULL);
+
+    int ok = 1;
+    for (int i = 0; i < count; i++) {
+        char line[64] = {0};
+        int len = snprintf(
+            line,
+            sizeof(line),
+            "%u,%u,%u\r\n",
+            entries[i].year,
+            entries[i].final_date,
+            (uint32_t)entries[i].result);
+        if (len <= 0 || !WriteFile(file, line, (DWORD)len, &written, NULL) || written != (DWORD)len) {
+            ok = 0;
+            break;
+        }
+    }
+
+    if (!ok) {
+        kbo_atomic_abort(file, tmp_path);
+        return 0;
+    }
+    if (!kbo_atomic_commit(file, tmp_path, path)) {
+        return 0;
+    }
+
+    kbo_log_runtimef(
+        "KBO Asian Games tournament history save source=%s year=%u final=%u result=%u path=%s",
+        source != NULL ? source : "",
+        year,
+        final_date,
+        (uint32_t)result,
+        path);
+    return 1;
 }

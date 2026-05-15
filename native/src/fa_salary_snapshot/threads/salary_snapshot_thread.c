@@ -7,7 +7,6 @@
 #include "../../competitive_balance_tax/api/competitive_balance_tax.h"
 #include "../../competitive_balance_tax/events/cbt_events.h"
 #include "../../competitive_balance_tax/exceptions/cbt_exceptions.h"
-#include "../../competitive_balance_tax/records/cbt_records.h"
 #include "../../competitive_balance_tax/rules/cbt_rules.h"
 #include "../../core/dates/core_current_date.h"
 #include "../../core/core_flags/api/flags_api.h"
@@ -20,28 +19,6 @@
 #include "../state/salary_snapshot_state.h"
 #include "../capture/salary_snapshot_write_capture.h"
 
-static int kbo_fa_salary_snapshot_cbt_records_exist_for_season(uint32_t season)
-{
-    KboCbtRecord* records = (KboCbtRecord*)HeapAlloc(
-        GetProcessHeap(),
-        HEAP_ZERO_MEMORY,
-        (SIZE_T)KBO_CBT_RECORDS_MAX * sizeof(KboCbtRecord));
-    if (records == NULL) {
-        return 0;
-    }
-
-    int count = kbo_cbt_load_records(records, KBO_CBT_RECORDS_MAX, NULL, 0);
-    int found = 0;
-    for (int i = 0; i < count; i++) {
-        if (records[i].season == season) {
-            found = 1;
-            break;
-        }
-    }
-    HeapFree(GetProcessHeap(), 0, records);
-    return found;
-}
-
 static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
 {
     (void)parameter;
@@ -51,7 +28,6 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
     uint32_t last_log_opening_day = 0u;
     uint32_t captured_season = 0u;
     uint32_t cbt_event_schedule_done_season = 0u;
-    uint32_t cbt_due_process_done_season = 0u;
     uint32_t cbt_auto_exception_done_season = 0u;
     uint32_t cached_message_date = 0u;
     int cached_message_found = 0;
@@ -196,22 +172,6 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
                     opening_day,
                     cbt_announcement_day);
                 kbo_schedule_cbt_custom_events("snapshot_thread_cbt_schedule");
-            }
-            if (cbt_announcement_day != 0u
-                    && date >= cbt_announcement_day
-                    && cbt_due_process_done_season != year
-                    && !kbo_fa_salary_snapshot_cbt_records_exist_for_season(year)) {
-                cbt_due_process_done_season = year;
-                kbo_log_runtimef(
-                    "KBO CBT due fallback processing date=%u season=%u opening_day=%u announce=%u reason=no_records_after_announcement",
-                    date,
-                    year,
-                    opening_day,
-                    cbt_announcement_day);
-                kbo_process_competitive_balance_tax_for_date(
-                    year,
-                    cbt_announcement_day,
-                    "snapshot_thread_cbt_due_fallback");
             }
             if (profile_snapshot_thread_tick_active) {
                 kbo_profiler_end("fa_salary_snapshot.thread.already_captured", &profile_snapshot_thread_tick);

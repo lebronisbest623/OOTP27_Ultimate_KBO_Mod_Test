@@ -44,6 +44,10 @@ __declspec(noinline) uint8_t ootp_kbo_player_offer_eligibility_wrapper(
     typedef uint8_t (__fastcall *OriginalOfferEligibilityFn)(void*, int32_t, int32_t);
     OriginalOfferEligibilityFn original_func = (OriginalOfferEligibilityFn)original_func_ptr;
 
+    if (kbo_runtime_save_in_progress()) {
+        return original_func != NULL ? original_func((void*)player_ptr, team_id, flag) : 0u;
+    }
+
     if (kbo_fast_block_fa_candidate_before_original(player_ptr, team_id, "offer_eligibility", NULL)) {
         return 0;
     }

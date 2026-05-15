@@ -151,6 +151,7 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
         kbo_log_runtime_line("KBO full runtime install skipped: already started");
         return;
     }
+    InterlockedExchange(&g_kbo_runtime_date_stable_ready, 1);
 
     start_kbo_hotkey_window_thread(instance);
     if (!read_kbo_localappdata_flag_file("disable_kbo_player_hover_manager_probe.txt")) {

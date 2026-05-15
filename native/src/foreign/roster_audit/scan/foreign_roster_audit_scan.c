@@ -6,6 +6,9 @@ void audit_foreign_roster_state(const char* source, int write_snapshot)
     if (!kbo_fix_enabled()) {
         return;
     }
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "foreign_roster_audit")) {
+        return;
+    }
 
     uintptr_t player_vector = 0;
     int32_t player_count = 0;

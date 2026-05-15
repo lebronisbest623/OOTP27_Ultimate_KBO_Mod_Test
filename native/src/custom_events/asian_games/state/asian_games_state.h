@@ -21,6 +21,7 @@ typedef struct KboAsianGamesRosterEntry {
     uint16_t age;
     uint8_t role;
     uint8_t wildcard;
+    uint8_t military_unserved;
     uint8_t old_restricted;
     uint8_t old_secondary_restricted;
     uint8_t old_injury_active;
@@ -37,6 +38,12 @@ typedef struct KboAsianGamesCandidate {
     uint32_t org_team_id;
     uint8_t selected;
 } KboAsianGamesCandidate;
+
+typedef struct KboAsianGamesTournamentHistoryEntry {
+    uint32_t year;
+    uint32_t final_date;
+    uint8_t result;
+} KboAsianGamesTournamentHistoryEntry;
 
 extern KboAsianGamesRosterEntry g_kbo_asian_games_roster[KBO_ASIAN_GAMES_ROSTER_SIZE];
 extern LONG g_kbo_asian_games_roster_count;

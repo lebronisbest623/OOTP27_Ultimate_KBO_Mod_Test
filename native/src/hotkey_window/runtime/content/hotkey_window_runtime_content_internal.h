@@ -13,6 +13,7 @@ const char* kbo_hub_cbt_subnav_label(int index);
 const char* kbo_hub_futures_subnav_label(int index);
 void kbo_hub_ensure_valid_selection(void);
 void kbo_refresh_hotkey_window(void);
+void kbo_layout_hotkey_window(HWND hwnd);
 void kbo_hub_apply_fixed_window_placement(HWND hwnd, int preserve_position);
 
 const char* kbo_hub_foreign_slot_code_for_player(uint8_t* player);
@@ -66,7 +67,9 @@ void kbo_webview_append_main_tabs(KboWindowTextBuffer* buffer);
 void kbo_webview_append_sub_tabs(KboWindowTextBuffer* buffer);
 int kbo_webview_current_view_has_sub_tabs(void);
 WCHAR* kbo_build_webview_hub_html(void);
+void kbo_webview_navigate_loading(void);
 void kbo_webview_navigate_current(void);
+void kbo_webview_navigate_current_immediate(void);
 int kbo_webview_team_action_allowed(uint32_t team_id, const char* source);
 
 #endif

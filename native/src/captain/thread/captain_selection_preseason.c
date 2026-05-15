@@ -123,6 +123,9 @@ int kbo_captain_find_row_index_by_team(
 
 static uint8_t* kbo_captain_find_player_by_id(uint32_t player_id, int* out_vector_available)
 {
+    if (kbo_runtime_save_in_progress()) {
+        return NULL;
+    }
     if (out_vector_available != NULL) {
         *out_vector_available = 0;
     }
@@ -144,6 +147,9 @@ static uint8_t* kbo_captain_find_player_by_id(uint32_t player_id, int* out_vecto
     }
 
     for (int32_t i = 0; i < player_count; i++) {
+        if ((i & 127) == 0 && kbo_runtime_save_in_progress()) {
+            return NULL;
+        }
         uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
         if (!kbo_player_pointer_plausible(player_ptr)
                 || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
@@ -231,6 +237,10 @@ int kbo_captain_write_initial_selection(
     uint32_t league_id,
     const char* source)
 {
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "captain_initial_selection")) {
+        return 0;
+    }
+
     KboCaptainSelectionRow rows[KBO_CAPTAIN_MAX_TEAMS];
     memset(rows, 0, sizeof(rows));
     int selected_count = 0;

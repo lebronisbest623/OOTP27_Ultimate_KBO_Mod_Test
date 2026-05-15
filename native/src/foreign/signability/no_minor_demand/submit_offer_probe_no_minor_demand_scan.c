@@ -12,6 +12,10 @@ static int kbo_no_minor_is_background_prescan(const char* source)
 int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
 {
     KBO_PROFILE_BEGIN(profile_no_minor_scan);
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "no_minor_demand_floor_scan")) {
+        KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.save_stop");
+        return 0;
+    }
     if (InterlockedCompareExchange(&g_kbo_no_minor_contract_demand_floor_enabled, 0, 0) == 0) {
         KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.disabled");
         return 0;
@@ -169,6 +173,7 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
             if (kbo_no_minor_write_player_i32(player_ptr, OOTP27_PLAYER_FA_DEMAND_SALARY_OFFSET, salary_floor)) {
                 demand_fixed++;
                 player_changed = 1;
+                old_demand = salary_floor;
             }
         }
         if (foreign_candidate && financials != NULL && retained_demand_floor <= 0) {

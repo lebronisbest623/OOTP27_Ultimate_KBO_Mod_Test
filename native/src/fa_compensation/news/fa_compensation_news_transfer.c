@@ -10,8 +10,10 @@
 #include "../../core/logging/core_log.h"
 #include "../../core/sql/history_transactions/core_sql_history_transactions.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../runtime_memory/runtime_memory.h"
 #include "../../team/assignment/assignment/team_assignment.h"
 #include "../../team/lookup/team_lookup.h"
+#include "../../team/names/team_string.h"
 #include "fa_compensation_news_transfer.h"
 
 static void kbo_fa_compensation_format_salary_text(int32_t salary, char* out, size_t out_size)
@@ -24,6 +26,109 @@ static void kbo_fa_compensation_format_salary_text(int32_t salary, char* out, si
         return;
     }
     snprintf(out, out_size, "%d", salary);
+}
+
+static int kbo_fa_compensation_team_name_placeholder(const char* text)
+{
+    return text == NULL
+        || text[0] == '\0'
+        || _stricmp(text, "Team") == 0
+        || _stricmp(text, "Unknown") == 0;
+}
+
+static void kbo_fa_compensation_copy_team_name(uint32_t team_id, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(team_id, 1);
+    if (team != NULL && memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+        char city[64] = {0};
+        char nickname[64] = {0};
+        char full_name[96] = {0};
+        copy_ootp_string_object_text(team, OOTP27_KBO_TEAM_CITY_STRING_OFFSET, city, sizeof(city));
+        copy_ootp_string_object_text(team, OOTP27_KBO_TEAM_NICKNAME_STRING_OFFSET, nickname, sizeof(nickname));
+        copy_ootp_string_object_text(team, 0x40u, full_name, sizeof(full_name));
+
+        if (!kbo_fa_compensation_team_name_placeholder(full_name) && strchr(full_name, ' ') != NULL) {
+            snprintf(out, out_size, "%s", full_name);
+            return;
+        }
+        if (_stricmp(city, "Doosan") == 0 && _stricmp(nickname, "DOO") == 0) {
+            snprintf(out, out_size, "Doosan Bears");
+            return;
+        }
+        if (_stricmp(city, "Lotte") == 0 && _stricmp(nickname, "LOT") == 0) {
+            snprintf(out, out_size, "Lotte Giants");
+            return;
+        }
+        if (_stricmp(city, "Samsung") == 0 && _stricmp(nickname, "SAM") == 0) {
+            snprintf(out, out_size, "Samsung Lions");
+            return;
+        }
+        if (_stricmp(city, "KIA") == 0 && _stricmp(nickname, "KIA") == 0) {
+            snprintf(out, out_size, "KIA Tigers");
+            return;
+        }
+        if (_stricmp(city, "SSG") == 0 && _stricmp(nickname, "SSG") == 0) {
+            snprintf(out, out_size, "SSG Landers");
+            return;
+        }
+        if (_stricmp(city, "Hanwha") == 0 && _stricmp(nickname, "HAN") == 0) {
+            snprintf(out, out_size, "Hanwha Eagles");
+            return;
+        }
+        if (_stricmp(city, "Kiwoom") == 0 && _stricmp(nickname, "KIW") == 0) {
+            snprintf(out, out_size, "Kiwoom Heroes");
+            return;
+        }
+        if (_stricmp(city, "NC") == 0 && _stricmp(nickname, "NC") == 0) {
+            snprintf(out, out_size, "NC Dinos");
+            return;
+        }
+        if (_stricmp(city, "KT") == 0 && _stricmp(nickname, "KT") == 0) {
+            snprintf(out, out_size, "KT Wiz");
+            return;
+        }
+        if (_stricmp(city, "LG") == 0 && _stricmp(nickname, "LG") == 0) {
+            snprintf(out, out_size, "LG Twins");
+            return;
+        }
+        if (!kbo_fa_compensation_team_name_placeholder(city)
+                && !kbo_fa_compensation_team_name_placeholder(nickname)
+                && _stricmp(city, nickname) != 0) {
+            snprintf(out, out_size, "%s %s", city, nickname);
+            return;
+        }
+        if (!kbo_fa_compensation_team_name_placeholder(full_name)) {
+            snprintf(out, out_size, "%s", full_name);
+            return;
+        }
+        if (!kbo_fa_compensation_team_name_placeholder(nickname)) {
+            snprintf(out, out_size, "%s", nickname);
+            return;
+        }
+        if (!kbo_fa_compensation_team_name_placeholder(city)) {
+            snprintf(out, out_size, "%s", city);
+            return;
+        }
+    }
+
+    snprintf(out, out_size, "Team #%u", team_id);
+}
+
+static void kbo_fa_compensation_copy_team_link(uint32_t team_id, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+
+    char team_name[96] = {0};
+    kbo_fa_compensation_copy_team_name(team_id, team_name, sizeof(team_name));
+    snprintf(out, out_size, "<%s:team#%u>", team_name, team_id);
 }
 
 void kbo_emit_fa_compensation_player_selected_news(
@@ -83,8 +188,8 @@ void kbo_emit_fa_compensation_player_selected_news(
     char original_team_link[96] = {0};
     snprintf(selected_player_link, sizeof(selected_player_link), "<%s:player#%u>", selected_name, selected->player_id);
     snprintf(fa_player_link, sizeof(fa_player_link), "<%s:player#%u>", rec->player_name[0] != '\0' ? rec->player_name : "FA player", rec->player_id);
-    snprintf(signing_team_link, sizeof(signing_team_link), "<Team #%u:team#%u>", rec->signing_team_id, rec->signing_team_id);
-    snprintf(original_team_link, sizeof(original_team_link), "<Team #%u:team#%u>", rec->original_team_id, rec->original_team_id);
+    kbo_fa_compensation_copy_team_link(rec->signing_team_id, signing_team_link, sizeof(signing_team_link));
+    kbo_fa_compensation_copy_team_link(rec->original_team_id, original_team_link, sizeof(original_team_link));
     KboNewsTemplateVar news_vars[] = {
         { "selected_name", selected_name },
         { "selected_player_link", selected_player_link },
@@ -145,8 +250,8 @@ void kbo_emit_fa_compensation_cash_only_news(
         "<%s:player#%u>",
         rec->player_name[0] != '\0' ? rec->player_name : "FA player",
         rec->player_id);
-    snprintf(signing_team_link, sizeof(signing_team_link), "<Team #%u:team#%u>", rec->signing_team_id, rec->signing_team_id);
-    snprintf(original_team_link, sizeof(original_team_link), "<Team #%u:team#%u>", rec->original_team_id, rec->original_team_id);
+    kbo_fa_compensation_copy_team_link(rec->signing_team_id, signing_team_link, sizeof(signing_team_link));
+    kbo_fa_compensation_copy_team_link(rec->original_team_id, original_team_link, sizeof(original_team_link));
 
     KboNewsTemplateVar news_vars[] = {
         { "player_name", rec->player_name[0] != '\0' ? rec->player_name : "FA player" },

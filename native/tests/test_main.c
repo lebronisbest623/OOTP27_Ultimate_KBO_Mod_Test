@@ -16,6 +16,7 @@
 #include "../src/core/season/phase/season_phase.h"
 #include "../src/core/core_flags/json/json_bool_parser.h"
 #include "../src/core/news/templates/core_news_templates.h"
+#include "../src/core/news/links/core_news_links.h"
 #include "../src/core/csv/core_csv.h"
 #include "../src/core/sql/escape/core_sql_escape.h"
 #include "../src/foreign/replacement_seed/parse/foreign_replacement_seed_parse.h"
@@ -178,6 +179,25 @@ static void test_news_template_render(void)
     assert(strcmp(out, "{missing} stays visible") == 0);
 
     printf("test_news_template_render: PASS\n");
+}
+
+static void test_news_related_link_parse(void)
+{
+    KboNewsRelatedIds ids;
+    kbo_news_related_ids_collect_pair(
+        &ids,
+        "<Lead Player:player#123> headlines for <Lead Team:team#7>",
+        "Body repeats <Lead Player:player#123>, adds <Other Player:player#456>, "
+        "ignores <Zero Player:player#0>, keeps <Other Team:team#8>, "
+        "and rejects malformed <Bad:player#55 text.");
+
+    assert(ids.player_count == 2);
+    assert(ids.player_ids[0] == 123u);
+    assert(ids.player_ids[1] == 456u);
+    assert(ids.team_count == 2);
+    assert(ids.team_ids[0] == 7u);
+    assert(ids.team_ids[1] == 8u);
+    printf("test_news_related_link_parse: PASS\n");
 }
 
 static void test_date_serial(void)
@@ -1684,6 +1704,7 @@ int main(void)
     test_core_text_and_sql_helpers();
     test_json_flags_parser();
     test_news_template_render();
+    test_news_related_link_parse();
     test_date_serial();
     test_foreign_waiver_date_helpers();
     test_military_csv_parse();

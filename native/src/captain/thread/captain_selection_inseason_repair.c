@@ -7,6 +7,10 @@ int kbo_run_captain_inseason_repair_once(
     uint32_t league_id,
     const char* source)
 {
+    if (!kbo_runtime_pause_for_save_if_needed(source != NULL ? source : "captain_inseason_repair")) {
+        return 0;
+    }
+
     KboCaptainSelectionRow current_rows[KBO_CAPTAIN_MAX_TEAMS];
     memset(current_rows, 0, sizeof(current_rows));
     int current_count = kbo_captain_load_selection_csv(season, current_rows, KBO_CAPTAIN_MAX_TEAMS);

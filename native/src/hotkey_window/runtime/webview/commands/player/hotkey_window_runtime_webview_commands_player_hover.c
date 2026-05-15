@@ -5,6 +5,8 @@
 #include "../../../../../core/files/save_paths/core_save_paths.h"
 #include "../../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 
+static void kbo_hide_webview_player_tooltip(void);
+
 static void kbo_append_rawf(char* out, size_t out_size, size_t* pos, const char* fmt, ...)
 {
     if (out == NULL || out_size == 0u || pos == NULL || *pos >= out_size) {
@@ -112,7 +114,7 @@ static int kbo_find_player_portrait_src(uint32_t player_id, char* out, size_t ou
         return 0;
     }
 
-    kbo_webview_copy_image_src(portrait_path, out, out_size);
+    kbo_webview_copy_file_url(portrait_path, out, out_size);
     return out[0] != '\0';
 }
 
@@ -164,6 +166,7 @@ static void kbo_show_webview_player_tooltip(
     char payload[16000] = {0};
     if (!kbo_capture_ootp_player_tooltip_payload(player_id, payload, sizeof(payload))) {
         kbo_log_runtimef("webview player tooltip skipped reason=capture_failed player=%u", player_id);
+        kbo_hide_webview_player_tooltip();
         return;
     }
 
@@ -215,7 +218,7 @@ static void kbo_show_webview_player_tooltip(
         "var cap=section('render text append capture','memory display ratings');var mem=section('memory display ratings','');var lines=clean(cap);var allRatings=ratingRows(lines,mem);var ratingScale=maxRating(allRatings);var grouped=overallRow(allRatings);var ratings=grouped.rest.slice(0,4);var stats=statTable(lines);var title=titleLine(lines);"
         "var meta='';for(var i=0;i<lines.length;i++){if(lines[i].indexOf('| Age ')>=0||lines[i].indexOf('Age ')===0){meta=lines[i];break;}}"
         "if(window.__kboPlayerHoverSeq!==hoverSeq){return;}var tip=document.getElementById('kboPlayerTooltip');if(!tip){tip=document.createElement('div');tip.id='kboPlayerTooltip';document.body.appendChild(tip);}tip.setAttribute('data-kbo-hover-seq',String(hoverSeq));"
-        "var portrait=portraitSrc?'<img class=\"kboPortrait\" src=\"'+esc(portraitSrc)+'\">':'<div class=\"kboPortrait\"></div>';"
+        "var portrait=portraitSrc?'<img class=\"kboPortrait\" src=\"'+esc(portraitSrc)+'\" onerror=\"this.style.visibility=\\'hidden\\'\">':'<div class=\"kboPortrait\"></div>';"
         "tip.innerHTML='<div class=\"kboTop\">'+portrait+'<div class=\"kboInfo\"><div class=\"kboName\">'+esc(title)+'</div>'+grouped.html+'<div class=\"kboRatings\">'+ratings.map(row).join('')+'</div></div></div><div class=\"kboMeta\">'+esc(meta)+'</div>'+stats;"
         "var barCount=tip.querySelectorAll('.kboBar').length;var fillCount=tip.querySelectorAll('.kboBarFill').length;var firstPct=ratings.length?barPct(ratings[0][1]):0;setTimeout(function(){if(window.__kboPlayerHoverSeq===hoverSeq){location.href='kbo://player-hover/debug/'+hoverSeq+'/'+playerId+'/'+ratings.length+'/'+barCount+'/'+fillCount+'/'+ratingScale+'/'+firstPct;}},0);"
         "tip.style.cssText='position:fixed;z-index:2147483647;left:%dpx;top:%dpx;width:430px;height:auto;max-width:calc(100vw - 16px);background:#303135;color:#f3f3f3;border:1px solid #151515;box-shadow:0 8px 22px rgba(0,0,0,.72);font-family:var(--ui-font),\\'Malgun Gothic\\',sans-serif;font-size:13px;pointer-events:none;text-align:left;display:block;overflow:hidden';"
@@ -353,7 +356,6 @@ static void kbo_hide_player_hover_payload(HWND hwnd, uint32_t player_id)
 {
     (void)hwnd;
     kbo_hide_webview_player_tooltip();
-    kbo_clear_ootp_player_hover_popup(player_id);
     kbo_log_runtimef("webview player hover hide player=%u", player_id);
 }
 

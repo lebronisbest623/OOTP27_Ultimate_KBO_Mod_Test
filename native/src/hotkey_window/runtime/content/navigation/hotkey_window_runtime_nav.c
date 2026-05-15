@@ -51,6 +51,8 @@ const char* kbo_hub_fa_subnav_label(int index)
         return kbo_hub_text("\xec\x8b\x9c\xec\x9e\xa5", "시장");
     case KBO_HUB_FA_SUBVIEW_COMPENSATION:
         return kbo_hub_text("\xeb\xb3\xb4\xec\x83\x81", "보상");
+    case KBO_HUB_FA_SUBVIEW_RIGHTS_EXERCISE:
+        return kbo_hub_text("\xea\xb6\x8c\xeb\xa6\xac \xed\x96\x89\xec\x82\xac", "권리 행사");
     default:
         return "";
     }

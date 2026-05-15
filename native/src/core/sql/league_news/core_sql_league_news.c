@@ -12,6 +12,7 @@
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../logging/core_log.h"
 #include "../../files/message_body/core_message_body_file.h"
+#include "../../news/links/core_news_links.h"
 #include "../escape/core_sql_escape.h"
 #include "../../dates/core_text_date.h"
 #include "../../text/ootp_text_encoding.h"
@@ -170,6 +171,8 @@ int insert_kbo_league_news_sql(
     }
 
     uint32_t message_id = kbo_league_news_stable_message_id(year, month, day, league_id, log_title);
+    KboNewsRelatedIds related;
+    kbo_news_related_ids_collect_pair(&related, title, body);
 
     char delete_sql[1400] = {0};
     snprintf(
@@ -186,9 +189,19 @@ int insert_kbo_league_news_sql(
         insert_sql,
         sizeof(insert_sql),
         "INSERT INTO messages(message_id, subject, player_id_0, player_id_1, player_id_2, player_id_3, player_id_4, team_id_0, team_id_1, team_id_2, team_id_3, team_id_4, league_id_0, league_id_1, importance, message_type, hype, sender_type, sender_id, recipient_id, trade_id, date, deleted, notify, ongoing_story_id, text_is_modified, body) "
-        "VALUES(%u, '%s', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, %u, 0, 3, %u, 0, 9001, %u, 0, 0, '%s', 0, 1, 0, 1, '%s');",
+        "VALUES(%u, '%s', %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, 0, 3, %u, 0, 9001, %u, 0, 0, '%s', 0, 1, 0, 1, '%s');",
         message_id,
         escaped_title,
+        related.player_ids[0],
+        related.player_ids[1],
+        related.player_ids[2],
+        related.player_ids[3],
+        related.player_ids[4],
+        related.team_ids[0],
+        related.team_ids[1],
+        related.team_ids[2],
+        related.team_ids[3],
+        related.team_ids[4],
         league_id,
         message_type,
         league_id,
@@ -202,13 +215,15 @@ int insert_kbo_league_news_sql(
         body_file = write_kbo_message_body_file(message_id, title, body, source);
     }
     kbo_log_runtimef(
-        "league news sql insert source=%s title=%s date=%s league_id=%u type=%u message_id=%u delete_result=%d insert_result=%d body_file=%d db=%p encoding=%s",
+        "league news sql insert source=%s title=%s date=%s league_id=%u type=%u message_id=%u related_players=%d related_teams=%d delete_result=%d insert_result=%d body_file=%d db=%p encoding=%s",
         source != NULL ? source : "",
         title,
         news_date,
         league_id,
         message_type,
         message_id,
+        related.player_count,
+        related.team_count,
         delete_result,
         insert_result,
         body_file,

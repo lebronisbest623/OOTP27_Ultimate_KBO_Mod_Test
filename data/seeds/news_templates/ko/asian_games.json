@@ -64,7 +64,7 @@
   "asian_games.complete_roster_header": "\n\n최종 명단\n",
   "asian_games.roster_group_header": "\n{role_group}\n",
   "asian_games.player_blurb": "{separator}{player_link}{role_suffix}",
-  "asian_games.roster_line": "- {player_link} / {team_link}{wildcard_text} / 만 {age}세\n",
+  "asian_games.roster_line": "- {player_link} / {team_link}{wildcard_text} / 만 {age}세 / {military_status}\n",
   "asian_games.replacement.title": "{tournament_label} 대표팀 엔트리 교체",
   "asian_games.replacement.title.variants": 2,
   "asian_games.replacement.title.v1": "{tournament_label} 대표팀 엔트리 교체",

@@ -6,6 +6,7 @@
 #include "../../../build_verify/build_verify.h"
 #include "../../logging/core_log.h"
 #include "../../files/message_body/core_message_body_file.h"
+#include "../links/core_news_links.h"
 #include "../../dates/core_current_date.h"
 #include "../../files/save_paths/core_save_paths.h"
 #include "../../dates/core_text_date.h"
@@ -124,6 +125,8 @@ int create_kbo_real_add_news(
     if (internal_body != NULL) {
         body_for_ootp = internal_body;
     }
+    KboNewsRelatedIds related;
+    kbo_news_related_ids_collect_pair(&related, title, body);
 
     *(uint32_t*)(news + OOTP27_NEWS_LEAGUE_ID_OFFSET) = league_id;
     *(uint32_t*)(news + OOTP27_NEWS_CATEGORY_OFFSET) = 3u;
@@ -131,8 +134,8 @@ int create_kbo_real_add_news(
     *(uint32_t*)(news + OOTP27_NEWS_FLAGS_58_OFFSET) = 1u;
     *(uint32_t*)(news + OOTP27_NEWS_TYPE_OFFSET) = 3u;
     *(uint32_t*)(news + OOTP27_NEWS_SECONDARY_LEAGUE_ID_OFFSET) = league_id;
-    *(uint32_t*)(news + OOTP27_NEWS_TEAM_ID_OFFSET) = 0xffffffffu;
-    *(uint32_t*)(news + OOTP27_NEWS_PLAYER_ID_OFFSET) = 0u;
+    *(uint32_t*)(news + OOTP27_NEWS_TEAM_ID_OFFSET) = related.team_count > 0 ? related.team_ids[0] : 0xffffffffu;
+    *(uint32_t*)(news + OOTP27_NEWS_PLAYER_ID_OFFSET) = related.player_count > 0 ? related.player_ids[0] : 0u;
     *(uint16_t*)(news + OOTP27_NEWS_YEAR_OFFSET) = (uint16_t)year;
     *(news + OOTP27_NEWS_DAY_OFFSET) = (uint8_t)day;
     *(news + OOTP27_NEWS_MONTH_OFFSET) = (uint8_t)month;
@@ -157,7 +160,7 @@ int create_kbo_real_add_news(
         || strcmp(body != NULL ? body : "", original_body) != 0;
 
     kbo_log_runtimef(
-        "league news real_add create source=%s title=%s date=%04u-%02u-%02u league_id=%u type=%u manager=%p object=%p result=%u id8c=%u title_ok=%d body_ok=%d body_file=%d source_mutated=%d title_encoding=%s body_encoding=%s",
+        "league news real_add create source=%s title=%s date=%04u-%02u-%02u league_id=%u type=%u related_players=%d related_teams=%d manager=%p object=%p result=%u id8c=%u title_ok=%d body_ok=%d body_file=%d source_mutated=%d title_encoding=%s body_encoding=%s",
         source != NULL ? source : "",
         original_title,
         year,
@@ -165,6 +168,8 @@ int create_kbo_real_add_news(
         day,
         league_id,
         message_type,
+        related.player_count,
+        related.team_count,
         (void*)manager,
         news,
         result,

@@ -50,6 +50,7 @@
 #include "../patch_installers/foreign/intl_established_fa/patch_installers_intl_established_fa.h"
 #include "../patch_installers/amateur_assignment/patch_installers_amateur_assignment.h"
 #include "../patch_installers/competitive_balance_tax/patch_installers_cbt_draft_order.h"
+#include "../patch_installers/hotkey_window/patch_installers_player_hover.h"
 #include "../patch_installers/military/patch_installers_military.h"
 #include "../patch_installers/season_phase/patch_installers_season_phase_probe.h"
 #include "../season_phase_monitor/season_phase_monitor.h"
@@ -63,6 +64,7 @@ extern HANDLE g_kbo_process_instance_mutex;
 extern volatile LONG g_kbo_sangmu_fa_hooks_install_started;
 extern volatile LONG g_kbo_full_runtime_install_started;
 extern volatile LONG g_kbo_full_runtime_marker_wait_started;
+extern volatile LONG g_kbo_runtime_date_stable_ready;
 
 DWORD WINAPI kbo_delayed_sangmu_fa_hooks_install_thread(LPVOID parameter);
 void start_kbo_delayed_sangmu_fa_hooks_install_thread(

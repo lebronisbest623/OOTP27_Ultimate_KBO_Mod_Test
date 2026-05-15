@@ -111,7 +111,12 @@ int kbo_parse_asian_games_schedule_seed_fields(char fields[][128], int field_cou
     out->departure_date = field_count > 7 ? kbo_asian_games_schedule_parse_date(fields[7]) : 0u;
     out->final_date = field_count > 8 ? kbo_asian_games_schedule_parse_date(fields[8]) : 0u;
     out->auto_schedule = field_count > 9 ? kbo_asian_games_schedule_parse_auto(fields[9]) : 0u;
-    kbo_asian_games_schedule_copy_text(out->notes, sizeof(out->notes), field_count > 10 ? fields[10] : "");
+    if (field_count > 11) {
+        kbo_asian_games_schedule_copy_text(out->final_result, sizeof(out->final_result), fields[10]);
+        kbo_asian_games_schedule_copy_text(out->notes, sizeof(out->notes), fields[11]);
+    } else {
+        kbo_asian_games_schedule_copy_text(out->notes, sizeof(out->notes), field_count > 10 ? fields[10] : "");
+    }
     return 1;
 }
 
@@ -137,7 +142,7 @@ int kbo_parse_asian_games_schedule_seed_line(const char* line, KboAsianGamesSche
         return 0;
     }
 
-    char fields[11][128];
-    int field_count = kbo_csv_read_trimmed_line_fields(p, (char*)fields, sizeof(fields[0]), 11);
+    char fields[12][128];
+    int field_count = kbo_csv_read_trimmed_line_fields(p, (char*)fields, sizeof(fields[0]), 12);
     return kbo_parse_asian_games_schedule_seed_fields(fields, field_count, out);
 }

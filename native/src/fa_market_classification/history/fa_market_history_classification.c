@@ -250,9 +250,11 @@ void kbo_classify_fa_market_row(
         snprintf(
             row->reason,
             sizeof(row->reason),
-            "domestic independent-league free agent marker original_league=%u original_team=%u draft_league=%u",
+            "domestic independent-league free agent marker original_league=%u original_team=%u active_team=%u current_league=%u draft_league=%u",
             original_league_id,
             row->original_team_id,
+            row->active_team_id,
+            row->current_league_id,
             row->draft_league_id);
         return;
     }

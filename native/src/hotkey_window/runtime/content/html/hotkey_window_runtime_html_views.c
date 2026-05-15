@@ -130,6 +130,7 @@ void kbo_webview_append_selected_view(KboWindowTextBuffer* buffer, uint32_t curr
         kbo_webview_append_fa_view(
             buffer,
             g_kbo_hub_selected_fa_subview,
+            g_kbo_hub_selected_fa_compensation_subview,
             g_kbo_hub_selected_fa_compensation_player_id,
             g_kbo_hub_selected_league_id);
     } else if (g_kbo_hub_selected_view == KBO_HUB_VIEW_SETTINGS) {

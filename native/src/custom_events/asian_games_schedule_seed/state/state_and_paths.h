@@ -18,6 +18,7 @@ typedef struct KboAsianGamesScheduleSeed {
     uint32_t departure_date;
     uint32_t final_date;
     uint8_t auto_schedule;
+    char final_result[48];
     char notes[128];
 } KboAsianGamesScheduleSeed;
 

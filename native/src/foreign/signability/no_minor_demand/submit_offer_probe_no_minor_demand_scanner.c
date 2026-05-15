@@ -199,6 +199,10 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
     int32_t salary_floor_hint)
 {
     KBO_PROFILE_BEGIN(profile_no_minor_write_probe);
+    if (kbo_runtime_save_in_progress()) {
+        KBO_PROFILE_END(profile_no_minor_write_probe, "no_minor.write_probe.save_in_progress");
+        return proposed_demand;
+    }
     kbo_restore_foreign_fa_demand_salary_ladder("demand_write");
     if (InterlockedCompareExchange(&g_kbo_no_minor_contract_demand_floor_enabled, 0, 0) == 0) {
         KBO_PROFILE_END(profile_no_minor_write_probe, "no_minor.write_probe.disabled");
@@ -235,12 +239,39 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
         return proposed_demand;
     }
 
+    uint8_t scan[OOTP27_PLAYER_SCAN_BYTES] = {0};
+    int scan_available = kbo_no_minor_copy_player_scan((uintptr_t)player, scan);
+    uint32_t player_id = scan_available ? *(uint32_t*)(scan + OOTP27_PLAYER_ID_OFFSET) : 0u;
+    uint8_t observed_contract_level = scan_available ? scan[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET] : 0u;
+    uint32_t nation_id = scan_available ? *(uint32_t*)(scan + OOTP27_PLAYER_NATION_ID_OFFSET) : 0u;
+    uint32_t current_team_id = scan_available ? *(uint32_t*)(scan + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) : 0u;
+    int16_t overall = scan_available ? *(int16_t*)(scan + OOTP27_PLAYER_OVERALL_VALUE_OFFSET) : 0;
+    int16_t ratings = scan_available ? *(int16_t*)(scan + OOTP27_PLAYER_RATINGS_VALUE_OFFSET) : 0;
+    int16_t career = scan_available ? *(int16_t*)(scan + OOTP27_PLAYER_CAREER_VALUE_OFFSET) : 0;
+
     int32_t adjusted_demand = proposed_demand < salary_floor ? salary_floor : proposed_demand;
+    if (scan_available
+            && nation_id == OOTP27_KBO_KOREA_NATION_ID
+            && current_team_id == 0u
+            && proposed_demand <= salary_floor + 1000) {
+        static LONG domestic_actual_log_count = 0;
+        LONG actual_slot = InterlockedIncrement(&domestic_actual_log_count);
+        if (actual_slot <= 240) {
+            kbo_log_runtimef(
+                "KBO domestic FA actual demand write observed: source=0x%x player=%u proposed=%d adjusted=%d minimum=%d level=%u ovr=%d rat=%d car=%d",
+                source_rva,
+                player_id,
+                proposed_demand,
+                adjusted_demand,
+                salary_floor,
+                (unsigned)observed_contract_level,
+                (int)overall,
+                (int)ratings,
+                (int)career);
+        }
+    }
+
     if (adjusted_demand != proposed_demand) {
-        uint8_t scan[OOTP27_PLAYER_SCAN_BYTES] = {0};
-        kbo_no_minor_copy_player_scan((uintptr_t)player, scan);
-        uint8_t observed_contract_level = scan[OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET];
-        uint32_t player_id = *(uint32_t*)(scan + OOTP27_PLAYER_ID_OFFSET);
         static LONG write_floor_log_count = 0;
         LONG slot = InterlockedIncrement(&write_floor_log_count);
         if (slot <= 120) {
@@ -273,6 +304,10 @@ DWORD WINAPI kbo_no_minor_contract_demand_floor_scanner_thread(LPVOID param)
 
     for (uint32_t attempt = 0; kbo_runtime_threads_should_continue(); attempt++) {
         KBO_PROFILE_BEGIN(profile_no_minor_scanner_tick);
+        if (!kbo_runtime_pause_for_save_if_needed("no_minor_demand_floor_scanner")) {
+            KBO_PROFILE_END(profile_no_minor_scanner_tick, "no_minor.scanner_tick.save_stop");
+            break;
+        }
         kbo_no_minor_scan_and_floor_teamless_fa_demands("background_prescan");
         KBO_PROFILE_END(profile_no_minor_scanner_tick, attempt < (uint32_t)policy->no_minor_scan_warmup_attempts
             ? "no_minor.scanner_tick.warmup"

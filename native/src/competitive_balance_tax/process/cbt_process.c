@@ -148,6 +148,15 @@ void kbo_process_competitive_balance_tax(uint32_t season, const char* source)
 
 void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news_yyyymmdd, const char* source)
 {
+    if (source == NULL || strcmp(source, "cbt_announcement_event") != 0) {
+        kbo_cbt_audit_process("skip", "announcement_event_required", source, season, news_yyyymmdd, 0, 0, 0, 0, 0u, 0, 0);
+        kbo_log_runtimef(
+            "KBO CBT skipped season=%u source=%s reason=announcement_event_required",
+            season,
+            source != NULL ? source : "");
+        return;
+    }
+
     if (season < 1982u || season > 2200u) {
         kbo_cbt_audit_process("skip", "season_out_of_range", source, season, news_yyyymmdd, 0, 0, 0, 0, 0u, 0, 0);
         return;

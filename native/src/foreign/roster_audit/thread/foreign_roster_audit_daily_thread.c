@@ -6,6 +6,7 @@
 #include "../../retention_guard/foreign_retention_guard.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
 #include "../../../fa_declaration/fa_declaration.h"
+#include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 
 static int kbo_foreign_roster_daily_abort_if_save(const char* stage, uint32_t today)
@@ -63,55 +64,84 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
             break;
         }
 
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_tick);
         if (kbo_foreign_roster_daily_abort_if_save("before_rights_sync", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.before_rights_sync");
             continue;
         }
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_rights_sync);
         kbo_sync_active_foreign_waiver_rights_to_memory(
             "foreign_roster_daily_date_change",
             today);
+        KBO_PROFILE_END(profile_foreign_roster_daily_rights_sync, "foreign_roster.daily.rights_sync");
         if (kbo_foreign_roster_daily_abort_if_save("after_rights_sync", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_rights_sync");
             continue;
         }
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_custom_events);
         kbo_custom_event_monitor_tick(
             &last_custom_event_scheduled_date,
             &last_custom_event_scanned_date,
             &last_custom_event_fa_comp_date,
             "foreign_roster_daily_date_change");
+        KBO_PROFILE_END(profile_foreign_roster_daily_custom_events, "foreign_roster.daily.custom_events");
         if (kbo_foreign_roster_daily_abort_if_save("after_custom_events", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_custom_events");
             continue;
         }
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_ai_callup);
         kbo_run_foreign_ai_roster_daily_callup("foreign_roster_daily_date_change");
+        KBO_PROFILE_END(profile_foreign_roster_daily_ai_callup, "foreign_roster.daily.ai_roster_callup");
         if (kbo_foreign_roster_daily_abort_if_save("after_ai_roster_callup", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_ai_roster_callup");
             continue;
         }
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_independent_acquisition);
         kbo_run_independent_team_acquisition_ai("foreign_roster_daily_date_change");
+        KBO_PROFILE_END(profile_foreign_roster_daily_independent_acquisition, "foreign_roster.daily.independent_acquisition");
         if (kbo_foreign_roster_daily_abort_if_save("after_independent_acquisition", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_independent_acquisition");
             continue;
         }
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_injury);
         kbo_foreign_injury_replacement_scan_once("foreign_roster_daily_date_change");
+        KBO_PROFILE_END(profile_foreign_roster_daily_injury, "foreign_roster.daily.injury_replacement");
         if (kbo_foreign_roster_daily_abort_if_save("after_injury_replacement", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_injury_replacement");
             continue;
         }
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_retention);
         kbo_foreign_retention_guard_repair("foreign_roster_daily_date_change");
+        KBO_PROFILE_END(profile_foreign_roster_daily_retention, "foreign_roster.daily.retention_guard");
         if (kbo_foreign_roster_daily_abort_if_save("after_retention_guard", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_retention_guard");
             continue;
         }
         uint32_t season = today / 10000u;
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_current);
         kbo_fa_declaration_repair_retained_contracts_for_season(
             season,
             "foreign_roster_daily_date_change");
+        KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_current, "foreign_roster.daily.fa_repair_current");
         if (kbo_foreign_roster_daily_abort_if_save("after_fa_repair_current", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_fa_repair_current");
             continue;
         }
         if (season > 1982u) {
+            KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_previous);
             kbo_fa_declaration_repair_retained_contracts_for_season(
                 season - 1u,
                 "foreign_roster_daily_date_change_previous_season");
+            KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_previous, "foreign_roster.daily.fa_repair_previous");
         }
         if (kbo_foreign_roster_daily_abort_if_save("after_fa_repair_previous", today)) {
+            KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_fa_repair_previous");
             continue;
         }
+        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_audit);
         audit_foreign_roster_state("foreign_roster_daily_date_change", 1);
+        KBO_PROFILE_END(profile_foreign_roster_daily_audit, "foreign_roster.daily.audit");
+        KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.tick");
         last_audit_date = today;
     }
 

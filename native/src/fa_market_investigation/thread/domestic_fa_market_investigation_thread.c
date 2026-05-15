@@ -235,6 +235,9 @@ static DWORD WINAPI kbo_domestic_fa_market_investigation_thread(LPVOID parameter
         if (today == last_scan_date && strcmp(save_path, last_save_path) == 0) {
             continue;
         }
+        if (!kbo_runtime_pause_for_save_if_needed("domestic_fa_market_investigation")) {
+            break;
+        }
 
         kbo_domestic_fa_run_investigation_once(today, "domestic_fa_market_investigation");
         last_scan_date = today;

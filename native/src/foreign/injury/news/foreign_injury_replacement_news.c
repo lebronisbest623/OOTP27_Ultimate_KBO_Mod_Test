@@ -263,6 +263,9 @@ void kbo_emit_foreign_injury_replacement_news(
     } else if (phase != NULL && strcmp(phase, "closed_keep_injured") == 0) {
         title_key = "foreign_injury.closed_keep_injured.title";
         body_key = "foreign_injury.closed_keep_injured.body";
+    } else if (phase != NULL && strcmp(phase, "closed_invalid") == 0) {
+        title_key = "foreign_injury.closed_invalid.title";
+        body_key = "foreign_injury.closed_invalid.body";
     } else if (phase != NULL && strcmp(phase, "closed") == 0) {
         if (rec->replacement_player_id != 0u) {
             title_key = "foreign_injury.closed_with_replacement.title";

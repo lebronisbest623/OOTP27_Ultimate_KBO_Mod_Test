@@ -27,6 +27,10 @@ static void kbo_asian_games_copy_text(char* out, size_t out_size, const char* te
     snprintf(out, out_size, "%s", text != NULL ? text : "");
 }
 
+static const char* kbo_asian_games_military_status_label(
+    const KboAsianGamesRosterEntry* entry,
+    int use_korean);
+
 static uint32_t kbo_asian_games_context_year(uint32_t event_yyyymmdd)
 {
     uint32_t year = g_kbo_asian_games_roster_year;
@@ -346,6 +350,7 @@ int kbo_asian_games_append_roster_line(
     char age_text[16] = {0};
     snprintf(index_text, sizeof(index_text), "%02ld", index + 1);
     snprintf(age_text, sizeof(age_text), "%u", (uint32_t)entry->age);
+    const char* military_status = kbo_asian_games_military_status_label(entry, use_korean);
     KboNewsTemplateVar vars[] = {
         { "index", index_text },
         { "player_link", player_link },
@@ -356,6 +361,7 @@ int kbo_asian_games_append_roster_line(
             : "" },
         { "age", age_text },
         { "status", status },
+        { "military_status", military_status },
     };
     char rendered[256] = {0};
     if (!kbo_news_template_render_key(
@@ -370,6 +376,19 @@ int kbo_asian_games_append_roster_line(
     kbo_news_text_append(out, out_size, rendered);
     *used = strlen(out);
     return 1;
+}
+
+static const char* kbo_asian_games_military_status_label(
+    const KboAsianGamesRosterEntry* entry,
+    int use_korean)
+{
+    int unserved = entry != NULL && entry->military_unserved != 0u;
+    if (use_korean) {
+        return unserved
+            ? "\xeb\xb3\x91\xec\x97\xad \xeb\xaf\xb8\xed\x95\x84"
+            : "\xeb\xb3\x91\xec\x97\xad \xed\x95\xb4\xea\xb2\xb0";
+    }
+    return unserved ? "military pending" : "military cleared";
 }
 
 KboAsianGamesRosterEntry* kbo_asian_games_choose_captain(void)

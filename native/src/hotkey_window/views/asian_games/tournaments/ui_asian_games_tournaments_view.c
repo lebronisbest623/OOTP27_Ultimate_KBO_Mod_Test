@@ -125,10 +125,42 @@ int kbo_webview_asian_games_tournament_is_scheduled(
     if (!kbo_webview_asian_games_tournament_is_announced(schedule, current_year)) {
         return 0;
     }
-    if (today != 0u && schedule->final_date != 0u && today > schedule->final_date) {
+    (void)today;
+    return 1;
+}
+
+const char* kbo_webview_asian_games_history_result_label(uint8_t result)
+{
+    if (result == KBO_ASIAN_GAMES_RESULT_GOLD) {
+        return "우승";
+    }
+    if (result == KBO_ASIAN_GAMES_RESULT_NO_GOLD) {
+        return "준우승";
+    }
+    return "";
+}
+
+int kbo_webview_find_asian_games_history_result(
+    const KboAsianGamesTournamentHistoryEntry* history,
+    int history_count,
+    uint32_t year,
+    uint8_t* out_result)
+{
+    if (out_result != NULL) {
+        *out_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
+    }
+    if (history == NULL || history_count <= 0 || year == 0u) {
         return 0;
     }
-    return schedule != NULL && schedule->year >= current_year;
+    for (int i = 0; i < history_count; i++) {
+        if (history[i].year == year) {
+            if (out_result != NULL) {
+                *out_result = history[i].result;
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
 void kbo_webview_append_asian_games_tournament_row(
@@ -168,6 +200,7 @@ void kbo_webview_append_asian_games_tournament_row(
     const char* phase = kbo_webview_asian_games_tournament_phase(schedule, today, &phase_class);
     const char* status_class = kbo_webview_asian_games_tournament_status_class(schedule);
     const char* status = kbo_asian_games_schedule_status_label(schedule);
+    const char* final_result = schedule->final_result[0] != '\0' ? schedule->final_result : "-";
 
     kbo_window_text_appendf(
         buffer,
@@ -186,6 +219,8 @@ void kbo_webview_append_asian_games_tournament_row(
     kbo_html_append_escaped(buffer, status);
     kbo_window_text_appendf(buffer, "</td><td class='roResult %s'>", phase_class);
     kbo_html_append_escaped(buffer, phase);
+    kbo_window_text_appendf(buffer, "</td><td class='roScore'>");
+    kbo_html_append_escaped(buffer, final_result);
     kbo_window_text_appendf(buffer, "</td></tr>");
 }
 
@@ -207,14 +242,41 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
     KboAsianGamesScheduleSeed schedules[64];
     memset(schedules, 0, sizeof(schedules));
     int count = 0;
-    uint32_t display_through_year = current_year + 6u;
-    if (display_through_year > 2200u) {
-        display_through_year = 2200u;
-    }
-    for (uint32_t year = current_year; year <= display_through_year && count < (int)(sizeof(schedules) / sizeof(schedules[0])); year++) {
-        KboAsianGamesScheduleSeed schedule;
-        if (kbo_get_asian_games_schedule_for_year(year, &schedule)
-                && kbo_webview_asian_games_tournament_is_scheduled(&schedule, today, current_year)) {
+    KboAsianGamesTournamentHistoryEntry history[128];
+    int history_count = kbo_load_asian_games_tournament_history(
+        history,
+        (int)(sizeof(history) / sizeof(history[0])),
+        "hotkey_window");
+    KboAsianGamesScheduleSeed seeded_schedules[96];
+    int seeded_count = kbo_get_asian_games_schedule_seed_list(
+        seeded_schedules,
+        (int)(sizeof(seeded_schedules) / sizeof(seeded_schedules[0])));
+    for (int i = 0; i < seeded_count && count < (int)(sizeof(schedules) / sizeof(schedules[0])); i++) {
+        KboAsianGamesScheduleSeed schedule = seeded_schedules[i];
+        uint8_t history_result = KBO_ASIAN_GAMES_RESULT_UNKNOWN;
+        int has_history = kbo_webview_find_asian_games_history_result(
+            history,
+            history_count,
+            schedule.year,
+            &history_result);
+        int past_without_history = today != 0u
+            && schedule.final_date != 0u
+            && today > schedule.final_date
+            && !has_history
+            && !kbo_custom_event_processed_marker_exists_for_kind(
+                schedule.final_date,
+                KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL);
+        if (past_without_history) {
+            continue;
+        }
+        if (has_history) {
+            snprintf(
+                schedule.final_result,
+                sizeof(schedule.final_result),
+                "%s",
+                kbo_webview_asian_games_history_result_label(history_result));
+        }
+        if (kbo_webview_asian_games_tournament_is_scheduled(&schedule, today, current_year)) {
             schedules[count++] = schedule;
         }
     }
@@ -222,6 +284,8 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
     int official_count = 0;
     int provisional_count = 0;
     int projected_count = 0;
+    int completed_count = 0;
+    int upcoming_count = 0;
     for (int i = 0; i < count; i++) {
         if (ascii_equals_ignore_case(schedules[i].status, "official")
                 || ascii_equals_ignore_case(schedules[i].status, "confirmed")) {
@@ -231,6 +295,11 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
         } else if (ascii_equals_ignore_case(schedules[i].status, "projected")) {
             projected_count++;
         }
+        if (today != 0u && schedules[i].final_date != 0u && today > schedules[i].final_date) {
+            completed_count++;
+        } else {
+            upcoming_count++;
+        }
     }
 
     char summary_text[256] = {0};
@@ -238,8 +307,10 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
         snprintf(
             summary_text,
             sizeof(summary_text),
-            "보기: 대회 - 예정 %d개 - 확정: %d / 잠정: %d / 예상: %d",
+            "보기: 대회 - 전체 %d개 - 완료: %d / 예정: %d - 확정: %d / 잠정: %d / 예상: %d",
             count,
+            completed_count,
+            upcoming_count,
             official_count,
             provisional_count,
             projected_count);
@@ -256,10 +327,11 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
         "<th class='roDate' data-sort-type='date'>대회</th><th class='roClub' data-sort-type='date'>명단 발표</th>"
         "<th class='roTeam' data-sort-type='date'>출국</th><th class='roReturn' data-sort-type='date'>결승</th>"
         "<th class='roStatus' data-sort-type='text'>상태</th><th class='roResult' data-sort-type='text'>단계</th>"
+        "<th class='roScore' data-sort-type='text'>최종 성적</th>"
         "</tr></thead><tbody>");
 
     if (count <= 0) {
-        kbo_window_text_appendf(buffer, "<tr><td colspan='8' class='roEmptyMessage'></td></tr>");
+        kbo_window_text_appendf(buffer, "<tr><td colspan='9' class='roEmptyMessage'></td></tr>");
     } else {
         for (int i = 0; i < count; i++) {
             kbo_webview_append_asian_games_tournament_row(buffer, &schedules[i], today);

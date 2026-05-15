@@ -34,46 +34,6 @@ static int kbo_cbt_should_log_no_date(void)
     return InterlockedCompareExchange64(&g_kbo_cbt_last_no_date_log_ms, (LONG64)now, last) == last;
 }
 
-static int kbo_process_due_cbt_event(
-    uint32_t today,
-    uint32_t league_id,
-    uint32_t event_yyyymmdd,
-    KboCustomEventKind kind,
-    const char* title,
-    const char* source)
-{
-    if (today == 0u || event_yyyymmdd == 0u || today < event_yyyymmdd) {
-        return 0;
-    }
-
-    int result = kbo_run_custom_event_by_kind(
-        0,
-        league_id,
-        event_yyyymmdd,
-        kind,
-        title,
-        source != NULL ? source : "cbt_due_event");
-    if (result > 0 || result == KBO_CUSTOM_EVENT_RUN_ALREADY_COMPLETED) {
-        kbo_log_runtimef(
-            "KBO CBT due event handled source=%s kind=%s event_date=%u today=%u result=%d",
-            source != NULL ? source : "",
-            kbo_custom_event_kind_key(kind),
-            event_yyyymmdd,
-            today,
-            result);
-        return result;
-    }
-
-    kbo_log_runtimef(
-        "KBO CBT due event deferred source=%s kind=%s event_date=%u today=%u result=%d",
-        source != NULL ? source : "",
-        kbo_custom_event_kind_key(kind),
-        event_yyyymmdd,
-        today,
-        result);
-    return result;
-}
-
 int kbo_schedule_cbt_custom_events(const char* source)
 {
     uint32_t year = 0u;
@@ -133,21 +93,6 @@ int kbo_schedule_cbt_custom_events(const char* source)
         return -1;
     }
 
-    int direct_deadline = kbo_process_due_cbt_event(
-        today,
-        league_id,
-        deadline,
-        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE,
-        deadline_title,
-        source);
-    int direct_announcement = kbo_process_due_cbt_event(
-        today,
-        league_id,
-        announcement,
-        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
-        announcement_title,
-        source);
-
     int pruned_deadline = kbo_prune_duplicate_custom_events_by_kind_for_date(
         league_id,
         deadline,
@@ -204,7 +149,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
         KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
 
     kbo_log_runtimef(
-        "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d direct_deadline=%d direct_announcement=%d pruned_deadline=%d pruned_announcement=%d ready=%d",
+        "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d pruned_deadline=%d pruned_announcement=%d ready=%d",
         source != NULL ? source : "",
         year,
         opening_day,
@@ -212,8 +157,6 @@ int kbo_schedule_cbt_custom_events(const char* source)
         announcement,
         created_deadline,
         created_announcement,
-        direct_deadline,
-        direct_announcement,
         pruned_deadline,
         pruned_announcement,
         deadline_exists && announcement_exists);
@@ -233,7 +176,7 @@ int kbo_schedule_cbt_custom_events(const char* source)
         pruned_announcement,
         deadline_exists && announcement_exists);
     return (deadline_exists && announcement_exists)
-        ? (created_deadline || created_announcement || direct_deadline > 0 || direct_announcement > 0)
+        ? (created_deadline || created_announcement)
         : -1;
 }
 
