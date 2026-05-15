@@ -37,7 +37,8 @@ void kbo_foreign_injury_process_existing_replacements(
         if (injured == NULL || !memory_range_readable(injured, OOTP27_PLAYER_SCAN_BYTES)) {
             continue;
         }
-        if (uses_slot && !kbo_foreign_injury_record_has_minimum_injury_basis(rec)) {
+        int expected_end_pending = kbo_foreign_injury_expected_end_pending(today, rec->expected_end_yyyymmdd);
+        if (uses_slot && !expected_end_pending && !kbo_foreign_injury_record_has_minimum_injury_basis(rec)) {
             uint32_t replacement_player_id = kbo_foreign_injury_resolve_replacement_for_record(rec);
             if (replacement_player_id != 0u) {
                 rec->replacement_player_id = replacement_player_id;
@@ -48,6 +49,17 @@ void kbo_foreign_injury_process_existing_replacements(
             }
             rec->converted = 0u;
             rec->status = KBO_FOREIGN_INJURY_STATUS_CLOSED;
+            if (closed_count < (int)(sizeof(closed_news) / sizeof(closed_news[0]))) {
+                closed_news[closed_count].rec = *rec;
+                closed_news[closed_count].decision.choice = KBO_FOREIGN_INJURY_DECISION_KEEP_INJURED;
+                snprintf(
+                    closed_news[closed_count].decision.reason,
+                    sizeof(closed_news[closed_count].decision.reason),
+                    "%s",
+                    "invalid_no_long_term_injury_basis");
+                snprintf(closed_news[closed_count].phase, sizeof(closed_news[closed_count].phase), "%s", "closed_invalid");
+                closed_count++;
+            }
             invalid_closed_count++;
             changed = 1;
             do {
@@ -91,6 +103,20 @@ void kbo_foreign_injury_process_existing_replacements(
         }
 
         int returned_to_top_team = kbo_foreign_injury_injured_player_returned_to_top_team(rec, injured);
+        if (returned_to_top_team && expected_end_pending) {
+            LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_return_wait_log_count);
+            if (log_slot <= 80 || (log_slot % 100) == 0) {
+                kbo_log_runtimef(
+                    "foreign injury replacement: waiting expected-end before close source=%s team=%u injured=%u replacement=%u today=%u expected_end=%u",
+                    source != NULL ? source : "",
+                    rec->team_id,
+                    rec->injured_player_id,
+                    rec->replacement_player_id,
+                    today,
+                    rec->expected_end_yyyymmdd);
+            }
+            continue;
+        }
         int expected_end_due = !returned_to_top_team
             && kbo_foreign_injury_expected_end_reached(today, rec->expected_end_yyyymmdd);
         if (!returned_to_top_team && !expected_end_due) {

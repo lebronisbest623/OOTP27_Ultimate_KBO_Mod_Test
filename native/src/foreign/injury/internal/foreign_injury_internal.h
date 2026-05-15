@@ -75,6 +75,9 @@ int kbo_foreign_injury_duration_text_meets_minimum(
 int kbo_foreign_injury_expected_end_reached(
     uint32_t today_yyyymmdd,
     uint32_t expected_end_yyyymmdd);
+int kbo_foreign_injury_expected_end_pending(
+    uint32_t today_yyyymmdd,
+    uint32_t expected_end_yyyymmdd);
 int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase);
 int kbo_foreign_injury_replacement_in_season_window(
     uint32_t league_id,

@@ -180,6 +180,14 @@ static int kbo_finalize_foreign_injury_replacement_seed(
             out->expected_end_yyyymmdd = kbo_add_days_yyyymmdd(today, (uint32_t)days_left);
         }
     }
+    if (out->expected_end_yyyymmdd == 0u
+            && today != 0u
+            && kbo_foreign_injury_status_uses_slot(out->status)) {
+        int min_days = kbo_foreign_player_policy()->injury_replacement_min_days;
+        if (min_days > 0) {
+            out->expected_end_yyyymmdd = kbo_add_days_yyyymmdd(today, (uint32_t)min_days);
+        }
+    }
 
     return out->team_id != 0u;
 }
@@ -292,11 +300,36 @@ int kbo_import_foreign_injury_replacement_seed_file_locked(
 
         KboForeignInjuryReplacement rec;
         if (kbo_parse_foreign_injury_replacement_seed_fields(fields, field_count, today, &rec)) {
-            if (kbo_find_foreign_injury_replacement_locked(rec.injured_player_id, 1) >= 0) {
-                skipped++;
+            int existing = kbo_find_foreign_injury_replacement_locked(rec.injured_player_id, 1);
+            if (existing >= 0) {
+                KboForeignInjuryReplacement* existing_rec = &g_kbo_foreign_injury_replacements[existing];
+                uint32_t repaired_expected_end = 0u;
+                if (existing_rec->opened_on_yyyymmdd != 0u) {
+                    int min_days = kbo_foreign_player_policy()->injury_replacement_min_days;
+                    if (min_days > 0) {
+                        repaired_expected_end = kbo_add_days_yyyymmdd(
+                            existing_rec->opened_on_yyyymmdd,
+                            (uint32_t)min_days);
+                    }
+                }
+                if (existing_rec->status == KBO_FOREIGN_INJURY_STATUS_CLOSED
+                        && existing_rec->expected_end_yyyymmdd == 0u
+                        && existing_rec->converted == 0u
+                        && repaired_expected_end != 0u
+                        && (today == 0u || today < repaired_expected_end)
+                        && kbo_foreign_injury_status_uses_slot(rec.status)) {
+                    rec.opened_on_yyyymmdd = existing_rec->opened_on_yyyymmdd;
+                    rec.expected_end_yyyymmdd = repaired_expected_end;
+                    *existing_rec = rec;
+                    imported++;
+                } else {
+                    skipped++;
+                }
             } else if (g_kbo_foreign_injury_replacement_count < KBO_FOREIGN_INJURY_REPLACEMENT_MAX) {
                 g_kbo_foreign_injury_replacements[g_kbo_foreign_injury_replacement_count++] = rec;
                 imported++;
+            } else {
+                skipped++;
             }
         } else if (field_count > 0 && fields[0][0] != '\0' && fields[0][0] != '#') {
             parse_failed++;
