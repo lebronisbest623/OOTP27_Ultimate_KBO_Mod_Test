@@ -59,6 +59,7 @@
 #include "src/foreign/intl_established_fa_postscan/api/intl_established_fa_postscan.h"
 #include "src/foreign/roster_audit/api/foreign_roster_audit.h"
 #include "src/amateur_player_quality/api/amateur_player_quality.h"
+#include "src/awards/schedule/award_schedule_probe.h"
 #include <stdint.h>
 #include "src/military_service/military_service.h"
 #include "src/military_service/calendar/military_service_date.h"

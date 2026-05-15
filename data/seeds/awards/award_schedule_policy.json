@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "awards": [
+    {
+      "id": "most_valuable_player",
+      "label": "KBO Most Valuable Player Award",
+      "match_titles": [ "Most Valuable Player Award", "MVP Award", "KBO MVP Award" ],
+      "default_month": 11,
+      "default_day": 26,
+      "year_overrides": [
+        { "year": 2023, "month": 11, "day": 27 },
+        { "year": 2024, "month": 11, "day": 26 },
+        { "year": 2025, "month": 11, "day": 24 }
+      ],
+      "evidence": [
+        "2023 KBO Awards ceremony: 2023-11-27",
+        "2024 KBO Awards ceremony: 2024-11-26",
+        "2025 KBO Awards ceremony: 2025-11-24"
+      ]
+    },
+    {
+      "id": "rookie_of_the_year",
+      "label": "KBO Rookie of the Year Award",
+      "match_titles": [ "Rookie of the Year Award", "Rookie Award", "KBO Rookie of the Year Award" ],
+      "default_month": 11,
+      "default_day": 26,
+      "year_overrides": [
+        { "year": 2023, "month": 11, "day": 27 },
+        { "year": 2024, "month": 11, "day": 26 },
+        { "year": 2025, "month": 11, "day": 24 }
+      ],
+      "evidence": [
+        "2023 KBO Awards ceremony: 2023-11-27",
+        "2024 KBO Awards ceremony: 2024-11-26",
+        "2025 KBO Awards ceremony: 2025-11-24"
+      ]
+    },
+    {
+      "id": "defense",
+      "label": "KBO Fielding Award",
+      "match_titles": [ "Fielding Award", "Defensive Award", "Defense Award", "KBO Fielding Award", "KBO Defensive Award" ],
+      "default_month": 11,
+      "default_day": 26,
+      "year_overrides": [
+        { "year": 2023, "month": 11, "day": 27 },
+        { "year": 2024, "month": 11, "day": 26 },
+        { "year": 2025, "month": 11, "day": 24 }
+      ],
+      "evidence": [
+        "2023 KBO Fielding Awards were presented at the KBO Awards ceremony: 2023-11-27",
+        "2024 KBO Fielding Awards were presented at the KBO Awards ceremony: 2024-11-26",
+        "2025 KBO Fielding Awards were presented at the KBO Awards ceremony: 2025-11-24"
+      ]
+    },
+    {
+      "id": "regular_season_title_holders",
+      "label": "KBO Regular Season Title Awards",
+      "match_titles": [ "Best Pitcher Award", "Best Hitter Award", "Pitching Award", "Hitting Award", "Regular Season Award", "Individual Award" ],
+      "default_month": 11,
+      "default_day": 26,
+      "year_overrides": [
+        { "year": 2023, "month": 11, "day": 27 },
+        { "year": 2024, "month": 11, "day": 26 },
+        { "year": 2025, "month": 11, "day": 24 }
+      ],
+      "evidence": [
+        "2023 KBO Awards ceremony included KBO League and Futures League title-holder awards: 2023-11-27",
+        "2024 KBO Awards ceremony included KBO League and Futures League title-holder awards: 2024-11-26",
+        "2025 KBO Awards ceremony included KBO League and Futures League title-holder awards: 2025-11-24"
+      ]
+    },
+    {
+      "id": "choi_dong_won",
+      "label": "Choi Dong-Won Award",
+      "match_titles": [ "Choi Dong-Won Award", "Pitcher of the Year Award", "Outstanding Pitcher Award" ],
+      "default_month": 11,
+      "default_day": 11,
+      "year_overrides": [
+        { "year": 2024, "month": 11, "day": 11 },
+        { "year": 2025, "month": 11, "day": 11 }
+      ],
+      "evidence": [
+        "2024 제11회 BNK부산은행 최동원상 시상식: 2024-11-11",
+        "2025 제12회 BNK부산은행 최동원상 시상식: 2025-11-11"
+      ]
+    },
+    {
+      "id": "golden_glove",
+      "label": "KBO Golden Glove Award",
+      "match_titles": [ "Golden Glove Award", "Gold Glove Award", "KBO Golden Glove Award" ],
+      "default_month": 12,
+      "default_day": 11,
+      "year_overrides": [
+        { "year": 2023, "month": 12, "day": 11 },
+        { "year": 2024, "month": 12, "day": 13 },
+        { "year": 2025, "month": 12, "day": 9 }
+      ],
+      "evidence": [
+        "2023 KBO Golden Glove ceremony: 2023-12-11",
+        "2024 KBO Golden Glove ceremony: 2024-12-13",
+        "2025 KBO Golden Glove ceremony: 2025-12-09"
+      ]
+    }
+  ]
+}

@@ -28,6 +28,13 @@
       ]
     },
     {
+      "id": "awards",
+      "label": "Awards",
+      "files": [
+        { "path": "award_schedule_policy.json", "source": "awards/award_schedule_policy.json", "label": "Award schedule policy", "kind": "policy" }
+      ]
+    },
+    {
       "id": "captain",
       "label": "Captain",
       "files": [

@@ -1,0 +1,6 @@
+#ifndef KBOFIX_SRC_AWARDS_SCHEDULE_AWARD_SCHEDULE_PROBE_H_
+#define KBOFIX_SRC_AWARDS_SCHEDULE_AWARD_SCHEDULE_PROBE_H_
+
+int start_kbo_award_schedule_probe_thread(void);
+
+#endif

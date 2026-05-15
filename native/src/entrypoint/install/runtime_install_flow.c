@@ -362,6 +362,7 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         kbo_log_runtime_line("KBO season phase read-only monitor disabled: kbo_flags.json enable_kbo_season_phase_monitor is false");
     }
+    start_kbo_award_schedule_probe_thread();
     start_kbo_military_seed_bootstrap_thread();
     start_kbo_military_days_tick_thread();
     if (read_kbo_localappdata_flag_file("enable_kbo_cbt_service_time_probe.txt")) {

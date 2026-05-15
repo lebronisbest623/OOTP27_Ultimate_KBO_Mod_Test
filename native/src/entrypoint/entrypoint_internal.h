@@ -53,6 +53,7 @@
 #include "../patch_installers/hotkey_window/patch_installers_player_hover.h"
 #include "../patch_installers/military/patch_installers_military.h"
 #include "../patch_installers/season_phase/patch_installers_season_phase_probe.h"
+#include "../awards/schedule/award_schedule_probe.h"
 #include "../season_phase_monitor/season_phase_monitor.h"
 #define KBO_REQUIRED_ROSTER_MARKER_URL "https://github.com/lebronisbest623/OOTP27_Ultimate_KBO"
 typedef struct KboSangmuFaHookInstallRequest {
