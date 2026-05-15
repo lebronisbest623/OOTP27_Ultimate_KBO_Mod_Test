@@ -81,18 +81,19 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
         && nation_id == OOTP27_KBO_KOREA_NATION_ID
         && original_team_id != 0u
         && original_team_league_id == OOTP27_KBO_MAIN_LEAGUE_ID;
+    uint32_t today = 0u;
+    uint32_t declaration_season = 0u;
+    KboFaDeclarationDecision decision;
+    memset(&decision, 0, sizeof(decision));
+    int fa_declaration_decision_found = 0;
     if (fa_filing_candidate) {
-        uint32_t today = 0u;
-        uint32_t declaration_season = 0u;
         if (kbo_get_current_yyyymmdd(&today) && today != 0u) {
             declaration_season = today / 10000u;
         }
+        fa_declaration_decision_found = declaration_season != 0u
+            && kbo_fa_declaration_find_latest_decision(player_id, declaration_season, &decision);
 
-        KboFaDeclarationDecision decision;
-        memset(&decision, 0, sizeof(decision));
-        if (declaration_season != 0u
-                && kbo_fa_declaration_find_latest_decision(player_id, declaration_season, &decision)
-                && decision.declared == 0u) {
+        if (fa_declaration_decision_found && decision.declared == 0u) {
             uint32_t floor_league_id = original_team_league_id != 0u
                 ? original_team_league_id
                 : (player_league_id != 0u ? player_league_id : player_draft_league_id);
@@ -134,13 +135,25 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
     int direct_block_candidate = contract_level != 0u
         && old_offer <= 0
         && kbo_salary_arbitration_is_known_non_tender_return(caller_rva);
-    int should_block = 0;
+    int missing_declaration_transition = fa_filing_candidate && !fa_declaration_decision_found;
+    int official_zero_offer_transition =
+        kbo_fa_filing_is_official_transition_caller(caller_rva)
+        && notify == 0u
+        && contract_level != 0u
+        && old_offer <= 0
+        && nation_id == OOTP27_KBO_KOREA_NATION_ID
+        && (team_league_id == OOTP27_KBO_MAIN_LEAGUE_ID
+            || player_league_id == OOTP27_KBO_MAIN_LEAGUE_ID
+            || player_draft_league_id == OOTP27_KBO_MAIN_LEAGUE_ID);
+    int should_block = direct_block_candidate
+        || missing_declaration_transition
+        || official_zero_offer_transition;
     if (!should_block) {
         static LONG pass_log_count = 0;
         LONG pass_slot = InterlockedIncrement(&pass_log_count);
         if (pass_slot <= 120) {
             kbo_log_runtimef(
-                "KBO salary arbitration non-tender pass-through player=%u team=%u team_league=%u player_league=%u draft_league=%u contract_level=%u offer=%d notify=%u caller_rva=0x%llx direct_block_candidate=%d",
+                "KBO salary arbitration non-tender pass-through player=%u team=%u team_league=%u player_league=%u draft_league=%u contract_level=%u offer=%d notify=%u caller_rva=0x%llx direct_block_candidate=%d official_zero_offer_transition=%d",
                 player_id,
                 team_id,
                 team_league_id,
@@ -150,7 +163,8 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
                 old_offer,
                 (unsigned)notify,
                 (unsigned long long)caller_rva,
-                direct_block_candidate ? 1 : 0);
+                direct_block_candidate ? 1 : 0,
+                official_zero_offer_transition ? 1 : 0);
         }
         if (original_func != NULL) {
             original_func(team_ptr, player_ptr, notify);
@@ -188,7 +202,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
     LONG slot = InterlockedIncrement(&block_log_count);
     if (slot <= 120) {
         kbo_log_runtimef(
-            "KBO salary arbitration non-tender blocked player=%u team=%u team_league=%u player_league=%u draft_league=%u contract_level=%u old_offer=%d floor=%d notify=%u caller_rva=0x%llx",
+            "KBO salary arbitration non-tender blocked player=%u team=%u team_league=%u player_league=%u draft_league=%u contract_level=%u old_offer=%d floor=%d notify=%u caller_rva=0x%llx direct_block_candidate=%d missing_declaration_transition=%d official_zero_offer_transition=%d declaration_season=%u",
             player_id,
             team_id,
             team_league_id,
@@ -198,7 +212,11 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
             old_offer,
             salary_floor,
             (unsigned)notify,
-            (unsigned long long)caller_rva);
+            (unsigned long long)caller_rva,
+            direct_block_candidate ? 1 : 0,
+            missing_declaration_transition ? 1 : 0,
+            official_zero_offer_transition ? 1 : 0,
+            declaration_season);
     }
 }
 

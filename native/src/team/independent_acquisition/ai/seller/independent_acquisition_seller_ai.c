@@ -169,12 +169,22 @@ int kbo_run_independent_team_acquisition_seller_ai(
     int32_t player_count,
     const char* source)
 {
+    static volatile LONG seller_ai_running = 0;
+    if (InterlockedCompareExchange(&seller_ai_running, 1, 0) != 0) {
+        kbo_log_runtimef(
+            "independent acquisition seller AI skipped source=%s today=%u reason=already_running",
+            source != NULL ? source : "",
+            today);
+        return 0;
+    }
+
     KboIndependentAcquisitionQueuedRequest queue[KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE];
     int request_count = kbo_independent_acquisition_load_requests(
         today / 10000u,
         queue,
         KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE);
     if (request_count <= 0) {
+        InterlockedExchange(&seller_ai_running, 0);
         return 0;
     }
 
@@ -391,5 +401,6 @@ int kbo_run_independent_team_acquisition_seller_ai(
         limit_blocked,
         pacing_deferred,
         seller_transfer_limit);
+    InterlockedExchange(&seller_ai_running, 0);
     return transferred;
 }
