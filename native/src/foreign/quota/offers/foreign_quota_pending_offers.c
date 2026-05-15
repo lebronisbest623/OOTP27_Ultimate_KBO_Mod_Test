@@ -37,6 +37,7 @@ enum {
 KboCustomForeignPendingOffer g_kbo_custom_foreign_pending_offers[KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX];
 LONG g_kbo_custom_foreign_pending_offer_lock = 0;
 int g_kbo_custom_foreign_pending_offer_count = 0;
+volatile LONG g_kbo_custom_foreign_pending_offer_generation = 0;
 static DWORD g_kbo_custom_foreign_pending_offer_last_prune_tick = 0u;
 static uint32_t g_kbo_custom_foreign_pending_offer_last_prune_date = 0u;
 
@@ -75,6 +76,7 @@ int kbo_custom_foreign_pending_offer_player_now_in_org(uint32_t team_id, uint32_
 
 static void kbo_custom_foreign_prune_pending_offers_locked(uint32_t today)
 {
+    int old_count = g_kbo_custom_foreign_pending_offer_count;
     int write_index = 0;
     for (int i = 0; i < g_kbo_custom_foreign_pending_offer_count; i++) {
         KboCustomForeignPendingOffer rec = g_kbo_custom_foreign_pending_offers[i];
@@ -86,6 +88,9 @@ static void kbo_custom_foreign_prune_pending_offers_locked(uint32_t today)
         g_kbo_custom_foreign_pending_offers[write_index++] = rec;
     }
     g_kbo_custom_foreign_pending_offer_count = write_index;
+    if (write_index != old_count) {
+        InterlockedIncrement(&g_kbo_custom_foreign_pending_offer_generation);
+    }
     g_kbo_custom_foreign_pending_offer_last_prune_tick = GetTickCount();
     g_kbo_custom_foreign_pending_offer_last_prune_date = today;
 }
@@ -165,6 +170,7 @@ void kbo_record_custom_foreign_pending_offer(uint32_t team_id, uint8_t* candidat
             rec->date_yyyymmdd = today;
             rec->asian_quota_candidate = asian;
             g_kbo_custom_foreign_pending_offer_last_prune_tick = 0u;
+            InterlockedIncrement(&g_kbo_custom_foreign_pending_offer_generation);
             kbo_custom_foreign_pending_offer_unlock();
             return;
         }
@@ -180,6 +186,7 @@ void kbo_record_custom_foreign_pending_offer(uint32_t team_id, uint8_t* candidat
             .asian_quota_candidate = asian
         };
         g_kbo_custom_foreign_pending_offer_last_prune_tick = 0u;
+        InterlockedIncrement(&g_kbo_custom_foreign_pending_offer_generation);
     }
 
     kbo_custom_foreign_pending_offer_unlock();
@@ -216,6 +223,7 @@ void kbo_cancel_custom_foreign_pending_offer(uint32_t team_id, uint32_t player_i
     g_kbo_custom_foreign_pending_offer_count = write_index;
     if (removed > 0) {
         g_kbo_custom_foreign_pending_offer_last_prune_tick = 0u;
+        InterlockedIncrement(&g_kbo_custom_foreign_pending_offer_generation);
     }
     kbo_custom_foreign_pending_offer_unlock();
 

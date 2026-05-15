@@ -181,6 +181,15 @@ static int kbo_independent_acquisition_seller_abort_if_save(
     return 1;
 }
 
+static uint32_t kbo_independent_acquisition_seller_effective_season(uint32_t today)
+{
+    uint32_t open_date = kbo_independent_team_acquisition_window_open_date();
+    if (open_date != 0u && today >= open_date) {
+        return open_date / 10000u;
+    }
+    return today / 10000u;
+}
+
 int kbo_run_independent_team_acquisition_seller_ai(
     uint32_t today,
     const uintptr_t* player_snapshot,
@@ -202,8 +211,9 @@ int kbo_run_independent_team_acquisition_seller_ai(
     }
 
     KboIndependentAcquisitionQueuedRequest queue[KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE];
+    uint32_t season = kbo_independent_acquisition_seller_effective_season(today);
     int request_count = kbo_independent_acquisition_load_requests(
-        today / 10000u,
+        season,
         queue,
         KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE);
     if (request_count <= 0) {

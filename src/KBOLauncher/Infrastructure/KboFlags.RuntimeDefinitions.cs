@@ -43,6 +43,8 @@ internal static partial class KboFlags
         new("disable_foreign_ai_controller", null, RuntimeFlagLifecycle.Recovery),
         new("enable_foreign_waiver_event_probe", null, RuntimeFlagLifecycle.Diagnostic),
         new("enable_kbo_domestic_fa_market_investigation", false, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_domestic_fa_orphan_rescue_dry_run", false, RuntimeFlagLifecycle.Diagnostic),
+        new("enable_kbo_domestic_fa_orphan_rescue", false, RuntimeFlagLifecycle.Recovery),
         new("enable_intl_established_fa_quality_probe_patch", true, RuntimeFlagLifecycle.Recovery),
         new("enable_kbo_ai_fa_fallback_patch", true, RuntimeFlagLifecycle.Recovery),
         new("enable_kbo_asian_quota_probe_logs", null, RuntimeFlagLifecycle.Diagnostic),

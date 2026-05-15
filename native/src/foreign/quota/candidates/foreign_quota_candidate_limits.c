@@ -2,6 +2,118 @@
 #include "../../rights/query/foreign_waiver_rights_query.h"
 #include "foreign_quota_retention_opportunity_probe.h"
 
+typedef struct KboCustomForeignCandidateCacheEntry {
+    uint32_t team_id;
+    uint32_t player_id;
+    uint32_t today;
+    uintptr_t player_ptr;
+    uint32_t current_team_id;
+    uint32_t active_team_id;
+    uint32_t original_team_id;
+    LONG pending_generation;
+    DWORD tick;
+    uint32_t effective_before;
+    uint32_t effective_after;
+    uint32_t effective_limit;
+    uint32_t injured_player_id;
+    uint8_t slot_type;
+    uint8_t allowed;
+    uint8_t valid;
+} KboCustomForeignCandidateCacheEntry;
+
+enum {
+    KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_SIZE = 4096,
+    KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_TTL_MS = 500u
+};
+
+static KboCustomForeignCandidateCacheEntry g_kbo_custom_foreign_candidate_cache[KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_SIZE];
+
+static uint32_t kbo_custom_foreign_candidate_cache_slot(uint32_t team_id, uint32_t player_id)
+{
+    uint32_t h = player_id * 2654435761u;
+    h ^= team_id * 2246822519u;
+    h ^= h >> 16;
+    return h & (KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_SIZE - 1u);
+}
+
+static void kbo_custom_foreign_candidate_cache_store(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t candidate_id,
+    uint32_t today,
+    uint32_t current_team_id,
+    uint32_t active_team_id,
+    uint32_t original_team_id,
+    LONG pending_generation,
+    uint32_t effective_before,
+    uint32_t effective_after,
+    uint32_t effective_limit,
+    uint8_t slot_type,
+    uint32_t injured_player_id,
+    int allowed)
+{
+    KboCustomForeignCandidateCacheEntry* entry =
+        &g_kbo_custom_foreign_candidate_cache[kbo_custom_foreign_candidate_cache_slot(team_id, candidate_id)];
+    entry->valid = 0u;
+    entry->team_id = team_id;
+    entry->player_id = candidate_id;
+    entry->today = today;
+    entry->player_ptr = (uintptr_t)candidate;
+    entry->current_team_id = current_team_id;
+    entry->active_team_id = active_team_id;
+    entry->original_team_id = original_team_id;
+    entry->pending_generation = pending_generation;
+    entry->effective_before = effective_before;
+    entry->effective_after = effective_after;
+    entry->effective_limit = effective_limit;
+    entry->slot_type = slot_type;
+    entry->injured_player_id = injured_player_id;
+    entry->allowed = allowed ? 1u : 0u;
+    entry->tick = GetTickCount();
+    entry->valid = 1u;
+}
+
+static int kbo_custom_foreign_candidate_cache_hit(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t candidate_id,
+    uint32_t today,
+    uint32_t current_team_id,
+    uint32_t active_team_id,
+    uint32_t original_team_id,
+    uint32_t* out_effective_before,
+    uint32_t* out_effective_after,
+    uint32_t* out_effective_limit,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id,
+    int* out_allowed)
+{
+    KboCustomForeignCandidateCacheEntry* entry =
+        &g_kbo_custom_foreign_candidate_cache[kbo_custom_foreign_candidate_cache_slot(team_id, candidate_id)];
+    DWORD now = GetTickCount();
+    LONG pending_generation = InterlockedCompareExchange(&g_kbo_custom_foreign_pending_offer_generation, 0, 0);
+    if (!entry->valid
+            || entry->team_id != team_id
+            || entry->player_id != candidate_id
+            || entry->today != today
+            || entry->player_ptr != (uintptr_t)candidate
+            || entry->current_team_id != current_team_id
+            || entry->active_team_id != active_team_id
+            || entry->original_team_id != original_team_id
+            || entry->pending_generation != pending_generation
+            || now - entry->tick > KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_TTL_MS) {
+        return 0;
+    }
+
+    if (out_effective_before != NULL) { *out_effective_before = entry->effective_before; }
+    if (out_effective_after != NULL) { *out_effective_after = entry->effective_after; }
+    if (out_effective_limit != NULL) { *out_effective_limit = entry->effective_limit; }
+    if (out_slot_type != NULL) { *out_slot_type = entry->slot_type; }
+    if (out_injured_player_id != NULL) { *out_injured_player_id = entry->injured_player_id; }
+    if (out_allowed != NULL) { *out_allowed = entry->allowed ? 1 : 0; }
+    return 1;
+}
+
 uint32_t kbo_custom_foreign_policy_extra_slots_for_candidate(
     uint32_t team_id,
     uint8_t* candidate,
@@ -99,6 +211,34 @@ int kbo_custom_foreign_policy_team_allows_candidate(
         return 0;
     }
 
+    uint32_t today = 0u;
+    uint32_t candidate_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ID_OFFSET);
+    kbo_get_foreign_waiver_current_yyyymmdd(&today);
+    uint32_t current_team_id = *(uint32_t*)(candidate + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+    uint32_t active_team_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+    uint32_t original_team_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
+    int cached_allowed = 0;
+    if (candidate_id != 0u
+            && kbo_custom_foreign_candidate_cache_hit(
+                team_id,
+                candidate,
+                candidate_id,
+                today,
+                current_team_id,
+                active_team_id,
+                original_team_id,
+                out_effective_before,
+                out_effective_after,
+                out_effective_limit,
+                out_slot_type,
+                out_injured_player_id,
+                &cached_allowed)) {
+        KBO_PROFILE_END(profile_custom_candidate, cached_allowed
+            ? "foreign_policy.candidate.cache_allowed"
+            : "foreign_policy.candidate.cache_blocked");
+        return cached_allowed;
+    }
+
     uint32_t foreign_count = 0u;
     uint32_t asian_count = 0u;
     uint32_t non_asian_count = 0u;
@@ -107,9 +247,6 @@ int kbo_custom_foreign_policy_team_allows_candidate(
     KBO_PROFILE_END(profile_custom_candidate_count, "foreign_policy.candidate.org_count");
     (void)foreign_count;
 
-    uint32_t today = 0u;
-    uint32_t candidate_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ID_OFFSET);
-    kbo_get_foreign_waiver_current_yyyymmdd(&today);
     uint32_t pending_asian_count = 0u;
     uint32_t pending_non_asian_count = 0u;
     int candidate_pending = 0;
@@ -178,6 +315,23 @@ int kbo_custom_foreign_policy_team_allows_candidate(
         allowed);
     if (allowed && opportunity_block) {
         allowed = 0;
+    }
+    if (candidate_id != 0u) {
+        kbo_custom_foreign_candidate_cache_store(
+            team_id,
+            candidate,
+            candidate_id,
+            today,
+            current_team_id,
+            active_team_id,
+            original_team_id,
+            InterlockedCompareExchange(&g_kbo_custom_foreign_pending_offer_generation, 0, 0),
+            effective_before,
+            effective_after,
+            effective_limit,
+            slot_type,
+            injured_player_id,
+            allowed);
     }
     KBO_PROFILE_END(profile_custom_candidate, allowed
         ? "foreign_policy.candidate.allowed"

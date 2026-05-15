@@ -13,6 +13,7 @@
 #include "../../core/logging/core_log.h"
 #include "../../fa_market_classification/api/fa_market_classification.h"
 #include "../../fa_market_classification/policy/fa_market_policy.h"
+#include "../rescue/domestic_fa_orphan_rescue.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../runtime_memory/runtime_memory.h"
@@ -22,7 +23,8 @@ static volatile LONG g_kbo_domestic_fa_market_investigation_started = 0;
 
 static int kbo_domestic_fa_market_investigation_enabled(void)
 {
-    return read_kbo_localappdata_flag_file("enable_kbo_domestic_fa_market_investigation.txt");
+    return read_kbo_localappdata_flag_file("enable_kbo_domestic_fa_market_investigation.txt")
+        || kbo_domestic_fa_orphan_rescue_enabled();
 }
 
 static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* source)
@@ -137,6 +139,8 @@ static int kbo_domestic_fa_run_investigation_once(uint32_t today, const char* so
             sizeof(candidates[0]),
             kbo_domestic_fa_compare_candidates_desc);
     }
+
+    kbo_domestic_fa_orphan_rescue_update_cache(today, candidates, candidate_count);
 
     char csv_path[MAX_PATH] = {0};
     int csv_written = kbo_domestic_fa_write_investigation_csv(

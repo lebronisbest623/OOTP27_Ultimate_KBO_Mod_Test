@@ -34,7 +34,7 @@ int kbo_cbt_exception_resolve_opening_day(uint32_t season, uint32_t* out_opening
     }
 
     uint32_t league_id = kbo_resolve_kbo_league_id();
-    uintptr_t league_ptr = league_id != 0u ? kbo_find_league_ptr_from_global_vectors(league_id) : 0u;
+    uintptr_t league_ptr = league_id != 0u ? kbo_find_league_ptr_from_id(league_id) : 0u;
     uint32_t opening_day = 0u;
     if (league_ptr != 0u
             && kbo_fa_salary_snapshot_read_opening_day(league_ptr, &opening_day)

@@ -1,6 +1,7 @@
 #include "../internal/cbt_internal.h"
 
 #include "../audit/cbt_rule_audit.h"
+#include "../draft/order/cbt_draft_order_penalty.h"
 #include "../../hotkey_window/api/hotkey_window_refresh.h"
 
 static int kbo_cbt_find_team(const KboCbtTeamPayroll* teams, int count, uint32_t team_id)
@@ -260,12 +261,6 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
         uint32_t team_id = teams[i].team_id;
         int32_t payroll = teams[i].top_n_sum;
 
-        /* Skip if already processed this season for this team */
-        if (kbo_cbt_find_record(records, record_count, season, team_id) >= 0) {
-            kbo_cbt_audit_team("skip", "record_already_exists", source, season, team_id, payroll, threshold, 0, 0u, 0, 0u, 0, 0);
-            continue;
-        }
-
         int32_t overage = payroll - threshold;
         uint32_t prior_consecutive = kbo_cbt_get_consecutive_count(records, record_count, team_id, season);
         uint32_t consecutive_count = overage > 0 ? prior_consecutive + 1u : 0u;
@@ -273,6 +268,59 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
         int32_t tax_amount = overage > 0
             ? (int32_t)((int64_t)overage * (int32_t)tax_rate / 100LL)
             : 0;
+
+        int existing_index = kbo_cbt_find_record(records, record_count, season, team_id);
+        if (existing_index >= 0) {
+            KboCbtRecord* existing = &records[existing_index];
+            int32_t normalized_overage = overage > 0 ? overage : 0;
+            if (existing->payroll != payroll
+                    || existing->threshold != threshold
+                    || existing->overage != normalized_overage
+                    || existing->tax_rate_pct != tax_rate
+                    || existing->tax_amount != tax_amount
+                    || existing->consecutive_count != consecutive_count) {
+                kbo_log_runtimef(
+                    "KBO CBT record reconciled season=%u team=%u payroll=%d->%d threshold=%d->%d overage=%d->%d rate=%u->%u tax=%d->%d consecutive=%u->%u source=%s",
+                    season,
+                    team_id,
+                    existing->payroll,
+                    payroll,
+                    existing->threshold,
+                    threshold,
+                    existing->overage,
+                    normalized_overage,
+                    existing->tax_rate_pct,
+                    tax_rate,
+                    existing->tax_amount,
+                    tax_amount,
+                    existing->consecutive_count,
+                    consecutive_count,
+                    source != NULL ? source : "");
+                existing->payroll = payroll;
+                existing->threshold = threshold;
+                existing->overage = normalized_overage;
+                existing->tax_rate_pct = tax_rate;
+                existing->tax_amount = tax_amount;
+                existing->consecutive_count = consecutive_count;
+                kbo_cbt_copy_team_name(team_id, existing->team_name, sizeof(existing->team_name));
+            }
+            int draft_penalty = overage > 0 && consecutive_count >= rules.draft_penalty_min_consecutive;
+            kbo_cbt_audit_team(
+                "skip",
+                "record_already_exists",
+                source,
+                season,
+                team_id,
+                payroll,
+                threshold,
+                normalized_overage,
+                tax_rate,
+                tax_amount,
+                consecutive_count,
+                draft_penalty,
+                teams[i].exception_credit);
+            continue;
+        }
 
         KboCbtRecord rec = {0};
         rec.season           = season;
@@ -328,6 +376,14 @@ void kbo_process_competitive_balance_tax_for_date(uint32_t season, uint32_t news
     }
 
     kbo_cbt_save_records(records, record_count);
+    int draft_order_moves = kbo_cbt_apply_pending_draft_order_penalties("cbt_process_post_records");
+    if (draft_order_moves > 0) {
+        kbo_log_runtimef(
+            "KBO CBT draft order penalties applied after record save season=%u moves=%d source=%s",
+            season,
+            draft_order_moves,
+            source != NULL ? source : "");
+    }
     if (league_id != 0u) {
         char summary_marker[64] = {0};
         snprintf(summary_marker, sizeof(summary_marker), "summary|%u|%u", season, league_id);

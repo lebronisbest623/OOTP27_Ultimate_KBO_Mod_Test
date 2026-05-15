@@ -10,7 +10,9 @@
 #include "../../core/events/core_league_events.h"
 #include "../../core/logging/core_log.h"
 #include "../../custom_events/runtime/dates/custom_event_dates.h"
+#include "../../custom_events/runtime/ledger/custom_event_ledger.h"
 #include "../../custom_events/runtime/lookup/custom_event_lookup.h"
+#include "../../custom_events/runtime/markers/custom_event_markers.h"
 #include "../../custom_events/runtime/runner/custom_event_runner.h"
 #include "../../custom_events/runtime/state/custom_event_state.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
@@ -32,6 +34,53 @@ static int kbo_cbt_should_log_no_date(void)
         return 0;
     }
     return InterlockedCompareExchange64(&g_kbo_cbt_last_no_date_log_ms, (LONG64)now, last) == last;
+}
+
+static int kbo_process_due_cbt_custom_event(
+    uint32_t today,
+    uint32_t league_id,
+    uint32_t event_date,
+    KboCustomEventKind kind,
+    const char* title,
+    const char* source)
+{
+    if (event_date == 0u || today == 0u || today < event_date) {
+        return 0;
+    }
+    if (kbo_custom_event_processed_marker_exists_for_kind(event_date, kind)
+            || kbo_custom_event_ledger_completed(league_id, event_date, kind)) {
+        return 0;
+    }
+
+    int result = kbo_run_custom_event_by_kind(
+        0,
+        league_id,
+        event_date,
+        kind,
+        title,
+        source);
+    if (result > 0) {
+        if (result == KBO_CUSTOM_EVENT_RUN_ALREADY_COMPLETED) {
+            return 0;
+        }
+        kbo_log_runtimef(
+            "KBO CBT due event handled source=%s kind=%s event_date=%u today=%u result=%d",
+            source != NULL ? source : "",
+            kbo_custom_event_kind_key(kind),
+            event_date,
+            today,
+            result);
+        return 1;
+    }
+
+    kbo_log_runtimef(
+        "KBO CBT due event deferred source=%s kind=%s event_date=%u today=%u result=%d",
+        source != NULL ? source : "",
+        kbo_custom_event_kind_key(kind),
+        event_date,
+        today,
+        result);
+    return -1;
 }
 
 int kbo_schedule_cbt_custom_events(const char* source)
@@ -104,14 +153,62 @@ int kbo_schedule_cbt_custom_events(const char* source)
         KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
         source);
 
-    int deadline_exists = deadline_past || kbo_custom_event_exists_by_kind_for_date(
+    int deadline_completed = kbo_custom_event_processed_marker_exists_for_kind(
+            deadline,
+            KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE)
+        || kbo_custom_event_ledger_completed(
+            league_id,
+            deadline,
+            KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE);
+    int announcement_completed = kbo_custom_event_processed_marker_exists_for_kind(
+            announcement,
+            KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT)
+        || kbo_custom_event_ledger_completed(
+            league_id,
+            announcement,
+            KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
+
+    int deadline_exists = deadline_past || deadline_completed || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            deadline,
+            KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE);
+    int announcement_exists = announcement_past || announcement_completed || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            announcement,
+            KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
+
+    int direct_processed = 0;
+    int direct_deadline_processed = 0;
+    int direct_announcement_processed = 0;
+    int direct_deferred = 0;
+    int direct_result = kbo_process_due_cbt_custom_event(
+        today,
         league_id,
         deadline,
-        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE);
-    int announcement_exists = announcement_past || kbo_custom_event_exists_by_kind_for_date(
+        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE,
+        deadline_title,
+        source);
+    if (direct_result > 0) {
+        direct_processed = 1;
+        direct_deadline_processed = 1;
+        deadline_exists = 1;
+    } else if (direct_result < 0) {
+        direct_deferred = 1;
+    }
+    direct_result = kbo_process_due_cbt_custom_event(
+        today,
         league_id,
         announcement,
-        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
+        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT,
+        announcement_title,
+        source);
+    if (direct_result > 0) {
+        direct_processed = 1;
+        direct_announcement_processed = 1;
+        announcement_exists = 1;
+    } else if (direct_result < 0) {
+        direct_deferred = 1;
+    }
 
     int created_deadline = 0;
     if (!deadline_exists) {
@@ -139,17 +236,17 @@ int kbo_schedule_cbt_custom_events(const char* source)
             source != NULL ? source : g_kbo_default_event_source);
     }
 
-    deadline_exists = deadline_past || created_deadline || kbo_custom_event_exists_by_kind_for_date(
-        league_id,
-        deadline,
-        KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE);
-    announcement_exists = announcement_past || created_announcement || kbo_custom_event_exists_by_kind_for_date(
-        league_id,
-        announcement,
-        KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
+    deadline_exists = deadline_past || deadline_completed || direct_deadline_processed || created_deadline || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            deadline,
+            KBO_CUSTOM_EVENT_KIND_CBT_EXCEPTION_DEADLINE);
+    announcement_exists = announcement_past || announcement_completed || direct_announcement_processed || created_announcement || kbo_custom_event_exists_by_kind_for_date(
+            league_id,
+            announcement,
+            KBO_CUSTOM_EVENT_KIND_CBT_ANNOUNCEMENT);
 
     kbo_log_runtimef(
-        "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d pruned_deadline=%d pruned_announcement=%d ready=%d",
+        "KBO CBT event schedule source=%s season=%u opening_day=%u deadline=%u announcement=%u created_deadline=%d created_announcement=%d direct_processed=%d direct_deferred=%d pruned_deadline=%d pruned_announcement=%d ready=%d",
         source != NULL ? source : "",
         year,
         opening_day,
@@ -157,6 +254,8 @@ int kbo_schedule_cbt_custom_events(const char* source)
         announcement,
         created_deadline,
         created_announcement,
+        direct_processed,
+        direct_deferred,
         pruned_deadline,
         pruned_announcement,
         deadline_exists && announcement_exists);
@@ -175,8 +274,11 @@ int kbo_schedule_cbt_custom_events(const char* source)
         pruned_deadline,
         pruned_announcement,
         deadline_exists && announcement_exists);
+    if (direct_deferred) {
+        return -1;
+    }
     return (deadline_exists && announcement_exists)
-        ? (created_deadline || created_announcement)
+        ? (created_deadline || created_announcement || direct_processed)
         : -1;
 }
 

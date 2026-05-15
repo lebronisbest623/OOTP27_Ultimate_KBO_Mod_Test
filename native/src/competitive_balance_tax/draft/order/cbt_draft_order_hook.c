@@ -17,5 +17,6 @@ __declspec(noinline) void ootp_kbo_cbt_draft_order_create_wrapper(
         original_func(draft_state, random_flag);
     }
 
+    kbo_cbt_note_draft_order_state(draft_state);
     kbo_cbt_apply_draft_order_penalties(draft_state, "draft_order_create_hook");
 }

@@ -159,6 +159,15 @@ static int kbo_independent_acquisition_buyer_has_pending_request(
     return 0;
 }
 
+static uint32_t kbo_independent_acquisition_effective_season(uint32_t today)
+{
+    uint32_t open_date = kbo_independent_team_acquisition_window_open_date();
+    if (open_date != 0u && today >= open_date) {
+        return open_date / 10000u;
+    }
+    return today / 10000u;
+}
+
 int kbo_run_independent_team_acquisition_ai(const char* source)
 {
     if (!kbo_fix_enabled()
@@ -197,9 +206,26 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         goto cleanup;
     }
 
-    if (!kbo_get_current_yyyymmdd(&today)
-            || !kbo_independent_acquisition_window_active(today)) {
+    if (!kbo_get_current_yyyymmdd(&today)) {
         goto cleanup;
+    }
+    uint32_t season = kbo_independent_acquisition_effective_season(today);
+    int window_active = kbo_independent_acquisition_window_active(today);
+    KboIndependentAcquisitionQueuedRequest pending_gate[KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE];
+    int pending_gate_count = kbo_independent_acquisition_load_requests(
+        season,
+        pending_gate,
+        KBO_INDEPENDENT_ACQUISITION_MAX_QUEUE);
+    if (!window_active && pending_gate_count <= 0) {
+        goto cleanup;
+    }
+    if (!window_active && pending_gate_count > 0) {
+        kbo_log_runtimef(
+            "independent acquisition AI catch-up source=%s today=%u season=%u pending=%d reason=window_closed_with_pending",
+            source != NULL ? source : "",
+            today,
+            season,
+            pending_gate_count);
     }
     if (kbo_independent_acquisition_abort_if_save(source, "after_date", today)) {
         abort_for_save = 1;
@@ -224,7 +250,6 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         goto cleanup;
     }
 
-    uint32_t season = today / 10000u;
     int32_t seller_transfer_limit =
         kbo_foreign_player_policy()->independent_acquisition_seller_transfer_limit;
     KboIndependentFuturesTeamLeague available_sellers[KBO_INDEPENDENT_ACQUISITION_MAX_SELLERS];
@@ -355,7 +380,8 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         considered_buyers++;
 
         KboIndependentAcquisitionCandidate candidate;
-        if (available_seller_count <= 0
+        if (!window_active
+                || available_seller_count <= 0
                 || !kbo_independent_acquisition_choose_candidate_for_buyer(
                 snapshot,
                 player_count,

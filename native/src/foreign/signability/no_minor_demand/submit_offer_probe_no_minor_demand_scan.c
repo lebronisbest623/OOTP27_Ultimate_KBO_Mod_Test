@@ -3,6 +3,7 @@
 static volatile LONG g_kbo_no_minor_background_scan_date = 0;
 static volatile LONG g_kbo_no_minor_background_scan_player_count = 0;
 static volatile LONG g_kbo_no_minor_background_scan_changed = 1;
+static volatile LONG g_kbo_no_minor_background_scan_verify_after_change = 0;
 
 static int kbo_no_minor_is_background_prescan(const char* source)
 {
@@ -88,7 +89,8 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
     if (background_prescan
             && (uint32_t)InterlockedCompareExchange(&g_kbo_no_minor_background_scan_date, 0, 0) == today
             && InterlockedCompareExchange(&g_kbo_no_minor_background_scan_player_count, 0, 0) == player_count
-            && InterlockedCompareExchange(&g_kbo_no_minor_background_scan_changed, 0, 0) == 0) {
+            && InterlockedCompareExchange(&g_kbo_no_minor_background_scan_changed, 0, 0) == 0
+            && InterlockedCompareExchange(&g_kbo_no_minor_background_scan_verify_after_change, 0, 0) == 0) {
         KBO_PROFILE_END(profile_no_minor_scan, "no_minor.scan.cached_unchanged");
         return 0;
     }
@@ -246,7 +248,13 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
     if (background_prescan) {
         InterlockedExchange(&g_kbo_no_minor_background_scan_date, (LONG)today);
         InterlockedExchange(&g_kbo_no_minor_background_scan_player_count, (LONG)player_count);
-        InterlockedExchange(&g_kbo_no_minor_background_scan_changed, changed > 0 ? 1 : 0);
+        if (changed > 0) {
+            InterlockedExchange(&g_kbo_no_minor_background_scan_changed, 0);
+            InterlockedExchange(&g_kbo_no_minor_background_scan_verify_after_change, 1);
+        } else {
+            InterlockedExchange(&g_kbo_no_minor_background_scan_changed, 0);
+            InterlockedExchange(&g_kbo_no_minor_background_scan_verify_after_change, 0);
+        }
     }
     KBO_PROFILE_END(profile_no_minor_scan, changed > 0
         ? "no_minor.scan.total_changed"

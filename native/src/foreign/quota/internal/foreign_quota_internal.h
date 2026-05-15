@@ -45,6 +45,7 @@ enum {
 extern KboCustomForeignPendingOffer g_kbo_custom_foreign_pending_offers[KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX];
 extern LONG g_kbo_custom_foreign_pending_offer_lock;
 extern int g_kbo_custom_foreign_pending_offer_count;
+extern volatile LONG g_kbo_custom_foreign_pending_offer_generation;
 
 void kbo_custom_foreign_pending_offer_lock(void);
 void kbo_custom_foreign_pending_offer_unlock(void);

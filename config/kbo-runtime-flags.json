@@ -248,6 +248,26 @@
       }
     },
     {
+      "key": "enable_kbo_domestic_fa_orphan_rescue_dry_run",
+      "defaultValue": false,
+      "lifecycle": "Diagnostic",
+      "ui": {
+        "label": "Domestic FA orphan rescue dry-run",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
+      "key": "enable_kbo_domestic_fa_orphan_rescue",
+      "defaultValue": false,
+      "lifecycle": "Recovery",
+      "ui": {
+        "label": "Domestic FA orphan rescue",
+        "enabledValue": 1,
+        "defaultEnabled": false
+      }
+    },
+    {
       "key": "enable_intl_established_fa_quality_probe_patch",
       "defaultValue": true,
       "lifecycle": "Recovery",

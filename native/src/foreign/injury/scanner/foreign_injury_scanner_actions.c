@@ -24,7 +24,8 @@ int kbo_foreign_injury_restore_active_replacement_player(const KboForeignInjuryR
     if (current_team_id == rec->team_id && active_team_id == rec->team_id) {
         return 0;
     }
-    if (current_team_id != 0u || active_team_id != 0u || original_team_id != rec->team_id) {
+    if (current_team_id != 0u || active_team_id != 0u
+            || (original_team_id != 0u && original_team_id != rec->team_id)) {
         return 0;
     }
 

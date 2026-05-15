@@ -33,11 +33,11 @@ static void kbo_cbt_rules_init_defaults(KboCbtRules* out)
     memset(out, 0, sizeof(*out));
     out->enabled                     = 1u;
     out->top_player_count            = 40u;
-    out->draft_penalty_min_consecutive = 2u;
+    out->draft_penalty_min_consecutive = 3u;
     out->draft_penalty_stages        = 9u;
     out->tax_rate_1                  = 50u;
-    out->tax_rate_2                  = 100u;
-    out->tax_rate_3plus              = 150u;
+    out->tax_rate_2                  = 50u;
+    out->tax_rate_3plus              = 100u;
     out->annual_increase_pct         = 5u;
     out->exception_deadline_days_after_opening = 6u;
     out->announcement_days_after_opening = 7u;

@@ -18,6 +18,9 @@ static int kbo_cbt_record_visible_in_hub(const KboCbtRecord* rec, uint32_t today
     if (today == 0u || rec->season != current_year) {
         return 1;
     }
+    if (rec->processed_date != 0u && today >= rec->processed_date) {
+        return 1;
+    }
 
     KboCbtRules rules;
     kbo_cbt_rules_load(&rules);

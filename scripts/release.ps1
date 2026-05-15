@@ -40,7 +40,7 @@ if (Test-Path -LiteralPath $Dist) {
 New-Item -ItemType Directory -Path $Dist | Out-Null
 
 Write-Host "==> Building native DLL..."
-& powershell -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "native\build.ps1")
+& pwsh -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "native\build.ps1")
 if ($LASTEXITCODE -ne 0) { throw "Native build failed" }
 
 Write-Host "==> Building optimizer tool..."
@@ -158,7 +158,7 @@ foreach ($RequiredFile in $RequiredFiles) {
         throw "Release payload missing required file: $RequiredFile"
     }
 }
-& powershell -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "tests\release\verify-release-artifact.ps1") -RepoRoot $RepoRoot -Dist $Dist
+& pwsh -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "tests\release\verify-release-artifact.ps1") -RepoRoot $RepoRoot -Dist $Dist
 if ($LASTEXITCODE -ne 0) { throw "Release payload validation failed" }
 
 $FileCount = (Get-ChildItem $Dist -Recurse -File).Count

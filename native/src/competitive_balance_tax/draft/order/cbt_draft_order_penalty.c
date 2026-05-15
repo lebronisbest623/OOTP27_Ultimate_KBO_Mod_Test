@@ -33,6 +33,7 @@ typedef struct KboCbtDraftPenaltyInfo {
 } KboCbtDraftPenaltyInfo;
 
 static volatile LONG g_kbo_cbt_draft_order_busy = 0;
+static PVOID volatile g_kbo_cbt_draft_order_observed_state = NULL;
 static uintptr_t g_kbo_cbt_draft_order_last_state = 0;
 static uint64_t g_kbo_cbt_draft_order_last_signature = 0;
 
@@ -188,6 +189,31 @@ static int kbo_cbt_find_owner_index(const uint32_t* owners, int count, uint32_t 
         }
     }
     return -1;
+}
+
+void kbo_cbt_note_draft_order_state(uintptr_t draft_state)
+{
+    if (draft_state == 0u) {
+        return;
+    }
+    InterlockedExchangePointer(
+        &g_kbo_cbt_draft_order_observed_state,
+        (PVOID)draft_state);
+}
+
+int kbo_cbt_apply_pending_draft_order_penalties(const char* source)
+{
+    uintptr_t draft_state = (uintptr_t)InterlockedCompareExchangePointer(
+        &g_kbo_cbt_draft_order_observed_state,
+        NULL,
+        NULL);
+    if (draft_state == 0u) {
+        kbo_log_runtimef(
+            "KBO CBT draft order pending apply skipped source=%s reason=no_observed_draft_state",
+            source != NULL ? source : "");
+        return 0;
+    }
+    return kbo_cbt_apply_draft_order_penalties(draft_state, source);
 }
 
 int kbo_cbt_apply_draft_order_penalties(uintptr_t draft_state, const char* source)

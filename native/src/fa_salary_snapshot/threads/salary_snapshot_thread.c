@@ -79,7 +79,7 @@ static DWORD WINAPI kbo_fa_salary_snapshot_thread(LPVOID parameter)
         if (cached_league_ptr_year == year && cached_league_ptr != 0u) {
             league_ptr = cached_league_ptr;
         } else {
-            league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);
+            league_ptr = kbo_find_league_ptr_from_id(league_id);
             if (league_ptr != 0u) {
                 cached_league_ptr = league_ptr;
                 cached_league_ptr_year = year;

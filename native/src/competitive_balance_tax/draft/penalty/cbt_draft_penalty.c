@@ -11,7 +11,7 @@
 static volatile LONG g_cbt_draft_penalty_cache_valid = 0;
 static KboCbtRecord g_cbt_draft_penalty_records[KBO_CBT_RECORDS_MAX];
 static int g_cbt_draft_penalty_record_count = 0;
-static uint32_t g_cbt_draft_penalty_min_consecutive = 2u;
+static uint32_t g_cbt_draft_penalty_min_consecutive = 3u;
 static uint32_t g_cbt_draft_penalty_stages = 9u;
 
 void kbo_cbt_draft_penalty_cache_clear(void)

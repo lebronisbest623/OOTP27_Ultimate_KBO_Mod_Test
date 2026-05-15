@@ -221,6 +221,17 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             : 0u;
         kbo_lock_foreign_injury_replacements();
         int existing = kbo_find_foreign_injury_replacement_locked(player_id, 0);
+        int closed_existing = existing < 0 ? kbo_find_foreign_injury_replacement_locked(player_id, 1) : -1;
+        if (existing < 0 && closed_existing >= 0) {
+            KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[closed_existing];
+            if (rec->status == KBO_FOREIGN_INJURY_STATUS_CLOSED) {
+                if (!direct_injury_eligible) {
+                    kbo_unlock_foreign_injury_replacements();
+                    continue;
+                }
+                existing = closed_existing;
+            }
+        }
         if (existing >= 0 && (message_injury_eligible || sql_injury_eligible) && candidate_expected_end != 0u) {
             KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[existing];
             if (rec->status != KBO_FOREIGN_INJURY_STATUS_CLOSED
@@ -228,6 +239,21 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 rec->expected_end_yyyymmdd = candidate_expected_end;
                 updated_rec = *rec;
                 updated_expected_end = kbo_persist_foreign_injury_replacements_locked();
+            }
+        }
+        if (existing >= 0) {
+            KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[existing];
+            if (rec->status == KBO_FOREIGN_INJURY_STATUS_CLOSED && direct_injury_eligible) {
+                rec->team_id = team_id;
+                rec->league_id = league_id != 0u ? league_id : configured_league_id;
+                rec->replacement_player_id = 0u;
+                rec->opened_on_yyyymmdd = today;
+                rec->expected_end_yyyymmdd = candidate_expected_end;
+                rec->slot_type = kbo_foreign_injury_slot_type_for_player(player);
+                rec->status = KBO_FOREIGN_INJURY_STATUS_OPEN;
+                rec->converted = 0u;
+                created_rec = *rec;
+                created = kbo_persist_foreign_injury_replacements_locked();
             }
         }
         if (existing < 0 && g_kbo_foreign_injury_replacement_count < KBO_FOREIGN_INJURY_REPLACEMENT_MAX) {
