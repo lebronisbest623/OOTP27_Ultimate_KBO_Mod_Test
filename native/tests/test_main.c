@@ -121,6 +121,18 @@ static void test_json_flags_parser(void)
     assert(kbo_find_json_value_span(json, (DWORD)strlen(json), "intl_established_fa_multiplier", &start, &end));
     assert((size_t)(end - start) == strlen("\" 5 \""));
     assert(strncmp(start, "\" 5 \"", (size_t)(end - start)) == 0);
+    assert(!kbo_find_json_value_span(json, (DWORD)strlen(json), " 5 ", &start, &end));
+    assert(!kbo_find_flag_value_in_json(json, (DWORD)strlen(json), "ignored", &value));
+
+    const char ui_json[] =
+        "{\r\n"
+        "  \"MOD INFO\": \"모드 정보\",\r\n"
+        "  \"Ultimate KBO is built only to provide the best KBO experience in OOTP.\": \"Ultimate KBO 모드\"\r\n"
+        "}\r\n";
+    char text_value[128] = {0};
+    assert(kbo_find_string_value_in_json(ui_json, (DWORD)strlen(ui_json), "MOD INFO", text_value, sizeof(text_value)));
+    assert(strcmp(text_value, "모드 정보") == 0);
+    assert(!kbo_find_string_value_in_json(ui_json, (DWORD)strlen(ui_json), "모드 정보", text_value, sizeof(text_value)));
 
     const char bom_json[] =
         "\xEF\xBB\xBF{\r\n"

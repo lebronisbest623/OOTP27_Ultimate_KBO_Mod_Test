@@ -110,6 +110,25 @@ static int kbo_parse_json_tokens(const char* json, DWORD json_size, jsmntok_t* t
     return parsed;
 }
 
+static int kbo_json_token_subtree_end(const jsmntok_t* tokens, int parsed, int index)
+{
+    if (tokens == NULL || index < 0 || index >= parsed) {
+        return index + 1;
+    }
+
+    int cursor = index + 1;
+    int children = tokens[index].size;
+    if (children <= 0) {
+        return cursor;
+    }
+
+    int child_tokens = tokens[index].type == JSMN_OBJECT ? children * 2 : children;
+    for (int i = 0; i < child_tokens && cursor < parsed; i++) {
+        cursor = kbo_json_token_subtree_end(tokens, parsed, cursor);
+    }
+    return cursor;
+}
+
 static int kbo_json_token_span_value(const char* json, const jsmntok_t* token, const char** out_start, const char** out_end)
 {
     if (json == NULL || token == NULL || out_start == NULL || out_end == NULL || token->start < 0 || token->end < token->start) {
@@ -299,14 +318,19 @@ static int kbo_find_value_token_in_json(const char* json, DWORD json_size, const
         return 0;
     }
 
-    for (int i = 1; i + 1 < parsed; i++) {
-        if (tokens[i].type != JSMN_STRING) {
-            continue;
-        }
-        if (kbo_token_equals_key(json, &tokens[i], key)) {
-            *out_value = tokens[i + 1];
+    if (tokens[0].type != JSMN_OBJECT || tokens[0].size <= 0) {
+        return 0;
+    }
+
+    int cursor = 1;
+    for (int pair = 0; pair < tokens[0].size && cursor + 1 < parsed; pair++) {
+        int key_index = cursor;
+        int value_index = cursor + 1;
+        if (tokens[key_index].type == JSMN_STRING && kbo_token_equals_key(json, &tokens[key_index], key)) {
+            *out_value = tokens[value_index];
             return 1;
         }
+        cursor = kbo_json_token_subtree_end(tokens, parsed, value_index);
     }
     return 0;
 }
