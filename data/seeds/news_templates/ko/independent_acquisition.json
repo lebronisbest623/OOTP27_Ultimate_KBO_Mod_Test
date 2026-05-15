@@ -1,6 +1,6 @@
 {
-  "independent_acquisition.open.title": "독립 구단 영입 창구 개방",
-  "independent_acquisition.open.news.body": "KBO가 2군 독립 구단의 영입 창구를 열었습니다. 대상은 퓨처스리그에 참가하는 독립 구단이며, 일정은 해당 리그 개막일로부터 두 달 뒤에 맞춰졌습니다.\n\n이 기간에는 울산 웨일즈 같은 2군 독립 구단이 최대 5명까지 필요한 전력 보강을 진행할 수 있습니다. KBO 구단 소속 선수 이동과는 별도 창구로 관리되며, 실제 영입 가능 여부는 각 선수의 계약 상태와 리그 등록 조건에 따라 결정됩니다.",
+  "independent_acquisition.open.title": "퓨처스 독립 구단, 시즌 중반 보강전 시작",
+  "independent_acquisition.open.news.body": "퓨처스리그 독립 구단들이 시즌 중반 전력 보강에 나설 수 있는 시간이 열렸습니다. 긴 시즌을 치르는 과정에서 생긴 빈자리를 메우고, 눈에 띄는 선수들에게는 다시 한 번 기회가 돌아갈 수 있는 무대입니다.\n\n울산 웨일즈를 비롯한 독립 구단들은 당장 필요한 포지션과 선수층을 살피며 움직일 전망입니다. KBO 구단들도 퓨처스 무대에서 꾸준히 모습을 보인 선수들의 다음 행선지를 주목하게 됐습니다.",
   "independent_acquisition.transfer.title": "{buyer_team_name}, {player_name} 영입",
-  "independent_acquisition.transfer.news.body": "{buyer_team_link}가 퓨처스 독립 구단 {seller_team_link}에서 뛰던 {player_link}을 새 식구로 맞았습니다.\n\n이번 영입은 2군 독립 구단 영입 창구를 통해 성사됐습니다. 이적료는 {cash_cost}달러로, {buyer_team_link}는 선수층 보강을 위해 빠르게 움직였습니다."
+  "independent_acquisition.transfer.news.body": "{buyer_team_link}가 퓨처스 독립 구단 {seller_team_link}에서 뛰던 {player_link}을 품었습니다.\n\n{buyer_team_link}는 시즌 중반 선수층을 넓히기 위해 독립 무대에서 꾸준히 기회를 노리던 {player_link}에게 손을 내밀었습니다. 이번 영입에는 {cash_cost}달러의 이적료가 붙었습니다."
 }

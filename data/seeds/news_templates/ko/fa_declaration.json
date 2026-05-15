@@ -1,6 +1,6 @@
 {
-  "fa_declaration.summary.title": "{season}시즌 FA 신청 마감",
-  "fa_declaration.summary.body": "{season}시즌 FA 신청 창구가 마감됐습니다. 총 {declared_count}명이 시장에 나서기로 했고, {deferred_count}명은 원소속팀에 남아 다음 기회를 보기로 했습니다.\n\n올해 FA 시장은 상위 등급 선수들의 선택으로 초반 분위기가 갈릴 전망입니다. 구단들은 보상 등급과 포지션 수요, 기존 전력 공백을 함께 따져 협상 우선순위를 다시 짜게 됐습니다.\n\n주요 FA 신청 선수\n{declared_list}\n신청을 미룬 주요 선수\n{deferred_list}\n신청을 미룬 선수들은 대체로 시장 상황과 잔류 조건을 함께 따진 끝에 결정을 미뤘습니다.",
+  "fa_declaration.summary.title": "{season}시즌 FA 시장 문 열렸다",
+  "fa_declaration.summary.body": "{season}시즌 FA 시장에 나설 얼굴들이 가려졌습니다. 총 {declared_count}명이 새 계약을 찾아 움직이고, {deferred_count}명은 원소속팀에 남아 다음 타이밍을 기다립니다.\n\n올해 시장의 초반 흐름은 상위 등급 선수들의 선택에서 갈릴 전망입니다. 구단들은 보상 부담, 포지션 수요, 비어 있는 전력 조각을 함께 놓고 협상 순서를 다시 짜게 됐습니다.\n\n시장에 나선 주요 선수\n{declared_list}\n신청을 미룬 주요 선수\n{deferred_list}\n신청을 미룬 선수들은 대체로 시장 분위기와 잔류 조건을 함께 따진 끝에 한 번 더 기다리는 쪽을 택했습니다.",
   "fa_declaration.summary.declared_line": "- {player_link} ({team_link}, {grade}등급)",
   "fa_declaration.summary.deferred_line": "- {player_link} ({team_link}, {grade}등급)",
   "fa_declaration.summary.none": "- 해당 없음",
