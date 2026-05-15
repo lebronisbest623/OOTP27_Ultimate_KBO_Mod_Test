@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 param(
     [switch] $Clean
 )
@@ -332,42 +333,62 @@ if ((Test-Path -LiteralPath $DllPath) -and -not $Clean) {
     $InputsNewestThanDll = (Get-LatestWriteTimeUtc -Files $NativeInputFiles) -gt (Get-Item -LiteralPath $DllPath).LastWriteTimeUtc
 }
 
-$Objects = @()
 $CompiledCount = 0
 $SkipNativeBuild = (Test-Path -LiteralPath $DllPath) -and -not $InputsNewestThanDll -and -not $Clean
 if ($SkipNativeBuild) {
     Write-Host "KBOFix.dll is up to date; skipped native dependency scan ($($NativeSources.Count) sources)."
+    $Objects = $NativeSources | ForEach-Object {
+        $Stem = Convert-ToObjectStem -SourcePath $_
+        Join-Path $ObjDir "$Stem.o"
+    }
 }
 else {
-    foreach ($Source in $NativeSources) {
-        $Stem = Convert-ToObjectStem -SourcePath $Source
-        $ObjectPath = Join-Path $ObjDir "$Stem.o"
-        $DepPath = Join-Path $ObjDir "$Stem.d"
-        $Objects += $ObjectPath
+    $SourceEntries = $NativeSources | ForEach-Object {
+        $Stem = Convert-ToObjectStem -SourcePath $_
+        [PSCustomObject]@{
+            Source     = $_
+            ObjectPath = Join-Path $ObjDir "$Stem.o"
+            DepPath    = Join-Path $ObjDir "$Stem.d"
+        }
+    }
 
-        if (-not (Test-ObjectOutOfDate -SourcePath $Source -ObjectPath $ObjectPath -DepPath $DepPath)) {
-            continue
-        }
+    $Objects = $SourceEntries | ForEach-Object { $_.ObjectPath }
 
-        Write-Host "Compiling $(Get-PathRelativeToRoot -Path $Source)"
-        $PreviousErrorActionPreference = $ErrorActionPreference
-        $ErrorActionPreference = "Continue"
-        try {
-            $GccOutput = & $Gcc -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
-                -isystem $WebView2Include `
-                -MMD -MP -MF $DepPath `
-                -c $Source `
-                -o $ObjectPath 2>&1
-            $GccExitCode = $LASTEXITCODE
+    $ToCompile = $SourceEntries | Where-Object {
+        Test-ObjectOutOfDate -SourcePath $_.Source -ObjectPath $_.ObjectPath -DepPath $_.DepPath
+    }
+
+    if ($ToCompile) {
+        $GccPath             = $Gcc
+        $WebView2IncludePath = $WebView2Include
+        $ThrottleLimit       = [Environment]::ProcessorCount
+        Write-Host "Compiling $($ToCompile.Count) of $($NativeSources.Count) sources (parallel, $ThrottleLimit threads)"
+
+        $Results = $ToCompile | ForEach-Object -Parallel {
+            $Entry      = $_
+            $GccPath    = $using:GccPath
+            $IncludePath = $using:WebView2IncludePath
+
+            $Output = & $GccPath -O2 -pipe -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
+                -isystem $IncludePath `
+                -MMD -MP -MF $Entry.DepPath `
+                -c $Entry.Source `
+                -o $Entry.ObjectPath 2>&1
+
+            [PSCustomObject]@{
+                Source   = $Entry.Source
+                ExitCode = $LASTEXITCODE
+                Output   = $Output
+            }
+        } -ThrottleLimit $ThrottleLimit
+
+        foreach ($Result in $Results) {
+            if ($Result.Output) { $Result.Output | ForEach-Object { Write-Host $_ } }
+            if ($Result.ExitCode -ne 0) {
+                throw "Failed to compile $($Result.Source)"
+            }
+            $CompiledCount += 1
         }
-        finally {
-            $ErrorActionPreference = $PreviousErrorActionPreference
-        }
-        $GccOutput | ForEach-Object { Write-Host $_ }
-        if ($GccExitCode -ne 0) {
-            throw "Failed to compile $Source"
-        }
-        $CompiledCount += 1
     }
 
     if (Test-LinkOutOfDate -OutputPath $DllPath -ObjectPaths $Objects -LoaderPath $WebView2Loader) {

@@ -129,7 +129,7 @@ static int kbo_independent_team_acquisition_build_news_text(
     title[0] = '\0';
     body[0] = '\0';
     if (!kbo_news_template_render_key(
-            "custom_event.independent_team_acquisition.open.title",
+            "independent_acquisition.open.title",
             NULL,
             0,
             title,
@@ -138,7 +138,7 @@ static int kbo_independent_team_acquisition_build_news_text(
         snprintf(title, title_size, "Futures Independent Club Signing Window Opens");
     }
     if (!kbo_news_template_render_key(
-            "custom_event.independent_team_acquisition.open.news.body",
+            "independent_acquisition.open.news.body",
             NULL,
             0,
             body,

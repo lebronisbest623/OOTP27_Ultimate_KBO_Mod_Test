@@ -14,6 +14,7 @@
 #include "../../../../core/news/templates/core_news_templates.h"
 #include "../../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../../../runtime_memory/runtime_memory.h"
+#include "../../../classification/team_classification.h"
 #include "../../../names/team_name_cache.h"
 #include "../../../names/team_string.h"
 
@@ -36,6 +37,19 @@ static void kbo_independent_acquisition_copy_team_name(
     }
     out[0] = '\0';
 
+    KboIndependentFuturesTeamLeague futures_teams[32];
+    int futures_count = kbo_collect_independent_futures_team_leagues(
+        futures_teams,
+        (int)(sizeof(futures_teams) / sizeof(futures_teams[0])),
+        NULL,
+        NULL);
+    for (int i = 0; i < futures_count; i++) {
+        if (futures_teams[i].team_id == team_id && futures_teams[i].display_name[0] != '\0') {
+            snprintf(out, out_size, "%s", futures_teams[i].display_name);
+            return;
+        }
+    }
+
     if (team != NULL && memory_range_readable(team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
         char city[64] = {0};
         char nickname[64] = {0};
@@ -46,6 +60,46 @@ static void kbo_independent_acquisition_copy_team_name(
 
         if (!kbo_independent_acquisition_team_name_placeholder(full_name) && strchr(full_name, ' ') != NULL) {
             snprintf(out, out_size, "%s", full_name);
+            return;
+        }
+        if (_stricmp(city, "Doosan") == 0 && _stricmp(nickname, "DOO") == 0) {
+            snprintf(out, out_size, "Doosan Bears");
+            return;
+        }
+        if (_stricmp(city, "Lotte") == 0 && _stricmp(nickname, "LOT") == 0) {
+            snprintf(out, out_size, "Lotte Giants");
+            return;
+        }
+        if (_stricmp(city, "Samsung") == 0 && _stricmp(nickname, "SAM") == 0) {
+            snprintf(out, out_size, "Samsung Lions");
+            return;
+        }
+        if (_stricmp(city, "KIA") == 0 && _stricmp(nickname, "KIA") == 0) {
+            snprintf(out, out_size, "KIA Tigers");
+            return;
+        }
+        if (_stricmp(city, "SSG") == 0 && _stricmp(nickname, "SSG") == 0) {
+            snprintf(out, out_size, "SSG Landers");
+            return;
+        }
+        if (_stricmp(city, "Hanwha") == 0 && _stricmp(nickname, "HAN") == 0) {
+            snprintf(out, out_size, "Hanwha Eagles");
+            return;
+        }
+        if (_stricmp(city, "Kiwoom") == 0 && _stricmp(nickname, "KIW") == 0) {
+            snprintf(out, out_size, "Kiwoom Heroes");
+            return;
+        }
+        if (_stricmp(city, "NC") == 0 && _stricmp(nickname, "NC") == 0) {
+            snprintf(out, out_size, "NC Dinos");
+            return;
+        }
+        if (_stricmp(city, "KT") == 0 && _stricmp(nickname, "KT") == 0) {
+            snprintf(out, out_size, "KT Wiz");
+            return;
+        }
+        if (_stricmp(city, "LG") == 0 && _stricmp(nickname, "LG") == 0) {
+            snprintf(out, out_size, "LG Twins");
             return;
         }
         if (!kbo_independent_acquisition_team_name_placeholder(city)
@@ -133,14 +187,14 @@ int kbo_emit_independent_acquisition_transfer_news(
         {"cash_cost", cash_cost_text},
     };
     if (!kbo_news_template_render_key(
-            "custom_event.independent_team_acquisition.transfer.title",
+            "independent_acquisition.transfer.title",
             vars,
             (int)(sizeof(vars) / sizeof(vars[0])),
             title,
             sizeof(title),
             source)
             || !kbo_news_template_render_key(
-                "custom_event.independent_team_acquisition.transfer.news.body",
+                "independent_acquisition.transfer.news.body",
                 vars,
                 (int)(sizeof(vars) / sizeof(vars[0])),
                 body,

@@ -61,7 +61,7 @@ void kbo_build_overview_hub_text(char* out, size_t out_size)
 
     kbo_window_text_appendf(&buffer, "%s\r\n\r\n", kbo_hub_text("\xec\x9a\x94\xec\x95\xbd", "OVERVIEW"));
 
-    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80", "SERVICE TEAMS"));
+    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80", "군경팀"));
     kbo_window_text_appendf(
         &buffer,
         kbo_hub_text("  \xec\x83\x81\xeb\xac\xb4 \xeb\xb3\xb5\xeb\xac\xb4 \xec\xa4\x91: %d\xeb\xaa\x85\r\n", "  Sangmu serving: %d\r\n"),
@@ -114,7 +114,7 @@ void kbo_build_military_service_window_text(char* out, size_t out_size)
     int sang_count = kbo_hub_count_service_players(sang_id, &sang_due_60, &sang_due_now);
     int kpb_count  = kbo_hub_count_service_players(kpb_id,  &kpb_due_60,  &kpb_due_now);
 
-    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80", "SERVICE TEAMS"));
+    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80", "군경팀"));
     kbo_window_text_appendf(
         &buffer,
         kbo_hub_text("\xec\xb6\x94\xec\xa0\x81 \xec\xa4\x91\xec\x9d\xb8 \xeb\xb3\xb5\xeb\xac\xb4 \xeb\xb0\xb0\xec\xa0\x95: %ld\r\n\r\n", "Tracked service assignments: %ld\r\n\r\n"),

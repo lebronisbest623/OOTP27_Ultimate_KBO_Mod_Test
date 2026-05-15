@@ -12,7 +12,7 @@
   "event.cbt_exception_deadline.title_key": "custom_event.cbt.exception_deadline.title",
   "event.cbt_announcement.title_key": "custom_event.cbt.announcement.title",
   "event.fa_declaration.title_key": "custom_event.fa.declaration.title",
-  "event.independent_team_acquisition_open.title_key": "custom_event.independent_team_acquisition.open.title",
+  "event.independent_team_acquisition_open.title_key": "independent_acquisition.open.title",
   "schedule": {
     "foreign_priority": {
       "fa_declaration_offset_days": 7,
@@ -61,7 +61,7 @@
     },
     {
       "kind": "independent_team_acquisition_open",
-      "title_key": "custom_event.independent_team_acquisition.open.title"
+      "title_key": "independent_acquisition.open.title"
     }
   ]
 }

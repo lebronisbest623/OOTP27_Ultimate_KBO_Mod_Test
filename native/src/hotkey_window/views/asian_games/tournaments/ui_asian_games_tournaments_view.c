@@ -81,27 +81,27 @@ const char* kbo_webview_asian_games_tournament_phase(
     }
     if (schedule == NULL || schedule->year == 0u || today == 0u) {
         if (out_class != NULL) { *out_class = "roMuted"; }
-        return "TBD";
+        return "미정";
     }
     if (schedule->tournament_start != 0u
             && schedule->tournament_end != 0u
             && today >= schedule->tournament_start
             && today <= schedule->tournament_end) {
         if (out_class != NULL) { *out_class = "roOrange"; }
-        return "In Progress";
+        return "진행 중";
     }
     if (schedule->final_date != 0u && today > schedule->final_date) {
         if (out_class != NULL) { *out_class = "roMuted"; }
-        return "Completed";
+        return "완료";
     }
     if (schedule->selection_date != 0u
             && schedule->tournament_start != 0u
             && today >= schedule->selection_date
             && today < schedule->tournament_start) {
         if (out_class != NULL) { *out_class = "roSoon"; }
-        return "Roster Window";
+        return "대표팀 창";
     }
-    return "Upcoming";
+    return "예정";
 }
 
 int kbo_webview_asian_games_tournament_is_announced(
@@ -148,7 +148,7 @@ void kbo_webview_append_asian_games_tournament_row(
     } else if (schedule->host_country[0] != '\0') {
         snprintf(host_text, sizeof(host_text), "%s", schedule->host_country);
     } else {
-        snprintf(host_text, sizeof(host_text), "TBD");
+        snprintf(host_text, sizeof(host_text), "미정");
     }
 
     char tournament_text[40] = {0};
@@ -238,13 +238,13 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
         snprintf(
             summary_text,
             sizeof(summary_text),
-            "View: Tournaments - %d Scheduled - Official: %d / Provisional: %d / Projected: %d",
+            "보기: 대회 - 예정 %d개 - 확정: %d / 잠정: %d / 예상: %d",
             count,
             official_count,
             provisional_count,
             projected_count);
     } else {
-        snprintf(summary_text, sizeof(summary_text), "View: Tournaments - Asian Games");
+        snprintf(summary_text, sizeof(summary_text), "보기: 대회 - 아시안게임");
     }
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights'>");
@@ -252,10 +252,10 @@ void kbo_webview_append_asian_games_tournaments_view(KboWindowTextBuffer* buffer
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable agTournamentTable'><thead><tr>"
-        "<th class='roPo' data-sort-type='number'>Year</th><th class='roName' data-sort-type='text'>Host</th>"
-        "<th class='roDate' data-sort-type='date'>Tournament</th><th class='roClub' data-sort-type='date'>Selection</th>"
-        "<th class='roTeam' data-sort-type='date'>Departure</th><th class='roReturn' data-sort-type='date'>Final</th>"
-        "<th class='roStatus' data-sort-type='text'>Status</th><th class='roResult' data-sort-type='text'>Phase</th>"
+        "<th class='roPo' data-sort-type='number'>연도</th><th class='roName' data-sort-type='text'>개최지</th>"
+        "<th class='roDate' data-sort-type='date'>대회</th><th class='roClub' data-sort-type='date'>명단 발표</th>"
+        "<th class='roTeam' data-sort-type='date'>출국</th><th class='roReturn' data-sort-type='date'>결승</th>"
+        "<th class='roStatus' data-sort-type='text'>상태</th><th class='roResult' data-sort-type='text'>단계</th>"
         "</tr></thead><tbody>");
 
     if (count <= 0) {

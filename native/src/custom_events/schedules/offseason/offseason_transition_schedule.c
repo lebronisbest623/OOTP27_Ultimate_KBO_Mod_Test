@@ -8,6 +8,7 @@
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/dates/core_text_date.h"
+#include "../../../core/season/phase/season_phase.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../allstar/allstar_league_context/allstar_league_context.h"
@@ -50,12 +51,12 @@ static void kbo_audit_offseason_transition(
 
 int kbo_custom_event_phase_is_offseason(uint8_t phase)
 {
-    return phase == 0u || phase == 1u;
+    return kbo_season_phase_is_offseason(phase);
 }
 
 int kbo_custom_event_phase_can_enter_offseason(uint8_t phase)
 {
-    return phase == 3u || phase == 4u;
+    return kbo_season_phase_can_enter_offseason(phase);
 }
 
 int kbo_custom_event_date_allows_offseason_transition(uint32_t yyyymmdd)
@@ -142,23 +143,14 @@ int kbo_custom_event_read_league_phase(
         return 0;
     }
 
-    uintptr_t league_ptr = kbo_find_league_ptr_from_global_vectors(league_id);
-    if (league_ptr == 0
-            || !memory_range_readable((void*)league_ptr, OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET + sizeof(uint32_t))) {
+    KboSeasonPhaseInfo phase_info;
+    if (!kbo_season_phase_read_raw(league_id, &phase_info)) {
         return 0;
     }
-
-    uint32_t league_year = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
-    uint8_t phase = *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET);
-    uint32_t phase_year = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET);
-    if (phase > 4u || league_year < 1982u || league_year > 2200u) {
-        return 0;
-    }
-
-    if (out_league_ptr != NULL) { *out_league_ptr = league_ptr; }
-    if (out_league_year != NULL) { *out_league_year = league_year; }
-    if (out_phase != NULL) { *out_phase = phase; }
-    if (out_phase_year != NULL) { *out_phase_year = phase_year; }
+    if (out_league_ptr != NULL) { *out_league_ptr = phase_info.league_ptr; }
+    if (out_league_year != NULL) { *out_league_year = phase_info.league_year; }
+    if (out_phase != NULL) { *out_phase = phase_info.raw_phase; }
+    if (out_phase_year != NULL) { *out_phase_year = phase_info.raw_phase_year; }
     return 1;
 }
 
@@ -260,16 +252,13 @@ int kbo_custom_event_monitor_check_offseason_transition(
         league_id = kbo_resolve_kbo_league_id();
     }
 
-    uintptr_t league_ptr = 0;
-    uint32_t league_year = 0;
-    uint32_t phase_year = 0;
-    uint8_t phase = 0xffu;
-    if (!kbo_custom_event_read_league_phase(
+    uint32_t known_offseason_start = kbo_get_latest_offseason_starts_event(today_yyyymmdd);
+    KboSeasonPhaseInfo phase_info;
+    if (!kbo_season_phase_resolve(
             league_id,
-            &league_ptr,
-            &league_year,
-            &phase,
-            &phase_year)) {
+            today_yyyymmdd,
+            known_offseason_start,
+            &phase_info)) {
         kbo_audit_offseason_transition(
             "defer",
             "league_phase_unavailable",
@@ -284,6 +273,11 @@ int kbo_custom_event_monitor_check_offseason_transition(
             0);
         return kbo_custom_event_schedule_pending_offseason_transition(today_yyyymmdd, source);
     }
+    uintptr_t league_ptr = phase_info.league_ptr;
+    uint32_t league_year = phase_info.league_year;
+    uint32_t phase_year = phase_info.raw_phase_year;
+    uint8_t phase = phase_info.effective_phase;
+    uint8_t raw_phase = phase_info.raw_phase;
 
     int same_league = g_kbo_custom_event_last_phase_league_id == league_id
         && g_kbo_custom_event_last_phase_league_ptr == league_ptr;
@@ -298,15 +292,20 @@ int kbo_custom_event_monitor_check_offseason_transition(
             || g_kbo_custom_event_last_seen_league_phase != phase
             || g_kbo_custom_event_last_phase_year != phase_year) {
         kbo_log_runtimef(
-            "KBO custom event phase observed source=%s league=%p league_id=%u date=%u league_year=%u previous_phase=%u phase=%u phase_year=%u",
+            "KBO custom event phase observed source=%s league=%p league_id=%u date=%u league_year=%u previous_phase=%u raw_phase=%u phase=%u label=%s phase_year=%u opening_day=%u offseason_start=%u corrected=%d",
             source != NULL ? source : "",
             (void*)league_ptr,
             league_id,
             today_yyyymmdd,
             league_year,
             had_previous ? (unsigned)g_kbo_custom_event_last_seen_league_phase : 255u,
+            (unsigned)raw_phase,
             (unsigned)phase,
-            phase_year);
+            kbo_season_phase_label(phase),
+            phase_year,
+            phase_info.opening_day,
+            known_offseason_start,
+            phase_info.corrected);
     }
 
     if (transitioned_to_offseason) {

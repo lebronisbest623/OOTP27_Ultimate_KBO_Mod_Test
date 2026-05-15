@@ -2,14 +2,7 @@
 #include "../audit/captain_rule_audit.h"
 static const char* kbo_captain_phase_label(uint8_t phase)
 {
-    switch (phase) {
-    case 0: return "offseason_or_reset";
-    case 1: return "offseason_started";
-    case 2: return "preseason_or_spring";
-    case 3: return "regular_season";
-    case 4: return "postseason_or_transition";
-    default: return "unknown";
-    }
+    return kbo_season_phase_label(phase);
 }
 void kbo_captain_log_phase_observed(
     const char* source,

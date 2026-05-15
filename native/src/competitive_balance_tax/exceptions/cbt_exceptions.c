@@ -238,6 +238,7 @@ int kbo_cbt_exception_auto_designate_missing(uint32_t season, const char* source
     uint32_t team_ids[KBO_CBT_EXCEPTION_AUTO_TEAM_MAX] = {0};
     int32_t best_salary[KBO_CBT_EXCEPTION_AUTO_TEAM_MAX] = {0};
     int best_grade_index[KBO_CBT_EXCEPTION_AUTO_TEAM_MAX];
+    int skip_log_count = 0;
     int team_count = 0;
     for (int i = 0; i < KBO_CBT_EXCEPTION_AUTO_TEAM_MAX; i++) {
         best_grade_index[i] = -1;
@@ -279,6 +280,18 @@ int kbo_cbt_exception_auto_designate_missing(uint32_t season, const char* source
 
         int season_count = 0;
         if (!kbo_cbt_exception_player_eligible(grade->ranking_team_id, grade->player_key, &season_count)) {
+            if (skip_log_count < 64) {
+                skip_log_count++;
+                kbo_log_runtimef(
+                    "KBO CBT exception auto candidate skipped season=%u team=%u player_key=%s player_name=%s salary=%d reason=ineligible team_seasons=%d source=%s",
+                    season,
+                    grade->ranking_team_id,
+                    grade->player_key,
+                    grade->player_name,
+                    grade->salary,
+                    season_count,
+                    source != NULL ? source : "");
+            }
             continue;
         }
         if (best_grade_index[team_slot] < 0 || grade->salary > best_salary[team_slot]) {

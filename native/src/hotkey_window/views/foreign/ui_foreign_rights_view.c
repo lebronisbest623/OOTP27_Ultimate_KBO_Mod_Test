@@ -49,10 +49,10 @@ static void kbo_webview_append_candidate_card(
     kbo_window_text_appendf(
         buffer,
         "<tr%s><td class='roAction'><span class='rightsActions'>"
-        "<a class='rightsAction rightsRelease' title='Release reserve rights' href='kbo://release/%u' data-player='",
+        "<a class='rightsAction rightsRelease' title='보류권 해제' href='kbo://release/%u' data-player='",
         player_id == selected_foreign_player_id ? " class='selected'" : "",
         player_id);
-    kbo_html_append_escaped(buffer, player_name[0] != '\0' ? player_name : "Unknown player");
+    kbo_html_append_escaped(buffer, player_name[0] != '\0' ? player_name : "알 수 없는 선수");
     kbo_window_text_appendf(
         buffer,
         "'>-</a></span></td><td class='roPo'>%s</td><td class='roNum'>",
@@ -61,7 +61,7 @@ static void kbo_webview_append_candidate_card(
     kbo_window_text_appendf(buffer, "</td>");
     kbo_webview_append_player_name_link_cell(
         buffer,
-        player_name[0] != '\0' ? player_name : "Unknown player",
+        player_name[0] != '\0' ? player_name : "알 수 없는 선수",
         player_id,
         "kbo://select/");
     kbo_window_text_appendf(buffer, "<td class='roTeam'>");
@@ -78,7 +78,7 @@ static void kbo_webview_append_candidate_card(
     kbo_window_text_appendf(buffer, "</td><td class='roDate'>");
     kbo_html_append_escaped(buffer, expires_text);
     kbo_window_text_appendf(buffer, "</td><td class='roStatus'>");
-    kbo_html_append_escaped(buffer, flags != NULL && flags[0] != '\0' ? flags : "Active");
+    kbo_html_append_escaped(buffer, flags != NULL && flags[0] != '\0' ? flags : "활성");
     kbo_window_text_appendf(buffer, "</td></tr>");
 }
 
@@ -93,11 +93,11 @@ void kbo_webview_append_foreign_rights_view(
             kbo_window_text_appendf(
                 buffer,
                 "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable foreignRightsTable'><thead><tr>"
-                "<th class='roAction'>Rights</th><th class='roPo' data-sort-type='text'>PO</th><th class='roNum' data-sort-type='number'></th>"
-                "<th class='roName' data-sort-type='text'>Name</th><th class='roTeam' data-sort-type='text'>Team</th>"
-                "<th class='roNat' data-sort-type='text'>Nationality*</th><th class='roAge' data-sort-type='number'>Age</th>"
-                "<th class='roDate' data-sort-type='date'>Retained</th><th class='roDate' data-sort-type='date'>Expires</th>"
-                "<th class='roStatus' data-sort-type='text'>Status</th></tr></thead><tbody>");
+                "<th class='roAction'>보류권</th><th class='roPo' data-sort-type='text'>포지션</th><th class='roNum' data-sort-type='number'></th>"
+                "<th class='roName' data-sort-type='text'>선수</th><th class='roTeam' data-sort-type='text'>구단</th>"
+                "<th class='roNat' data-sort-type='text'>국적*</th><th class='roAge' data-sort-type='number'>나이</th>"
+                "<th class='roDate' data-sort-type='date'>보류일</th><th class='roDate' data-sort-type='date'>만료일</th>"
+                "<th class='roStatus' data-sort-type='text'>상태</th></tr></thead><tbody>");
 
             uintptr_t player_vector = 0;
             int32_t player_count = 0;
@@ -132,12 +132,12 @@ void kbo_webview_append_foreign_rights_view(
                     }
                     char flags[96] = {0};
                     snprintf(flags, sizeof(flags), "%s%s%s%s%s",
-                        player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] ? "Restricted " : "",
-                        player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] ? "SecRestricted " : "",
+                        player[OOTP27_PLAYER_RESTRICTED_FLAG_OFFSET] ? "제한 " : "",
+                        player[OOTP27_PLAYER_SECONDARY_RESTRICTED_FLAG_OFFSET] ? "2차제한 " : "",
                         player[OOTP27_PLAYER_DFA_FLAG_OFFSET] ? "DFA " : "",
-                        player[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET] ? "Loan " : "",
-                        player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] ? "Injured " : "");
-                    if (flags[0] == '\0') { snprintf(flags, sizeof(flags), "Reserved"); }
+                        player[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET] ? "임대 " : "",
+                        player[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] ? "부상 " : "");
+                    if (flags[0] == '\0') { snprintf(flags, sizeof(flags), "보류"); }
                     uint32_t retained_on = 0u;
                     uint32_t expires_on = 0u;
                     kbo_get_active_foreign_waiver_right_dates(

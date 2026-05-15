@@ -3,7 +3,6 @@
 
 void kbo_webview_append_asian_quota_view(KboWindowTextBuffer* buffer)
 {
-    kbo_foreign_injury_replacement_scan_once("foreign_policy_webview");
     int configured_nations = kbo_load_asian_quota_nation_ids_once();
     uint32_t team_foreign = 0u;
     uint32_t team_asian = 0u;
@@ -259,10 +258,10 @@ void kbo_webview_append_sub_tabs(KboWindowTextBuffer* buffer)
 const char* kbo_hub_cbt_subnav_label(int index)
 {
     switch (index) {
-        case KBO_HUB_CBT_SUBVIEW_OVERVIEW: return "Overview";
-        case KBO_HUB_CBT_SUBVIEW_HISTORY:  return "History";
-        case KBO_HUB_CBT_SUBVIEW_EXCEPTIONS: return "Exceptions";
-        case KBO_HUB_CBT_SUBVIEW_RULES:    return "Rules";
+        case KBO_HUB_CBT_SUBVIEW_OVERVIEW: return "개요";
+        case KBO_HUB_CBT_SUBVIEW_HISTORY:  return "기록";
+        case KBO_HUB_CBT_SUBVIEW_EXCEPTIONS: return "예외";
+        case KBO_HUB_CBT_SUBVIEW_RULES:    return "규정";
         default: return "";
     }
 }

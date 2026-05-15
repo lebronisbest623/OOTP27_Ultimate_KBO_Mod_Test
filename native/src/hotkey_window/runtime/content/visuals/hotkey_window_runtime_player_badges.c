@@ -33,7 +33,6 @@ static void kbo_hub_refresh_foreign_slot_cache(void)
 
     int injured_count = 0;
     int replacement_count = 0;
-    kbo_foreign_injury_replacement_scan_once("foreign_slot_cache");
     kbo_ensure_foreign_injury_replacements_loaded();
     kbo_lock_foreign_injury_replacements();
     for (int i = 0; i < g_kbo_foreign_injury_replacement_count; i++) {

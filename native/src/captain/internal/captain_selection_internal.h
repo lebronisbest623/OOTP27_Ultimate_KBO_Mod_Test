@@ -16,6 +16,7 @@
 #include "../../core/dates/core_current_date.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/season/phase/season_phase.h"
 #include "../../core/teams/core_team_collect.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../runtime_memory/runtime_memory.h"

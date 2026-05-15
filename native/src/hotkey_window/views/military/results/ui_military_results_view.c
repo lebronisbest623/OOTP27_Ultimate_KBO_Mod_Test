@@ -9,8 +9,8 @@ void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint3
     uint32_t kpb_id  = kpb  != NULL ? *(uint32_t*)(kpb  + OOTP27_KBO_TEAM_ID_OFFSET) : 0;
     char sang_name[64] = {0};
     char kpb_name[64]  = {0};
-    kbo_hub_copy_team_display_name_from_ptr(sang, sang_name, sizeof(sang_name), "Sangmu Baseball Team");
-    kbo_hub_copy_team_display_name_from_ptr(kpb,  kpb_name,  sizeof(kpb_name),  "Korean Police Baseball Team");
+    kbo_hub_copy_team_display_name_from_ptr(sang, sang_name, sizeof(sang_name), "상무");
+    kbo_hub_copy_team_display_name_from_ptr(kpb,  kpb_name,  sizeof(kpb_name),  "경찰 야구단");
 
     LONG count = g_kbo_military_draft_candidate_count;
     if (count < 0) { count = 0; }
@@ -80,14 +80,14 @@ void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint3
         snprintf(
             summary_text,
             sizeof(summary_text),
-            "View: Announcement Results - %u - Accepted: %d",
+            "보기: 발표 결과 - %u - 합격: %d명",
             selected_year,
             selected_in_year);
     } else {
         snprintf(
             summary_text,
             sizeof(summary_text),
-            "View: Announcement Results - Accepted: %d",
+            "보기: 발표 결과 - 합격: %d명",
             selected_in_year);
     }
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights'>");
@@ -99,7 +99,7 @@ void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint3
     }
     kbo_window_text_appendf(
         buffer,
-        "</div><div class='rosterTopControls'><span class='rosterTopLabel'>YEAR:</span>"
+        "</div><div class='rosterTopControls'><span class='rosterTopLabel'>연도:</span>"
         "<div class='rosterYearChoice'>");
     kbo_webview_begin_ootp_choice(buffer, "militaryResultsYearSelect", selected_year_label);
     if (year_count > 0) {
@@ -124,9 +124,9 @@ void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint3
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable resultRosterTable'><thead><tr>"
-        "<th class='roPo' data-sort-type='text'>PO</th><th class='roName' data-sort-type='text'>Name</th>"
-        "<th class='roClub' data-sort-type='text'>Original Club</th><th class='roLeague' data-sort-type='text'>Service Team</th>"
-        "<th class='roReturn' data-sort-type='text'>Return Date</th><th class='roResult' data-sort-type='text'>Result</th>"
+        "<th class='roPo' data-sort-type='text'>포지션</th><th class='roName' data-sort-type='text'>선수</th>"
+        "<th class='roClub' data-sort-type='text'>원 소속</th><th class='roLeague' data-sort-type='text'>복무 구단</th>"
+        "<th class='roReturn' data-sort-type='text'>복귀일</th><th class='roResult' data-sort-type='text'>결과</th>"
         "</tr></thead><tbody>");
 
     int rendered = 0;
@@ -148,7 +148,7 @@ void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint3
         char service_team_name[64] = {0};
         char return_date[16] = "-";
         const char* position_label = "-";
-        snprintf(service_team_name, sizeof(service_team_name), "%s", sang_name[0] != '\0' ? sang_name : "Sangmu Baseball Team");
+        snprintf(service_team_name, sizeof(service_team_name), "%s", sang_name[0] != '\0' ? sang_name : "상무");
 
         if (kbo_player_pointer_plausible(player_ptr)) {
             uint8_t* player = (uint8_t*)player_ptr;
@@ -186,14 +186,14 @@ void kbo_webview_append_military_results_view(KboWindowTextBuffer* buffer, uint3
         }
 
         kbo_window_text_appendf(buffer, "<tr><td class='roPo'>%s</td>", position_label);
-        kbo_webview_append_player_name_cell(buffer, player_name[0] != '\0' ? player_name : "Unknown player", candidate->player_id);
+        kbo_webview_append_player_name_cell(buffer, player_name[0] != '\0' ? player_name : "알 수 없는 선수", candidate->player_id);
         kbo_window_text_appendf(buffer, "<td class='roClub'>");
         kbo_html_append_escaped(buffer, original_team_name);
         kbo_window_text_appendf(buffer, "</td><td class='roLeague'>");
         kbo_html_append_escaped(buffer, service_team_name);
         kbo_window_text_appendf(
             buffer,
-            "</td><td class='roReturn'>%s</td><td class='roResult'>Accepted</td></tr>",
+            "</td><td class='roReturn'>%s</td><td class='roResult'>합격</td></tr>",
             return_date);
         rendered++;
     }

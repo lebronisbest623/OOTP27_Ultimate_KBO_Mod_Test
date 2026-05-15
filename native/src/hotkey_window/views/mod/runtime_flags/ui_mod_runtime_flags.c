@@ -57,9 +57,9 @@ void kbo_webview_append_mod_runtime_flag_row(KboWindowTextBuffer* buffer, const 
     snprintf(href_on, sizeof(href_on), "kbo://mod/settings/flag/%s/on", setting->key);
     snprintf(href_off, sizeof(href_off), "kbo://mod/settings/flag/%s/off", setting->key);
     kbo_window_text_appendf(buffer, "</label>");
-    kbo_webview_begin_ootp_choice(buffer, id, enabled ? "On" : "Off");
-    kbo_webview_append_ootp_choice_option(buffer, href_on, "On", enabled);
-    kbo_webview_append_ootp_choice_option(buffer, href_off, "Off", !enabled);
+    kbo_webview_begin_ootp_choice(buffer, id, enabled ? "켬" : "끔");
+    kbo_webview_append_ootp_choice_option(buffer, href_on, "켬", enabled);
+    kbo_webview_append_ootp_choice_option(buffer, href_off, "끔", !enabled);
     kbo_webview_end_ootp_choice(buffer);
     kbo_window_text_appendf(buffer, "</div>");
 }

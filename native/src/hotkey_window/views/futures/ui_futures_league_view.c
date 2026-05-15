@@ -29,17 +29,17 @@ static void kbo_futures_ui_append_context_bar(
         snprintf(
             summary,
             sizeof(summary),
-            "View: %s - Buyer: %s - Window: %s - Period: %s to %s - Cash: %s - Sellers: %d - Rows: %d",
+            "보기: %s - 구매 구단: %s - 기간: %s - 창구: %s ~ %s - 보유 자금: %s - 판매 구단: %d - 표시: %d",
             mode != NULL ? mode : "-",
             buyer_name,
-            context->window_open ? "Open" : "Closed",
+            context->window_open ? "열림" : "닫힘",
             open_text,
             close_text,
             cash_text,
             context->seller_count,
             row_count);
     } else {
-        snprintf(summary, sizeof(summary), "View: %s - Rows: %d", mode != NULL ? mode : "-", row_count);
+        snprintf(summary, sizeof(summary), "보기: %s - 표시: %d", mode != NULL ? mode : "-", row_count);
     }
     kbo_webview_append_roster_top_bar(buffer, summary);
 }
@@ -63,25 +63,25 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
         &context);
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights futuresRights'>");
-    kbo_futures_ui_append_context_bar(buffer, &context, count, "OFFER");
+    kbo_futures_ui_append_context_bar(buffer, &context, count, "제안");
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable futuresOfferTable'><thead><tr>"
-        "<th class='roAction'>Offer</th><th class='roPo' data-sort-type='text'>PO</th>"
-        "<th class='roName' data-sort-type='text'>Name</th><th class='roClub' data-sort-type='text'>Independent Club</th>"
-        "<th class='roNat' data-sort-type='text'>Nation</th><th class='roAge' data-sort-type='number'>Age</th>"
-        "<th class='roSlot' data-sort-type='text'>Slot</th><th class='roCash' data-sort-type='number'>Cash</th>"
-        "<th class='roScore' data-sort-type='number'>Score</th><th class='roStatus' data-sort-type='text'>Status</th>"
+        "<th class='roAction'>제안</th><th class='roPo' data-sort-type='text'>포지션</th>"
+        "<th class='roName' data-sort-type='text'>선수</th><th class='roClub' data-sort-type='text'>독립 구단</th>"
+        "<th class='roNat' data-sort-type='text'>국적</th><th class='roAge' data-sort-type='number'>나이</th>"
+        "<th class='roSlot' data-sort-type='text'>분류</th><th class='roCash' data-sort-type='number'>비용</th>"
+        "<th class='roStatus' data-sort-type='text'>상태</th>"
         "</tr></thead><tbody>");
 
     if (!context.policy_enabled) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "Custom foreign policy is disabled.");
+        kbo_futures_ui_append_empty_row(buffer, 9, "커스텀 외국인 정책이 비활성화되어 있습니다.");
     } else if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "Select a KBO club first.");
+        kbo_futures_ui_append_empty_row(buffer, 9, "먼저 KBO 구단을 선택하세요.");
     } else if (context.seller_count <= 0) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "No independent Futures League club is resolved from the seed file.");
+        kbo_futures_ui_append_empty_row(buffer, 9, "시드 파일에서 독립 구단을 찾지 못했습니다.");
     } else if (count <= 0) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "No eligible independent club player is available for this club.");
+        kbo_futures_ui_append_empty_row(buffer, 9, "이 구단에 표시할 독립 구단 선수가 없습니다.");
     }
 
     for (int i = 0; i < count; i++) {
@@ -89,30 +89,36 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
         char player_name[96] = {0};
         char seller_name[96] = {0};
         char cash_text[32] = {0};
-        char status[32] = "Ready";
+        char status[32] = "가능";
         kbo_futures_ui_copy_player_name(row->player_ptr, row->player_id, player_name, sizeof(player_name));
         kbo_futures_ui_copy_team_name(row->seller_team_id, seller_name, sizeof(seller_name));
         kbo_futures_ui_format_cash(row->cash_cost, cash_text, sizeof(cash_text));
+        if (row->status_label[0] != '\0') {
+            snprintf(status, sizeof(status), "%s", row->status_label);
+        }
         if (row->already_decided) {
-            snprintf(status, sizeof(status), "Result");
+            snprintf(status, sizeof(status), "결과");
         } else if (row->already_requested) {
-            snprintf(status, sizeof(status), "Pending");
+            snprintf(status, sizeof(status), "대기");
         } else if (!context.window_open) {
-            snprintf(status, sizeof(status), "Closed");
+            snprintf(status, sizeof(status), "마감");
         }
 
         kbo_window_text_appendf(buffer, "<tr><td class='roAction'><span class='rightsActions'>");
-        if (context.window_open && !row->already_requested && !row->already_decided) {
+        if (context.window_open
+                && !row->offer_blocked
+                && !row->already_requested
+                && !row->already_decided) {
             kbo_window_text_appendf(
                 buffer,
-                "<a class='rightsAction rightsAdd' title='Submit offer' href='kbo://futures-offer/submit/%u/%u/%u'>Offer</a>",
+                "<a class='rightsAction rightsAdd' title='영입 제안' href='kbo://futures-offer/submit/%u/%u/%u'>제안</a>",
                 buyer_team_id,
                 row->seller_team_id,
                 row->player_id);
         } else {
             kbo_window_text_appendf(buffer, "<span class='rightsAction rightsAdd disabled' title='");
             kbo_html_append_escaped(buffer, status);
-            kbo_window_text_appendf(buffer, "'>Offer</span>");
+            kbo_window_text_appendf(buffer, "'>제안</span>");
         }
         kbo_window_text_appendf(buffer, "</span></td><td class='roPo'>%s</td>", kbo_futures_ui_position_label(row->player_ptr));
         kbo_webview_append_player_name_cell(buffer, player_name, row->player_id);
@@ -129,9 +135,7 @@ static void kbo_futures_ui_append_offer_view(KboWindowTextBuffer* buffer, uint32
         kbo_html_append_escaped(buffer, cash_text);
         kbo_window_text_appendf(
             buffer,
-            "</td><td class='roScore' data-sort-value='%lld'>%lld</td><td class='roStatus'>",
-            (long long)row->request_score,
-            (long long)row->request_score);
+            "</td><td class='roStatus'>");
         kbo_html_append_escaped(buffer, status);
         kbo_window_text_appendf(buffer, "</td></tr>");
     }
@@ -151,21 +155,20 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
         KBO_INDEPENDENT_ACQUISITION_UI_MAX_ROWS);
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights futuresRights'>");
-    kbo_futures_ui_append_context_bar(buffer, &context, count, "PENDING");
+    kbo_futures_ui_append_context_bar(buffer, &context, count, "대기");
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable futuresPendingTable'><thead><tr>"
-        "<th class='roAction'>Cancel</th><th class='roDate' data-sort-type='number'>Date</th><th class='roPo' data-sort-type='text'>PO</th>"
-        "<th class='roName' data-sort-type='text'>Name</th><th class='roClub' data-sort-type='text'>Independent Club</th>"
-        "<th class='roNat' data-sort-type='text'>Nation</th><th class='roSlot' data-sort-type='text'>Slot</th>"
-        "<th class='roCash' data-sort-type='number'>Cash</th><th class='roScore' data-sort-type='number'>Score</th>"
-        "<th class='roStatus' data-sort-type='text'>Status</th>"
+        "<th class='roAction'>취소</th><th class='roDate' data-sort-type='number'>일자</th><th class='roPo' data-sort-type='text'>포지션</th>"
+        "<th class='roName' data-sort-type='text'>선수</th><th class='roClub' data-sort-type='text'>독립 구단</th>"
+        "<th class='roNat' data-sort-type='text'>국적</th><th class='roSlot' data-sort-type='text'>분류</th>"
+        "<th class='roCash' data-sort-type='number'>비용</th><th class='roStatus' data-sort-type='text'>상태</th>"
         "</tr></thead><tbody>");
 
     if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "Select a KBO club first.");
+        kbo_futures_ui_append_empty_row(buffer, 9, "먼저 KBO 구단을 선택하세요.");
     } else if (count <= 0) {
-        kbo_futures_ui_append_empty_row(buffer, 10, "No pending independent club offer.");
+        kbo_futures_ui_append_empty_row(buffer, 9, "대기 중인 독립 구단 영입 제안이 없습니다.");
     }
     for (int i = 0; i < count; i++) {
         KboIndependentAcquisitionUiRequestRow* row = &rows[i];
@@ -181,7 +184,7 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
         kbo_window_text_appendf(
             buffer,
             "<tr><td class='roAction'><span class='rightsActions'>"
-            "<a class='rightsAction rightsCancel' title='Cancel offer' href='kbo://futures-offer/cancel/%u/%u/%u'>Cancel</a>"
+            "<a class='rightsAction rightsCancel' title='영입 제안 취소' href='kbo://futures-offer/cancel/%u/%u/%u'>취소</a>"
             "</span></td><td class='roDate' data-sort-value='%u'>",
             buyer_team_id,
             row->seller_team_id,
@@ -200,9 +203,7 @@ static void kbo_futures_ui_append_pending_view(KboWindowTextBuffer* buffer, uint
         kbo_html_append_escaped(buffer, cash_text);
         kbo_window_text_appendf(
             buffer,
-            "</td><td class='roScore' data-sort-value='%lld'>%lld</td><td class='roStatus'>PENDING</td></tr>",
-            (long long)row->request_score,
-            (long long)row->request_score);
+            "</td><td class='roStatus'>대기</td></tr>");
     }
     kbo_window_text_appendf(buffer, "</tbody></table></section></div>");
 }
@@ -213,12 +214,12 @@ static const char* kbo_futures_ui_result_label(const KboIndependentAcquisitionUi
         return "-";
     }
     if (row->winning_buyer_team_id == row->request.buyer_team_id && row->transferred) {
-        return "ACQUIRED";
+        return "영입";
     }
     if (row->winning_buyer_team_id == row->request.buyer_team_id) {
-        return "FAILED";
+        return "실패";
     }
-    return "LOST";
+    return "경합 패배";
 }
 
 static void kbo_futures_ui_append_result_view(KboWindowTextBuffer* buffer, uint32_t selected_team_id)
@@ -233,20 +234,20 @@ static void kbo_futures_ui_append_result_view(KboWindowTextBuffer* buffer, uint3
         KBO_INDEPENDENT_ACQUISITION_UI_MAX_ROWS);
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights futuresRights'>");
-    kbo_futures_ui_append_context_bar(buffer, &context, count, "RESULT");
+    kbo_futures_ui_append_context_bar(buffer, &context, count, "결과");
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable futuresResultTable'><thead><tr>"
-        "<th class='roDate' data-sort-type='number'>Decision</th><th class='roResult' data-sort-type='text'>Result</th>"
-        "<th class='roPo' data-sort-type='text'>PO</th><th class='roName' data-sort-type='text'>Name</th>"
-        "<th class='roClub' data-sort-type='text'>Independent Club</th><th class='roTeam' data-sort-type='text'>Winner</th>"
-        "<th class='roCash' data-sort-type='number'>Cash</th><th class='roScore' data-sort-type='number'>Score</th>"
+        "<th class='roDate' data-sort-type='number'>결정일</th><th class='roResult' data-sort-type='text'>결과</th>"
+        "<th class='roPo' data-sort-type='text'>포지션</th><th class='roName' data-sort-type='text'>선수</th>"
+        "<th class='roClub' data-sort-type='text'>독립 구단</th><th class='roTeam' data-sort-type='text'>낙찰 구단</th>"
+        "<th class='roCash' data-sort-type='number'>비용</th>"
         "</tr></thead><tbody>");
 
     if (!context.buyer_valid) {
-        kbo_futures_ui_append_empty_row(buffer, 8, "Select a KBO club first.");
+        kbo_futures_ui_append_empty_row(buffer, 7, "먼저 KBO 구단을 선택하세요.");
     } else if (count <= 0) {
-        kbo_futures_ui_append_empty_row(buffer, 8, "No independent club offer result.");
+        kbo_futures_ui_append_empty_row(buffer, 7, "독립 구단 영입 결과가 없습니다.");
     }
     for (int i = 0; i < count; i++) {
         KboIndependentAcquisitionUiResultRow* row = &rows[i];
@@ -279,9 +280,7 @@ static void kbo_futures_ui_append_result_view(KboWindowTextBuffer* buffer, uint3
         kbo_html_append_escaped(buffer, cash_text);
         kbo_window_text_appendf(
             buffer,
-            "</td><td class='roScore' data-sort-value='%lld'>%lld</td></tr>",
-            (long long)row->request.request_score,
-            (long long)row->request.request_score);
+            "</td></tr>");
     }
     kbo_window_text_appendf(buffer, "</tbody></table></section></div>");
 }

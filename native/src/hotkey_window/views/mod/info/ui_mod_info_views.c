@@ -14,31 +14,31 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
             buffer,
             "<div class='rights settingsGrid'>"
             "<section class='card modCard settingsCard'><h2 class='cardTitle'>");
-        kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\x84\xa4\xec\xa0\x95", "MOD SETTINGS"));
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\x84\xa4\xec\xa0\x95", "모드 설정"));
         kbo_window_text_appendf(
             buffer,
             "</h2><div class='settingRow'><label class='settingLabel' for='languageSelect'>");
-        kbo_html_append_escaped(buffer, kbo_hub_text("\xed\x91\x9c\xec\x8b\x9c \xec\x96\xb8\xec\x96\xb4", "Display language"));
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xed\x91\x9c\xec\x8b\x9c \xec\x96\xb8\xec\x96\xb4", "표시 언어"));
         kbo_window_text_appendf(buffer, "</label>");
         kbo_webview_begin_ootp_choice(
             buffer,
             "languageSelect",
-            kbo_hub_language() == KBO_HUB_LANG_KO ? "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4" : "English");
+            kbo_hub_language() == KBO_HUB_LANG_KO ? "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4" : "영어");
         kbo_webview_append_ootp_choice_option(
             buffer, "kbo://mod/settings/lang/ko", "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4", kbo_hub_language() == KBO_HUB_LANG_KO);
         kbo_webview_append_ootp_choice_option(
-            buffer, "kbo://mod/settings/lang/en", "English", kbo_hub_language() == KBO_HUB_LANG_EN);
+            buffer, "kbo://mod/settings/lang/en", "영어", kbo_hub_language() == KBO_HUB_LANG_EN);
         kbo_webview_end_ootp_choice(buffer);
         kbo_window_text_appendf(buffer, "</div>");
         kbo_window_text_appendf(
             buffer,
             "<div class='settingRow'><label class='settingLabel' for='customNewsLanguageSelect'>");
-        kbo_html_append_escaped(buffer, kbo_hub_text("\xec\xbb\xa4\xec\x8a\xa4\xed\x85\x80 \xeb\x89\xb4\xec\x8a\xa4 \xec\x96\xb8\xec\x96\xb4", "Custom news language"));
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xec\xbb\xa4\xec\x8a\xa4\xed\x85\x80 \xeb\x89\xb4\xec\x8a\xa4 \xec\x96\xb8\xec\x96\xb4", "커스텀 뉴스 언어"));
         kbo_window_text_appendf(buffer, "</label>");
         kbo_webview_begin_ootp_choice(
             buffer,
             "customNewsLanguageSelect",
-            custom_news_language == KBO_CUSTOM_NEWS_LANGUAGE_EN ? "English" : "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4");
+            custom_news_language == KBO_CUSTOM_NEWS_LANGUAGE_EN ? "영어" : "\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4");
         kbo_webview_append_ootp_choice_option(
             buffer,
             "kbo://mod/settings/custom-news-language/ko",
@@ -47,28 +47,28 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
         kbo_webview_append_ootp_choice_option(
             buffer,
             "kbo://mod/settings/custom-news-language/en",
-            "English",
+            "영어",
             custom_news_language == KBO_CUSTOM_NEWS_LANGUAGE_EN);
         kbo_webview_end_ootp_choice(buffer);
         kbo_window_text_appendf(buffer, "</div>");
         kbo_window_text_appendf(
             buffer,
             "<div class='settingRow'><label class='settingLabel' for='profilerSelect'>");
-        kbo_html_append_escaped(buffer, kbo_hub_text("\xed\x94\x84\xeb\xa1\x9c\xed\x8c\x8c\xec\x9d\xbc\xeb\x9f\xac", "Profiler"));
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xed\x94\x84\xeb\xa1\x9c\xed\x8c\x8c\xec\x9d\xbc\xeb\x9f\xac", "프로파일러"));
         kbo_window_text_appendf(buffer, "</label>");
-        kbo_webview_begin_ootp_choice(buffer, "profilerSelect", profiler_enabled ? "On" : "Off");
-        kbo_webview_append_ootp_choice_option(buffer, "kbo://mod/settings/profiler/off", "Off", !profiler_enabled);
-        kbo_webview_append_ootp_choice_option(buffer, "kbo://mod/settings/profiler/on", "On", profiler_enabled);
+        kbo_webview_begin_ootp_choice(buffer, "profilerSelect", profiler_enabled ? "켬" : "끔");
+        kbo_webview_append_ootp_choice_option(buffer, "kbo://mod/settings/profiler/off", "끔", !profiler_enabled);
+        kbo_webview_append_ootp_choice_option(buffer, "kbo://mod/settings/profiler/on", "켬", profiler_enabled);
         kbo_webview_end_ootp_choice(buffer);
         kbo_window_text_appendf(buffer, "</div>");
         kbo_window_text_appendf(
             buffer,
             "<div class='settingRow'><label class='settingLabel' for='uiTeamActionsSelect'>");
-        kbo_html_append_escaped(buffer, kbo_hub_text("UI \xed\x8c\x80 \xec\x95\xa1\xec\x85\x98", "UI team actions"));
+        kbo_html_append_escaped(buffer, kbo_hub_text("UI \xed\x8c\x80 \xec\x95\xa1\xec\x85\x98", "UI 구단 액션"));
         const char* all_teams_label =
-            kbo_hub_text("\xeb\xaa\xa8\xeb\x93\xa0 \xed\x8c\x80 \xed\x97\x88\xec\x9a\xa9 (\xea\xb0\x9c\xeb\xb0\x9c)", "All teams (development)");
+            kbo_hub_text("\xeb\xaa\xa8\xeb\x93\xa0 \xed\x8c\x80 \xed\x97\x88\xec\x9a\xa9 (\xea\xb0\x9c\xeb\xb0\x9c)", "모든 팀 허용 (개발)");
         const char* controlled_team_label =
-            kbo_hub_text("\xeb\x82\xb4 \xed\x8c\x80\xeb\xa7\x8c \xed\x97\x88\xec\x9a\xa9", "Controlled team only");
+            kbo_hub_text("\xeb\x82\xb4 \xed\x8c\x80\xeb\xa7\x8c \xed\x97\x88\xec\x9a\xa9", "내 팀만 허용");
         kbo_window_text_appendf(buffer, "</label>");
         kbo_webview_begin_ootp_choice(
             buffer,
@@ -84,18 +84,18 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
         kbo_webview_append_mod_runtime_flag_group(
             buffer,
             KBO_MOD_FLAG_USER,
-            "User settings",
-            "Regular gameplay options intended for normal use.");
+            "사용자 설정",
+            "일반 플레이에서 사용하는 기본 옵션입니다.");
         kbo_webview_append_mod_runtime_flag_group(
             buffer,
             KBO_MOD_FLAG_RECOVERY,
-            "Recovery switches",
-            "Use these when a feature causes errors and you need to keep playing without editing JSON.");
+            "복구 스위치",
+            "기능 오류가 있을 때 JSON을 직접 수정하지 않고 임시로 끄는 옵션입니다.");
         kbo_webview_append_mod_runtime_flag_group(
             buffer,
             KBO_MOD_FLAG_DIAGNOSTIC,
-            "Developer diagnostics",
-            "Extra logging and probes for troubleshooting.");
+            "개발자 진단",
+            "문제 추적용 추가 로그와 진단 기능입니다.");
         kbo_window_text_appendf(buffer, "</section></div>");
         return;
     }
@@ -107,34 +107,34 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
         kbo_window_text_appendf(
             buffer,
             "<div class='rights modReadme'>"
-            "<section class='card modCard modCardMain'><h2 class='cardTitle'>MOD INFO</h2>"
+            "<section class='card modCard modCardMain'><h2 class='cardTitle'>모드 정보</h2>"
             "<p class='modLead'>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "Ultimate KBO\xeb\x8a\x94 Out of the Park Baseball 27\xec\x97\x90\xec\x84\x9c KBO\xeb\xa5\xbc \xea\xb0\x80\xec\x9e\xa5 KBO\xeb\x8b\xb5\xea\xb2\x8c \xec\xa6\x90\xea\xb8\xb0\xea\xb8\xb0 \xec\x9c\x84\xed\x95\x9c \xed\x8c\xac \xec\xa0\x9c\xec\x9e\x91 \xeb\xaa\xa8\xeb\x93\x9c\xec\x9e\x85\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Ultimate KBO is a fan-made mod for Out of the Park Baseball 27, built to make the KBO experience feel richer, sharper, and more authentic."));
+                "Ultimate KBO는 Out of the Park Baseball 27에서 KBO 경험을 더 깊고 선명하게 만들기 위한 팬 제작 모드입니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xec\x8b\xa4\xec\xa0\x9c \xeb\xa6\xac\xea\xb7\xb8\xec\x9d\x98 \xed\x9d\x90\xeb\xa6\x84, \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0 \xeb\xa7\xa5\xeb\x9d\xbd, \xed\x95\x9c\xea\xb5\xad \xec\x95\xbc\xea\xb5\xac \xed\x8a\xb9\xec\x9c\xa0\xec\x9d\x98 \xec\xa0\x9c\xeb\x8f\x84\xec\x99\x80 \xeb\xa6\xac\xeb\x93\xac\xec\x9d\x84 \xeb\x9f\xb0\xec\xb2\x98\xec\x99\x80 \xed\x95\xa8\xea\xbb\x98 \xea\xb2\x8c\xec\x9e\x84 \xec\x95\x88\xec\x9c\xbc\xeb\xa1\x9c \xec\x9e\x90\xec\x97\xb0\xec\x8a\xa4\xeb\x9f\xbd\xea\xb2\x8c \xeb\x81\x8c\xec\x96\xb4\xec\x98\xa4\xeb\x8a\x94 \xea\xb2\x83\xec\x9d\x84 \xeb\xaa\xa9\xed\x91\x9c\xeb\xa1\x9c \xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Used with the KBO Launcher, it brings launcher-assisted rules, roster context, and Korean baseball rhythms into the game."));
+                "KBO 런처와 함께 사용하면 런처 기반 규정, 로스터 맥락, 한국 야구의 흐름이 게임에 자연스럽게 들어옵니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "KBO \xeb\x9f\xb0\xec\xb2\x98\xec\x99\x80 \xed\x95\xa8\xea\xbb\x98 \xec\x82\xac\xec\x9a\xa9\xed\x95\xa0 \xeb\x95\x8c \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98, \xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80, \xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xea\xb0\x99\xec\x9d\x80 \xeb\xb3\xb4\xea\xb0\x95 \xea\xb8\xb0\xeb\x8a\xa5\xec\x9d\xb4 \xeb\xa7\x9e\xeb\xac\xbc\xeb\xa0\xa4 \xea\xb0\x80\xec\x9e\xa5 \xec\x99\x84\xec\x84\xb1\xeb\x90\x9c \xea\xb2\xbd\xed\x97\x98\xec\x9d\x84 \xec\xa0\x9c\xea\xb3\xb5\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4.",
-                "The best experience comes when the mod and launcher work together across foreign-player, military-team, and Asian Games workflows."));
+                "외국인 선수, 군경팀, 아시안게임 흐름까지 모드와 런처가 함께 동작할 때 가장 완성된 경험을 제공합니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "Ultimate KBO\xeb\x8a\x94 Out of the Park Developments\xec\x9d\x98 \xea\xb3\xb5\xec\x8b\x9d \xec\xa0\x9c\xed\x92\x88 \xeb\x98\x90\xeb\x8a\x94 \xea\xb3\xb5\xec\x8b\x9d \xec\xa0\x9c\xed\x9c\xb4 \xec\xbd\x98\xed\x85\x90\xec\xb8\xa0\xea\xb0\x80 \xec\x95\x84\xeb\x8b\x99\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Ultimate KBO is not an official product of, nor affiliated with, Out of the Park Developments."));
+                "Ultimate KBO는 Out of the Park Developments의 공식 제품이 아니며 공식 제휴 콘텐츠도 아닙니다."));
         kbo_window_text_appendf(
             buffer,
-            "</p></section><section class='card modCard'><h2 class='cardTitle'>GITHUB</h2>"
+            "</p></section><section class='card modCard'><h2 class='cardTitle'>GitHub</h2>"
             "<div class='githubHero'>");
         if (github_icon_path[0] != '\0') {
             kbo_window_text_appendf(buffer, "<img class='githubLogo' src='");
@@ -150,11 +150,11 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
             buffer,
             kbo_hub_text(
                 "\xea\xb0\x9c\xeb\xb0\x9c \xea\xb8\xb0\xeb\xa1\x9d\xea\xb3\xbc \xeb\xb0\xb0\xed\x8f\xac \xed\x9d\x90\xeb\xa6\x84\xec\x9d\x80 GitHub \xec\xa0\x80\xec\x9e\xa5\xec\x86\x8c\xec\x97\x90\xec\x84\x9c \xed\x99\x95\xec\x9d\xb8\xed\x95\xa0 \xec\x88\x98 \xec\x9e\x88\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Development history, releases, and issues are available in the GitHub repository."));
+                "개발 기록, 배포, 이슈는 GitHub 저장소에서 확인할 수 있습니다."));
         kbo_window_text_appendf(
             buffer,
             "</p><a class='githubLink' href='kbo://github'>GitHub</a>"
-            "</section><section class='card modCard modBuildCard'><h2 class='cardTitle'>SUPPORTED BUILD</h2>"
+            "</section><section class='card modCard modBuildCard'><h2 class='cardTitle'>지원 빌드</h2>"
             "<div class='buildList'>");
         for (size_t i = 0; i < kbo_supported_ootp_build_count(); i++) {
             const OotpSupportedBuild* build = kbo_supported_ootp_build_at(i);
@@ -166,11 +166,11 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
                 "<div class='buildRow'><span class='buildLabel'>%s</span><span class='buildValue'>OOTP 27 %s</span></div>"
                 "<div class='buildRow'><span class='buildLabel'>%s</span><span class='buildValue'>0x%08X</span></div>"
                 "<div class='buildRow'><span class='buildLabel'>%s</span><span class='buildValue'>0x%08X</span></div>",
-                kbo_hub_text("\xeb\xb2\x84\xec\xa0\x84", "Build"),
+                kbo_hub_text("\xeb\xb2\x84\xec\xa0\x84", "빌드"),
                 build->label,
-                kbo_hub_text("\xed\x83\x80\xec\x9e\x84\xec\x8a\xa4\xed\x83\xac\xed\x94\x84", "Timestamp"),
+                kbo_hub_text("\xed\x83\x80\xec\x9e\x84\xec\x8a\xa4\xed\x83\xac\xed\x94\x84", "타임스탬프"),
                 build->timestamp,
-                kbo_hub_text("\xec\x9d\xb4\xeb\xaf\xb8\xec\xa7\x80", "Image"),
+                kbo_hub_text("\xec\x9d\xb4\xeb\xaf\xb8\xec\xa7\x80", "이미지"),
                 build->size_of_image);
         }
         kbo_window_text_appendf(buffer, "</div></section></div>");
@@ -181,55 +181,55 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
         kbo_window_text_appendf(
             buffer,
             "<div class='rights modReadme'>"
-            "<section class='card modCard modCardMain'><h2 class='cardTitle'>LICENSE</h2>"
+            "<section class='card modCard modCardMain'><h2 class='cardTitle'>라이선스</h2>"
             "<p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "Ultimate KBO\xec\x99\x80 KBO \xeb\x9f\xb0\xec\xb2\x98\xeb\x8a\x94 \xed\x8c\xac \xec\xa0\x9c\xec\x9e\x91 \xed\x94\x84\xeb\xa1\x9c\xec\xa0\x9d\xed\x8a\xb8\xeb\xa1\x9c, \xea\xb0\x9c\xec\x9d\xb8\xec\xa0\x81\xec\x9d\xb8 OOTP \xed\x94\x8c\xeb\xa0\x88\xec\x9d\xb4\xec\x99\x80 \xec\xbb\xa4\xeb\xae\xa4\xeb\x8b\x88\xed\x8b\xb0 \xed\x99\x9c\xec\x9a\xa9\xec\x9d\x84 \xec\x9c\x84\xed\x95\xb4 \xec\x9e\x88\xeb\x8a\x94 \xea\xb7\xb8\xeb\x8c\x80\xeb\xa1\x9c \xec\xa0\x9c\xea\xb3\xb5\xeb\x90\xa9\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Ultimate KBO and the KBO Launcher are fan-made project materials provided as-is for personal OOTP play and community use."));
+                "Ultimate KBO와 KBO 런처는 개인 OOTP 플레이와 커뮤니티 활용을 위해 있는 그대로 제공되는 팬 제작 프로젝트입니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xeb\xaa\xa8\xeb\x93\x9c \xed\x8c\x8c\xec\x9d\xbc\xea\xb3\xbc \xeb\x9f\xb0\xec\xb2\x98 \xea\xb5\xac\xec\x84\xb1\xec\x9d\x80 \xec\xb6\x9c\xec\xb2\x98\xeb\xa5\xbc \xeb\x82\xa8\xea\xb8\xb0\xeb\x8a\x94 \xed\x95\x9c \xec\x9e\x90\xec\x9c\xa0\xeb\xa1\xad\xea\xb2\x8c \xec\xb0\xb8\xea\xb3\xa0\xed\x95\x98\xea\xb3\xa0 \xec\x88\x98\xec\xa0\x95\xed\x95\xa0 \xec\x88\x98 \xec\x9e\x88\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4. \xeb\x8b\xa8, \xeb\xb3\xb8 \xed\x94\x84\xeb\xa1\x9c\xec\xa0\x9d\xed\x8a\xb8\xeb\xa5\xbc \xec\x9c\xa0\xeb\xa3\x8c \xec\x83\x81\xed\x92\x88\xec\x9d\xb4\xeb\x82\x98 \xea\xb3\xb5\xec\x8b\x9d \xec\xbd\x98\xed\x85\x90\xec\xb8\xa0\xec\xb2\x98\xeb\x9f\xbc \xeb\xb0\xb0\xed\x8f\xac\xed\x95\x98\xeb\x8a\x94 \xea\xb2\x83\xec\x9d\x80 \xea\xb6\x8c\xec\x9e\xa5\xed\x95\x98\xec\xa7\x80 \xec\x95\x8a\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "You may reference and modify the mod files and launcher configuration as long as attribution remains. Do not sell or present this project as official content."));
+                "출처를 남기는 한 모드 파일과 런처 구성을 참고하거나 수정할 수 있습니다. 이 프로젝트를 유료 상품이나 공식 콘텐츠처럼 배포하지 마세요."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xed\x94\x84\xeb\xa1\x9c\xec\xa0\x9d\xed\x8a\xb8\xeb\xa5\xbc \xec\x9e\xac\xeb\xb0\xb0\xed\x8f\xac\xed\x95\x98\xea\xb1\xb0\xeb\x82\x98 \xec\x88\x98\xec\xa0\x95\xeb\xb3\xb8\xec\x9d\x84 \xea\xb3\xb5\xec\x9c\xa0\xed\x95\xa0 \xeb\x95\x8c\xeb\x8a\x94 Ultimate KBO\xec\x99\x80 \xec\x9b\x90 \xec\xa0\x80\xec\x9e\xa5\xec\x86\x8c\xeb\xa5\xbc \xed\x95\xa8\xea\xbb\x98 \xed\x91\x9c\xec\x8b\x9c\xed\x95\xb4 \xec\xa3\xbc\xec\x84\xb8\xec\x9a\x94.",
-                "When redistributing the project or sharing modified versions, keep the Ultimate KBO name and original repository visible."));
+                "프로젝트를 재배포하거나 수정본을 공유할 때는 Ultimate KBO 이름과 원 저장소를 함께 표시해 주세요."));
         kbo_window_text_appendf(
             buffer,
-            "</p></section><section class='card modCard'><h2 class='cardTitle'>NOT OFFICIAL</h2>"
+            "</p></section><section class='card modCard'><h2 class='cardTitle'>공식 콘텐츠 아님</h2>"
             "<p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "Ultimate KBO\xeb\x8a\x94 Out of the Park Developments\xec\x9d\x98 \xea\xb3\xb5\xec\x8b\x9d \xec\xa0\x9c\xed\x92\x88, \xea\xb3\xb5\xec\x8b\x9d \xed\x8c\xa8\xec\xb9\x98, \xea\xb3\xb5\xec\x8b\x9d \xec\xa0\x9c\xed\x9c\xb4 \xec\xbd\x98\xed\x85\x90\xec\xb8\xa0\xea\xb0\x80 \xec\x95\x84\xeb\x8b\x99\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Ultimate KBO is not an official product, patch, or affiliated content of Out of the Park Developments."));
+                "Ultimate KBO는 Out of the Park Developments의 공식 제품, 공식 패치, 제휴 콘텐츠가 아닙니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "Out of the Park Baseball, OOTP \xeb\xb0\x8f \xea\xb4\x80\xeb\xa0\xa8 \xec\x83\x81\xed\x91\x9c\xeb\x8a\x94 \xea\xb0\x81 \xea\xb6\x8c\xeb\xa6\xac\xec\x9e\x90\xec\x97\x90\xea\xb2\x8c \xec\x9e\x88\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Out of the Park Baseball, OOTP, and related trademarks belong to their respective owners."));
+                "Out of the Park Baseball, OOTP 및 관련 상표는 각 권리자에게 있습니다."));
         kbo_window_text_appendf(
             buffer,
-            "</p></section><section class='card modCard'><h2 class='cardTitle'>THIRD-PARTY ASSETS</h2>"
+            "</p></section><section class='card modCard'><h2 class='cardTitle'>제3자 자산</h2>"
             "<p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xea\xb5\xac\xeb\x8b\xa8\xeb\xaa\x85, \xeb\xa1\x9c\xea\xb3\xa0, \xeb\xa6\xac\xea\xb7\xb8 \xed\x91\x9c\xec\x8b\x9d \xeb\x93\xb1 \xed\x98\x84\xec\x8b\xa4 \xec\x95\xbc\xea\xb5\xac\xec\x99\x80 \xea\xb4\x80\xeb\xa0\xa8\xeb\x90\x9c \xec\x9e\x90\xec\x82\xb0\xec\x9d\x98 \xea\xb6\x8c\xeb\xa6\xac\xeb\x8a\x94 \xea\xb0\x81 \xea\xb6\x8c\xeb\xa6\xac\xec\x9e\x90\xec\x97\x90\xea\xb2\x8c \xec\x9e\x88\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Club names, logos, league marks, and other real-baseball assets belong to their respective rights holders."));
+                "구단명, 로고, 리그 표식 등 현실 야구와 관련된 자산의 권리는 각 권리자에게 있습니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xed\x95\xa8\xea\xbb\x98 \xec\xa0\x9c\xea\xb3\xb5\xeb\x90\x98\xeb\x8a\x94 \xed\x8f\xb0\xed\x8a\xb8, \xec\x95\x84\xec\x9d\xb4\xec\xbd\x98, \xeb\x9d\xbc\xec\x9d\xb4\xeb\xb8\x8c\xeb\x9f\xac\xeb\xa6\xac \xeb\x93\xb1\xec\x9d\x80 \xea\xb0\x81\xea\xb0\x81\xec\x9d\x98 \xec\x9b\x90 \xeb\x9d\xbc\xec\x9d\xb4\xec\x84\xa0\xec\x8a\xa4 \xec\xa1\xb0\xea\xb1\xb4\xec\x9d\x84 \xeb\x94\xb0\xeb\xa6\x85\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Bundled fonts, icons, libraries, and other third-party materials remain under their original license terms."));
+                "함께 제공되는 폰트, 아이콘, 라이브러리 등은 각각의 원 라이선스 조건을 따릅니다."));
         kbo_window_text_appendf(buffer, "</p></section></div>");
         return;
     }
@@ -238,33 +238,33 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
         kbo_window_text_appendf(
             buffer,
             "<div class='rights modReadme'>"
-            "<section class='card modCard modCardMain'><h2 class='cardTitle'>CREATOR</h2>"
+            "<section class='card modCard modCardMain'><h2 class='cardTitle'>제작자</h2>"
             "<p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "Ultimate KBO\xec\x99\x80 KBO \xeb\x9f\xb0\xec\xb2\x98\xeb\x8a\x94 lebronisbest623\xec\x9d\x98 \xec\x9e\x91\xed\x92\x88\xec\x9e\x85\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Ultimate KBO and the KBO Launcher are works by lebronisbest623."));
+                "Ultimate KBO와 KBO 런처는 lebronisbest623의 작업물입니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xeb\xaa\xa8\xeb\x93\x9c \xea\xb5\xac\xec\x84\xb1, \xeb\x9f\xb0\xec\xb2\x98 \xea\xb0\x9c\xeb\xb0\x9c, KBO \xed\x99\x98\xea\xb2\xbd \xea\xb5\xac\xed\x98\x84\xec\x9d\x84 \xed\x95\xa8\xea\xbb\x98 \xeb\x8b\xb4\xec\x95\x98\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "This includes the mod structure, launcher work, and KBO-specific game integration."));
+                "모드 구성, 런처 개발, KBO 환경 구현을 함께 담았습니다."));
         kbo_window_text_appendf(
             buffer,
-            "</p></section><section class='card modCard'><h2 class='cardTitle'>TESTERS</h2>"
+            "</p></section><section class='card modCard'><h2 class='cardTitle'>테스터</h2>"
             "<p>");
         kbo_webview_append_mod_tester_credits(buffer);
         kbo_window_text_appendf(
             buffer,
-            "</p></section><section class='card modCard'><h2 class='cardTitle'>SPECIAL THANKS</h2>"
-            "<p>lazyquokka1218 (facegens &amp; logos)</p><p>");
+            "</p></section><section class='card modCard'><h2 class='cardTitle'>감사</h2>"
+            "<p>lazyquokka1218 (페이스젠 &amp; 로고)</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xed\x94\x8c\xeb\xa0\x88\xec\x9d\xb4\xec\x96\xb4 facegen\xea\xb3\xbc \xeb\xa1\x9c\xea\xb3\xa0 \xec\x9e\x90\xec\x82\xb0 \xec\x9e\x91\xec\x97\x85\xec\x97\x90 \xea\xb0\x90\xec\x82\xac\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Thank you for the player facegen and logo asset work."));
+                "선수 페이스젠과 로고 자산 작업에 감사드립니다."));
         kbo_window_text_appendf(buffer, "</p></section></div>");
         return;
     }
@@ -276,43 +276,43 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
         kbo_window_text_appendf(
             buffer,
             "<div class='rights modReadme modContrib'>"
-            "<section class='card modCard modCardMain'><h2 class='cardTitle'>CONTRIBUTIONS</h2>"
+            "<section class='card modCard modCardMain'><h2 class='cardTitle'>기여</h2>"
             "<p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "Ultimate KBO\xeb\x8a\x94 \xed\x98\xbc\xec\x9e\x90 \xeb\x8b\xab\xec\x95\x84\xeb\x91\x90\xeb\x8a\x94 \xeb\xaa\xa8\xeb\x93\x9c\xea\xb0\x80 \xec\x95\x84\xeb\x8b\x88\xeb\x9d\xbc, KBO\xeb\xa5\xbc \xeb\x8d\x94 \xea\xb7\xb8\xeb\x9f\xb4\xeb\x93\xaf\xed\x95\x98\xea\xb2\x8c \xeb\xa7\x8c\xeb\x93\xa4\xea\xb3\xa0 \xec\x8b\xb6\xec\x9d\x80 \xec\x82\xac\xeb\x9e\x8c\xeb\x93\xa4\xec\x9d\xb4 \xec\xa1\xb0\xea\xb8\x88\xec\x94\xa9 \xeb\xb3\xb4\xed\x83\x9c\xeb\xa9\xb0 \xec\xa2\x8b\xec\x95\x84\xec\xa7\x88 \xec\x88\x98 \xec\x9e\x88\xeb\x8a\x94 \xed\x94\x84\xeb\xa1\x9c\xec\xa0\x9d\xed\x8a\xb8\xec\x9e\x85\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Ultimate KBO is a project that can grow through small contributions from people who want the KBO experience to feel more complete."));
+                "Ultimate KBO는 KBO 경험을 더 완성도 있게 만들고 싶은 사람들의 작은 기여로 성장할 수 있는 프로젝트입니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "GitHub \xec\xa0\x80\xec\x9e\xa5\xec\x86\x8c\xec\x97\x90\xec\x84\x9c\xeb\x8a\x94 \xeb\xaa\xa8\xeb\x93\x9c \xeb\x8d\xb0\xec\x9d\xb4\xed\x84\xb0, \xea\xb5\xac\xec\x9e\xa5 \xec\x9e\x90\xeb\xa3\x8c, \xeb\xa1\x9c\xea\xb3\xa0, \xed\x8e\x98\xec\x9d\xb4\xec\x8a\xa4\xec\xa0\xa0, \xeb\xb2\x88\xec\x97\xad, \xed\x85\x8c\xec\x8a\xa4\xed\x8a\xb8 \xeb\xa6\xac\xed\x8f\xac\xed\x8a\xb8 \xeb\x93\xb1 \xec\x97\xac\xeb\x9f\xac \xed\x98\x95\xed\x83\x9c\xec\x9d\x98 \xea\xb8\xb0\xec\x97\xac\xeb\xa5\xbc \xeb\xb0\x9b\xec\x9d\x84 \xec\x88\x98 \xec\x9e\x88\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "The GitHub repository can accept many kinds of contributions, including mod data, stadium references, logos, facegens, translations, and testing reports."));
+                "GitHub 저장소에서는 모드 데이터, 구장 자료, 로고, 페이스젠, 번역, 테스트 리포트 등 여러 형태의 기여를 받을 수 있습니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xec\x9e\x91\xec\x9d\x80 \xec\x88\x98\xec\xa0\x95 \xec\xa0\x9c\xec\x95\x88, \xeb\x88\x84\xeb\x9d\xbd\xeb\x90\x9c \xec\x9e\x90\xeb\xa3\x8c \xec\xa0\x9c\xeb\xb3\xb4, \xec\x8a\xa4\xed\x81\xac\xeb\xa6\xb0\xec\x83\xb7\xea\xb3\xbc \xec\x9e\xac\xed\x98\x84 \xeb\xa1\x9c\xea\xb7\xb8\xeb\x8f\x84 \xec\xb6\xa9\xeb\xb6\x84\xed\x9e\x88 \xeb\x8f\x84\xec\x9b\x80\xec\x9d\xb4 \xeb\x90\xa9\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Small fixes, missing references, screenshots, and reproduction notes are all useful."));
+                "작은 수정 제안, 누락 자료 제보, 스크린샷, 재현 기록도 모두 도움이 됩니다."));
         kbo_window_text_appendf(
             buffer,
-            "</p></section><section class='card modCard'><h2 class='cardTitle'>WHAT HELPS</h2>"
+            "</p></section><section class='card modCard'><h2 class='cardTitle'>도움 되는 것</h2>"
             "<p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0\xec\x99\x80 \xeb\xa6\xac\xea\xb7\xb8 \xec\x84\xa4\xec\xa0\x95 \xeb\xb3\xb4\xea\xb0\x95, \xea\xb5\xac\xec\x9e\xa5 \xec\xa0\x95\xeb\xb3\xb4, \xed\x8c\x80/\xeb\xa6\xac\xea\xb7\xb8 \xeb\xa1\x9c\xea\xb3\xa0, \xec\x84\xa0\xec\x88\x98 facegen, \xed\x85\x8d\xec\x8a\xa4\xed\x8a\xb8\xec\x99\x80 \xeb\xb2\x88\xec\x97\xad, \xeb\xb2\x84\xea\xb7\xb8 \xeb\xa6\xac\xed\x8f\xac\xed\x8a\xb8\xea\xb0\x80 \xeb\xaa\xa8\xeb\x91\x90 \xea\xb8\xb0\xec\x97\xac \xeb\x8c\x80\xec\x83\x81\xec\x9e\x85\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Roster and league tuning, stadium information, team and league logos, player facegens, text, translation, and bug reports are all welcome."));
+                "로스터와 리그 설정 보강, 구장 정보, 팀/리그 로고, 선수 페이스젠, 텍스트와 번역, 버그 리포트가 모두 기여 대상입니다."));
         kbo_window_text_appendf(buffer, "</p><p>");
         kbo_html_append_escaped(
             buffer,
             kbo_hub_text(
                 "\xec\x99\x84\xec\x84\xb1\xeb\x90\x9c \xed\x8c\x8c\xec\x9d\xbc\xec\x9d\xb4 \xec\x95\x84\xeb\x8b\x88\xec\x96\xb4\xeb\x8f\x84 \xea\xb4\x9c\xec\xb0\xae\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4. \xec\xb0\xb8\xea\xb3\xa0 \xec\x9e\x90\xeb\xa3\x8c\xeb\x82\x98 \xeb\xb0\xa9\xed\x96\xa5 \xec\xa0\x9c\xec\x95\x88\xeb\xa7\x8c\xec\x9c\xbc\xeb\xa1\x9c\xeb\x8f\x84 \xeb\x8b\xa4\xec\x9d\x8c \xec\x97\x85\xeb\x8d\xb0\xec\x9d\xb4\xed\x8a\xb8\xec\x9d\x98 \xec\x8b\xa4\xeb\xa7\x88\xeb\xa6\xac\xea\xb0\x80 \xeb\x90\xa0 \xec\x88\x98 \xec\x9e\x88\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "A contribution does not have to be a finished file. References and direction can still shape the next update."));
+                "완성된 파일이 아니어도 괜찮습니다. 참고 자료나 방향 제안만으로도 다음 업데이트의 실마리가 될 수 있습니다."));
         kbo_window_text_appendf(
             buffer,
-            "</p></section><section class='card modCard'><h2 class='cardTitle'>GITHUB</h2>");
+            "</p></section><section class='card modCard'><h2 class='cardTitle'>GitHub</h2>");
         if (github_icon_path[0] != '\0') {
             kbo_window_text_appendf(buffer, "<div class='githubHero'><img class='githubLogo' src='");
             kbo_webview_append_image_src(buffer, github_icon_path);
@@ -323,7 +323,7 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
             buffer,
             kbo_hub_text(
                 "\xec\xa0\x80\xec\x9e\xa5\xec\x86\x8c\xeb\xa5\xbc \xeb\xb0\xa9\xeb\xac\xb8\xed\x95\xb4 \xec\x9d\xb4\xec\x8a\x88\xeb\xa5\xbc \xeb\x82\xa8\xea\xb8\xb0\xea\xb1\xb0\xeb\x82\x98, \xec\x9e\x90\xeb\xa3\x8c\xeb\xa5\xbc \xea\xb3\xb5\xec\x9c\xa0\xed\x95\x98\xea\xb1\xb0\xeb\x82\x98, \xec\xa7\x81\xec\xa0\x91 \xeb\xb3\x80\xea\xb2\xbd \xec\xa0\x9c\xec\x95\x88\xec\x9d\x84 \xeb\xb3\xb4\xeb\x82\xbc \xec\x88\x98 \xec\x9e\x88\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.",
-                "Visit the repository to open issues, share material, or send proposed changes."));
+                "저장소에서 이슈를 남기거나, 자료를 공유하거나, 직접 변경 제안을 보낼 수 있습니다."));
         kbo_window_text_appendf(buffer, "</p><a class='githubLink' href='kbo://github'>GitHub</a></section></div>");
         return;
     }

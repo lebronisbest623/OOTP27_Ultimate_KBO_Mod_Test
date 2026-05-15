@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-uint8_t* build_kbo_season_phase_opening_day_event_stub(
+uint8_t* build_kbo_season_phase_capture_event_stub(
     void* patch_site,
     uint8_t base_reg,
     uint32_t site_rva,

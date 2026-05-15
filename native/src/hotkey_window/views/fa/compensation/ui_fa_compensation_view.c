@@ -33,17 +33,17 @@ const char* kbo_fa_compensation_decision_label(
 {
     if (has_decision && decision != NULL) {
         if (strcmp(decision->action, "CASH_ONLY") == 0) {
-            return "Cash Only";
+            return "현금 보상";
         }
         if (decision->selected_player_name[0] != '\0') {
             return decision->selected_player_name;
         }
-        return "Player + Cash";
+        return "선수+현금";
     }
     if (rec != NULL && rec->requires_player_compensation && rec->protect_count > 0u) {
-        return "Awaiting list";
+        return "보호 명단 대기";
     }
-    return "Cash Only";
+    return "현금 보상";
 }
 
 void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32_t selected_compensation_player_id)
@@ -61,7 +61,7 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
         HEAP_ZERO_MEMORY,
         (SIZE_T)KBO_FA_COMPENSATION_PROTECTED_LIST_MAX * sizeof(KboFaCompensationProtectionDebugRow));
     if (records == NULL || debug_rows == NULL) {
-        kbo_window_text_appendf(buffer, "<div class='rights rosterRights'><section class='tablewrap rosterTableWrap'>Could not allocate compensation buffer.</section></div>");
+        kbo_window_text_appendf(buffer, "<div class='rights rosterRights'><section class='tablewrap rosterTableWrap'>보상 버퍼를 할당하지 못했습니다.</section></div>");
         if (records != NULL) { HeapFree(GetProcessHeap(), 0, records); }
         if (debug_rows != NULL) { HeapFree(GetProcessHeap(), 0, debug_rows); }
         return;
@@ -120,90 +120,90 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
         kbo_html_append_escaped(buffer, kbo_fa_market_display_grade(detail_rec->grade));
         kbo_window_text_appendf(buffer, "</span></div><div class='faCompBoardSummary'>");
         if (detail_rec->requires_player_compensation && detail_rec->protect_count > 0u) {
-            kbo_window_text_appendf(buffer, "Signing this FA requires cash compensation and one eligible player unless cash-only compensation is selected.");
+            kbo_window_text_appendf(buffer, "이 FA 계약은 현금 보상과 보상 선수 1명이 필요합니다. 현금 보상을 선택하면 선수 보상은 제외됩니다.");
         } else {
-            kbo_window_text_appendf(buffer, "Signing this FA requires cash-only compensation.");
+            kbo_window_text_appendf(buffer, "이 FA 계약은 현금 보상이 필요합니다.");
         }
         kbo_window_text_appendf(buffer, "</div></div>");
 
         kbo_window_text_appendf(buffer, "<div class='faCompBoardPanels'>");
 
-        kbo_window_text_appendf(buffer, "<article class='faCompPanel'><h3>FA PLAYER</h3><dl>");
-        kbo_window_text_appendf(buffer, "<dt>Player</dt><dd>");
+        kbo_window_text_appendf(buffer, "<article class='faCompPanel'><h3>FA 선수</h3><dl>");
+        kbo_window_text_appendf(buffer, "<dt>선수</dt><dd>");
         kbo_html_append_escaped(buffer, detail_rec->player_name);
-        kbo_window_text_appendf(buffer, "</dd><dt>Grade</dt><dd>");
+        kbo_window_text_appendf(buffer, "</dd><dt>등급</dt><dd>");
         kbo_html_append_escaped(buffer, kbo_fa_market_display_grade(detail_rec->grade));
-        kbo_window_text_appendf(buffer, "</dd><dt>Previous Salary</dt><dd>");
+        kbo_window_text_appendf(buffer, "</dd><dt>직전 연봉</dt><dd>");
         kbo_html_append_escaped(buffer, previous_salary);
-        kbo_window_text_appendf(buffer, "</dd><dt>Status</dt><dd>");
+        kbo_window_text_appendf(buffer, "</dd><dt>상태</dt><dd>");
         kbo_html_append_escaped(buffer, kbo_fa_compensation_status_label(detail_rec->status));
         kbo_window_text_appendf(buffer, "</dd></dl></article>");
 
-        kbo_window_text_appendf(buffer, "<article class='faCompPanel faCompPanelFocus'><h3>COMPENSATION</h3><dl>");
-        kbo_window_text_appendf(buffer, "<dt>Player + Cash</dt><dd>");
+        kbo_window_text_appendf(buffer, "<article class='faCompPanel faCompPanelFocus'><h3>보상</h3><dl>");
+        kbo_window_text_appendf(buffer, "<dt>선수+현금</dt><dd>");
         kbo_html_append_escaped(buffer, cash_with_player);
-        kbo_window_text_appendf(buffer, "</dd><dt>Cash Only</dt><dd>");
+        kbo_window_text_appendf(buffer, "</dd><dt>현금 보상</dt><dd>");
         kbo_html_append_escaped(buffer, cash_only);
-        kbo_window_text_appendf(buffer, "</dd><dt>Protected List</dt><dd>%u players</dd><dt>Decision</dt><dd>", detail_rec->protect_count);
+        kbo_window_text_appendf(buffer, "</dd><dt>보호 명단</dt><dd>%u명</dd><dt>결정</dt><dd>", detail_rec->protect_count);
         kbo_html_append_escaped(buffer, kbo_fa_compensation_decision_label(detail_rec, &board_decision, board_has_decision));
         kbo_window_text_appendf(buffer, "</dd></dl></article>");
 
-        kbo_window_text_appendf(buffer, "<article class='faCompPanel'><h3>TEAM IMPACT</h3><dl>");
-        kbo_window_text_appendf(buffer, "<dt>Original Team</dt><dd>");
+        kbo_window_text_appendf(buffer, "<article class='faCompPanel'><h3>구단 영향</h3><dl>");
+        kbo_window_text_appendf(buffer, "<dt>원 소속</dt><dd>");
         kbo_html_append_escaped(buffer, original_team);
-        kbo_window_text_appendf(buffer, "</dd><dt>Signing Team</dt><dd>");
+        kbo_window_text_appendf(buffer, "</dd><dt>계약 구단</dt><dd>");
         kbo_html_append_escaped(buffer, signing_team);
-        kbo_window_text_appendf(buffer, "</dd><dt>Board</dt><dd>");
+        kbo_window_text_appendf(buffer, "</dd><dt>보드</dt><dd>");
         if (board_is_final) {
-            kbo_window_text_appendf(buffer, "Finalized");
+            kbo_window_text_appendf(buffer, "완료");
         } else if (board_detail_rows <= 0) {
-            kbo_window_text_appendf(buffer, "Protected list needed");
+            kbo_window_text_appendf(buffer, "보호 명단 필요");
         } else {
-            kbo_window_text_appendf(buffer, "Ready for decision");
+            kbo_window_text_appendf(buffer, "결정 가능");
         }
-        kbo_window_text_appendf(buffer, "</dd><dt>Route</dt><dd>");
+        kbo_window_text_appendf(buffer, "</dd><dt>이동</dt><dd>");
         kbo_html_append_escaped(buffer, signing_team);
-        kbo_window_text_appendf(buffer, " to ");
+        kbo_window_text_appendf(buffer, " -> ");
         kbo_html_append_escaped(buffer, original_team);
         kbo_window_text_appendf(buffer, "</dd></dl></article>");
 
         kbo_window_text_appendf(buffer, "</div><div class='faCompActionBar'><span>");
         if (board_is_final) {
-            kbo_window_text_appendf(buffer, "This compensation case is finalized.");
+            kbo_window_text_appendf(buffer, "이 보상 건은 완료되었습니다.");
         } else if (board_detail_rows <= 0) {
-            kbo_window_text_appendf(buffer, "Submit the signing team's protected list before selecting compensation.");
+            kbo_window_text_appendf(buffer, "보상 방식을 선택하기 전에 계약 구단의 보호 명단을 제출하세요.");
         } else {
-            kbo_window_text_appendf(buffer, "Choose cash-only compensation or select one available player from the list below.");
+            kbo_window_text_appendf(buffer, "현금 보상을 선택하거나 아래 목록에서 보상 선수를 선택하세요.");
         }
         kbo_window_text_appendf(buffer, "</span><div>");
         if (board_is_final) {
-            kbo_window_text_appendf(buffer, "<span class='faCompFinal'>Final</span>");
+            kbo_window_text_appendf(buffer, "<span class='faCompFinal'>완료</span>");
         } else if (board_detail_rows <= 0) {
-            kbo_window_text_appendf(buffer, "<a class='rightsTextAction' href='kbo://fa-comp/submit/%u'>Submit List</a>", detail_rec->player_id);
+            kbo_window_text_appendf(buffer, "<a class='rightsTextAction' href='kbo://fa-comp/submit/%u'>명단 제출</a>", detail_rec->player_id);
         } else {
-            kbo_window_text_appendf(buffer, "<a class='rightsTextAction cashOnly' href='kbo://fa-comp/cash-only/%u'>Cash Only</a>", detail_rec->player_id);
+            kbo_window_text_appendf(buffer, "<a class='rightsTextAction cashOnly' href='kbo://fa-comp/cash-only/%u'>현금 보상</a>", detail_rec->player_id);
         }
         kbo_window_text_appendf(buffer, "</div></div></section>");
     } else {
         kbo_window_text_appendf(
             buffer,
-            "<section class='faCompBoard faCompBoardEmpty'><div class='faCompBoardLead'><div class='faCompBoardTitle'>FA COMPENSATION</div>"
-            "<div class='faCompBoardSummary'>No active player-compensation case is ready for review.</div></div></section>");
+            "<section class='faCompBoard faCompBoardEmpty'><div class='faCompBoardLead'><div class='faCompBoardTitle'>FA 보상</div>"
+            "<div class='faCompBoardSummary'>검토할 선수 보상 건이 없습니다.</div></div></section>");
     }
 
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap faCompLedgerWrap'><table class='ootpRosterTable faCompTable'><thead><tr>"
-        "<th data-sort-type='number'>Date</th>"
+        "<th data-sort-type='number'>일자</th>"
         "<th class='roName' data-sort-type='text'>FA</th>"
-        "<th data-sort-type='number'>Grade</th>"
-        "<th data-sort-type='text'>From</th>"
-        "<th data-sort-type='text'>To</th>"
-        "<th class='roEntry' data-sort-type='number'>Prev Salary</th>"
-        "<th class='roEntry' data-sort-type='number'>Player + Cash</th>"
-        "<th class='roEntry' data-sort-type='number'>Cash Only</th>"
-        "<th class='roStatus' data-sort-type='text'>Status</th>"
-        "<th class='roAction' data-sort-type='text'>Action</th>"
+        "<th data-sort-type='number'>등급</th>"
+        "<th data-sort-type='text'>원 소속</th>"
+        "<th data-sort-type='text'>계약 구단</th>"
+        "<th class='roEntry' data-sort-type='number'>직전 연봉</th>"
+        "<th class='roEntry' data-sort-type='number'>선수+현금</th>"
+        "<th class='roEntry' data-sort-type='number'>현금 보상</th>"
+        "<th class='roStatus' data-sort-type='text'>상태</th>"
+        "<th class='roAction' data-sort-type='text'>처리</th>"
         "</tr></thead><tbody>");
 
     for (int i = 0; i < count && i < 800; i++) {
@@ -245,9 +245,9 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
         if (rec->requires_player_compensation && rec->protect_count > 0u) {
             if (rec->status == KBO_FA_COMPENSATION_STATUS_PENDING
                     || rec->status == KBO_FA_COMPENSATION_STATUS_RECORDED) {
-                kbo_window_text_appendf(buffer, "<a class='rightsTextAction' title='Submit protected list' href='kbo://fa-comp/submit/%u'>Submit</a>", rec->player_id);
+                kbo_window_text_appendf(buffer, "<a class='rightsTextAction' title='보호 명단 제출' href='kbo://fa-comp/submit/%u'>제출</a>", rec->player_id);
             } else {
-                kbo_window_text_appendf(buffer, "<a class='rightsTextAction' title='Open compensation board' href='kbo://fa-comp/detail/%u'>Open</a>", rec->player_id);
+                kbo_window_text_appendf(buffer, "<a class='rightsTextAction' title='보상 보드 열기' href='kbo://fa-comp/detail/%u'>열기</a>", rec->player_id);
             }
         } else {
             kbo_html_append_escaped(buffer, "-");
@@ -255,9 +255,9 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
         kbo_window_text_appendf(buffer, "</td></tr>");
     }
     if (count == 0) {
-        kbo_window_text_appendf(buffer, "<tr><td colspan='10' class='roEmptyMessage'>No KBO FA compensation obligations recorded.</td></tr>");
+        kbo_window_text_appendf(buffer, "<tr><td colspan='10' class='roEmptyMessage'>기록된 KBO FA 보상 의무가 없습니다.</td></tr>");
     } else if (count > 800) {
-        kbo_window_text_appendf(buffer, "<tr><td colspan='10' class='roEmptyMessage'>Output truncated. Open fa_compensation.csv for the full ledger.</td></tr>");
+        kbo_window_text_appendf(buffer, "<tr><td colspan='10' class='roEmptyMessage'>출력이 일부만 표시됩니다. 전체 내역은 fa_compensation.csv에서 확인하세요.</td></tr>");
     }
     kbo_window_text_appendf(buffer, "</tbody></table></section>");
 
@@ -269,12 +269,12 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
         kbo_window_text_appendf(
             buffer,
             "<section class='tablewrap rosterTableWrap faCompLists'><table class='ootpRosterTable faCompListTable'><thead><tr>"
-            "<th class='faCompPool' data-sort-type='text'>Pool</th>"
-            "<th class='faCompRank' data-sort-type='number'>Rank</th>"
-            "<th class='roName' data-sort-type='text'>Player</th>"
-            "<th class='faCompAge' data-sort-type='number'>Age</th>"
-            "<th class='faCompScore' data-sort-type='number'>Score</th>"
-            "<th class='roAction' data-sort-type='text'>Decision</th>"
+            "<th class='faCompPool' data-sort-type='text'>구분</th>"
+            "<th class='faCompRank' data-sort-type='number'>순위</th>"
+            "<th class='roName' data-sort-type='text'>선수</th>"
+            "<th class='faCompAge' data-sort-type='number'>나이</th>"
+            "<th class='faCompScore' data-sort-type='number'>점수</th>"
+            "<th class='roAction' data-sort-type='text'>결정</th>"
             "</tr></thead><tbody>");
 
         int rendered = 0;
@@ -287,7 +287,7 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
                     continue;
                 }
                 const char* label = strcmp(row->list_type, "auto_protected") == 0
-                    ? "Auto" : (strcmp(row->list_type, "protected") == 0 ? "Protected" : "Available");
+                    ? "자동 보호" : (strcmp(row->list_type, "protected") == 0 ? "보호" : "선택 가능");
                 int selected_player = has_decision
                     && strcmp(decision.action, "PLAYER") == 0
                     && row->player_id == decision.selected_player_id;
@@ -305,11 +305,11 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
                     row->score,
                     row->score);
                 if (selected_player) {
-                    kbo_window_text_appendf(buffer, "<span class='faCompPick'>Selected</span>");
+                    kbo_window_text_appendf(buffer, "<span class='faCompPick'>선택됨</span>");
                 } else if (!is_final && strcmp(row->list_type, "unprotected") == 0) {
                     kbo_window_text_appendf(
                         buffer,
-                        "<a class='rightsTextAction' href='kbo://fa-comp/select/%u/%u'>Select</a>",
+                        "<a class='rightsTextAction' href='kbo://fa-comp/select/%u/%u'>선택</a>",
                         detail_rec->player_id,
                         row->player_id);
                 } else {
@@ -320,11 +320,11 @@ void kbo_webview_append_fa_compensation_view(KboWindowTextBuffer* buffer, uint32
             }
         }
         if (rendered == 0) {
-            kbo_window_text_appendf(buffer, "<tr><td colspan='6' class='roEmptyMessage'>Protected list has not been submitted yet.</td></tr>");
+            kbo_window_text_appendf(buffer, "<tr><td colspan='6' class='roEmptyMessage'>보호 명단이 아직 제출되지 않았습니다.</td></tr>");
         }
         kbo_window_text_appendf(buffer, "</tbody></table></section>");
     } else {
-        kbo_window_text_appendf(buffer, "<section class='tablewrap rosterTableWrap faCompLists'><table class='ootpRosterTable'><tbody><tr><td class='roEmptyMessage'>No player compensation board is available.</td></tr></tbody></table></section>");
+        kbo_window_text_appendf(buffer, "<section class='tablewrap rosterTableWrap faCompLists'><table class='ootpRosterTable'><tbody><tr><td class='roEmptyMessage'>사용 가능한 선수 보상 보드가 없습니다.</td></tr></tbody></table></section>");
     }
 
     kbo_window_text_appendf(buffer, "</div>");

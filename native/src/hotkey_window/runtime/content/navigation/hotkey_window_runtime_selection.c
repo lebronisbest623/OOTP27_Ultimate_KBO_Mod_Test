@@ -18,18 +18,18 @@ RECT kbo_hub_nav_item_rect(int index, int width, int height)
 const char* kbo_hub_current_view_title(void)
 {
     switch (g_kbo_hub_selected_view) {
-    case KBO_HUB_VIEW_MILITARY: return kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80",    "SERVICE TEAMS");
-    case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c", "FOREIGN RIGHTS");
-    case KBO_HUB_VIEW_ASIAN_QUOTA: return kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98", "FOREIGN PLAYERS");
-    case KBO_HUB_VIEW_ASIAN_GAMES: return kbo_hub_text("ASIAN GAMES", "ASIAN GAMES");
+    case KBO_HUB_VIEW_MILITARY: return kbo_hub_text("\xea\xb5\xb0\xea\xb2\xbd\xed\x8c\x80",    "군경팀");
+    case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c", "외국인 보류권");
+    case KBO_HUB_VIEW_ASIAN_QUOTA: return kbo_hub_text("\xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98", "외국인 선수");
+    case KBO_HUB_VIEW_ASIAN_GAMES: return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84", "아시안게임");
     case KBO_HUB_VIEW_UPCOMING_FA:
     case KBO_HUB_VIEW_FA_CASES: return kbo_hub_text("FA", "FA");
-    case KBO_HUB_VIEW_MOD_INFO: return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
-    case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",      "SETTINGS");
-    case KBO_HUB_VIEW_REPUTATION: return kbo_hub_text("\xed\x8f\x89\xed\x8c\x90", "REPUTATION");
-    case KBO_HUB_VIEW_CBT:        return kbo_hub_text("\xea\xb2\xbd\xec\x9f\x81\xea\xb7\xa0\xed\x98\x95\xec\x84\xb8", "CBT");
-    case KBO_HUB_VIEW_FUTURES_LEAGUE: return kbo_hub_text("\xea\xb5\xac\xeb\xa7\xa4", "PURCHASE");
-    default:                    return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO");
+    case KBO_HUB_VIEW_MOD_INFO: return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "모드 정보");
+    case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xec\x84\xa4\xec\xa0\x95",      "설정");
+    case KBO_HUB_VIEW_REPUTATION: return kbo_hub_text("\xed\x8f\x89\xed\x8c\x90", "평판");
+    case KBO_HUB_VIEW_CBT:        return kbo_hub_text("\xea\xb2\xbd\xec\x9f\x81\xea\xb7\xa0\xed\x98\x95\xec\x84\xb8", "경쟁균형세");
+    case KBO_HUB_VIEW_FUTURES_LEAGUE: return kbo_hub_text("\xea\xb5\xac\xeb\xa7\xa4", "구매");
+    default:                    return kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "모드 정보");
     }
 }
 
@@ -38,31 +38,31 @@ const char* kbo_hub_current_view_subtitle(void)
     switch (g_kbo_hub_selected_view) {
     case KBO_HUB_VIEW_MILITARY:
         return kbo_hub_military_subnav_label(g_kbo_hub_selected_military_subview);
-    case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xed\x8c\x80\xeb\xb3\x84 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98 \xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c\xec\x9d\x84 \xed\x99\x95\xec\x9d\xb8\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4", "Retained foreign player rights by club");
+    case KBO_HUB_VIEW_FOREIGN_RIGHTS: return kbo_hub_text("\xed\x8c\x80\xeb\xb3\x84 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8 \xec\x84\xa0\xec\x88\x98 \xeb\xb3\xb4\xeb\xa5\x98\xea\xb6\x8c\xec\x9d\x84 \xed\x99\x95\xec\x9d\xb8\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4", "구단별 외국인 선수 보류권");
     case KBO_HUB_VIEW_ASIAN_QUOTA:
         return kbo_hub_foreign_subnav_label(g_kbo_hub_selected_foreign_subview);
     case KBO_HUB_VIEW_ASIAN_GAMES:
         switch (g_kbo_hub_selected_agames_subview) {
         case KBO_HUB_AGAMES_SUBVIEW_TOURNAMENTS:
-            return kbo_hub_text("ASIAN GAMES TOURNAMENTS", "ASIAN GAMES TOURNAMENTS");
+            return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xeb\x8c\x80\xed\x9a\x8c", "아시안게임 대회");
         case KBO_HUB_AGAMES_SUBVIEW_SCHEDULE:
-            return kbo_hub_text("ASIAN GAMES SCHEDULE", "ASIAN GAMES SCHEDULE");
+            return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xec\x9d\xbc\xec\xa0\x95", "아시안게임 일정");
         case KBO_HUB_AGAMES_SUBVIEW_ROSTER:
-            return kbo_hub_text("ASIAN GAMES ROSTER", "ASIAN GAMES ROSTER");
+            return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0", "아시안게임 로스터");
         default:
-            return kbo_hub_text("ASIAN GAMES", "ASIAN GAMES");
+            return kbo_hub_text("\xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84", "아시안게임");
         }
     case KBO_HUB_VIEW_UPCOMING_FA:
     case KBO_HUB_VIEW_FA_CASES:
         return kbo_hub_fa_subnav_label(g_kbo_hub_selected_fa_subview);
     case KBO_HUB_VIEW_MOD_INFO:
         return kbo_hub_mod_subnav_label(g_kbo_hub_selected_mod_subview);
-    case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xeb\xa6\xac\xea\xb7\xb8\xec\x99\x80 \xea\xb2\x8c\xec\x9e\x84 \xed\x94\x8c\xeb\xa0\x88\xec\x9d\xb4 \xec\x84\xa4\xec\xa0\x95", "League and gameplay settings");
-    case KBO_HUB_VIEW_REPUTATION: return kbo_hub_text("\xec\xb5\x9c\xea\xb7\xbc 5\xeb\x85\x84 \xed\x8f\x89\xed\x8c\x90 \xeb\xb3\x80\xeb\x8f\x99", "Last 5 years of reputation changes");
-    case KBO_HUB_VIEW_CBT:        return kbo_hub_text("\xed\x8c\x80\xeb\xb3\x84 \xea\xb2\xbd\xec\x9f\x81\xea\xb7\xa0\xed\x98\x95\xec\x84\xb8 \xed\x98\x84\xed\x99\xa9", "Competitive balance tax records by team");
+    case KBO_HUB_VIEW_SETTINGS: return kbo_hub_text("\xeb\xa6\xac\xea\xb7\xb8\xec\x99\x80 \xea\xb2\x8c\xec\x9e\x84 \xed\x94\x8c\xeb\xa0\x88\xec\x9d\xb4 \xec\x84\xa4\xec\xa0\x95", "리그와 게임 플레이 설정");
+    case KBO_HUB_VIEW_REPUTATION: return kbo_hub_text("\xec\xb5\x9c\xea\xb7\xbc 5\xeb\x85\x84 \xed\x8f\x89\xed\x8c\x90 \xeb\xb3\x80\xeb\x8f\x99", "최근 5년 평판 변동");
+    case KBO_HUB_VIEW_CBT:        return kbo_hub_text("\xed\x8c\x80\xeb\xb3\x84 \xea\xb2\xbd\xec\x9f\x81\xea\xb7\xa0\xed\x98\x95\xec\x84\xb8 \xed\x98\x84\xed\x99\xa9", "구단별 경쟁균형세 현황");
     case KBO_HUB_VIEW_FUTURES_LEAGUE:
         return kbo_hub_futures_subnav_label(g_kbo_hub_selected_futures_subview);
-    default:                    return kbo_hub_text("\xeb\x9f\xb0\xec\xb2\x98\xec\x99\x80 \xeb\x9f\xb0\xed\x83\x80\xec\x9e\x84 \xed\x8c\xa8\xec\xb9\x98 \xec\x83\x81\xed\x83\x9c\xeb\xa5\xbc \xed\x91\x9c\xec\x8b\x9c\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",       "Launcher and runtime patch status");
+    default:                    return kbo_hub_text("\xeb\x9f\xb0\xec\xb2\x98\xec\x99\x80 \xeb\x9f\xb0\xed\x83\x80\xec\x9e\x84 \xed\x8c\xa8\xec\xb9\x98 \xec\x83\x81\xed\x83\x9c\xeb\xa5\xbc \xed\x91\x9c\xec\x8b\x9c\xed\x95\xa9\xeb\x8b\x88\xeb\x8b\xa4",       "런처와 런타임 패치 상태");
     }
 }
 

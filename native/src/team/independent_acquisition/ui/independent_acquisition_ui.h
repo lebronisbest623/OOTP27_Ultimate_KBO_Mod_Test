@@ -54,12 +54,14 @@ typedef struct KboIndependentAcquisitionUiOfferRow {
     uint8_t foreign_player;
     uint8_t asian_quota;
     uint8_t slot_type;
+    uint8_t offer_blocked;
     uint8_t already_requested;
     uint8_t already_decided;
     int32_t value_score;
     int32_t cash_cost;
     int64_t request_score;
     char slot_label[32];
+    char status_label[32];
 } KboIndependentAcquisitionUiOfferRow;
 
 typedef struct KboIndependentAcquisitionUiRequestRow {

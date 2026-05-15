@@ -40,6 +40,10 @@ int kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(
     int min_days,
     int inactive_roster_present);
 int kbo_foreign_injury_duration_meets_minimum(int16_t days_left, int min_days);
+int kbo_foreign_injury_duration_text_meets_minimum(
+    const char* text,
+    int min_days,
+    int* out_days);
 int kbo_foreign_injury_active_record_has_roster_basis(
     uint8_t status,
     uint32_t replacement_player_id,

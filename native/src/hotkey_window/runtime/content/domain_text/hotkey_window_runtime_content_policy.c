@@ -16,7 +16,7 @@ void kbo_build_foreign_injury_replacement_hub_text(char* out, size_t out_size)
     uint32_t selected_team_id = g_kbo_hub_selected_team_id;
     char selected_team_name[96] = {0};
     kbo_hub_copy_team_display_name_by_id(selected_team_id, selected_team_name, sizeof(selected_team_name), NULL);
-    kbo_foreign_injury_replacement_scan_once("hotkey_text");
+    kbo_ensure_foreign_injury_replacements_loaded();
 
     int open_count = 0;
     int pending_count = 0;
@@ -101,7 +101,7 @@ void kbo_build_mod_info_hub_text(char* out, size_t out_size)
     buffer.capacity = out_size;
     buffer.length   = 0;
 
-    kbo_window_text_appendf(&buffer, "%s\r\n\r\n", kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "MOD INFO"));
+    kbo_window_text_appendf(&buffer, "%s\r\n\r\n", kbo_hub_text("\xeb\xaa\xa8\xeb\x93\x9c \xec\xa0\x95\xeb\xb3\xb4", "모드 정보"));
     kbo_window_text_appendf(&buffer, "GitHub\r\n");
     kbo_window_text_appendf(&buffer, "  https://github.com/lebronisbest623/OOTP27_Ultimate_KBO\r\n\r\n");
     kbo_window_text_appendf(
@@ -139,7 +139,6 @@ void kbo_build_foreign_policy_hub_text(char* out, size_t out_size)
         return;
     }
     out[0] = '\0';
-    kbo_foreign_injury_replacement_scan_once("foreign_policy_text");
 
     KboWindowTextBuffer buffer;
     buffer.data     = out;

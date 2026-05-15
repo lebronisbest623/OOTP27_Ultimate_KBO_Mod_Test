@@ -57,6 +57,7 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\foreign\common\dates\foreign_waiver_date.c") `
     (Join-Path $Root "src\foreign\replacement_seed\parse\foreign_replacement_seed_parse.c") `
     (Join-Path $Root "src\captain\season\captain_season.c") `
+    (Join-Path $Root "src\core\season\phase\season_phase_rules.c") `
     (Join-Path $Root "src\captain\seed\parse\captain_seed_parse.c") `
     (Join-Path $Root "src\military_service\calendar\military_service_date.c") `
     (Join-Path $Root "src\military_service\selection\events\policy\military_selection_policy.c") `

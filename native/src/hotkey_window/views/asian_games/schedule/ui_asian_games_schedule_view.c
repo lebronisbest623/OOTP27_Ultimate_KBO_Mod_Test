@@ -32,32 +32,32 @@ const char* kbo_webview_asian_games_schedule_status(
 {
     if (event_date == 0u) {
         if (out_class != NULL) { *out_class = "roMuted"; }
-        return "TBD";
+        return "미정";
     }
     int processed = (fired_date == event_date)
         || kbo_custom_event_processed_marker_exists_for_kind(event_date, event_kind);
     if (processed) {
         if (out_class != NULL) { *out_class = "roReady"; }
-        return "Complete";
+        return "완료";
     }
     if (today == event_date) {
         if (out_class != NULL) { *out_class = "roOrange"; }
-        return "Today";
+        return "오늘";
     }
     if (today != 0u && today > event_date) {
         if (out_class != NULL) { *out_class = "roMuted"; }
-        return "Past";
+        return "지난 일정";
     }
     if (event_exists) {
         if (out_class != NULL) { *out_class = "roServing"; }
-        return "Scheduled";
+        return "등록됨";
     }
     if (!auto_schedule) {
         if (out_class != NULL) { *out_class = "roMuted"; }
-        return "Seeded";
+        return "시드";
     }
     if (out_class != NULL) { *out_class = "roSoon"; }
-    return "Pending";
+    return "대기";
 }
 
 void kbo_webview_append_asian_games_schedule_row(
@@ -97,7 +97,7 @@ void kbo_webview_append_asian_games_schedule_row(
             event_date % 100u);
         weekday = kbo_hub_weekday_abbrev(kbo_webview_weekday_for_yyyymmdd(event_date));
     } else {
-        snprintf(date_text, sizeof(date_text), "TBD");
+        snprintf(date_text, sizeof(date_text), "미정");
     }
 
     kbo_window_text_appendf(
@@ -149,7 +149,7 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
         snprintf(
             summary_text,
             sizeof(summary_text),
-            "View: Schedule - Asian Games %u%s - %s - %d Completed / 3 Events",
+            "보기: 일정 - 아시안게임 %u%s - %s - 완료 %d / 3개 이벤트",
             schedule_year,
             host_text,
             kbo_asian_games_schedule_status_label(&schedule),
@@ -164,12 +164,12 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
         snprintf(
             summary_text,
             sizeof(summary_text),
-            "View: Schedule - Asian Games %u%s - %s / Dates TBD",
+            "보기: 일정 - 아시안게임 %u%s - %s / 날짜 미정",
             schedule_year,
             host_text,
             kbo_asian_games_schedule_status_label(&schedule));
     } else {
-        snprintf(summary_text, sizeof(summary_text), "View: Schedule - Asian Games");
+        snprintf(summary_text, sizeof(summary_text), "보기: 일정 - 아시안게임");
     }
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights'>");
@@ -177,9 +177,9 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable agScheduleTable'><thead><tr>"
-        "<th class='roDate' data-sort-type='date'>Date</th><th class='roPo' data-sort-type='text'>Day</th>"
-        "<th class='roName' data-sort-type='text'>Event</th><th class='roLeague' data-sort-type='text'>Action</th>"
-        "<th class='roClub' data-sort-type='text'>Impact</th><th class='roStatus' data-sort-type='text'>Status</th>"
+        "<th class='roDate' data-sort-type='date'>날짜</th><th class='roPo' data-sort-type='text'>요일</th>"
+        "<th class='roName' data-sort-type='text'>이벤트</th><th class='roLeague' data-sort-type='text'>처리</th>"
+        "<th class='roClub' data-sort-type='text'>영향</th><th class='roStatus' data-sort-type='text'>상태</th>"
         "</tr></thead><tbody>");
 
     if (schedule_year == 0u) {
@@ -189,9 +189,9 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
             buffer,
             selection_date,
             KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_SELECTION,
-            kbo_hub_text("\xeb\x8c\x80\xed\x91\x9c\xed\x8c\x80 \xeb\xb0\x9c\xed\x91\x9c", "Roster Selection"),
-            kbo_hub_text("KBO \xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0 \xec\x84\xa0\xeb\xb0\x9c", "KBO announces the national-team roster"),
-            kbo_hub_text("24\xeb\xaa\x85 \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0", "24-man roster"),
+            kbo_hub_text("\xeb\x8c\x80\xed\x91\x9c\xed\x8c\x80 \xeb\xb0\x9c\xed\x91\x9c", "대표팀 발표"),
+            kbo_hub_text("KBO \xec\x95\x84\xec\x8b\x9c\xec\x95\x88\xea\xb2\x8c\xec\x9e\x84 \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0 \xec\x84\xa0\xeb\xb0\x9c", "KBO 아시안게임 로스터 선발"),
+            kbo_hub_text("24\xeb\xaa\x85 \xeb\xa1\x9c\xec\x8a\xa4\xed\x84\xb0", "24명 로스터"),
             g_kbo_asian_games_last_selection_fired_date,
             today,
             league_id,
@@ -200,9 +200,9 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
             buffer,
             departure_date,
             KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_DEPARTURE,
-            kbo_hub_text("\xec\x84\xa0\xec\x88\x98\xeb\x8b\xa8 \xec\xb6\x9c\xea\xb5\xad", "Player Departure"),
-            kbo_hub_text("\xec\x84\xa0\xeb\xb0\x9c \xec\x84\xa0\xec\x88\x98 \xea\xb5\xac\xeb\x8b\xa8 \xec\x9d\xb4\xed\x83\x88 \xeb\xb0\x8f \xeb\x8c\x80\xec\xb2\xb4 \xed\x99\x95\xec\x9d\xb8", "Selected players leave their clubs"),
-            kbo_hub_text("\xec\xa0\x9c\xed\x95\x9c \xeb\xaa\x85\xeb\x8b\xa8", "Restricted-list window"),
+            kbo_hub_text("\xec\x84\xa0\xec\x88\x98\xeb\x8b\xa8 \xec\xb6\x9c\xea\xb5\xad", "선수단 출국"),
+            kbo_hub_text("\xec\x84\xa0\xeb\xb0\x9c \xec\x84\xa0\xec\x88\x98 \xea\xb5\xac\xeb\x8b\xa8 \xec\x9d\xb4\xed\x83\x88 \xeb\xb0\x8f \xeb\x8c\x80\xec\xb2\xb4 \xed\x99\x95\xec\x9d\xb8", "선발 선수 구단 이탈 및 대체 확인"),
+            kbo_hub_text("\xec\xa0\x9c\xed\x95\x9c \xeb\xaa\x85\xeb\x8b\xa8", "제한 명단"),
             g_kbo_asian_games_last_departure_fired_date,
             today,
             league_id,
@@ -211,9 +211,9 @@ void kbo_webview_append_asian_games_schedule_view(KboWindowTextBuffer* buffer)
             buffer,
             final_date,
             KBO_CUSTOM_EVENT_KIND_ASIAN_GAMES_FINAL,
-            kbo_hub_text("\xea\xb2\xb0\xec\x8a\xb9 / \xeb\xb3\xb5\xea\xb7\x80", "Final / Return"),
-            kbo_hub_text("\xeb\x8c\x80\xed\x9a\x8c \xec\xa2\x85\xeb\xa3\x8c \xed\x9b\x84 \xea\xb5\xac\xeb\x8b\xa8 \xeb\xb3\xb5\xea\xb7\x80 \xeb\xb0\x8f \xeb\xb3\x91\xec\x97\xad \xed\x98\x9c\xed\x83\x9d \xec\xb2\x98\xeb\xa6\xac", "Players return after the final"),
-            kbo_hub_text("\xea\xb8\x88\xeb\xa9\x94\xeb\x8b\xac \xeb\xa9\xb4\xec\xa0\x9c", "Gold-medal exemption"),
+            kbo_hub_text("\xea\xb2\xb0\xec\x8a\xb9 / \xeb\xb3\xb5\xea\xb7\x80", "결승 / 복귀"),
+            kbo_hub_text("\xeb\x8c\x80\xed\x9a\x8c \xec\xa2\x85\xeb\xa3\x8c \xed\x9b\x84 \xea\xb5\xac\xeb\x8b\xa8 \xeb\xb3\xb5\xea\xb7\x80 \xeb\xb0\x8f \xeb\xb3\x91\xec\x97\xad \xed\x98\x9c\xed\x83\x9d \xec\xb2\x98\xeb\xa6\xac", "대회 종료 후 구단 복귀 및 병역 혜택 처리"),
+            kbo_hub_text("\xea\xb8\x88\xeb\xa9\x94\xeb\x8b\xac \xeb\xa9\xb4\xec\xa0\x9c", "금메달 면제"),
             g_kbo_asian_games_last_final_fired_date,
             today,
             league_id,

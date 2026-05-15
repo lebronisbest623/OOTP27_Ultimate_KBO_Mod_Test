@@ -269,8 +269,8 @@ void kbo_webview_append_reputation_view(KboWindowTextBuffer* buffer, uint32_t le
     kbo_window_text_appendf(
         buffer,
         "<div class='rights rosterRights'><section class='tablewrap rosterTableWrap'><table class='ootpRosterTable reputationTable'><thead><tr>"
-        "<th data-sort-type='text'>Team</th><th style='width:88px' data-sort-type='number'>Current</th>"
-        "<th style='width:64px' data-sort-type='number'>Rank</th><th style='width:92px' data-sort-type='text'>Record</th>");
+        "<th data-sort-type='text'>구단</th><th style='width:88px' data-sort-type='number'>현재</th>"
+        "<th style='width:64px' data-sort-type='number'>순위</th><th style='width:92px' data-sort-type='text'>전적</th>");
     for (int i = 0; i < selected_year_count; i++) {
         kbo_window_text_appendf(buffer, "<th style='width:96px' data-sort-type='number'>%u</th>", selected_years[i]);
     }

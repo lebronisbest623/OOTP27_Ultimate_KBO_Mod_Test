@@ -64,7 +64,7 @@ static const char* kbo_custom_event_default_title_key(KboCustomEventKind kind)
     case KBO_CUSTOM_EVENT_KIND_FA_DECLARATION:
         return "custom_event.fa.declaration.title";
     case KBO_CUSTOM_EVENT_KIND_INDEPENDENT_TEAM_ACQUISITION_OPEN:
-        return "custom_event.independent_team_acquisition.open.title";
+        return "independent_acquisition.open.title";
     default:
         return NULL;
     }

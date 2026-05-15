@@ -8,16 +8,16 @@ void kbo_webview_append_military_roster_view(KboWindowTextBuffer* buffer)
     uint32_t kpb_id  = kpb  != NULL ? *(uint32_t*)(kpb  + OOTP27_KBO_TEAM_ID_OFFSET) : 0;
     char sang_name[64] = {0};
     char kpb_name[64]  = {0};
-    kbo_hub_copy_team_display_name_from_ptr(sang, sang_name, sizeof(sang_name), "Sangmu Baseball Team");
-    kbo_hub_copy_team_display_name_from_ptr(kpb,  kpb_name,  sizeof(kpb_name),  "Korean Police Baseball Team");
+    kbo_hub_copy_team_display_name_from_ptr(sang, sang_name, sizeof(sang_name), "상무");
+    kbo_hub_copy_team_display_name_from_ptr(kpb,  kpb_name,  sizeof(kpb_name), "경찰 야구단");
 
     kbo_window_text_appendf(buffer, "<div class='rights rosterRights'>");
     kbo_webview_append_roster_top_bar(buffer, NULL);
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable serviceRosterTable'><thead><tr>"
-        "<th class='roPo' data-sort-type='text'>PO</th><th class='roNum' data-sort-type='number'></th><th class='roName' data-sort-type='text'>Name</th>"
-        "<th class='roLeague' data-sort-type='text'>League</th><th class='roClub' data-sort-type='text'>Original Club</th><th class='roReturn' data-sort-type='text'>Return Date</th></tr></thead><tbody>");
+        "<th class='roPo' data-sort-type='text'>포지션</th><th class='roNum' data-sort-type='number'></th><th class='roName' data-sort-type='text'>선수</th>"
+        "<th class='roLeague' data-sort-type='text'>복무 구단</th><th class='roClub' data-sort-type='text'>원 소속</th><th class='roReturn' data-sort-type='text'>복귀일</th></tr></thead><tbody>");
 
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
@@ -79,7 +79,7 @@ void kbo_webview_append_military_roster_view(KboWindowTextBuffer* buffer)
                 kbo_webview_player_position_label(player, 0u));
             kbo_html_append_escaped(buffer, uniform_number);
             kbo_window_text_appendf(buffer, "</td>");
-            kbo_webview_append_player_name_cell(buffer, player_name[0] != '\0' ? player_name : "Unknown player", player_id);
+            kbo_webview_append_player_name_cell(buffer, player_name[0] != '\0' ? player_name : "알 수 없는 선수", player_id);
             kbo_window_text_appendf(buffer, "<td class='roLeague'>");
             kbo_html_append_escaped(buffer, service_team_name);
             kbo_window_text_appendf(buffer, "</td><td class='roClub'>");

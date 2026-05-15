@@ -55,16 +55,14 @@ int kbo_run_captain_selection_maintenance_once(const char* source)
     }
 
     uint32_t league_id = kbo_resolve_kbo_league_id();
-    uintptr_t league_ptr = kbo_find_league_ptr_from_id(league_id);
-    if (league_ptr == 0
-            || !memory_range_readable(
-                (void*)league_ptr,
-                OOTP27_KBO_LEAGUE_PHASE_YEAR_OFFSET + sizeof(uint32_t))) {
+    KboSeasonPhaseInfo phase_info;
+    if (!kbo_season_phase_resolve(league_id, date, 0u, &phase_info)) {
         return kbo_captain_run_seed_startup_without_league_ptr(date, league_id, source);
     }
 
-    uint32_t league_season = *(uint32_t*)(league_ptr + OOTP27_KBO_LEAGUE_YEAR_OFFSET);
-    uint8_t phase = *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET);
+    uintptr_t league_ptr = phase_info.league_ptr;
+    uint32_t league_season = phase_info.league_year;
+    uint8_t phase = phase_info.effective_phase;
     uint32_t season = kbo_captain_effective_season(date, league_season);
     if (season < 1982u || season > 2200u) {
         return 0;

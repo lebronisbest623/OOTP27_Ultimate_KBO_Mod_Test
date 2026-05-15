@@ -1284,6 +1284,28 @@ static void test_foreign_injury_inactive_roster_long_term_basis(void)
     assert(kbo_foreign_injury_duration_meets_minimum(1239, min_days));
     assert(!kbo_foreign_injury_duration_meets_minimum(-1, min_days));
 
+    int evidence_days = 0;
+    assert(kbo_foreign_injury_duration_text_meets_minimum(
+        "It will be at least 12 months before White returns to the field.",
+        min_days,
+        &evidence_days));
+    assert(evidence_days == 360);
+    assert(kbo_foreign_injury_duration_text_meets_minimum(
+        "The 31-year-old pitcher will be out for at least 12 months.",
+        min_days,
+        &evidence_days));
+    assert(evidence_days == 360);
+    assert(kbo_foreign_injury_duration_text_meets_minimum(
+        "The club expects him out for 6 weeks.",
+        min_days,
+        &evidence_days));
+    assert(evidence_days == 42);
+    assert(!kbo_foreign_injury_duration_text_meets_minimum(
+        "He is expected to miss 2 weeks.",
+        min_days,
+        &evidence_days));
+    assert(evidence_days == 14);
+
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(0u, 0, min_days, 1));
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 8, min_days, 1));
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 0, min_days, 0));

@@ -118,6 +118,7 @@
         { "path": "news_templates/en/fa_compensation.json", "label": "News templates: FA compensation (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/foreign_injury.json", "label": "News templates: Foreign injury (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/foreign_waiver.json", "label": "News templates: Foreign waiver (English)", "kind": "news_template", "language": "en" },
+        { "path": "news_templates/en/independent_acquisition.json", "label": "News templates: Independent acquisition (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/en/military_service.json", "label": "News templates: Military service (English)", "kind": "news_template", "language": "en" },
         { "path": "news_templates/ko/asian_games.json", "label": "News templates: Asian Games (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/captain.json", "label": "News templates: Captain (Korean)", "kind": "news_template", "language": "ko" },
@@ -127,6 +128,7 @@
         { "path": "news_templates/ko/fa_compensation.json", "label": "News templates: FA compensation (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/foreign_injury.json", "label": "News templates: Foreign injury (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/foreign_waiver.json", "label": "News templates: Foreign waiver (Korean)", "kind": "news_template", "language": "ko" },
+        { "path": "news_templates/ko/independent_acquisition.json", "label": "News templates: Independent acquisition (Korean)", "kind": "news_template", "language": "ko" },
         { "path": "news_templates/ko/military_service.json", "label": "News templates: Military service (Korean)", "kind": "news_template", "language": "ko" }
       ]
     },

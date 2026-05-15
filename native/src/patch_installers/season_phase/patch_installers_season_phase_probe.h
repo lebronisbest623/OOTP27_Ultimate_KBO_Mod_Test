@@ -1,6 +1,7 @@
 #ifndef KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_SEASON_PHASE_PROBE_H_
 #define KBOFIX_SRC_PATCH_INSTALLERS_PATCH_INSTALLERS_SEASON_PHASE_PROBE_H_
 
+int install_kbo_season_phase_capture_hooks(void);
 int install_kbo_season_phase_opening_day_snapshot_hooks(void);
 
 #endif

@@ -205,11 +205,17 @@ void kbo_hub_copy_team_abbrev_by_id(uint32_t team_id, char* out, size_t out_size
     char name[96] = {0};
     kbo_hub_copy_team_display_name_by_id(team_id, name, sizeof(name), fallback);
     if (kbo_ascii_contains_ignore_case(name, "Lotte"))      { snprintf(out, out_size, "LOT");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Giants"))     { snprintf(out, out_size, "LOT");  return; }
     if (kbo_ascii_contains_ignore_case(name, "Doosan"))     { snprintf(out, out_size, "DOO");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Bears"))      { snprintf(out, out_size, "DOO");  return; }
     if (kbo_ascii_contains_ignore_case(name, "Samsung"))    { snprintf(out, out_size, "SAM");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Lions"))      { snprintf(out, out_size, "SAM");  return; }
     if (kbo_ascii_contains_ignore_case(name, "KIA"))        { snprintf(out, out_size, "KIA");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Tigers"))     { snprintf(out, out_size, "KIA");  return; }
     if (kbo_ascii_contains_ignore_case(name, "SSG"))        { snprintf(out, out_size, "SSG");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Landers"))    { snprintf(out, out_size, "SSG");  return; }
     if (kbo_ascii_contains_ignore_case(name, "Hanwha"))     { snprintf(out, out_size, "HAN");  return; }
+    if (kbo_ascii_contains_ignore_case(name, "Eagles"))     { snprintf(out, out_size, "HAN");  return; }
     if (kbo_ascii_contains_ignore_case(name, "Kiwoom"))     { snprintf(out, out_size, "KIW");  return; }
     if (kbo_ascii_contains_ignore_case(name, "Nexen"))      { snprintf(out, out_size, "NEX");  return; }
     if (kbo_ascii_contains_ignore_case(name, "Heroes"))     { snprintf(out, out_size, "KIW");  return; }

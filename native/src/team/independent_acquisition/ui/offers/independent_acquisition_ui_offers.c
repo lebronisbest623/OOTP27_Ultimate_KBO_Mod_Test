@@ -46,14 +46,14 @@ static void kbo_independent_acquisition_ui_slot_label(
         return;
     }
     if (!foreign_player) {
-        snprintf(out, out_size, "DOM");
+        snprintf(out, out_size, "국내");
         return;
     }
     if (slot_type != 0u) {
         snprintf(out, out_size, "%s", kbo_foreign_injury_slot_label(slot_type));
         return;
     }
-    snprintf(out, out_size, "%s", asian_quota ? "Asian" : "Foreign");
+    snprintf(out, out_size, "%s", asian_quota ? "아시아" : "외국인");
 }
 
 static void kbo_independent_acquisition_ui_insert_offer_row(
@@ -195,9 +195,10 @@ int kbo_independent_acquisition_ui_collect_offer_rows(
             continue;
         }
         int32_t cash_cost = kbo_independent_acquisition_cash_cost_for_player(player);
-        if (cash_cost <= 0 || buyer.cash_available < cash_cost) {
+        if (cash_cost <= 0) {
             continue;
         }
+        int no_cash = buyer.cash_available < cash_cost;
 
         uint32_t effective_before = buyer.effective_foreign_count;
         uint32_t effective_after = buyer.effective_foreign_count;
@@ -206,16 +207,17 @@ int kbo_independent_acquisition_ui_collect_offer_rows(
         uint32_t injured_player_id = 0u;
         int foreign_player = kbo_player_is_foreign_for_kbo_rights(player);
         int asian_quota = foreign_player && kbo_player_is_asian_quota_candidate(player);
-        if (foreign_player
-                && !kbo_custom_foreign_policy_team_allows_candidate(
+        int policy_blocked = 0;
+        if (foreign_player) {
+            int allowed = kbo_custom_foreign_policy_team_allows_candidate(
                     buyer.team_id,
                     player,
                     &effective_before,
                     &effective_after,
                     &effective_limit,
                     &slot_type,
-                    &injured_player_id)) {
-            continue;
+                    &injured_player_id);
+            policy_blocked = !allowed;
         }
 
         KboIndependentAcquisitionUiOfferRow row;
@@ -236,6 +238,7 @@ int kbo_independent_acquisition_ui_collect_offer_rows(
         row.foreign_player = foreign_player ? 1u : 0u;
         row.asian_quota = asian_quota ? 1u : 0u;
         row.slot_type = slot_type;
+        row.offer_blocked = (no_cash || policy_blocked) ? 1u : 0u;
         row.already_requested = kbo_independent_acquisition_request_exists(
             context.season,
             buyer.team_id,
@@ -258,6 +261,13 @@ int kbo_independent_acquisition_ui_collect_offer_rows(
             row.asian_quota,
             row.slot_label,
             sizeof(row.slot_label));
+        if (no_cash) {
+            snprintf(row.status_label, sizeof(row.status_label), "자금 부족");
+        } else if (policy_blocked) {
+            snprintf(row.status_label, sizeof(row.status_label), "영입 불가");
+        } else {
+            snprintf(row.status_label, sizeof(row.status_label), "가능");
+        }
         kbo_independent_acquisition_ui_insert_offer_row(out_rows, &count, max_rows, &row);
     }
 

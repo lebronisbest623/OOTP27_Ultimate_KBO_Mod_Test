@@ -14,6 +14,7 @@
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/dates/core_text_date.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/season/phase/season_phase.h"
 #include "../../core/teams/core_team_collect.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../foreign/common/policy/foreign_player_policy.h"
@@ -66,29 +67,43 @@ static int kbo_independent_acquisition_window_active(uint32_t today)
         return 0;
     }
 
+    int32_t ttl_days = kbo_foreign_player_policy()->pending_offer_ttl_days;
+    uint32_t ttl = ttl_days > 0 ? (uint32_t)ttl_days : 0u;
+    uint32_t age_days = today_serial - open_serial;
+    if (age_days > ttl) {
+        static uint32_t last_logged_expired_date = 0u;
+        if (last_logged_expired_date != today) {
+            last_logged_expired_date = today;
+            kbo_log_runtimef(
+                "independent acquisition AI window closed source=ttl today=%u open=%u age_days=%u ttl_days=%u",
+                today,
+                open_date,
+                age_days,
+                ttl);
+        }
+        return 0;
+    }
+
     uint32_t league_id = kbo_get_foreign_waiver_league_id();
     if (league_id == 0u) {
         league_id = kbo_resolve_kbo_league_id();
     }
-    uintptr_t league_ptr = league_id != 0u ? kbo_find_league_ptr_from_id(league_id) : 0u;
-    if (league_ptr == 0u
-            || !memory_range_readable(
-                (void*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET),
-                sizeof(uint8_t))) {
-        return today_serial - open_serial <= (uint32_t)kbo_foreign_player_policy()->pending_offer_ttl_days;
-    }
-
-    uint8_t phase = *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET);
-    if (phase != 2u && phase != 3u) {
-        static uint32_t last_logged_closed_date = 0u;
-        if (last_logged_closed_date != today) {
-            last_logged_closed_date = today;
+    KboSeasonPhaseInfo phase_info;
+    if (kbo_season_phase_resolve(league_id, today, 0u, &phase_info)
+            && !kbo_season_phase_is_preseason_or_regular(phase_info.effective_phase)) {
+        static uint32_t last_logged_phase_closed_date = 0u;
+        if (last_logged_phase_closed_date != today) {
+            last_logged_phase_closed_date = today;
             kbo_log_runtimef(
-                "independent acquisition AI window closed source=league_phase today=%u open=%u league=%u phase=%u",
+                "independent acquisition AI window closed source=effective_phase today=%u open=%u league=%u raw_phase=%u effective_phase=%u label=%s opening_day=%u corrected=%d",
                 today,
                 open_date,
                 league_id,
-                (uint32_t)phase);
+                (unsigned)phase_info.raw_phase,
+                (unsigned)phase_info.effective_phase,
+                kbo_season_phase_label(phase_info.effective_phase),
+                phase_info.opening_day,
+                phase_info.corrected);
         }
         return 0;
     }

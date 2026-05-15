@@ -200,8 +200,8 @@ void kbo_build_settings_hub_text(char* out, size_t out_size)
     buffer.capacity = out_size;
     buffer.length   = 0;
 
-    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xec\x84\xa4\xec\xa0\x95", "SETTINGS"));
-    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xeb\xa6\xac\xea\xb7\xb8 \xec\x84\xa4\xec\xa0\x95", "LEAGUE SETTINGS"));
+    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xec\x84\xa4\xec\xa0\x95", "설정"));
+    kbo_window_text_appendf(&buffer, "%s\r\n", kbo_hub_text("\xeb\xa6\xac\xea\xb7\xb8 \xec\x84\xa4\xec\xa0\x95", "리그 설정"));
     int multiplier = kbo_get_intl_established_fa_multiplier();
     kbo_window_text_appendf(&buffer, "%s\r\n", "INTERNATIONAL ESTABLISHED FA");
     kbo_window_text_appendf(

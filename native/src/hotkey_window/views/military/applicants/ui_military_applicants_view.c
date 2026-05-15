@@ -107,8 +107,8 @@ void kbo_webview_append_military_applicant_summary(
     snprintf(
         summary_text,
         sizeof(summary_text),
-        "View: Applicants - Status: %s - POS: P %d / C %d / INF %d / OF %d / Other %d - %d Applicants - Period: %s to %s",
-        application_active ? "Open" : "Closed",
+        "보기: 지원자 - 상태: %s - 포지션: 투수 %d / 포수 %d / 내야 %d / 외야 %d / 기타 %d - 지원자 %d명 - 기간: %s ~ %s",
+        application_active ? "열림" : "닫힘",
         pitchers,
         catchers,
         infielders,
@@ -178,9 +178,9 @@ void kbo_webview_append_military_applicants_view(KboWindowTextBuffer* buffer)
     kbo_window_text_appendf(
         buffer,
         "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable applicantRosterTable'><thead><tr>"
-        "<th class='roPo' data-sort-type='text'>PO</th><th class='roName' data-sort-type='text'>Name</th>"
-        "<th class='roClub' data-sort-type='text'>Original Club</th><th class='roAge' data-sort-type='number'>Age</th>"
-        "<th class='roEntry' data-sort-type='number'>Entry Year</th><th class='roStatus' data-sort-type='text'>Status</th>"
+        "<th class='roPo' data-sort-type='text'>포지션</th><th class='roName' data-sort-type='text'>선수</th>"
+        "<th class='roClub' data-sort-type='text'>원 소속</th><th class='roAge' data-sort-type='number'>나이</th>"
+        "<th class='roEntry' data-sort-type='number'>입대 연도</th><th class='roStatus' data-sort-type='text'>상태</th>"
         "</tr></thead><tbody>");
 
     int rendered = 0;
@@ -218,19 +218,19 @@ void kbo_webview_append_military_applicants_view(KboWindowTextBuffer* buffer)
         }
 
         kbo_window_text_appendf(buffer, "<tr><td class='roPo'>%s</td>", position_label);
-        kbo_webview_append_player_name_cell(buffer, player_name[0] != '\0' ? player_name : "Unknown player", candidate->player_id);
+        kbo_webview_append_player_name_cell(buffer, player_name[0] != '\0' ? player_name : "알 수 없는 선수", candidate->player_id);
         kbo_window_text_appendf(buffer, "<td class='roClub'>");
         kbo_html_append_escaped(buffer, original_team_name);
         if (age > 0u) {
             kbo_window_text_appendf(
                 buffer,
-                "</td><td class='roAge'>%u</td><td class='roEntry'>%u</td><td class='roStatus'>Queued</td></tr>",
+                "</td><td class='roAge'>%u</td><td class='roEntry'>%u</td><td class='roStatus'>대기</td></tr>",
                 (uint32_t)age,
                 (uint32_t)candidate->entry_year);
         } else {
             kbo_window_text_appendf(
                 buffer,
-                "</td><td class='roAge'></td><td class='roEntry'>%u</td><td class='roStatus'>Queued</td></tr>",
+                "</td><td class='roAge'></td><td class='roEntry'>%u</td><td class='roStatus'>대기</td></tr>",
                 (uint32_t)candidate->entry_year);
         }
         rendered++;

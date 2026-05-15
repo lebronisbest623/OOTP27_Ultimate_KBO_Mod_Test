@@ -49,12 +49,10 @@ int kbo_cbt_is_latest_for_team(const KboCbtRecord* records, int index)
 void kbo_cbt_team_name(const KboCbtRecord* rec, char* out, size_t out_size)
 {
     out[0] = '\0';
-    if (rec->team_name[0] != '\0') {
-        snprintf(out, out_size, "%s", rec->team_name);
-    } else {
-        kbo_hub_copy_team_display_name_by_id(rec->team_id, out, out_size, NULL);
+    if (rec != NULL && rec->team_id != 0u) {
+        kbo_hub_copy_team_abbrev_by_id(rec->team_id, out, out_size, NULL);
     }
-    if (out[0] == '\0') snprintf(out, out_size, "Team #%u", rec->team_id);
+    if (out[0] == '\0') snprintf(out, out_size, rec != NULL ? "T%u" : "-", rec != NULL ? rec->team_id : 0u);
 }
 
 static int kbo_cbt_ratio_pct(const KboCbtRecord* rec)
@@ -121,7 +119,7 @@ static void kbo_webview_append_cbt_overview_view(KboWindowTextBuffer* buffer)
 
     char summary[256];
     snprintf(summary, sizeof(summary),
-        count > 0 ? "%u season overview - %d clubs - %d over tax line" : "No records yet - snapshot taken at opening day",
+        count > 0 ? "%u시즌 개요 - %d개 구단 - 기준선 초과 %d개" : "아직 기록 없음 - 개막일 스냅샷에서 생성",
         latest_season, clubs, violations);
 
     char tax_text[32], threshold_text[32];
@@ -133,17 +131,17 @@ static void kbo_webview_append_cbt_overview_view(KboWindowTextBuffer* buffer)
     kbo_cbt_append_overview_css(buffer);
     kbo_window_text_appendf(buffer,
         "<div class='cbtOverview'><section class='cbtMetrics'>"
-        "<div class='cbtMetric'><span class='cbtMetricLabel'>Current Threshold</span><span class='cbtMetricValue'>");
+        "<div class='cbtMetric'><span class='cbtMetricLabel'>현재 기준선</span><span class='cbtMetricValue'>");
     kbo_html_append_escaped(buffer, threshold_text);
     kbo_window_text_appendf(buffer,
-        "</span></div><div class='cbtMetric'><span class='cbtMetricLabel'>Clubs Over Line</span><span class='cbtMetricValue %s'>%d</span></div>"
-        "<div class='cbtMetric'><span class='cbtMetricLabel'>Total Tax Due</span><span class='cbtMetricValue %s'>",
+        "</span></div><div class='cbtMetric'><span class='cbtMetricLabel'>초과 구단</span><span class='cbtMetricValue %s'>%d</span></div>"
+        "<div class='cbtMetric'><span class='cbtMetricLabel'>총 납부액</span><span class='cbtMetricValue %s'>",
         violations > 0 ? "warn" : "good", violations, total_tax > 0 ? "warn" : "good");
     kbo_html_append_escaped(buffer, tax_text);
     kbo_window_text_appendf(buffer,
-        "</span></div><div class='cbtMetric'><span class='cbtMetricLabel'>Draft Penalties</span><span class='cbtMetricValue %s'>%d</span></div>"
+        "</span></div><div class='cbtMetric'><span class='cbtMetricLabel'>지명권 페널티</span><span class='cbtMetricValue %s'>%d</span></div>"
         "</section><section class='tablewrap rosterTableWrap cbtChartWrap'>"
-        "<div class='cbtChartTitle'>League Tax Line</div>"
+        "<div class='cbtChartTitle'>리그 사치세 기준선</div>"
         "<div class='cbtPlot'>"
         "<div class='cbtGrid' style='top:0%%'></div><div class='cbtAxisLabel' style='top:0%%'>1.400</div>"
         "<div class='cbtGrid' style='top:14.2857%%'></div><div class='cbtAxisLabel' style='top:14.2857%%'>1.200</div>"
@@ -158,7 +156,7 @@ static void kbo_webview_append_cbt_overview_view(KboWindowTextBuffer* buffer)
 
     if (count <= 0) {
         kbo_window_text_appendf(buffer,
-            "<div style='color:#888;text-align:center;padding:22px'>Records are written when the opening-day salary snapshot is taken.</div>");
+            "<div style='color:#888;text-align:center;padding:22px'>개막일 연봉 스냅샷을 만들면 기록됩니다.</div>");
     }
 
     for (int i = 0; i < count; i++) {

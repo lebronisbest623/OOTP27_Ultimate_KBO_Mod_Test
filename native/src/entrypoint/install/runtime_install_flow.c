@@ -286,6 +286,11 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     } else {
         kbo_log_runtime_line("KBO foreign AI offer attach hook disabled: no research/probe flag is enabled");
     }
+    if (!read_kbo_localappdata_flag_file("disable_kbo_season_phase_capture_hooks.txt")) {
+        install_kbo_season_phase_capture_hooks();
+    } else {
+        kbo_log_runtime_line("KBO season phase capture hooks disabled: disable_kbo_season_phase_capture_hooks is true");
+    }
     start_kbo_custom_event_monitor();
     if (kbo_no_minor_contract_patch_enabled()) {
         if (!kbo_opening_day_storyline_guard_active("no_minor_contract_patch_install", NULL, NULL)) {
@@ -328,7 +333,7 @@ void install_kbo_full_runtime_after_roster_marker(HINSTANCE instance)
     }
     if (read_kbo_localappdata_flag_file("enable_kbo_season_phase_monitor.txt")) {
         start_kbo_season_phase_monitor();
-        kbo_log_runtime_line("KBO season phase write probe disabled: unsafe after crash; using read-only monitor");
+        kbo_log_runtime_line("KBO season phase read-only monitor enabled; write capture hooks are managed separately");
     } else {
         kbo_log_runtime_line("KBO season phase read-only monitor disabled: kbo_flags.json enable_kbo_season_phase_monitor is false");
     }

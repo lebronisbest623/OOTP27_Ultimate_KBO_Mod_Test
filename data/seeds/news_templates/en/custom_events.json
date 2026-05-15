@@ -7,9 +7,5 @@
   "custom_event.asian_games.final.title": "Asian Games Final",
   "custom_event.cbt.exception_deadline.title": "Exception Player Deadline",
   "custom_event.cbt.announcement.title": "Competitive Balance Tax Announcement",
-  "custom_event.fa.declaration.title": "FA Declaration Deadline",
-  "custom_event.independent_team_acquisition.open.title": "Futures Independent Club Signing Window Opens",
-  "custom_event.independent_team_acquisition.open.news.body": "KBO opened the player acquisition window for independent clubs playing in the Futures League. The date is tied to two months after the opening day of the league that includes the independent club.\n\nDuring this period, independent Futures clubs such as the Ulsan Whales can make up to five roster additions through a separate process. Actual acquisition eligibility still depends on each player's contract status and league registration rules.",
-  "custom_event.independent_team_acquisition.transfer.title": "{buyer_team_name} acquire {player_name}",
-  "custom_event.independent_team_acquisition.transfer.news.body": "{buyer_team_link} completed the acquisition of {player_link} from {seller_team_link} through the Futures independent club acquisition process.\n\nThe cash consideration is ${cash_cost}. The amount is charged to the acquiring club's CASH balance, and the independent club does not receive a launcher-economy credit."
+  "custom_event.fa.declaration.title": "FA Declaration Deadline"
 }

@@ -25,9 +25,9 @@ void kbo_webview_append_asian_games_view(KboWindowTextBuffer* buffer, int select
             kbo_window_text_appendf(
                 buffer,
                 "<section class='tablewrap rosterTableWrap'><table class='ootpRosterTable agRosterTable'><thead><tr>"
-                "<th class='roPo' data-sort-type='text'>PO</th><th class='roNum' data-sort-type='number'></th><th class='roName' data-sort-type='text'>Name</th>"
-                "<th class='roLeague' data-sort-type='text'>League</th><th class='roAge' data-sort-type='number'>Age</th><th class='roNat' data-sort-type='text'>Nationality*</th>"
-                "<th class='roTeam' data-sort-type='text'>Team</th><th class='roClub' data-sort-type='text'>WC</th></tr></thead><tbody>");
+                "<th class='roPo' data-sort-type='text'>포지션</th><th class='roNum' data-sort-type='number'></th><th class='roName' data-sort-type='text'>선수</th>"
+                "<th class='roLeague' data-sort-type='text'>리그</th><th class='roAge' data-sort-type='number'>나이</th><th class='roNat' data-sort-type='text'>국적*</th>"
+                "<th class='roTeam' data-sort-type='text'>구단</th><th class='roClub' data-sort-type='text'>와일드카드</th></tr></thead><tbody>");
             if (roster_count == 0) {
                 kbo_window_text_appendf(buffer, "<tr><td colspan='8'></td></tr>");
             } else {
@@ -41,7 +41,7 @@ void kbo_webview_append_asian_games_view(KboWindowTextBuffer* buffer, int select
                     if (kbo_player_pointer_plausible(player_ptr)) {
                         kbo_hub_copy_player_display_name((uint8_t*)player_ptr, player_name, sizeof(player_name));
                     } else {
-                        snprintf(player_name, sizeof(player_name), "Unknown player");
+                        snprintf(player_name, sizeof(player_name), "알 수 없는 선수");
                     }
                     char uniform_number[8] = {0};
                     kbo_webview_copy_player_uniform_number(entry->player_id, uniform_number, sizeof(uniform_number));
@@ -56,7 +56,7 @@ void kbo_webview_append_asian_games_view(KboWindowTextBuffer* buffer, int select
                     kbo_webview_append_player_name_cell(buffer, player_name, entry->player_id);
                     kbo_window_text_appendf(
                         buffer,
-                        "<td class='roLeague'>Korean National Team</td><td class='roAge'>%u</td>",
+                        "<td class='roLeague'>대한민국 대표팀</td><td class='roAge'>%u</td>",
                         (uint32_t)entry->age
                     );
                     kbo_webview_append_roster_nation_cell(buffer, OOTP27_KBO_KOREA_NATION_ID, kbo_hub_nation_flag_asset_path);
@@ -65,7 +65,7 @@ void kbo_webview_append_asian_games_view(KboWindowTextBuffer* buffer, int select
                     kbo_window_text_appendf(
                         buffer,
                         "</td><td class='roClub'>%s</td></tr>",
-                        entry->wildcard ? "YES" : "NO");
+                        entry->wildcard ? "예" : "아니오");
                 }
             }
             kbo_window_text_appendf(buffer, "</tbody></table></section></div>");
