@@ -1,4 +1,5 @@
 #include "../internal/foreign_injury_internal.h"
+#include "../../../team/assignment/org_query/team_org_assignment_query.h"
 
 int kbo_persist_foreign_injury_replacements_locked(void)
 {
@@ -165,15 +166,18 @@ int kbo_foreign_injury_record_has_minimum_injury_basis(const KboForeignInjuryRep
     if (rec == NULL || rec->injured_player_id == 0u) {
         return 0;
     }
-    if (rec->expected_end_yyyymmdd != 0u) {
-        return 1;
-    }
 
     uint32_t team_id = 0u;
     uint32_t league_id = 0u;
     uint8_t* injured = kbo_find_player_by_id(rec->injured_player_id, &team_id, &league_id);
     if (injured == NULL || !memory_range_readable(injured, OOTP27_PLAYER_SCAN_BYTES)) {
         return 0;
+    }
+    if (!kbo_player_current_assignment_matches_team_or_affiliate(injured, rec->team_id)) {
+        return 0;
+    }
+    if (rec->expected_end_yyyymmdd != 0u) {
+        return 1;
     }
 
     uint8_t injury_active = injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET];
