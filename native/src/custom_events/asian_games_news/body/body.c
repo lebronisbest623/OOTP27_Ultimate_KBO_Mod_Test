@@ -157,18 +157,28 @@ void kbo_asian_games_build_final_matchup(
     static const char* korean_opponents[] = {
         "\xec\x9d\xbc\xeb\xb3\xb8",
         "\xeb\x8c\x80\xeb\xa7\x8c",
-        "\xec\xa4\x91\xea\xb5\xad",
         "\xec\x9d\xbc\xeb\xb3\xb8",
         "\xeb\x8c\x80\xeb\xa7\x8c",
-        "\xed\x95\x84\xeb\xa6\xac\xed\x95\x80",
+        "\xec\x9d\xbc\xeb\xb3\xb8",
+        "\xeb\x8c\x80\xeb\xa7\x8c",
+        "\xec\x9d\xbc\xeb\xb3\xb8",
+        "\xeb\x8c\x80\xeb\xa7\x8c",
+        "\xec\x9d\xbc\xeb\xb3\xb8",
+        "\xeb\x8c\x80\xeb\xa7\x8c",
+        "\xec\xa4\x91\xea\xb5\xad",
     };
     static const char* english_opponents[] = {
         "Japan",
         "Taiwan",
-        "China",
         "Japan",
         "Taiwan",
-        "the Philippines",
+        "Japan",
+        "Taiwan",
+        "Japan",
+        "Taiwan",
+        "Japan",
+        "Taiwan",
+        "China",
     };
 
     uint32_t hash = 2166136261u;
