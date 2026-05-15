@@ -27,6 +27,7 @@
 #include "window/independent_acquisition_window.h"
 
 static volatile LONG g_kbo_independent_acquisition_ai_last_run_date = 0;
+static volatile LONG g_kbo_independent_acquisition_ai_running = 0;
 
 static int kbo_independent_acquisition_claim_daily_run(uint32_t today)
 {
@@ -119,10 +120,19 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         return 0;
     }
 
+    if (InterlockedCompareExchange(&g_kbo_independent_acquisition_ai_running, 1, 0) != 0) {
+        kbo_log_runtimef(
+            "independent acquisition AI skipped source=%s reason=already_running",
+            source != NULL ? source : "");
+        return 0;
+    }
+
+    int result = 0;
+    uintptr_t* snapshot = NULL;
     uint32_t today = 0u;
     if (!kbo_get_current_yyyymmdd(&today)
             || !kbo_independent_acquisition_window_active(today)) {
-        return 0;
+        goto cleanup;
     }
 
     KboIndependentFuturesTeamLeague sellers[KBO_INDEPENDENT_ACQUISITION_MAX_SELLERS];
@@ -140,7 +150,7 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
             today,
             seed_rows,
             unresolved_rows);
-        return 0;
+        goto cleanup;
     }
 
     uint32_t season = today / 10000u;
@@ -177,15 +187,15 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
             || player_vector == 0u
             || player_count <= 0
             || player_count > 200000) {
-        return 0;
+        goto cleanup;
     }
     SIZE_T player_vector_bytes = (SIZE_T)player_count * sizeof(uintptr_t);
     if (!memory_range_readable((void*)player_vector, player_vector_bytes)) {
-        return 0;
+        goto cleanup;
     }
-    uintptr_t* snapshot = (uintptr_t*)HeapAlloc(GetProcessHeap(), 0, player_vector_bytes);
+    snapshot = (uintptr_t*)HeapAlloc(GetProcessHeap(), 0, player_vector_bytes);
     if (snapshot == NULL) {
-        return 0;
+        goto cleanup;
     }
     SIZE_T bytes_read = 0u;
     if (!ReadProcessMemory(
@@ -195,8 +205,7 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
             player_vector_bytes,
             &bytes_read)
             || bytes_read != player_vector_bytes) {
-        HeapFree(GetProcessHeap(), 0, snapshot);
-        return 0;
+        goto cleanup;
     }
 
     uint32_t kbo_league_id = kbo_get_foreign_waiver_league_id();
@@ -213,8 +222,7 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         &scanned,
         &unreadable);
     if (!kbo_independent_acquisition_claim_daily_run(today)) {
-        HeapFree(GetProcessHeap(), 0, snapshot);
-        return 0;
+        goto cleanup;
     }
 
     int requested = 0;
@@ -321,6 +329,12 @@ int kbo_run_independent_team_acquisition_ai(const char* source)
         snapshot,
         player_count,
         source);
-    HeapFree(GetProcessHeap(), 0, snapshot);
-    return requested + transferred;
+    result = requested + transferred;
+
+cleanup:
+    if (snapshot != NULL) {
+        HeapFree(GetProcessHeap(), 0, snapshot);
+    }
+    InterlockedExchange(&g_kbo_independent_acquisition_ai_running, 0);
+    return result;
 }
