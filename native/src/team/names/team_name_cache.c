@@ -10,8 +10,9 @@
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../runtime_memory/runtime_memory.h"
 
-#define KBO_NAME_ID_CACHE_MAX       300000u
+#define KBO_NAME_ID_CACHE_MAX       400000u
 #define KBO_NAME_CACHE_TEXT_BYTES   48u
+#define KBO_NAME_RECORD_AUX_MAX     512u
 #define KBO_NAMES_DAT_MAX_BYTES     (32u * 1024u * 1024u)
 
 static char* g_kbo_name_cache_texts = NULL;
@@ -141,6 +142,9 @@ static int kbo_load_name_cache_for_save(const char* save_path)
     }
 
     uint32_t loaded = 0;
+    uint32_t old_shape_records = 0;
+    uint32_t translated_shape_records = 0;
+    uint32_t max_id_seen = 0;
     for (DWORD i = 0; i + 13u < read; ) {
         uint8_t tag = data[i];
         if (tag != 0x27u && tag != 0x07u) {
@@ -156,11 +160,9 @@ static int kbo_load_name_cache_for_save(const char* save_path)
         }
 
         uint32_t text_offset = i + 5u;
-        uint32_t id_offset   = text_offset + len + 4u;
-        if (data[text_offset + len] != 0u
-                || data[text_offset + len + 1u] != 0u
-                || data[text_offset + len + 2u] != 0u
-                || data[text_offset + len + 3u] != 0u) {
+        uint32_t aux_len = kbo_read_u32_le_bytes(data + text_offset + len);
+        SIZE_T id_offset = (SIZE_T)text_offset + (SIZE_T)len + sizeof(uint32_t) + (SIZE_T)aux_len;
+        if (aux_len > KBO_NAME_RECORD_AUX_MAX || id_offset + sizeof(uint32_t) > (SIZE_T)read) {
             i++;
             continue;
         }
@@ -172,8 +174,16 @@ static int kbo_load_name_cache_for_save(const char* save_path)
             if (slot[0] == '\0') {
                 kbo_name_cache_store(cache, id, data + text_offset, len);
                 loaded++;
+                if (id > max_id_seen) {
+                    max_id_seen = id;
+                }
+                if (aux_len == 0) {
+                    old_shape_records++;
+                } else {
+                    translated_shape_records++;
+                }
             }
-            i = id_offset + sizeof(uint32_t);
+            i = (DWORD)(id_offset + sizeof(uint32_t));
             continue;
         }
 
@@ -190,7 +200,13 @@ static int kbo_load_name_cache_for_save(const char* save_path)
 
     g_kbo_name_cache_texts = cache;
     snprintf(g_kbo_name_cache_save_path, sizeof(g_kbo_name_cache_save_path), "%s", save_path);
-    kbo_log_runtimef("KBO names.dat cache loaded entries=%u path=%s", loaded, path);
+    kbo_log_runtimef(
+        "KBO names.dat cache loaded entries=%u old_shape=%u translated_shape=%u max_id=%u path=%s",
+        loaded,
+        old_shape_records,
+        translated_shape_records,
+        max_id_seen,
+        path);
 
     InterlockedExchange(&g_kbo_name_cache_loading, 0);
     return 1;

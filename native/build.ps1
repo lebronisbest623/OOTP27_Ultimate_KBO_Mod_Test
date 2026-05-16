@@ -396,6 +396,8 @@ else {
         $ResponsePath = Join-Path $ObjDir "KBOFix.link.rsp"
         $ResponseArgs = @(
             "-shared"
+            "-static"
+            "-static-libgcc"
             "-o"
             "`"$($DllPath.Replace('\', '/'))`""
         )
