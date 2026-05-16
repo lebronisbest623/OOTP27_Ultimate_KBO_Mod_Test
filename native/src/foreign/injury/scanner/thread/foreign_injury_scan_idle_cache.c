@@ -21,8 +21,7 @@ int kbo_foreign_injury_replacement_scan_source_is_periodic_thread(const char* so
 
 static int kbo_foreign_injury_replacement_scan_source_uses_idle_cache(const char* source)
 {
-    return kbo_foreign_injury_replacement_scan_source_is_periodic_thread(source)
-        || (source != NULL && strcmp(source, "foreign_roster_daily_date_change") == 0);
+    return kbo_foreign_injury_replacement_scan_source_is_periodic_thread(source);
 }
 
 int kbo_foreign_injury_same_date_idle_scan_cached(uint32_t today, const char* source)

@@ -36,8 +36,6 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
     uint32_t last_custom_event_scheduled_date = 0u;
     uint32_t last_custom_event_scanned_date = 0u;
     uint32_t last_custom_event_fa_comp_date = 0u;
-    uint32_t observed_date = 0u;
-    int stable_date_ticks = 0;
     uint32_t last_fa_repair_current_season = 0u;
     uint32_t last_fa_repair_previous_season = 0u;
     DWORD last_fa_repair_current_tick = 0u;
@@ -58,15 +56,6 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
         }
 
         if (today == 0u || today == last_audit_date) {
-            continue;
-        }
-        if (today != observed_date) {
-            observed_date = today;
-            stable_date_ticks = 1;
-            continue;
-        }
-        stable_date_ticks++;
-        if (stable_date_ticks < 2) {
             continue;
         }
         if (!kbo_runtime_pause_for_save_if_needed("foreign_roster_daily_date_change")) {

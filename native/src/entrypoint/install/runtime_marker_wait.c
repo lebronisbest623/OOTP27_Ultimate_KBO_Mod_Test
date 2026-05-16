@@ -20,8 +20,6 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
         kbo_filetime_to_i64(guard_started_time));
     kbo_log_runtime_line("KBO full runtime marker guard thread started");
 
-    uint32_t last_date_serial = 0u;
-    int stable_date_ticks = 0;
     int early_amateur_team_add_guard_installed = 0;
     const KboRuntimeTuningPolicy* tuning = kbo_runtime_tuning_policy();
     for (int attempt = 1; attempt <= tuning->runtime_marker_wait_attempts; attempt++) {
@@ -39,31 +37,20 @@ DWORD WINAPI kbo_full_runtime_marker_wait_thread(LPVOID parameter)
             }
 
             uint32_t today_serial = kbo_current_date_serial();
-            if (today_serial != 0u && today_serial == last_date_serial) {
-                stable_date_ticks++;
-            } else if (today_serial != 0u) {
-                last_date_serial = today_serial;
-                stable_date_ticks = 1;
-            } else {
-                last_date_serial = 0u;
-                stable_date_ticks = 0;
-            }
-
-            if (stable_date_ticks >= tuning->runtime_marker_wait_stable_ticks) {
+            if (today_serial != 0u) {
                 InterlockedExchange(&g_kbo_runtime_date_stable_ready, 1);
+                kbo_log_runtimef(
+                    "KBO full runtime marker guard ready source=runtime_marker_wait date_serial=%u",
+                    today_serial);
                 install_kbo_full_runtime_after_roster_marker(instance);
                 return 0;
             }
 
-            if (log_detail || stable_date_ticks == 1) {
+            if (log_detail) {
                 kbo_log_runtimef(
-                    "KBO full runtime marker guard waiting source=runtime_marker_wait reason=current_date_not_stable date_serial=%u stable_ticks=%d",
-                    today_serial,
-                    stable_date_ticks);
+                    "KBO full runtime marker guard waiting source=runtime_marker_wait reason=current_date_unavailable date_serial=%u",
+                    today_serial);
             }
-        } else {
-            last_date_serial = 0u;
-            stable_date_ticks = 0;
         }
         Sleep((DWORD)tuning->runtime_marker_wait_sleep_ms);
     }
