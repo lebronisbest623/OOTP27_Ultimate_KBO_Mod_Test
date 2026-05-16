@@ -172,12 +172,6 @@ static int kbo_award_schedule_assign_event_title(uint8_t* event, const char* tit
     return assigned;
 }
 
-static int kbo_award_schedule_display_window_open(uint32_t current_date)
-{
-    uint32_t month_day = current_date % 10000u;
-    return month_day >= 1101u || month_day < 301u;
-}
-
 static int kbo_award_schedule_apply_policy(
     uint32_t league_id,
     uint32_t current_date,
@@ -285,18 +279,16 @@ static int kbo_award_schedule_apply_policy(
                     (void*)event_ptr);
             }
 
-            uint8_t desired_deleted = kbo_award_schedule_display_window_open(current_date) ? 0u : 1u;
-            if (kbo_award_schedule_set_deleted(event, desired_deleted)) {
+            if (kbo_award_schedule_set_deleted(event, 0u)) {
                 changed++;
                 kbo_log_runtimef(
-                    "KBO award schedule native event visibility rule=%s title=%s type=%u league_id=%u event=%p current_date=%08u deleted=%u",
+                    "KBO award schedule native event enabled rule=%s title=%s type=%u league_id=%u event=%p current_date=%08u",
                     rule->id,
                     desired_title[0] != '\0' ? desired_title : title,
                     event_type,
                     league_id,
                     (void*)event_ptr,
-                    current_date,
-                    (uint32_t)desired_deleted);
+                    current_date);
             }
             break;
         }
