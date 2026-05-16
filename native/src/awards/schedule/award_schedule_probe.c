@@ -2,6 +2,16 @@
 
 volatile LONG g_kbo_award_schedule_probe_started = 0;
 
+#define KBO_AWARD_SCHEDULE_NORMAL_SLEEP_MS 2000u
+#define KBO_AWARD_SCHEDULE_FAST_SLEEP_MS 250u
+#define KBO_AWARD_SCHEDULE_FAST_RETRY_PULSES 80
+
+static int kbo_award_schedule_probe_fast_window(uint32_t date_key)
+{
+    uint32_t month_day = date_key % 10000u;
+    return month_day >= 1001u && month_day <= 1215u;
+}
+
 static void kbo_award_probe_copy_name(
     uint8_t* league,
     uint32_t offset,
@@ -98,11 +108,15 @@ static DWORD WINAPI kbo_award_schedule_probe_thread(LPVOID parameter)
     uintptr_t last_league = 0u;
     uint32_t last_date = 0u;
     int logged = 0;
+    int fast_retry_pulses = 0;
 
     kbo_log_runtime_line("KBO award schedule probe started");
 
     while (kbo_runtime_threads_should_continue()) {
-        if (!kbo_runtime_sleep_should_continue(2000u)) {
+        uint32_t sleep_ms = fast_retry_pulses > 0
+            ? KBO_AWARD_SCHEDULE_FAST_SLEEP_MS
+            : KBO_AWARD_SCHEDULE_NORMAL_SLEEP_MS;
+        if (!kbo_runtime_sleep_should_continue(sleep_ms)) {
             break;
         }
         if (!kbo_fix_enabled()) {
@@ -128,10 +142,23 @@ static DWORD WINAPI kbo_award_schedule_probe_thread(LPVOID parameter)
             logged = 1;
             last_league = league_ptr;
             last_date = date_key;
-            kbo_award_schedule_log_event_inventory(league_id, date_key);
             kbo_award_schedule_apply_once(league_id, date_key, 1);
+            kbo_award_schedule_log_event_inventory(league_id, date_key);
+            if (kbo_award_schedule_probe_fast_window(date_key)) {
+                fast_retry_pulses = KBO_AWARD_SCHEDULE_FAST_RETRY_PULSES;
+                kbo_log_runtimef(
+                    "KBO award schedule fast retry window date=%u pulses=%d sleep_ms=%u",
+                    date_key,
+                    fast_retry_pulses,
+                    (uint32_t)KBO_AWARD_SCHEDULE_FAST_SLEEP_MS);
+            } else {
+                fast_retry_pulses = 0;
+            }
         } else {
             kbo_award_schedule_apply_once(league_id, date_key, 0);
+            if (fast_retry_pulses > 0) {
+                fast_retry_pulses--;
+            }
         }
     }
 
