@@ -1,5 +1,6 @@
 #include "../internal/foreign_injury_internal.h"
 
+#include "../../../core/dates/core_text_date.h"
 #include "../../../core/news/templates/core_news_templates.h"
 #include "../../../team/names/team_string.h"
 
@@ -174,6 +175,28 @@ static void kbo_foreign_injury_copy_team_link(uint32_t team_id, char* out, size_
     }
 }
 
+static int kbo_foreign_injury_days_until(uint32_t from_yyyymmdd, uint32_t to_yyyymmdd)
+{
+    if (from_yyyymmdd == 0u || to_yyyymmdd == 0u) {
+        return 0;
+    }
+
+    uint32_t from_serial = kbo_date_serial(
+        from_yyyymmdd / 10000u,
+        (from_yyyymmdd / 100u) % 100u,
+        from_yyyymmdd % 100u);
+    uint32_t to_serial = kbo_date_serial(
+        to_yyyymmdd / 10000u,
+        (to_yyyymmdd / 100u) % 100u,
+        to_yyyymmdd % 100u);
+    if (from_serial == 0u || to_serial == 0u || to_serial <= from_serial) {
+        return 0;
+    }
+
+    uint32_t diff = to_serial - from_serial;
+    return diff > 32767u ? 32767 : (int)diff;
+}
+
 void kbo_emit_foreign_injury_replacement_news(
     const KboForeignInjuryReplacement* rec,
     int days_left,
@@ -235,8 +258,6 @@ void kbo_emit_foreign_injury_replacement_news(
             "%s",
             use_korean ? "\xeb\x8c\x80\xec\xb2\xb4 \xec\x99\xb8\xea\xb5\xad\xec\x9d\xb8" : "the temporary replacement");
     }
-    snprintf(days_left_text, sizeof(days_left_text), "%d", days_left > 0 ? days_left : 0);
-
     int keep_replacement = phase != NULL && strcmp(phase, "closed_keep_replacement") == 0;
     if (keep_replacement) {
         snprintf(retained_player_name, sizeof(retained_player_name), "%s", replacement_player_name);
@@ -279,14 +300,24 @@ void kbo_emit_foreign_injury_replacement_news(
         title_key = "foreign_injury.pending.title";
         body_key = "foreign_injury.pending.body";
     }
-    if ((phase == NULL || strcmp(phase, "open") == 0) && days_left <= 0) {
+
+    int display_days_left = days_left;
+    if (display_days_left <= 0) {
+        display_days_left = kbo_foreign_injury_days_until(event_date, rec->expected_end_yyyymmdd);
+    }
+    snprintf(days_left_text, sizeof(days_left_text), "%d", display_days_left > 0 ? display_days_left : 0);
+
+    const int days_left_required = strcmp(body_key, "foreign_injury.open.body") == 0;
+    if (days_left_required && display_days_left <= 0) {
         kbo_log_runtimef(
-            "foreign injury replacement: news skipped phase=%s team=%u injured=%u league=%u reason=nonpositive_days_left days_left=%d",
+            "foreign injury replacement: news skipped phase=%s team=%u injured=%u league=%u reason=nonpositive_days_left days_left=%d expected_end=%u event_date=%u",
             phase != NULL ? phase : "open",
             rec->team_id,
             rec->injured_player_id,
             rec->league_id,
-            days_left);
+            days_left,
+            rec->expected_end_yyyymmdd,
+            event_date);
         return;
     }
 
@@ -335,10 +366,14 @@ void kbo_emit_foreign_injury_replacement_news(
         title,
         body);
     kbo_log_runtimef(
-        "foreign injury replacement: news phase=%s team=%u injured=%u league=%u created=%d",
+        "foreign injury replacement: news phase=%s team=%u injured=%u league=%u created=%d days_left=%d display_days_left=%d expected_end=%u event_date=%u",
         phase != NULL ? phase : "open",
         rec->team_id,
         rec->injured_player_id,
         rec->league_id,
-        created);
+        created,
+        days_left,
+        display_days_left,
+        rec->expected_end_yyyymmdd,
+        event_date);
 }

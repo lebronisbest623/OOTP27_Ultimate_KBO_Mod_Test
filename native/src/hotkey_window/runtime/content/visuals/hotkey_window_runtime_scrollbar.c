@@ -225,6 +225,7 @@ void kbo_show_or_hide_hotkey_window(void)
     }
 
     if (IsWindowVisible(hwnd)) {
+        kbo_hub_save_window_placement(hwnd);
         ShowWindow(hwnd, SW_HIDE);
         kbo_log_runtimef("KBO F2 hub hidden hwnd=%p", (void*)hwnd);
         return;

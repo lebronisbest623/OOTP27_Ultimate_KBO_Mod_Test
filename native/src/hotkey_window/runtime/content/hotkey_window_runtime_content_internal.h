@@ -15,6 +15,7 @@ void kbo_hub_ensure_valid_selection(void);
 void kbo_refresh_hotkey_window(void);
 void kbo_layout_hotkey_window(HWND hwnd);
 void kbo_hub_apply_fixed_window_placement(HWND hwnd, int preserve_position);
+void kbo_hub_save_window_placement(HWND hwnd);
 
 const char* kbo_hub_foreign_slot_code_for_player(uint8_t* player);
 void kbo_hub_delete_bitmap(HBITMAP* bitmap);
