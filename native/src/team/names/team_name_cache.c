@@ -5,9 +5,11 @@
 #include <string.h>
 
 #include "team_name_cache.h"
+#include "team_string.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/logging/core_log.h"
 #include "../../core/files/save_paths/core_save_paths.h"
+#include "../../core/files/save_paths/core_save_paths_internal.h"
 #include "../../runtime_memory/runtime_memory.h"
 
 #define KBO_NAME_ID_CACHE_MAX       400000u
@@ -16,7 +18,7 @@
 #define KBO_NAMES_DAT_MAX_BYTES     (32u * 1024u * 1024u)
 
 static char* g_kbo_name_cache_texts = NULL;
-static char  g_kbo_name_cache_save_path[MAX_PATH] = {0};
+static char  g_kbo_name_cache_save_path[KBO_UTF8_PATH_BYTES] = {0};
 static LONG  g_kbo_name_cache_loading = 0;
 
 static uint32_t kbo_read_u32_le_bytes(const uint8_t* data)
@@ -27,15 +29,20 @@ static uint32_t kbo_read_u32_le_bytes(const uint8_t* data)
         | ((uint32_t)data[3] << 24);
 }
 
-static int kbo_name_record_text_plausible(const uint8_t* text, uint32_t len)
+static int kbo_name_record_display_text_plausible(const char* text)
 {
-    if (text == NULL || len == 0 || len >= KBO_NAME_CACHE_TEXT_BYTES) {
+    if (text == NULL || text[0] == '\0') {
+        return 0;
+    }
+
+    size_t len = strlen(text);
+    if (len >= KBO_NAME_CACHE_TEXT_BYTES) {
         return 0;
     }
 
     int has_letter = 0;
-    for (uint32_t i = 0; i < len; i++) {
-        uint8_t c = text[i];
+    for (size_t i = 0; i < len; i++) {
+        uint8_t c = (uint8_t)text[i];
         if (c == 0 || c < 0x20u) {
             return 0;
         }
@@ -54,24 +61,48 @@ static int kbo_name_record_text_plausible(const uint8_t* text, uint32_t len)
     return has_letter;
 }
 
-static void kbo_name_cache_store(char* cache, uint32_t id, const uint8_t* text, uint32_t len)
+static int kbo_name_record_copy_display_text(
+    const uint8_t* text,
+    uint32_t len,
+    char* out,
+    size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return 0;
+    }
+    out[0] = '\0';
+    if (text == NULL || len == 0u || len > KBO_NAME_RECORD_AUX_MAX) {
+        return 0;
+    }
+
+    char raw[KBO_NAME_RECORD_AUX_MAX + 1u] = {0};
+    memcpy(raw, text, len);
+    raw[len] = '\0';
+
+    char decoded[KBO_NAME_CACHE_TEXT_BYTES] = {0};
+    if (!copy_limited_ootp_display_string(raw, decoded, sizeof(decoded))
+            || !kbo_name_record_display_text_plausible(decoded)) {
+        return 0;
+    }
+
+    snprintf(out, out_size, "%s", decoded);
+    return 1;
+}
+
+static int kbo_name_cache_store(char* cache, uint32_t id, const char* text)
 {
     if (cache == NULL || id == 0 || id > KBO_NAME_ID_CACHE_MAX
-            || !kbo_name_record_text_plausible(text, len)) {
-        return;
+            || !kbo_name_record_display_text_plausible(text)) {
+        return 0;
     }
 
     char* slot = cache + ((SIZE_T)id * KBO_NAME_CACHE_TEXT_BYTES);
     if (slot[0] != '\0') {
-        return;
+        return 0;
     }
 
-    SIZE_T copy_len = len;
-    if (copy_len >= KBO_NAME_CACHE_TEXT_BYTES) {
-        copy_len = KBO_NAME_CACHE_TEXT_BYTES - 1u;
-    }
-    memcpy(slot, text, copy_len);
-    slot[copy_len] = '\0';
+    snprintf(slot, KBO_NAME_CACHE_TEXT_BYTES, "%s", text);
+    return 1;
 }
 
 static int kbo_load_name_cache_for_save(const char* save_path)
@@ -96,11 +127,10 @@ static int kbo_load_name_cache_for_save(const char* save_path)
         g_kbo_name_cache_save_path[0] = '\0';
     }
 
-    char path[MAX_PATH] = {0};
+    char path[KBO_UTF8_PATH_BYTES] = {0};
     snprintf(path, sizeof(path), "%s\\names.dat", save_path);
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = kbo_create_file_read_utf8(path);
     if (file == INVALID_HANDLE_VALUE) {
         kbo_log_runtimef("KBO names.dat cache skipped reason=open_failed gle=%lu path=%s", GetLastError(), path);
         InterlockedExchange(&g_kbo_name_cache_loading, 0);
@@ -144,6 +174,7 @@ static int kbo_load_name_cache_for_save(const char* save_path)
     uint32_t loaded = 0;
     uint32_t old_shape_records = 0;
     uint32_t translated_shape_records = 0;
+    uint32_t translated_text_records = 0;
     uint32_t max_id_seen = 0;
     for (DWORD i = 0; i + 13u < read; ) {
         uint8_t tag = data[i];
@@ -153,7 +184,7 @@ static int kbo_load_name_cache_for_save(const char* save_path)
         }
 
         uint32_t len = kbo_read_u32_le_bytes(data + i + 1u);
-        if (len == 0 || len >= KBO_NAME_CACHE_TEXT_BYTES
+        if (len == 0 || len > KBO_NAME_RECORD_AUX_MAX
                 || i + 5u + len + 8u > read) {
             i++;
             continue;
@@ -168,19 +199,36 @@ static int kbo_load_name_cache_for_save(const char* save_path)
         }
 
         uint32_t id = kbo_read_u32_le_bytes(data + id_offset);
-        if (id > 0 && id <= KBO_NAME_ID_CACHE_MAX
-                && kbo_name_record_text_plausible(data + text_offset, len)) {
+        char primary_text[KBO_NAME_CACHE_TEXT_BYTES] = {0};
+        char translated_text[KBO_NAME_CACHE_TEXT_BYTES] = {0};
+        int has_primary_text = kbo_name_record_copy_display_text(
+            data + text_offset,
+            len,
+            primary_text,
+            sizeof(primary_text));
+        int has_translated_text = aux_len > 0u
+            && kbo_name_record_copy_display_text(
+                data + text_offset + len + sizeof(uint32_t),
+                aux_len,
+                translated_text,
+                sizeof(translated_text));
+
+        if (id > 0 && id <= KBO_NAME_ID_CACHE_MAX && (has_primary_text || has_translated_text)) {
             char* slot = cache + ((SIZE_T)id * KBO_NAME_CACHE_TEXT_BYTES);
             if (slot[0] == '\0') {
-                kbo_name_cache_store(cache, id, data + text_offset, len);
-                loaded++;
-                if (id > max_id_seen) {
-                    max_id_seen = id;
-                }
-                if (aux_len == 0) {
-                    old_shape_records++;
-                } else {
-                    translated_shape_records++;
+                if (kbo_name_cache_store(cache, id, has_translated_text ? translated_text : primary_text)) {
+                    loaded++;
+                    if (id > max_id_seen) {
+                        max_id_seen = id;
+                    }
+                    if (aux_len == 0) {
+                        old_shape_records++;
+                    } else {
+                        translated_shape_records++;
+                    }
+                    if (has_translated_text) {
+                        translated_text_records++;
+                    }
                 }
             }
             i = (DWORD)(id_offset + sizeof(uint32_t));
@@ -207,6 +255,12 @@ static int kbo_load_name_cache_for_save(const char* save_path)
         translated_shape_records,
         max_id_seen,
         path);
+    if (translated_text_records > 0u) {
+        kbo_log_runtimef(
+            "KBO names.dat cache translated text entries=%u path=%s",
+            translated_text_records,
+            path);
+    }
 
     InterlockedExchange(&g_kbo_name_cache_loading, 0);
     return 1;
@@ -222,7 +276,7 @@ static int kbo_lookup_name_id(uint32_t name_id, char* out, size_t out_size)
         return 0;
     }
 
-    char save_path[MAX_PATH] = {0};
+    char save_path[KBO_UTF8_PATH_BYTES] = {0};
     if (!kbo_get_current_save_path(save_path, sizeof(save_path))
             || !kbo_load_name_cache_for_save(save_path)) {
         return 0;

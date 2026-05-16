@@ -169,7 +169,8 @@ const char* kbo_fa_market_display_case_label(const char* case_label)
     if (strcmp(case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0) { return "FA"; }
     if (strcmp(case_label, "DOMESTIC_RELEASED_NON_FA") == 0) { return "Released"; }
     if (strcmp(case_label, "DOMESTIC_UNDRAFTED_FREE_AGENT") == 0) { return "Undrafted"; }
-    if (strcmp(case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0) { return "Indy FA"; }
+    if (strcmp(case_label, "DOMESTIC_INDEPENDENT_FUTURES_FA") == 0) { return "Futures Indy FA"; }
+    if (strcmp(case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0) { return "Indy League FA"; }
     if (strcmp(case_label, "DOMESTIC_TEAMLESS_UNVERIFIED") == 0) { return "Teamless"; }
     if (strcmp(case_label, "DOMESTIC_MARKET_UNVERIFIED") == 0) { return "Teamless"; }
     if (strcmp(case_label, "FOREIGN_RESERVED_RIGHT") == 0) { return "Foreign Rights"; }

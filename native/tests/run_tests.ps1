@@ -82,6 +82,8 @@ if ($LASTEXITCODE -ne 0) {
     (Join-Path $Root "src\military_service\seed\parse\military_service_seed_parse.c") `
     (Join-Path $Root "src\military_service\players\team_policy\military_service_team_policy_parse.c") `
     (Join-Path $Root "src\team\classification\parse\team_classification_seed_parse.c") `
+    (Join-Path $Root "src\fa_market_classification\policy\fa_market_row_policy.c") `
+    (Join-Path $Root "src\team\names\team_string.c") `
     (Join-Path $Root "src\core\dates\core_text_date.c") `
     (Join-Path $Root "src\core\sql\escape\core_sql_escape.c") `
     (Join-Path $Root "src\core\core_flags\keys\flag_key.c") `
@@ -99,6 +101,7 @@ if ($LASTEXITCODE -ne 0) {
     (Join-Path $Root "src\fa_filing\fa_filing_parts\fa_filing_csv_parse.c") `
     (Join-Path $Root "src\fa_salary_snapshot\csv\salary_snapshot_csv_parse.c") `
     (Join-Path $Root "src\core\files\atomic\core_atomic_file.c") `
+    (Join-Path $Root "src\core\files\save_paths\platform\windows_path.c") `
     (Join-Path $Root "src\core\logging\event\log_event.c") `
     (Join-Path $Root "src\core\logging\rule_audit.c") `
     (Join-Path $Root "src\core\policy\core_policy.c") `

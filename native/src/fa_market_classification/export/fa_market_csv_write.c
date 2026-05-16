@@ -80,7 +80,7 @@ void kbo_write_fa_market_classification_csv(
 
     kbo_fa_market_write_raw(
         file,
-        "date,source,selected_league_id,player_id,name,nation_id,current_team_id,active_team_id,original_team_id,current_league_id,draft_league_id,age,retired_flag,contract_level,fa_demand,dfa_flag,foreign_flag,draft_class,draft_subtype,draft_eligible,draft_extra,generation_flags,generation_context,generation_grade,generation_special,rights_team_id,kbo_case,kbo_grade,fa_grade_salary,fa_grade_overall_rank,fa_grade_team_rank,fa_grade_snapshot_team_id,fa_grade_snapshot_date,fa_grade_opening_day,fa_grade_auto,fa_grade_team_changed_review,fa_grade_flag,reason\r\n");
+        "date,source,selected_league_id,player_id,name,nation_id,current_team_id,active_team_id,original_team_id,original_league_id,current_league_id,draft_league_id,age,retired_flag,contract_level,fa_demand,dfa_flag,foreign_flag,draft_class,draft_subtype,draft_eligible,draft_extra,generation_flags,generation_context,generation_grade,generation_special,rights_team_id,kbo_case,kbo_grade,fa_grade_salary,fa_grade_overall_rank,fa_grade_team_rank,fa_grade_snapshot_team_id,fa_grade_snapshot_date,fa_grade_opening_day,fa_grade_auto,fa_grade_team_changed_review,fa_grade_flag,reason\r\n");
 
     char date[16] = {0};
     if (summary->today_yyyymmdd != 0u) {
@@ -103,11 +103,12 @@ void kbo_write_fa_market_classification_csv(
         len = snprintf(
             middle,
             sizeof(middle),
-            ",%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,",
+            ",%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,",
             row->nation_id,
             row->current_team_id,
             row->active_team_id,
             row->original_team_id,
+            row->original_league_id,
             row->current_league_id,
             row->draft_league_id,
             (uint32_t)row->age,

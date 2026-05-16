@@ -58,7 +58,8 @@ static void kbo_independent_acquisition_copy_team_name(
         copy_ootp_string_object_text(team, OOTP27_KBO_TEAM_NICKNAME_STRING_OFFSET, nickname, sizeof(nickname));
         copy_ootp_string_object_text(team, 0x40u, full_name, sizeof(full_name));
 
-        if (!kbo_independent_acquisition_team_name_placeholder(full_name) && strchr(full_name, ' ') != NULL) {
+        if (!kbo_independent_acquisition_team_name_placeholder(full_name)
+                && (strchr(full_name, ' ') != NULL || kbo_ootp_text_has_non_ascii(full_name))) {
             snprintf(out, out_size, "%s", full_name);
             return;
         }

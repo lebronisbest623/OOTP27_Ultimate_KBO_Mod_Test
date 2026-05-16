@@ -57,7 +57,12 @@ DWORD kbo_get_file_attributes_utf8(const char* path)
     return GetFileAttributesW(wide);
 }
 
-HANDLE kbo_create_file_read_utf8(const char* path)
+HANDLE kbo_create_file_utf8(
+    const char* path,
+    DWORD desired_access,
+    DWORD share_mode,
+    DWORD creation_disposition,
+    DWORD flags_and_attributes)
 {
     WCHAR wide[KBO_WIDE_PATH_CHARS] = {0};
     if (!kbo_utf8_to_wide_path(path, wide, KBO_WIDE_PATH_CHARS)) {
@@ -65,12 +70,22 @@ HANDLE kbo_create_file_read_utf8(const char* path)
     }
     return CreateFileW(
         wide,
+        desired_access,
+        share_mode,
+        NULL,
+        creation_disposition,
+        flags_and_attributes,
+        NULL);
+}
+
+HANDLE kbo_create_file_read_utf8(const char* path)
+{
+    return kbo_create_file_utf8(
+        path,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
         OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
+        FILE_ATTRIBUTE_NORMAL);
 }
 
 int kbo_get_file_attributes_ex_utf8(const char* path, WIN32_FILE_ATTRIBUTE_DATA* out)

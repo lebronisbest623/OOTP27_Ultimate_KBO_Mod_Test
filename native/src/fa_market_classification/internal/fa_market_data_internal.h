@@ -22,6 +22,7 @@
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../foreign/rights/query/foreign_waiver_rights_query.h"
 #include "../../runtime_memory/runtime_memory.h"
+#include "../../team/classification/team_classification.h"
 #include "../../team/lookup/team_lookup.h"
 #include "../../team/names/team_name_cache.h"
 #include "../api/fa_market_classification.h"

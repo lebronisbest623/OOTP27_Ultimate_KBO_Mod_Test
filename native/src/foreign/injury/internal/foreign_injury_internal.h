@@ -79,6 +79,9 @@ int kbo_foreign_injury_expected_end_reached(
 int kbo_foreign_injury_expected_end_pending(
     uint32_t today_yyyymmdd,
     uint32_t expected_end_yyyymmdd);
+uint32_t kbo_foreign_injury_expected_end_from_duration(
+    uint32_t anchor_yyyymmdd,
+    int duration_days);
 int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase);
 int kbo_foreign_injury_replacement_phase_allows_close(uint8_t effective_phase);
 int kbo_foreign_injury_replacement_in_season_window(
@@ -137,6 +140,9 @@ int kbo_persist_foreign_injury_replacements_locked(void);
 void kbo_ensure_foreign_injury_replacements_loaded(void);
 int kbo_foreign_injury_replacements_loaded_for_current_save(void);
 int kbo_find_foreign_injury_replacement_locked(uint32_t injured_player_id, int include_closed);
+int kbo_foreign_injury_replacement_player_reserved_locked(
+    uint32_t replacement_player_id,
+    const KboForeignInjuryReplacement* owner_rec);
 int kbo_team_has_foreign_injury_slot_locked(uint32_t team_id, uint8_t slot_type, uint32_t* out_injured_player_id);
 int kbo_team_has_foreign_injury_slot(uint32_t team_id, uint8_t slot_type, uint32_t* out_injured_player_id);
 int kbo_foreign_injury_record_has_minimum_injury_basis(const KboForeignInjuryReplacement* rec);

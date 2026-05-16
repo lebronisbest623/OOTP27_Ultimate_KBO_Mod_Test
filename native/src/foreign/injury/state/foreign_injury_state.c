@@ -220,6 +220,16 @@ int kbo_foreign_injury_expected_end_pending(
         && today_yyyymmdd < expected_end_yyyymmdd;
 }
 
+uint32_t kbo_foreign_injury_expected_end_from_duration(
+    uint32_t anchor_yyyymmdd,
+    int duration_days)
+{
+    if (anchor_yyyymmdd == 0u || duration_days <= 0) {
+        return 0u;
+    }
+    return kbo_add_days_yyyymmdd(anchor_yyyymmdd, (uint32_t)duration_days);
+}
+
 int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase)
 {
     return effective_phase == KBO_SEASON_PHASE_REGULAR_SEASON;

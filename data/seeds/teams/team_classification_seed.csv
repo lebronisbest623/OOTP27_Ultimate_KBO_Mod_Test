@@ -1,2 +1,3 @@
 # team_csv_id,enabled,team_type,league_level,display_name
+# league_level=futures/minor/farm means an independent club embedded in Futures; independent/independent_league means a true independent-league club.
 ULS,1,independent,futures,Ulsan Whales

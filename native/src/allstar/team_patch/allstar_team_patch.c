@@ -73,6 +73,16 @@ static int patch_kbo_allstar_team_name(
     return patched > 0;
 }
 
+static int kbo_allstar_team_contains_any_marker(uint8_t* team, const char* const* markers, size_t count)
+{
+    for (size_t i = 0u; i < count; i++) {
+        if (team_contains_ootp_string_text(team, markers[i])) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
 {
     if (out_kind != NULL) {
@@ -82,20 +92,72 @@ static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
         return 0;
     }
 
-    if (team_has_ootp_string_text(team, "All-Stars")) {
-        if (team_has_ootp_string_text(team, "AS1")
-                || team_has_ootp_string_text(team, "Nanum")
-                || team_has_ootp_string_text(team, "Team 1")
-                || team_has_ootp_string_text(team, "Team 1 All-Stars")) {
+    static const char* const allstar_kind_markers[] = {
+        "All-Star", "All Star", "Allstars", "All-Stars", "All Stars",
+        "\xec\x98\xac\xec\x8a\xa4\xed\x83\x80",
+        "\xec\x98\xac\x20\xec\x8a\xa4\xed\x83\x80"
+    };
+    static const char* const future_kind_markers[] = {
+        "Future Star", "Future Stars", "Futures Star", "Futures Stars",
+        "\xed\x93\xa8\xec\xb2\x98\xec\x8a\xa4",
+        "\xed\x93\xa8\xec\xb2\x98"
+    };
+    static const char* const allstar_side1_markers[] = {
+        "AS1", "Nanum", "Team 1", "Team 1 All-Stars",
+        "\xeb\x82\x98\xeb\x88\x94",
+        "\xed\x8c\x80\x20\x31",
+        "\x31\xed\x8c\x80"
+    };
+    static const char* const allstar_side2_markers[] = {
+        "AS2", "Dream", "Team 2", "Team 2 All-Stars",
+        "\xeb\x93\x9c\xeb\xa6\xbc",
+        "\xed\x8c\x80\x20\x32",
+        "\x32\xed\x8c\x80"
+    };
+    static const char* const future_side1_markers[] = {
+        "FS1", "North", "Team 1", "Team 1 Future Stars",
+        "\xeb\xb6\x81\xeb\xb6\x80",
+        "\xeb\xb6\x81",
+        "\xec\x84\x9c\xea\xb5\xb0",
+        "\xec\x84\x9c\xeb\xb6\x80",
+        "\xed\x8c\x80\x20\x31",
+        "\x31\xed\x8c\x80"
+    };
+    static const char* const future_side2_markers[] = {
+        "FS2", "South", "Team 2", "Team 2 Future Stars",
+        "\xeb\x82\xa8\xeb\xb6\x80",
+        "\xeb\x82\xa8",
+        "\xeb\x8f\x99\xea\xb5\xb0",
+        "\xeb\x8f\x99\xeb\xb6\x80",
+        "\xed\x8c\x80\x20\x32",
+        "\x32\xed\x8c\x80"
+    };
+
+    int allstar_kind = 0;
+    allstar_kind = kbo_allstar_team_contains_any_marker(
+        team,
+        allstar_kind_markers,
+        sizeof(allstar_kind_markers) / sizeof(allstar_kind_markers[0]));
+    int future_kind = 0;
+    future_kind = kbo_allstar_team_contains_any_marker(
+        team,
+        future_kind_markers,
+        sizeof(future_kind_markers) / sizeof(future_kind_markers[0]));
+
+    if (allstar_kind) {
+        if (kbo_allstar_team_contains_any_marker(
+                team,
+                allstar_side1_markers,
+                sizeof(allstar_side1_markers) / sizeof(allstar_side1_markers[0]))) {
             if (out_kind != NULL) {
                 *out_kind = 1;
             }
             return 1;
         }
-        if (team_has_ootp_string_text(team, "AS2")
-                || team_has_ootp_string_text(team, "Dream")
-                || team_has_ootp_string_text(team, "Team 2")
-                || team_has_ootp_string_text(team, "Team 2 All-Stars")) {
+        if (kbo_allstar_team_contains_any_marker(
+                team,
+                allstar_side2_markers,
+                sizeof(allstar_side2_markers) / sizeof(allstar_side2_markers[0]))) {
             if (out_kind != NULL) {
                 *out_kind = 1;
             }
@@ -103,22 +165,93 @@ static int kbo_allstar_exhibition_team_side(uint8_t* team, int* out_kind)
         }
     }
 
-    if (team_has_ootp_string_text(team, "Future Stars")) {
-        if (team_has_ootp_string_text(team, "FS1")
-                || team_has_ootp_string_text(team, "North")
-                || team_has_ootp_string_text(team, "Team 1")
-                || team_has_ootp_string_text(team, "Team 1 Future Stars")) {
+    if (future_kind) {
+        if (kbo_allstar_team_contains_any_marker(
+                team,
+                future_side1_markers,
+                sizeof(future_side1_markers) / sizeof(future_side1_markers[0]))) {
             if (out_kind != NULL) {
                 *out_kind = 2;
             }
             return 1;
         }
-        if (team_has_ootp_string_text(team, "FS2")
-                || team_has_ootp_string_text(team, "South")
-                || team_has_ootp_string_text(team, "Team 2")
-                || team_has_ootp_string_text(team, "Team 2 Future Stars")) {
+        if (kbo_allstar_team_contains_any_marker(
+                team,
+                future_side2_markers,
+                sizeof(future_side2_markers) / sizeof(future_side2_markers[0]))) {
             if (out_kind != NULL) {
                 *out_kind = 2;
+            }
+            return 2;
+        }
+    }
+
+    if (team_contains_ootp_string_text(team, "AS1")) {
+        if (out_kind != NULL) {
+            *out_kind = 1;
+        }
+        return 1;
+    }
+    if (team_contains_ootp_string_text(team, "AS2")) {
+        if (out_kind != NULL) {
+            *out_kind = 1;
+        }
+        return 2;
+    }
+    if (team_contains_ootp_string_text(team, "FS1")) {
+        if (out_kind != NULL) {
+            *out_kind = 2;
+        }
+        return 1;
+    }
+    if (team_contains_ootp_string_text(team, "FS2")) {
+        if (out_kind != NULL) {
+            *out_kind = 2;
+        }
+        return 2;
+    }
+
+    if (team_contains_ootp_string_text(team, "\xeb\x82\x98\xeb\x88\x94")) {
+        if (out_kind != NULL) {
+            *out_kind = 1;
+        }
+        return 1;
+    }
+    if (team_contains_ootp_string_text(team, "\xeb\x93\x9c\xeb\xa6\xbc")) {
+        if (out_kind != NULL) {
+            *out_kind = 1;
+        }
+        return 2;
+    }
+    if (team_contains_ootp_string_text(team, "\xeb\xb6\x81\xeb\xb6\x80")
+            || team_contains_ootp_string_text(team, "\xec\x84\x9c\xea\xb5\xb0")
+            || team_contains_ootp_string_text(team, "\xec\x84\x9c\xeb\xb6\x80")) {
+        if (out_kind != NULL) {
+            *out_kind = 2;
+        }
+        return 1;
+    }
+    if (team_contains_ootp_string_text(team, "\xeb\x82\xa8\xeb\xb6\x80")
+            || team_contains_ootp_string_text(team, "\xeb\x8f\x99\xea\xb5\xb0")
+            || team_contains_ootp_string_text(team, "\xeb\x8f\x99\xeb\xb6\x80")) {
+        if (out_kind != NULL) {
+            *out_kind = 2;
+        }
+        return 2;
+    }
+
+    if (allstar_kind) {
+        if (team_contains_ootp_string_text(team, "\xed\x8c\x80\x20\x31")
+                || team_contains_ootp_string_text(team, "\x31\xed\x8c\x80")) {
+            if (out_kind != NULL) {
+                *out_kind = 1;
+            }
+            return 1;
+        }
+        if (team_contains_ootp_string_text(team, "\xed\x8c\x80\x20\x32")
+                || team_contains_ootp_string_text(team, "\x32\xed\x8c\x80")) {
+            if (out_kind != NULL) {
+                *out_kind = 1;
             }
             return 2;
         }

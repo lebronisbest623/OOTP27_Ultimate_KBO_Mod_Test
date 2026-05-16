@@ -170,7 +170,10 @@ int kbo_asian_games_team_is_service_or_ulsan(uint8_t* team)
         const KboAsianGamesRosterPolicy* policy = kbo_asian_games_roster_policy();
         if (kbo_ascii_contains_ignore_case(name, policy->service_team_keyword_1)
                 || kbo_ascii_contains_ignore_case(name, policy->service_team_keyword_2)
-                || kbo_ascii_contains_ignore_case(name, policy->service_team_keyword_3)) {
+                || kbo_ascii_contains_ignore_case(name, policy->service_team_keyword_3)
+                || strstr(name, "\xec\x83\x81\xeb\xac\xb4") != NULL
+                || strstr(name, "\xea\xb2\xbd\xec\xb0\xb0") != NULL
+                || strstr(name, "\xec\x9a\xb8\xec\x82\xb0") != NULL) {
             return 1;
         }
     }

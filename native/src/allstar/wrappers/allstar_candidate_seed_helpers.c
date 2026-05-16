@@ -1,10 +1,23 @@
 #include "allstar_candidate_seed_helpers.h"
 
+#include <stddef.h>
+
 #include "../../bootstrap/abi/hook_entrypoints.h"
 #include "../allstar_league_context/allstar_league_context.h"
 #include "../team_patch/allstar_team_patch.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../../team/lookup/team_lookup.h"
+#include "../../team/names/team_string.h"
+
+static int kbo_allstar_candidate_team_has_any_marker(uint8_t* team, const char* const* markers, size_t count)
+{
+    for (size_t i = 0u; i < count; i++) {
+        if (team_contains_ootp_string_text(team, markers[i])) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 int kbo_allstar_candidate_seed_is_exhibition_team(uint8_t* team)
 {
@@ -12,12 +25,19 @@ int kbo_allstar_candidate_seed_is_exhibition_team(uint8_t* team)
         return 0;
     }
 
-    return team_has_ootp_string_text(team, "All-Stars")
-        || team_has_ootp_string_text(team, "Future Stars")
-        || team_has_ootp_string_text(team, "AS1")
-        || team_has_ootp_string_text(team, "AS2")
-        || team_has_ootp_string_text(team, "FS1")
-        || team_has_ootp_string_text(team, "FS2");
+    static const char* const exhibition_markers[] = {
+        "All-Star", "All Star", "Allstars", "All-Stars", "All Stars",
+        "Future Star", "Future Stars", "Futures Star", "Futures Stars",
+        "AS1", "AS2", "FS1", "FS2",
+        "\xec\x98\xac\xec\x8a\xa4\xed\x83\x80",
+        "\xec\x98\xac\x20\xec\x8a\xa4\xed\x83\x80",
+        "\xed\x93\xa8\xec\xb2\x98\xec\x8a\xa4",
+        "\xed\x93\xa8\xec\xb2\x98"
+    };
+    return kbo_allstar_candidate_team_has_any_marker(
+        team,
+        exhibition_markers,
+        sizeof(exhibition_markers) / sizeof(exhibition_markers[0]));
 }
 
 static uint8_t* kbo_allstar_candidate_find_team_by_id_in_league(

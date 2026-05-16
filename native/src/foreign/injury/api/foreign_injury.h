@@ -50,6 +50,9 @@ int kbo_foreign_injury_expected_end_reached(
 int kbo_foreign_injury_expected_end_pending(
     uint32_t today_yyyymmdd,
     uint32_t expected_end_yyyymmdd);
+uint32_t kbo_foreign_injury_expected_end_from_duration(
+    uint32_t anchor_yyyymmdd,
+    int duration_days);
 int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase);
 int kbo_foreign_injury_replacement_phase_allows_close(uint8_t effective_phase);
 int kbo_foreign_injury_replacement_in_season_window(

@@ -27,6 +27,14 @@ static int kbo_player_team_seasons_ascii_contains_ignore_case(const char* text, 
     return 0;
 }
 
+static int kbo_player_team_seasons_name_contains(const char* text, const char* marker)
+{
+    if (text == NULL || marker == NULL || marker[0] == '\0') {
+        return 0;
+    }
+    return kbo_player_team_seasons_ascii_contains_ignore_case(text, marker) || strstr(text, marker) != NULL;
+}
+
 static void kbo_player_team_seasons_copy_team_name_by_id(uint32_t team_id, char* out, size_t out_size)
 {
     if (out == NULL || out_size == 0u) {
@@ -76,27 +84,88 @@ void kbo_player_team_seasons_copy_team_seed_code(uint32_t team_id, char* out, si
 
     char name[96] = {0};
     kbo_player_team_seasons_copy_team_name_by_id(team_id, name, sizeof(name));
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Lotte"))   { snprintf(out, out_size, "LOT"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Giants"))  { snprintf(out, out_size, "LOT"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Doosan"))  { snprintf(out, out_size, "DOO"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Bears"))   { snprintf(out, out_size, "DOO"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Samsung")) { snprintf(out, out_size, "SAM"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Lions"))   { snprintf(out, out_size, "SAM"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "KIA"))     { snprintf(out, out_size, "KIA"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Tigers"))  { snprintf(out, out_size, "KIA"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "SSG"))     { snprintf(out, out_size, "SSG"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Landers")) { snprintf(out, out_size, "SSG"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Hanwha"))  { snprintf(out, out_size, "HH");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Eagles"))  { snprintf(out, out_size, "HH");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Kiwoom"))  { snprintf(out, out_size, "KIW"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Nexen"))   { snprintf(out, out_size, "NEX"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Heroes"))  { snprintf(out, out_size, "KIW"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Dinos"))   { snprintf(out, out_size, "NC");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "NC"))      { snprintf(out, out_size, "NC");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Wiz"))     { snprintf(out, out_size, "kt");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "KT"))      { snprintf(out, out_size, "kt");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Twins"))   { snprintf(out, out_size, "LG");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "LG"))      { snprintf(out, out_size, "LG");  return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Sangmu"))  { snprintf(out, out_size, "SANG"); return; }
-    if (kbo_player_team_seasons_ascii_contains_ignore_case(name, "Police"))  { snprintf(out, out_size, "KPB"); return; }
+    if (kbo_player_team_seasons_name_contains(name, "Lotte")
+            || kbo_player_team_seasons_name_contains(name, "Giants")
+            || kbo_player_team_seasons_name_contains(name, "\xeb\xa1\xaf\xeb\x8d\xb0")
+            || kbo_player_team_seasons_name_contains(name, "\xec\x9e\x90\xec\x9d\xb4\xec\x96\xb8\xec\xb8\xa0")) {
+        snprintf(out, out_size, "LOT");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Doosan")
+            || kbo_player_team_seasons_name_contains(name, "Bears")
+            || kbo_player_team_seasons_name_contains(name, "\xeb\x91\x90\xec\x82\xb0")
+            || kbo_player_team_seasons_name_contains(name, "\xeb\xb2\xa0\xec\x96\xb4\xec\x8a\xa4")) {
+        snprintf(out, out_size, "DOO");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Samsung")
+            || kbo_player_team_seasons_name_contains(name, "Lions")
+            || kbo_player_team_seasons_name_contains(name, "\xec\x82\xbc\xec\x84\xb1")
+            || kbo_player_team_seasons_name_contains(name, "\xeb\x9d\xbc\xec\x9d\xb4\xec\x98\xa8\xec\xa6\x88")) {
+        snprintf(out, out_size, "SAM");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "KIA")
+            || kbo_player_team_seasons_name_contains(name, "Tigers")
+            || kbo_player_team_seasons_name_contains(name, "\xea\xb8\xb0\xec\x95\x84")
+            || kbo_player_team_seasons_name_contains(name, "\xed\x83\x80\xec\x9d\xb4\xea\xb1\xb0\xec\xa6\x88")) {
+        snprintf(out, out_size, "KIA");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "SSG")
+            || kbo_player_team_seasons_name_contains(name, "Landers")
+            || kbo_player_team_seasons_name_contains(name, "\xeb\x9e\x9c\xeb\x8d\x94\xec\x8a\xa4")) {
+        snprintf(out, out_size, "SSG");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Hanwha")
+            || kbo_player_team_seasons_name_contains(name, "Eagles")
+            || kbo_player_team_seasons_name_contains(name, "\xed\x95\x9c\xed\x99\x94")
+            || kbo_player_team_seasons_name_contains(name, "\xec\x9d\xb4\xea\xb8\x80\xec\x8a\xa4")) {
+        snprintf(out, out_size, "HH");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Nexen")
+            || kbo_player_team_seasons_name_contains(name, "\xeb\x84\xa5\xec\x84\xbc")) {
+        snprintf(out, out_size, "NEX");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Kiwoom")
+            || kbo_player_team_seasons_name_contains(name, "Heroes")
+            || kbo_player_team_seasons_name_contains(name, "\xed\x82\xa4\xec\x9b\x80")
+            || kbo_player_team_seasons_name_contains(name, "\xed\x9e\x88\xec\x96\xb4\xeb\xa1\x9c\xec\xa6\x88")) {
+        snprintf(out, out_size, "KIW");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Dinos")
+            || kbo_player_team_seasons_name_contains(name, "NC")
+            || kbo_player_team_seasons_name_contains(name, "\xec\x97\x94\xec\x94\xa8")
+            || kbo_player_team_seasons_name_contains(name, "\xeb\x8b\xa4\xec\x9d\xb4\xeb\x85\xb8\xec\x8a\xa4")) {
+        snprintf(out, out_size, "NC");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Wiz")
+            || kbo_player_team_seasons_name_contains(name, "KT")
+            || kbo_player_team_seasons_name_contains(name, "\xec\xbc\x80\xec\x9d\xb4\xed\x8b\xb0")
+            || kbo_player_team_seasons_name_contains(name, "\xec\x9c\x84\xec\xa6\x88")) {
+        snprintf(out, out_size, "kt");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Twins")
+            || kbo_player_team_seasons_name_contains(name, "LG")
+            || kbo_player_team_seasons_name_contains(name, "\xec\x97\x98\xec\xa7\x80")
+            || kbo_player_team_seasons_name_contains(name, "\xed\x8a\xb8\xec\x9c\x88\xec\x8a\xa4")) {
+        snprintf(out, out_size, "LG");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Sangmu")
+            || kbo_player_team_seasons_name_contains(name, "\xec\x83\x81\xeb\xac\xb4")) {
+        snprintf(out, out_size, "SANG");
+        return;
+    }
+    if (kbo_player_team_seasons_name_contains(name, "Police")
+            || kbo_player_team_seasons_name_contains(name, "\xea\xb2\xbd\xec\xb0\xb0")) {
+        snprintf(out, out_size, "KPB");
+        return;
+    }
 }

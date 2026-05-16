@@ -26,7 +26,7 @@ int kbo_fa_market_row_is_undrafted_domestic(const KboFaMarketClassification* row
     return 0;
 }
 
-int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* row)
+static int kbo_fa_market_row_can_be_independent_source(const KboFaMarketClassification* row)
 {
     if (row == NULL
             || row->nation_id != OOTP27_KBO_KOREA_NATION_ID
@@ -36,23 +36,48 @@ int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* 
             || row->draft_eligible != 0u) {
         return 0;
     }
+    return 1;
+}
 
-    if (kbo_fa_market_row_is_undrafted_domestic(row)) {
-        return 0;
+static int kbo_fa_market_classified_team_independent_kind(uint32_t team_id)
+{
+    return kbo_team_classification_independent_kind_for_team(team_id);
+}
+
+int kbo_fa_market_row_independent_source_kind(const KboFaMarketClassification* row)
+{
+    if (!kbo_fa_market_row_can_be_independent_source(row)) {
+        return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
     }
 
-    uint32_t original_league_id = kbo_fa_market_get_team_league_id(row->original_team_id);
+    int original_kind = kbo_fa_market_classified_team_independent_kind(row->original_team_id);
+    if (original_kind != KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE) {
+        return original_kind;
+    }
+    int active_kind = kbo_fa_market_classified_team_independent_kind(row->active_team_id);
+    if (active_kind != KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE) {
+        return active_kind;
+    }
+
+    uint32_t original_team_league_id = kbo_fa_market_get_team_league_id(row->original_team_id);
+    uint32_t active_team_league_id = kbo_fa_market_get_team_league_id(row->active_team_id);
     const KboFaMarketPolicy* policy = kbo_fa_market_policy();
     uint32_t independent_league_id = (uint32_t)policy->independent_league_id;
-    if (original_league_id == independent_league_id) {
-        return 1;
+    if (independent_league_id != 0u
+            && (original_team_league_id == independent_league_id
+                || active_team_league_id == independent_league_id
+                || row->original_league_id == independent_league_id
+                || row->current_league_id == independent_league_id
+                || row->draft_league_id == independent_league_id)) {
+        return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE;
     }
-    if (row->active_team_id != 0u
-            && kbo_fa_market_get_team_league_id(row->active_team_id) == independent_league_id) {
-        return 1;
-    }
-    return row->current_league_id == independent_league_id
-        || row->draft_league_id == independent_league_id;
+    return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
+}
+
+int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* row)
+{
+    return kbo_fa_market_row_independent_source_kind(row)
+        == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE;
 }
 
 void kbo_fa_market_set_history_reason(
@@ -97,9 +122,15 @@ int kbo_fa_market_apply_history_case(
     }
 
     if (history->became_free_agent) {
-        if (kbo_fa_market_row_is_independent_league_fa(row)) {
+        int independent_kind = kbo_fa_market_row_independent_source_kind(row);
+        if (independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES) {
+            snprintf(row->case_label, sizeof(row->case_label), "DOMESTIC_INDEPENDENT_FUTURES_FA");
+            kbo_fa_market_set_history_reason(row, history, "player history says free agent from independent futures-team context");
+            return 1;
+        }
+        if (independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE) {
             snprintf(row->case_label, sizeof(row->case_label), "DOMESTIC_INDEPENDENT_LEAGUE_FA");
-            kbo_fa_market_set_history_reason(row, history, "player history says free agent from independent-league context");
+            kbo_fa_market_set_history_reason(row, history, "player history says free agent from true independent-league context");
             return 1;
         }
 

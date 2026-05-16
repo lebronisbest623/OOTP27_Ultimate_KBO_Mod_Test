@@ -1,4 +1,5 @@
 #include "../award_schedule_probe_internal.h"
+#include "../../../core/files/save_paths/core_save_paths_internal.h"
 
 static int kbo_award_schedule_read_file(const char* path, char** out_text, DWORD* out_size)
 {
@@ -8,8 +9,7 @@ static int kbo_award_schedule_read_file(const char* path, char** out_text, DWORD
     *out_text = NULL;
     *out_size = 0u;
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = kbo_create_file_read_utf8(path);
     if (file == INVALID_HANDLE_VALUE) {
         return 0;
     }

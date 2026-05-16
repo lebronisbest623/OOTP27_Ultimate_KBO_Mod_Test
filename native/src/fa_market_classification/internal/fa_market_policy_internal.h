@@ -4,6 +4,7 @@
 #include "fa_market_data_internal.h"
 
 int kbo_fa_market_row_is_undrafted_domestic(const KboFaMarketClassification* row);
+int kbo_fa_market_row_independent_source_kind(const KboFaMarketClassification* row);
 int kbo_fa_market_row_is_independent_league_fa(const KboFaMarketClassification* row);
 void kbo_fa_market_set_history_reason(
     KboFaMarketClassification* row,

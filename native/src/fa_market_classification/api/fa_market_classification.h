@@ -27,6 +27,7 @@ typedef struct KboFaMarketClassification {
     uint32_t current_team_id;
     uint32_t active_team_id;
     uint32_t original_team_id;
+    uint32_t original_league_id;
     uint32_t current_league_id;
     uint32_t draft_league_id;
     uint32_t rights_team_id;

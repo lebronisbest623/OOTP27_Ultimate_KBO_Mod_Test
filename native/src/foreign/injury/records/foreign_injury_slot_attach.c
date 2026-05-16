@@ -89,6 +89,9 @@ int kbo_attach_foreign_injury_replacement_after_signing(
                 injured_player_id)) {
             continue;
         }
+        if (kbo_foreign_injury_replacement_player_reserved_locked(replacement_player_id, rec)) {
+            continue;
+        }
 
         if (rec->replacement_player_id == replacement_player_id
                 && rec->status == KBO_FOREIGN_INJURY_STATUS_ACTIVE) {

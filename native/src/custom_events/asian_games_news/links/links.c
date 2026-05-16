@@ -117,7 +117,8 @@ void kbo_copy_asian_games_team_name(uint32_t team_id, char* out, size_t out_size
         copy_ootp_string_object_text(team, 0x10u, city, sizeof(city));
         copy_ootp_string_object_text(team, 0x28u, nickname, sizeof(nickname));
         copy_ootp_string_object_text(team, 0x40u, full_name, sizeof(full_name));
-        if (full_name[0] != '\0' && strchr(full_name, ' ') != NULL) {
+        if (full_name[0] != '\0'
+                && (strchr(full_name, ' ') != NULL || kbo_ootp_text_has_non_ascii(full_name))) {
             kbo_copy_asian_games_display_team_name(full_name, out, out_size);
             return;
         }

@@ -120,6 +120,23 @@ static int kbo_captain_team_index(uint32_t team_id, const uint32_t* team_ids, in
     return -1;
 }
 
+static int kbo_captain_player_name_is_generic_id(const char* name)
+{
+    if (name == NULL || strncmp(name, "Player #", 8u) != 0) {
+        return 0;
+    }
+    const char* p = name + 8u;
+    if (*p < '0' || *p > '9') {
+        return 0;
+    }
+    for (; *p != '\0'; p++) {
+        if (*p < '0' || *p > '9') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static void kbo_captain_fill_player_row(
     KboCaptainSelectionRow* row,
     uint8_t* player,
@@ -294,6 +311,10 @@ int kbo_captain_select_for_preseason(
                 sizeof(candidate.reason),
                 "seed:%s",
                 seed.player_key[0] != '\0' ? seed.player_key : "player_id");
+            if (kbo_captain_player_name_is_generic_id(candidate.player_name)
+                    && seed.player_name[0] != '\0') {
+                snprintf(candidate.player_name, sizeof(candidate.player_name), "%s", seed.player_name);
+            }
         }
         if (kbo_captain_candidate_should_replace(&rows[team_index], &candidate)) {
             rows[team_index] = candidate;

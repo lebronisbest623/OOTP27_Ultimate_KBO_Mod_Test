@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../fa_declaration_internal.h"
+#include "../../fa_rules/fa_rules.h"
 #include "scoring/fa_declaration_decision_score.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../fa_filing/fa_filing.h"
@@ -141,27 +142,40 @@ void kbo_fa_declaration_apply_salary_grade(
     const KboFaSalarySnapshotGrade* grades,
     int grade_count)
 {
-    if (candidate == NULL || candidate->player_id == 0u || grades == NULL || grade_count <= 0) {
+    if (candidate == NULL || candidate->player_id == 0u) {
         return;
     }
-    const KboFaSalarySnapshotGrade* grade = kbo_find_fa_salary_snapshot_grade(
-        grades,
-        grade_count,
-        candidate->player_id);
-    if (grade == NULL) {
-        return;
+
+    if (grades != NULL && grade_count > 0) {
+        const KboFaSalarySnapshotGrade* grade = kbo_find_fa_salary_snapshot_grade(
+            grades,
+            grade_count,
+            candidate->player_id);
+        if (grade != NULL) {
+            if (candidate->grade[0] == '\0' || strcmp(candidate->grade, "UNKNOWN") == 0) {
+                snprintf(candidate->grade, sizeof(candidate->grade), "%s", grade->grade);
+            }
+            if (candidate->salary <= 0) {
+                candidate->salary = grade->salary;
+            }
+            if (candidate->team_id == 0u) {
+                candidate->team_id = grade->ranking_team_id;
+            }
+            if (candidate->player_name[0] == '\0' && grade->player_name[0] != '\0') {
+                snprintf(candidate->player_name, sizeof(candidate->player_name), "%s", grade->player_name);
+            }
+        }
     }
-    if (candidate->grade[0] == '\0' || strcmp(candidate->grade, "UNKNOWN") == 0) {
-        snprintf(candidate->grade, sizeof(candidate->grade), "%s", grade->grade);
-    }
-    if (candidate->salary <= 0) {
-        candidate->salary = grade->salary;
-    }
-    if (candidate->team_id == 0u) {
-        candidate->team_id = grade->ranking_team_id;
-    }
-    if (candidate->player_name[0] == '\0' && grade->player_name[0] != '\0') {
-        snprintf(candidate->player_name, sizeof(candidate->player_name), "%s", grade->player_name);
+
+    KboFaRules rules;
+    if (kbo_fa_rules_load(&rules)
+            && rules.age_grade_override_enabled
+            && rules.age_grade_min_age > 0u
+            && rules.age_grade[0] != '\0'
+            && candidate->age >= rules.age_grade_min_age
+            && kbo_fa_rules_case_is_compensable(&rules, candidate->case_label)
+            && _stricmp(candidate->grade, rules.age_grade) != 0) {
+        snprintf(candidate->grade, sizeof(candidate->grade), "%s", rules.age_grade);
     }
 }
 

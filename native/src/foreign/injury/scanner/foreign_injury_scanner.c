@@ -218,7 +218,7 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         KboForeignInjuryReplacement updated_rec;
         memset(&updated_rec, 0, sizeof(updated_rec));
         uint32_t candidate_expected_end = (direct_injury_eligible || message_injury_eligible || sql_injury_eligible)
-            ? kbo_add_days_yyyymmdd(today, (uint32_t)effective_days_left)
+            ? kbo_foreign_injury_expected_end_from_duration(today, effective_days_left)
             : 0u;
         kbo_lock_foreign_injury_replacements();
         int existing = kbo_find_foreign_injury_replacement_locked(player_id, 0);
@@ -235,9 +235,16 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         }
         if (existing >= 0 && (message_injury_eligible || sql_injury_eligible) && candidate_expected_end != 0u) {
             KboForeignInjuryReplacement* rec = &g_kbo_foreign_injury_replacements[existing];
+            uint32_t evidence_anchor = rec->opened_on_yyyymmdd != 0u
+                ? rec->opened_on_yyyymmdd
+                : today;
+            uint32_t evidence_expected_end = kbo_foreign_injury_expected_end_from_duration(
+                evidence_anchor,
+                effective_days_left);
             if (rec->status != KBO_FOREIGN_INJURY_STATUS_CLOSED
-                    && (rec->expected_end_yyyymmdd == 0u || candidate_expected_end > rec->expected_end_yyyymmdd)) {
-                rec->expected_end_yyyymmdd = candidate_expected_end;
+                    && evidence_expected_end != 0u
+                    && (rec->expected_end_yyyymmdd == 0u || evidence_expected_end > rec->expected_end_yyyymmdd)) {
+                rec->expected_end_yyyymmdd = evidence_expected_end;
                 updated_rec = *rec;
                 updated_expected_end = kbo_persist_foreign_injury_replacements_locked();
             }

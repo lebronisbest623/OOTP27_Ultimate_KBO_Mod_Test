@@ -92,16 +92,34 @@ int kbo_parse_team_classification_seed_line(
     return 1;
 }
 
-int kbo_team_classification_seed_row_is_independent_futures(
+int kbo_team_classification_seed_row_independent_kind(
     const KboTeamClassificationSeedRow* row)
 {
     if (row == NULL || !row->enabled || row->team_csv_id[0] == '\0') {
-        return 0;
+        return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
     }
     if (_stricmp(row->team_type, "independent") != 0) {
-        return 0;
+        return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
     }
-    return _stricmp(row->league_level, "futures") == 0
-        || _stricmp(row->league_level, "minor") == 0
-        || _stricmp(row->league_level, "farm") == 0;
+
+    if (_stricmp(row->league_level, "futures") == 0
+            || _stricmp(row->league_level, "minor") == 0
+            || _stricmp(row->league_level, "farm") == 0) {
+        return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES;
+    }
+    if (_stricmp(row->league_level, "independent") == 0
+            || _stricmp(row->league_level, "independent_league") == 0
+            || _stricmp(row->league_level, "independent-league") == 0
+            || _stricmp(row->league_level, "indy") == 0
+            || _stricmp(row->league_level, "league") == 0) {
+        return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE;
+    }
+    return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
+}
+
+int kbo_team_classification_seed_row_is_independent_futures(
+    const KboTeamClassificationSeedRow* row)
+{
+    return kbo_team_classification_seed_row_independent_kind(row)
+        == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES;
 }

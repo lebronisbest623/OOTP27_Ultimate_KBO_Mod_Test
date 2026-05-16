@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "parse/team_classification_seed_parse.h"
+
 typedef struct KboIndependentFuturesTeamLeague {
     uint32_t team_id;
     uint32_t league_id;
@@ -15,6 +17,7 @@ int kbo_collect_independent_futures_team_leagues(
     int max_count,
     int* out_seed_rows,
     int* out_unresolved_rows);
+int kbo_team_classification_independent_kind_for_team(uint32_t team_id);
 int kbo_team_classification_league_has_independent_futures_team(uint32_t league_id);
 
 #endif

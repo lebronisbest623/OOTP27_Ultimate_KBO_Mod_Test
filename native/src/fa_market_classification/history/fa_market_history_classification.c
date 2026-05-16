@@ -231,6 +231,35 @@ void kbo_classify_fa_market_row(
         return;
     }
 
+    int independent_kind = kbo_fa_market_row_independent_source_kind(row);
+    if (independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES
+            || independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE) {
+        uint32_t original_team_league_id = kbo_fa_market_get_team_league_id(row->original_team_id);
+        uint32_t active_team_league_id = kbo_fa_market_get_team_league_id(row->active_team_id);
+        snprintf(
+            row->case_label,
+            sizeof(row->case_label),
+            "%s",
+            independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES
+                ? "DOMESTIC_INDEPENDENT_FUTURES_FA"
+                : "DOMESTIC_INDEPENDENT_LEAGUE_FA");
+        snprintf(
+            row->reason,
+            sizeof(row->reason),
+            "%s original_team_league=%u active_team_league=%u original_team=%u active_team=%u original_league=%u current_league=%u draft_league=%u",
+            independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES
+                ? "domestic independent futures-team free agent marker"
+                : "domestic true independent-league free agent marker",
+            original_team_league_id,
+            active_team_league_id,
+            row->original_team_id,
+            row->active_team_id,
+            row->original_league_id,
+            row->current_league_id,
+            row->draft_league_id);
+        return;
+    }
+
     if (kbo_fa_market_row_is_undrafted_domestic(row)) {
         snprintf(row->case_label, sizeof(row->case_label), "DOMESTIC_UNDRAFTED_FREE_AGENT");
         snprintf(
@@ -241,21 +270,6 @@ void kbo_classify_fa_market_row(
             (uint32_t)row->draft_subtype,
             (uint32_t)row->generation_context,
             (uint32_t)row->generation_grade);
-        return;
-    }
-
-    if (kbo_fa_market_row_is_independent_league_fa(row)) {
-        uint32_t original_league_id = kbo_fa_market_get_team_league_id(row->original_team_id);
-        snprintf(row->case_label, sizeof(row->case_label), "DOMESTIC_INDEPENDENT_LEAGUE_FA");
-        snprintf(
-            row->reason,
-            sizeof(row->reason),
-            "domestic independent-league free agent marker original_league=%u original_team=%u active_team=%u current_league=%u draft_league=%u",
-            original_league_id,
-            row->original_team_id,
-            row->active_team_id,
-            row->current_league_id,
-            row->draft_league_id);
         return;
     }
 
@@ -274,9 +288,10 @@ int kbo_fa_market_case_rank(const char* case_label)
     if (strcmp(case_label, "KBO_FA_BY_HISTORY_UNGRADED") == 0) { return 13; }
     if (strcmp(case_label, "DOMESTIC_RELEASED_NON_FA") == 0) { return 30; }
     if (strcmp(case_label, "DOMESTIC_UNDRAFTED_FREE_AGENT") == 0) { return 31; }
-    if (strcmp(case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0) { return 32; }
-    if (strcmp(case_label, "DOMESTIC_TEAMLESS_UNVERIFIED") == 0) { return 33; }
-    if (strcmp(case_label, "DOMESTIC_MARKET_UNVERIFIED") == 0) { return 33; }
+    if (strcmp(case_label, "DOMESTIC_INDEPENDENT_FUTURES_FA") == 0) { return 32; }
+    if (strcmp(case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0) { return 33; }
+    if (strcmp(case_label, "DOMESTIC_TEAMLESS_UNVERIFIED") == 0) { return 34; }
+    if (strcmp(case_label, "DOMESTIC_MARKET_UNVERIFIED") == 0) { return 34; }
     if (strcmp(case_label, "FOREIGN_RESERVED_RIGHT") == 0) { return 40; }
     if (strcmp(case_label, "FOREIGN_FREE") == 0) { return 41; }
     return 99;

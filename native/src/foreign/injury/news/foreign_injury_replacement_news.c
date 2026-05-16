@@ -122,7 +122,8 @@ static void kbo_foreign_injury_copy_team_name(uint32_t team_id, char* out, size_
         copy_ootp_string_object_text(team, OOTP27_KBO_TEAM_NICKNAME_STRING_OFFSET, nickname, sizeof(nickname));
         copy_ootp_string_object_text(team, 0x40u, full_name, sizeof(full_name));
 
-        if (!kbo_foreign_injury_team_name_placeholder(full_name) && strchr(full_name, ' ') != NULL) {
+        if (!kbo_foreign_injury_team_name_placeholder(full_name)
+                && (strchr(full_name, ' ') != NULL || kbo_ootp_text_has_non_ascii(full_name))) {
             kbo_foreign_injury_copy_display_team_name(full_name, out, out_size);
             if (out[0] != '\0') { return; }
         }
@@ -277,6 +278,16 @@ void kbo_emit_foreign_injury_replacement_news(
     } else if (phase != NULL && strcmp(phase, "pending") == 0) {
         title_key = "foreign_injury.pending.title";
         body_key = "foreign_injury.pending.body";
+    }
+    if ((phase == NULL || strcmp(phase, "open") == 0) && days_left <= 0) {
+        kbo_log_runtimef(
+            "foreign injury replacement: news skipped phase=%s team=%u injured=%u league=%u reason=nonpositive_days_left days_left=%d",
+            phase != NULL ? phase : "open",
+            rec->team_id,
+            rec->injured_player_id,
+            rec->league_id,
+            days_left);
+        return;
     }
 
     KboNewsTemplateVar vars[] = {

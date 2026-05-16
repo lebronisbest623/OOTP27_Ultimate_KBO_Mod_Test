@@ -29,6 +29,7 @@ int kbo_hub_league_name_likeness_score(const char* name)
     int letters = 0;
     int digits = 0;
     int spaces = 0;
+    int non_ascii = 0;
     for (size_t i = 0; i < len; i++) {
         unsigned char c = (unsigned char)name[i];
         if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
@@ -37,16 +38,21 @@ int kbo_hub_league_name_likeness_score(const char* name)
             digits++;
         } else if (c == ' ') {
             spaces++;
+        } else if (c >= 0x80u) {
+            non_ascii = 1;
         } else if (c != '-' && c != '_' && c != '.' && c != '&' && c != '\'') {
             return -50;
         }
     }
 
-    if (letters < 3 || digits > letters / 2) {
+    if ((letters < 3 && !non_ascii) || (letters > 0 && digits > letters / 2)) {
         return -50;
     }
 
     int score = 0;
+    if (non_ascii) {
+        score += 30;
+    }
     if (spaces > 0) {
         score += 12;
     }
@@ -54,12 +60,19 @@ int kbo_hub_league_name_likeness_score(const char* name)
         score += 8;
     }
     if (kbo_ascii_contains_ignore_case(name, "League")
+            || kbo_ascii_contains_ignore_case(name, "KBO")
             || kbo_ascii_contains_ignore_case(name, "Organization")
             || kbo_ascii_contains_ignore_case(name, "Association")
             || kbo_ascii_contains_ignore_case(name, "Federation")
             || kbo_ascii_contains_ignore_case(name, "Baseball")
             || kbo_ascii_contains_ignore_case(name, "Conference")
-            || kbo_ascii_contains_ignore_case(name, "Division")) {
+            || kbo_ascii_contains_ignore_case(name, "Division")
+            || strstr(name, "\xeb\xa6\xac\xea\xb7\xb8") != NULL
+            || strstr(name, "\xec\x95\xbc\xea\xb5\xac") != NULL
+            || strstr(name, "\xec\x97\xb0\xeb\xa7\xb9") != NULL
+            || strstr(name, "\xed\x98\x91\xed\x9a\x8c") != NULL
+            || strstr(name, "\xed\x95\x9c\xea\xb5\xad") != NULL
+            || strstr(name, "\xeb\x8c\x80\xed\x95\x9c\xeb\xaf\xbc\xea\xb5\xad") != NULL) {
         score += 30;
     }
 

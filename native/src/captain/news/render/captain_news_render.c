@@ -12,6 +12,145 @@ static const char* kbo_captain_news_player_name(const KboCaptainSelectionRow* ro
     return "the new captain";
 }
 
+static int kbo_captain_news_player_name_is_generic_id(const char* name)
+{
+    if (name == NULL || strncmp(name, "Player #", 8u) != 0) {
+        return 0;
+    }
+    const char* p = name + 8u;
+    if (*p < '0' || *p > '9') {
+        return 0;
+    }
+    for (; *p != '\0'; p++) {
+        if (*p < '0' || *p > '9') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int kbo_captain_news_copy_seed_player_name(
+    const KboCaptainSelectionRow* row,
+    char* out,
+    size_t out_size)
+{
+    if (row == NULL || out == NULL || out_size == 0u || row->team_id == 0u || !row->seeded) {
+        return 0;
+    }
+
+    kbo_ensure_captain_seeds_loaded();
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(row->team_id, 0);
+    KboCaptainSeed seed;
+    if (!kbo_find_best_captain_seed_for_team(row->season, row->league_id, row->team_id, team, &seed)) {
+        return 0;
+    }
+    if (seed.player_name[0] == '\0') {
+        return 0;
+    }
+    if (seed.player_id != 0u && row->player_id != 0u && seed.player_id != row->player_id) {
+        return 0;
+    }
+
+    snprintf(out, out_size, "%s", seed.player_name);
+    return 1;
+}
+
+static int kbo_captain_news_copy_seed_player_name_by_metadata(
+    const KboCaptainSelectionRow* row,
+    char* out,
+    size_t out_size)
+{
+    if (row == NULL || out == NULL || out_size == 0u || !row->seeded) {
+        return 0;
+    }
+
+    const char* seed_key = NULL;
+    if (strncmp(row->reason, "seed:", 5u) == 0 && row->reason[5] != '\0') {
+        seed_key = row->reason + 5u;
+    }
+    if (seed_key == NULL && row->player_id == 0u) {
+        return 0;
+    }
+
+    kbo_ensure_captain_seeds_loaded();
+    int found = 0;
+    char found_name[128] = {0};
+    kbo_lock_captain_seeds();
+    for (int i = 0; i < g_kbo_captain_seed_count; i++) {
+        const KboCaptainSeed* seed = &g_kbo_captain_seeds[i];
+        if (!seed->active || seed->player_name[0] == '\0') {
+            continue;
+        }
+        if (seed->season != 0u && seed->season != row->season) {
+            continue;
+        }
+        if (seed->league_id != 0u && row->league_id != 0u && seed->league_id != row->league_id) {
+            continue;
+        }
+        if (seed->team_id != 0u && row->team_id != 0u && seed->team_id != row->team_id) {
+            continue;
+        }
+        if (seed_key != NULL && seed->player_key[0] != '\0' && _stricmp(seed->player_key, seed_key) == 0) {
+            snprintf(found_name, sizeof(found_name), "%s", seed->player_name);
+            found = 1;
+            break;
+        }
+        if (seed->player_id != 0u && row->player_id != 0u && seed->player_id == row->player_id) {
+            snprintf(found_name, sizeof(found_name), "%s", seed->player_name);
+            found = 1;
+            break;
+        }
+    }
+    kbo_unlock_captain_seeds();
+
+    if (!found) {
+        return 0;
+    }
+    snprintf(out, out_size, "%s", found_name);
+    return 1;
+}
+
+static void kbo_captain_news_copy_player_name(
+    const KboCaptainSelectionRow* row,
+    char* out,
+    size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+
+    const char* row_name = row != NULL ? row->player_name : NULL;
+    if (row_name != NULL
+            && row_name[0] != '\0'
+            && strcmp(row_name, "Unknown player") != 0
+            && !kbo_captain_news_player_name_is_generic_id(row_name)) {
+        snprintf(out, out_size, "%s", row_name);
+        return;
+    }
+
+    if (kbo_captain_news_copy_seed_player_name(row, out, out_size)) {
+        return;
+    }
+    if (kbo_captain_news_copy_seed_player_name_by_metadata(row, out, out_size)) {
+        return;
+    }
+
+    if (row != NULL && row->player_id != 0u) {
+        uint8_t* player = kbo_find_player_by_id(row->player_id, NULL, NULL);
+        if (player != NULL) {
+            char resolved_name[128] = {0};
+            kbo_copy_player_display_name(player, resolved_name, sizeof(resolved_name));
+            if (resolved_name[0] != '\0' && strcmp(resolved_name, "Unknown player") != 0) {
+                snprintf(out, out_size, "%s", resolved_name);
+                return;
+            }
+        }
+    }
+
+    snprintf(out, out_size, "%s", kbo_captain_news_player_name(row));
+}
+
 static const char* kbo_captain_news_team_name(const KboCaptainSelectionRow* row)
 {
     if (row != NULL && row->team_name[0] != '\0') {
@@ -128,10 +267,12 @@ static void kbo_captain_news_append_player_link(
     size_t out_size,
     const KboCaptainSelectionRow* row)
 {
+    char player_name[128] = {0};
+    kbo_captain_news_copy_player_name(row, player_name, sizeof(player_name));
     if (row != NULL && row->player_id != 0u) {
-        kbo_news_text_appendf(out, out_size, "<%s:player#%u>", kbo_captain_news_player_name(row), row->player_id);
+        kbo_news_text_appendf(out, out_size, "<%s:player#%u>", player_name, row->player_id);
     } else {
-        kbo_news_text_appendf(out, out_size, "%s", kbo_captain_news_player_name(row));
+        kbo_news_text_appendf(out, out_size, "%s", player_name);
     }
 }
 
@@ -158,8 +299,8 @@ static int kbo_captain_news_build_render_context(
     memset(ctx, 0, sizeof(*ctx));
     snprintf(ctx->season, sizeof(ctx->season), "%u", season);
     kbo_captain_news_copy_display_team_name(row, ctx->team_name, sizeof(ctx->team_name));
-    snprintf(ctx->player_name, sizeof(ctx->player_name), "%s", kbo_captain_news_player_name(row));
-    snprintf(ctx->old_player_name, sizeof(ctx->old_player_name), "%s", kbo_captain_news_player_name(old_row));
+    kbo_captain_news_copy_player_name(row, ctx->player_name, sizeof(ctx->player_name));
+    kbo_captain_news_copy_player_name(old_row, ctx->old_player_name, sizeof(ctx->old_player_name));
     kbo_captain_news_append_team_link(ctx->team_link, sizeof(ctx->team_link), row);
     kbo_captain_news_append_player_link(ctx->player_link, sizeof(ctx->player_link), row);
     kbo_captain_news_append_player_link(ctx->old_player_link, sizeof(ctx->old_player_link), old_row);

@@ -1,5 +1,8 @@
 #include "hotkey_window_runtime_window_internal.h"
 
+#define KBO_HUB_WINDOW_STYLE (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME)
+#define KBO_HUB_WINDOW_EX_STYLE (WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE)
+
 void kbo_layout_hotkey_window(HWND hwnd)
 {
     if (hwnd == NULL) {
@@ -40,8 +43,6 @@ void kbo_hub_get_work_area(HWND hwnd, RECT* out)
 
 RECT kbo_hub_fixed_window_rect(HWND hwnd)
 {
-    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    DWORD ex_style = WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE;
     RECT work = {0, 0, 0, 0};
     kbo_hub_get_work_area(hwnd, &work);
     int max_client_w = (work.right > work.left) ? (work.right - work.left - 48) : KBO_HUB_FIXED_CLIENT_WIDTH;
@@ -53,8 +54,16 @@ RECT kbo_hub_fixed_window_rect(HWND hwnd)
     if (client_w < KBO_HUB_MIN_CLIENT_WIDTH) { client_w = KBO_HUB_MIN_CLIENT_WIDTH; }
     if (client_h < KBO_HUB_MIN_CLIENT_HEIGHT) { client_h = KBO_HUB_MIN_CLIENT_HEIGHT; }
     RECT rect = {0, 0, client_w, client_h};
-    AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+    AdjustWindowRectEx(&rect, KBO_HUB_WINDOW_STYLE, FALSE, KBO_HUB_WINDOW_EX_STYLE);
     return rect;
+}
+
+static SIZE kbo_hub_min_track_size(void)
+{
+    RECT rect = {0, 0, KBO_HUB_MIN_CLIENT_WIDTH, KBO_HUB_MIN_CLIENT_HEIGHT};
+    AdjustWindowRectEx(&rect, KBO_HUB_WINDOW_STYLE, FALSE, KBO_HUB_WINDOW_EX_STYLE);
+    SIZE size = {rect.right - rect.left, rect.bottom - rect.top};
+    return size;
 }
 
 void kbo_hub_apply_fixed_window_placement(HWND hwnd, int preserve_position)
@@ -129,24 +138,15 @@ LRESULT CALLBACK kbo_hotkey_window_proc(HWND hwnd, UINT message, WPARAM wparam, 
     }
 
     case WM_SIZE:
-        if (wparam != SIZE_MINIMIZED) {
-            kbo_hub_apply_fixed_window_placement(hwnd, 1);
-        }
         kbo_refresh_hotkey_window_layout(hwnd);
         return 0;
 
     case WM_GETMINMAXINFO: {
         MINMAXINFO* info = (MINMAXINFO*)lparam;
         if (info != NULL) {
-            RECT rect = kbo_hub_fixed_window_rect(hwnd);
-            int width = rect.right - rect.left;
-            int height = rect.bottom - rect.top;
-            info->ptMinTrackSize.x = width;
-            info->ptMinTrackSize.y = height;
-            info->ptMaxTrackSize.x = width;
-            info->ptMaxTrackSize.y = height;
-            info->ptMaxSize.x = width;
-            info->ptMaxSize.y = height;
+            SIZE min_track = kbo_hub_min_track_size();
+            info->ptMinTrackSize.x = min_track.cx;
+            info->ptMinTrackSize.y = min_track.cy;
         }
         return 0;
     }
@@ -320,14 +320,12 @@ DWORD WINAPI kbo_hotkey_window_thread(LPVOID parameter)
     }
 
     HWND owner = kbo_find_ootp_main_window();
-    DWORD window_style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    DWORD window_ex_style = WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE;
     RECT fixed_rect = kbo_hub_fixed_window_rect(owner);
     HWND hwnd = CreateWindowExA(
-        window_ex_style,
+        KBO_HUB_WINDOW_EX_STYLE,
         wc.lpszClassName,
         "Ultimate KBO",
-        window_style,
+        KBO_HUB_WINDOW_STYLE,
         CW_USEDEFAULT, CW_USEDEFAULT,
         fixed_rect.right - fixed_rect.left,
         fixed_rect.bottom - fixed_rect.top,

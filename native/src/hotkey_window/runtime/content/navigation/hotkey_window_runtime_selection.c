@@ -80,13 +80,21 @@ int kbo_hub_league_keeps_allstar_teams(uint32_t league_id)
 
 int kbo_hub_team_name_is_allstar(const char* name)
 {
+    if (name == NULL || name[0] == '\0') {
+        return 0;
+    }
+
     return kbo_ascii_contains_ignore_case(name, "All-Star")
         || kbo_ascii_contains_ignore_case(name, "All Star")
         || kbo_ascii_contains_ignore_case(name, "Allstars")
         || kbo_ascii_contains_ignore_case(name, "All-Stars")
         || kbo_ascii_contains_ignore_case(name, "All Stars")
         || kbo_ascii_contains_ignore_case(name, "Futures Stars")
-        || kbo_ascii_contains_ignore_case(name, "Future Stars");
+        || kbo_ascii_contains_ignore_case(name, "Future Stars")
+        || strstr(name, "\xec\x98\xac\xec\x8a\xa4\xed\x83\x80") != NULL
+        || strstr(name, "\xec\x98\xac\x20\xec\x8a\xa4\xed\x83\x80") != NULL
+        || strstr(name, "\xed\x93\xa8\xec\xb2\x98\xec\x8a\xa4") != NULL
+        || strstr(name, "\xed\x93\xa8\xec\xb2\x98") != NULL;
 }
 
 int kbo_hub_team_hidden_from_dropdown(uint8_t* team)

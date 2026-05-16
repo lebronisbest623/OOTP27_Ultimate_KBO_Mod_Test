@@ -14,6 +14,12 @@ int kbo_wide_to_utf8_path(const WCHAR* path, char* out, size_t out_size);
 int kbo_get_localappdata_utf8(char* out, size_t out_size);
 int kbo_create_directory_utf8(const char* path);
 DWORD kbo_get_file_attributes_utf8(const char* path);
+HANDLE kbo_create_file_utf8(
+    const char* path,
+    DWORD desired_access,
+    DWORD share_mode,
+    DWORD creation_disposition,
+    DWORD flags_and_attributes);
 HANDLE kbo_create_file_read_utf8(const char* path);
 int kbo_get_file_attributes_ex_utf8(const char* path, WIN32_FILE_ATTRIBUTE_DATA* out);
 int kbo_path_looks_like_absolute_save_path(const char* path);

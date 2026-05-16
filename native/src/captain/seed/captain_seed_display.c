@@ -125,6 +125,112 @@ static uint8_t* kbo_captain_display_find_player_by_id(uint32_t player_id, int* o
     return NULL;
 }
 
+static int kbo_captain_display_player_name_is_generic_id(const char* name)
+{
+    if (name == NULL || strncmp(name, "Player #", 8u) != 0) {
+        return 0;
+    }
+    const char* p = name + 8u;
+    if (*p < '0' || *p > '9') {
+        return 0;
+    }
+    for (; *p != '\0'; p++) {
+        if (*p < '0' || *p > '9') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int kbo_captain_display_player_name_needs_repair(const char* name)
+{
+    return name == NULL
+        || name[0] == '\0'
+        || strcmp(name, "Unknown player") == 0
+        || kbo_captain_display_player_name_is_generic_id(name);
+}
+
+static int kbo_captain_display_copy_seed_player_name(
+    const KboCaptainSelectionRow* row,
+    char* out,
+    size_t out_size)
+{
+    if (row == NULL || out == NULL || out_size == 0u || row->team_id == 0u || !row->seeded) {
+        return 0;
+    }
+
+    kbo_ensure_captain_seeds_loaded();
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(row->team_id, 0);
+    KboCaptainSeed seed;
+    if (!kbo_find_best_captain_seed_for_team(row->season, row->league_id, row->team_id, team, &seed)) {
+        return 0;
+    }
+    if (seed.player_name[0] == '\0') {
+        return 0;
+    }
+    if (seed.player_id != 0u && row->player_id != 0u && seed.player_id != row->player_id) {
+        return 0;
+    }
+
+    snprintf(out, out_size, "%s", seed.player_name);
+    return 1;
+}
+
+static int kbo_captain_display_copy_seed_player_name_by_metadata(
+    const KboCaptainSelectionRow* row,
+    char* out,
+    size_t out_size)
+{
+    if (row == NULL || out == NULL || out_size == 0u || !row->seeded) {
+        return 0;
+    }
+
+    const char* seed_key = NULL;
+    if (strncmp(row->reason, "seed:", 5u) == 0 && row->reason[5] != '\0') {
+        seed_key = row->reason + 5u;
+    }
+    if (seed_key == NULL && row->player_id == 0u) {
+        return 0;
+    }
+
+    kbo_ensure_captain_seeds_loaded();
+    int found = 0;
+    char found_name[128] = {0};
+    kbo_lock_captain_seeds();
+    for (int i = 0; i < g_kbo_captain_seed_count; i++) {
+        const KboCaptainSeed* seed = &g_kbo_captain_seeds[i];
+        if (!seed->active || seed->player_name[0] == '\0') {
+            continue;
+        }
+        if (seed->season != 0u && seed->season != row->season) {
+            continue;
+        }
+        if (seed->league_id != 0u && row->league_id != 0u && seed->league_id != row->league_id) {
+            continue;
+        }
+        if (seed->team_id != 0u && row->team_id != 0u && seed->team_id != row->team_id) {
+            continue;
+        }
+        if (seed_key != NULL && seed->player_key[0] != '\0' && _stricmp(seed->player_key, seed_key) == 0) {
+            snprintf(found_name, sizeof(found_name), "%s", seed->player_name);
+            found = 1;
+            break;
+        }
+        if (seed->player_id != 0u && row->player_id != 0u && seed->player_id == row->player_id) {
+            snprintf(found_name, sizeof(found_name), "%s", seed->player_name);
+            found = 1;
+            break;
+        }
+    }
+    kbo_unlock_captain_seeds();
+
+    if (!found) {
+        return 0;
+    }
+    snprintf(out, out_size, "%s", found_name);
+    return 1;
+}
+
 static int kbo_captain_display_fill_from_row(
     const KboCaptainSelectionRow* row,
     KboCaptainDisplayCache* out)
@@ -151,6 +257,11 @@ static int kbo_captain_display_fill_from_row(
         kbo_copy_player_display_name(player, resolved_name, sizeof(resolved_name));
         if (resolved_name[0] != '\0' && strcmp(resolved_name, "Unknown player") != 0) {
             snprintf(out->player_name, sizeof(out->player_name), "%s", resolved_name);
+        }
+    }
+    if (kbo_captain_display_player_name_needs_repair(out->player_name)) {
+        if (!kbo_captain_display_copy_seed_player_name(row, out->player_name, sizeof(out->player_name))) {
+            kbo_captain_display_copy_seed_player_name_by_metadata(row, out->player_name, sizeof(out->player_name));
         }
     }
     out->found = out->player_name[0] != '\0' || out->player_id != 0u;

@@ -25,7 +25,7 @@ static BOOL CALLBACK kbo_fa_market_policy_init_once(PINIT_ONCE init_once, PVOID 
     p->undrafted_college_league_id = kbo_fa_market_policy_int("undrafted_college_league_id", 201, 0, 1000000);
     p->undrafted_college_draft_subtype = kbo_fa_market_policy_int("undrafted_college_draft_subtype", 1, 0, 255);
     p->undrafted_college_age_max = kbo_fa_market_policy_int("undrafted_college_age_max", 25, 0, 80);
-    p->undrafted_high_school_league_id = kbo_fa_market_policy_int("undrafted_high_school_league_id", 200, 0, 1000000);
+    p->undrafted_high_school_league_id = kbo_fa_market_policy_int("undrafted_high_school_league_id", 203, 0, 1000000);
     p->undrafted_high_school_age_max = kbo_fa_market_policy_int("undrafted_high_school_age_max", 20, 0, 80);
     p->independent_league_id = kbo_fa_market_policy_int("independent_league_id", 200, 0, 1000000);
     p->player_age_min = kbo_fa_market_policy_int("player_age_min", 16, 0, 80);

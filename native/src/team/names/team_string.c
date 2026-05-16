@@ -69,6 +69,129 @@ int copy_limited_ootp_internal_string(const char* source, char* out, size_t out_
     return len > 0;
 }
 
+static int kbo_ootp_hex_value(unsigned char c)
+{
+    if (c >= '0' && c <= '9') {
+        return (int)(c - '0');
+    }
+    if (c >= 'a' && c <= 'f') {
+        return (int)(c - 'a' + 10);
+    }
+    if (c >= 'A' && c <= 'F') {
+        return (int)(c - 'A' + 10);
+    }
+    return -1;
+}
+
+static int kbo_append_utf8_codepoint(char* out, size_t out_size, size_t* pos, uint32_t cp)
+{
+    if (out == NULL || out_size == 0u || pos == NULL || cp == 0u
+            || cp > 0x10ffffu || (cp >= 0xd800u && cp <= 0xdfffu)) {
+        return 0;
+    }
+    if (cp < 0x80u) {
+        if (*pos + 1u >= out_size) {
+            return 0;
+        }
+        out[(*pos)++] = (char)cp;
+        return 1;
+    }
+    if (cp < 0x800u) {
+        if (*pos + 2u >= out_size) {
+            return 0;
+        }
+        out[(*pos)++] = (char)(0xc0u | (cp >> 6));
+        out[(*pos)++] = (char)(0x80u | (cp & 0x3fu));
+        return 1;
+    }
+    if (cp < 0x10000u) {
+        if (*pos + 3u >= out_size) {
+            return 0;
+        }
+        out[(*pos)++] = (char)(0xe0u | (cp >> 12));
+        out[(*pos)++] = (char)(0x80u | ((cp >> 6) & 0x3fu));
+        out[(*pos)++] = (char)(0x80u | (cp & 0x3fu));
+        return 1;
+    }
+    if (*pos + 4u >= out_size) {
+        return 0;
+    }
+    out[(*pos)++] = (char)(0xf0u | (cp >> 18));
+    out[(*pos)++] = (char)(0x80u | ((cp >> 12) & 0x3fu));
+    out[(*pos)++] = (char)(0x80u | ((cp >> 6) & 0x3fu));
+    out[(*pos)++] = (char)(0x80u | (cp & 0x3fu));
+    return 1;
+}
+
+int copy_limited_ootp_display_string(const char* source, char* out, size_t out_size)
+{
+    if (out == NULL || out_size == 0) {
+        return 0;
+    }
+    out[0] = '\0';
+    if (source == NULL || !memory_range_readable(source, 1)) {
+        return 0;
+    }
+
+    size_t pos = 0u;
+    int unicode_mode = 0;
+    for (size_t i = 0u; i < 512u && pos + 1u < out_size; ) {
+        if (!memory_range_readable(source + i, 1)) {
+            break;
+        }
+        unsigned char c = (unsigned char)source[i];
+        if (c == '\0') {
+            break;
+        }
+        if (c == 0x01u) {
+            unicode_mode = !unicode_mode;
+            i++;
+            continue;
+        }
+        if (unicode_mode && c == ',') {
+            if (!memory_range_readable(source + i, 5)) {
+                break;
+            }
+            int h0 = kbo_ootp_hex_value((unsigned char)source[i + 1u]);
+            int h1 = kbo_ootp_hex_value((unsigned char)source[i + 2u]);
+            int h2 = kbo_ootp_hex_value((unsigned char)source[i + 3u]);
+            int h3 = kbo_ootp_hex_value((unsigned char)source[i + 4u]);
+            if (h0 >= 0 && h1 >= 0 && h2 >= 0 && h3 >= 0) {
+                uint32_t cp = ((uint32_t)h0 << 12)
+                    | ((uint32_t)h1 << 8)
+                    | ((uint32_t)h2 << 4)
+                    | (uint32_t)h3;
+                if (!kbo_append_utf8_codepoint(out, out_size, &pos, cp)) {
+                    break;
+                }
+                i += 5u;
+                continue;
+            }
+        }
+        if (c < 0x20u) {
+            break;
+        }
+        out[pos++] = (char)c;
+        i++;
+    }
+
+    out[pos] = '\0';
+    return pos > 0u;
+}
+
+int kbo_ootp_text_has_non_ascii(const char* text)
+{
+    if (text == NULL) {
+        return 0;
+    }
+    for (const unsigned char* p = (const unsigned char*)text; *p != '\0'; p++) {
+        if (*p >= 0x80u) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, char* out, size_t out_size)
 {
     uint8_t* string_object = object_base + string_offset;
@@ -78,7 +201,7 @@ int copy_ootp_string_object_text(uint8_t* object_base, uint32_t string_offset, c
     }
 
     const char* text = *(const char**)text_slot;
-    return copy_limited_ascii_string(text, out, out_size);
+    return copy_limited_ootp_display_string(text, out, out_size);
 }
 
 int copy_ootp_string_object_raw_text(uint8_t* object_base, uint32_t string_offset, char* out, size_t out_size)
@@ -158,6 +281,64 @@ int team_has_ootp_string_text(uint8_t* team, const char* expected)
         text[0] = '\0';
         if (copy_ootp_string_object_text(team, string_offsets[i], text, sizeof(text))
                 && ascii_equals_ignore_case(text, expected)) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static int kbo_string_contains_ootp_text(const char* text, const char* expected)
+{
+    if (text == NULL || expected == NULL || expected[0] == '\0') {
+        return 0;
+    }
+    if (strstr(text, expected) != NULL) {
+        return 1;
+    }
+
+    size_t expected_len = strlen(expected);
+    for (const char* p = text; *p != '\0'; p++) {
+        size_t i = 0u;
+        for (; i < expected_len; i++) {
+            char a = p[i];
+            char b = expected[i];
+            if (a == '\0') {
+                return 0;
+            }
+            if (a >= 'A' && a <= 'Z') {
+                a = (char)(a - 'A' + 'a');
+            }
+            if (b >= 'A' && b <= 'Z') {
+                b = (char)(b - 'A' + 'a');
+            }
+            if (a != b) {
+                break;
+            }
+        }
+        if (i == expected_len) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int team_contains_ootp_string_text(uint8_t* team, const char* expected)
+{
+    if (team == NULL || expected == NULL || expected[0] == '\0') {
+        return 0;
+    }
+
+    static const uint32_t string_offsets[] = {
+        0x10u, 0x28u, 0x40u, 0x58u, 0x70u, 0x100u
+    };
+
+    char text[128] = {0};
+    for (size_t i = 0; i < sizeof(string_offsets) / sizeof(string_offsets[0]); i++) {
+        text[0] = '\0';
+        if (copy_ootp_string_object_text(team, string_offsets[i], text, sizeof(text))
+                && kbo_string_contains_ootp_text(text, expected)) {
             return 1;
         }
     }

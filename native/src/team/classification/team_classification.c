@@ -21,12 +21,13 @@
 typedef struct KboTeamClassificationEntry {
     char team_csv_id[16];
     char display_name[96];
+    volatile LONG independent_kind;
     volatile LONG team_id;
     volatile LONG league_id;
 } KboTeamClassificationEntry;
 
-static KboTeamClassificationEntry g_kbo_independent_futures_teams[KBO_TEAM_CLASSIFICATION_MAX];
-static volatile LONG g_kbo_independent_futures_team_count = 0;
+static KboTeamClassificationEntry g_kbo_independent_teams[KBO_TEAM_CLASSIFICATION_MAX];
+static volatile LONG g_kbo_independent_team_count = 0;
 static volatile LONG g_kbo_team_classification_loaded_state = 0;
 static volatile LONG g_kbo_team_classification_refresh_tick = 0;
 
@@ -48,33 +49,50 @@ static void kbo_team_classification_copy_text(char* out, size_t out_size, const 
     out[len] = '\0';
 }
 
-static int kbo_team_classification_add_independent_futures_row(
+static const char* kbo_team_classification_independent_kind_label(int kind)
+{
+    if (kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES) {
+        return "futures";
+    }
+    if (kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE) {
+        return "league";
+    }
+    return "none";
+}
+
+static int kbo_team_classification_add_independent_row(
     const KboTeamClassificationSeedRow* row)
 {
     if (row == NULL || row->team_csv_id[0] == '\0') {
         return 0;
     }
+    int independent_kind = kbo_team_classification_seed_row_independent_kind(row);
+    if (independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE) {
+        return 0;
+    }
 
-    LONG count = InterlockedCompareExchange(&g_kbo_independent_futures_team_count, 0, 0);
+    LONG count = InterlockedCompareExchange(&g_kbo_independent_team_count, 0, 0);
     for (LONG i = 0; i < count; i++) {
-        if (_stricmp(g_kbo_independent_futures_teams[i].team_csv_id, row->team_csv_id) == 0) {
+        if (_stricmp(g_kbo_independent_teams[i].team_csv_id, row->team_csv_id) == 0) {
             return 1;
         }
     }
     if (count >= KBO_TEAM_CLASSIFICATION_MAX) {
         kbo_log_runtimef(
-            "KBO team classification seed ignored extra independent futures row team=%s max=%d",
+            "KBO team classification seed ignored extra independent row team=%s kind=%s max=%d",
             row->team_csv_id,
+            kbo_team_classification_independent_kind_label(independent_kind),
             KBO_TEAM_CLASSIFICATION_MAX);
         return 0;
     }
 
-    KboTeamClassificationEntry* entry = &g_kbo_independent_futures_teams[count];
+    KboTeamClassificationEntry* entry = &g_kbo_independent_teams[count];
     kbo_team_classification_copy_text(entry->team_csv_id, sizeof(entry->team_csv_id), row->team_csv_id);
     kbo_team_classification_copy_text(entry->display_name, sizeof(entry->display_name), row->display_name);
+    InterlockedExchange(&entry->independent_kind, independent_kind);
     InterlockedExchange(&entry->team_id, 0);
     InterlockedExchange(&entry->league_id, 0);
-    InterlockedExchange(&g_kbo_independent_futures_team_count, count + 1);
+    InterlockedExchange(&g_kbo_independent_team_count, count + 1);
     return 1;
 }
 
@@ -92,6 +110,8 @@ static int kbo_team_classification_load_seed_file(void)
 
     int rows = 0;
     int loaded = 0;
+    int futures = 0;
+    int leagues = 0;
     char line[512];
     while (fgets(line, sizeof(line), file) != NULL) {
         KboTeamClassificationSeedRow row;
@@ -99,19 +119,27 @@ static int kbo_team_classification_load_seed_file(void)
             continue;
         }
         rows++;
-        if (!kbo_team_classification_seed_row_is_independent_futures(&row)) {
+        int independent_kind = kbo_team_classification_seed_row_independent_kind(&row);
+        if (independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE) {
             continue;
         }
-        if (kbo_team_classification_add_independent_futures_row(&row)) {
+        if (kbo_team_classification_add_independent_row(&row)) {
             loaded++;
+            if (independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES) {
+                futures++;
+            } else if (independent_kind == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE) {
+                leagues++;
+            }
         }
     }
     fclose(file);
 
     kbo_log_runtimef(
-        "KBO team classification seed loaded rows=%d independent_futures=%d source=%s",
+        "KBO team classification seed loaded rows=%d independent=%d futures=%d true_league=%d source=%s",
         rows,
         loaded,
+        futures,
+        leagues,
         path);
     return loaded;
 }
@@ -131,7 +159,7 @@ static void kbo_team_classification_load_once(void)
 
     if (kbo_team_classification_load_seed_file() < 0) {
         kbo_log_runtimef(
-            "KBO team classification seed missing; no independent futures teams enabled file=%s",
+            "KBO team classification seed missing; no independent teams enabled file=%s",
             KBO_TEAM_CLASSIFICATION_SEED_FILE);
     }
     InterlockedExchange(&g_kbo_team_classification_loaded_state, 2);
@@ -139,7 +167,7 @@ static void kbo_team_classification_load_once(void)
 
 static void kbo_team_classification_resolve_ids(int force)
 {
-    LONG count = InterlockedCompareExchange(&g_kbo_independent_futures_team_count, 0, 0);
+    LONG count = InterlockedCompareExchange(&g_kbo_independent_team_count, 0, 0);
     if (count <= 0) {
         return;
     }
@@ -152,7 +180,7 @@ static void kbo_team_classification_resolve_ids(int force)
     InterlockedExchange(&g_kbo_team_classification_refresh_tick, (LONG)now);
 
     for (LONG i = 0; i < count; i++) {
-        KboTeamClassificationEntry* entry = &g_kbo_independent_futures_teams[i];
+        KboTeamClassificationEntry* entry = &g_kbo_independent_teams[i];
         if (entry->team_csv_id[0] == '\0') {
             continue;
         }
@@ -172,8 +200,9 @@ static void kbo_team_classification_resolve_ids(int force)
         LONG old_league = InterlockedExchange(&entry->league_id, (LONG)league_id);
         if (force || (uint32_t)old_team != team_id || (uint32_t)old_league != league_id) {
             kbo_log_runtimef(
-                "KBO team classification resolved independent futures team csv=%s team=%u league=%u name=%s",
+                "KBO team classification resolved independent team csv=%s kind=%s team=%u league=%u name=%s",
                 entry->team_csv_id,
+                kbo_team_classification_independent_kind_label((int)InterlockedCompareExchange(&entry->independent_kind, 0, 0)),
                 team_id,
                 league_id,
                 entry->display_name);
@@ -200,15 +229,17 @@ int kbo_collect_independent_futures_team_leagues(
     kbo_team_classification_load_once();
     kbo_team_classification_resolve_ids(0);
 
-    LONG count = InterlockedCompareExchange(&g_kbo_independent_futures_team_count, 0, 0);
-    if (out_seed_rows != NULL) {
-        *out_seed_rows = (int)count;
-    }
-
     int written = 0;
     int unresolved = 0;
+    int futures_rows = 0;
+    LONG count = InterlockedCompareExchange(&g_kbo_independent_team_count, 0, 0);
     for (LONG i = 0; i < count; i++) {
-        KboTeamClassificationEntry* entry = &g_kbo_independent_futures_teams[i];
+        KboTeamClassificationEntry* entry = &g_kbo_independent_teams[i];
+        if ((int)InterlockedCompareExchange(&entry->independent_kind, 0, 0)
+                != KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES) {
+            continue;
+        }
+        futures_rows++;
         uint32_t team_id = (uint32_t)InterlockedCompareExchange(&entry->team_id, 0, 0);
         uint32_t league_id = (uint32_t)InterlockedCompareExchange(&entry->league_id, 0, 0);
         if (team_id == 0u || league_id == 0u) {
@@ -237,10 +268,33 @@ int kbo_collect_independent_futures_team_leagues(
         }
     }
 
+    if (out_seed_rows != NULL) {
+        *out_seed_rows = futures_rows;
+    }
     if (out_unresolved_rows != NULL) {
         *out_unresolved_rows = unresolved;
     }
     return written;
+}
+
+int kbo_team_classification_independent_kind_for_team(uint32_t team_id)
+{
+    if (team_id == 0u) {
+        return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
+    }
+
+    kbo_team_classification_load_once();
+    kbo_team_classification_resolve_ids(0);
+
+    LONG count = InterlockedCompareExchange(&g_kbo_independent_team_count, 0, 0);
+    for (LONG i = 0; i < count; i++) {
+        KboTeamClassificationEntry* entry = &g_kbo_independent_teams[i];
+        uint32_t entry_team_id = (uint32_t)InterlockedCompareExchange(&entry->team_id, 0, 0);
+        if (entry_team_id == team_id) {
+            return (int)InterlockedCompareExchange(&entry->independent_kind, 0, 0);
+        }
+    }
+    return KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
 }
 
 int kbo_team_classification_league_has_independent_futures_team(uint32_t league_id)
@@ -252,10 +306,14 @@ int kbo_team_classification_league_has_independent_futures_team(uint32_t league_
     kbo_team_classification_load_once();
     kbo_team_classification_resolve_ids(0);
 
-    LONG count = InterlockedCompareExchange(&g_kbo_independent_futures_team_count, 0, 0);
+    LONG count = InterlockedCompareExchange(&g_kbo_independent_team_count, 0, 0);
     for (LONG i = 0; i < count; i++) {
+        if ((int)InterlockedCompareExchange(&g_kbo_independent_teams[i].independent_kind, 0, 0)
+                != KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES) {
+            continue;
+        }
         uint32_t entry_league_id = (uint32_t)InterlockedCompareExchange(
-            &g_kbo_independent_futures_teams[i].league_id,
+            &g_kbo_independent_teams[i].league_id,
             0,
             0);
         if (entry_league_id == league_id) {

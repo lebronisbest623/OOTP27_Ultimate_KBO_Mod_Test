@@ -188,6 +188,7 @@ static int kbo_collect_fa_market_classifications_internal(
         row->current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
         row->active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
         row->original_team_id = kbo_fa_market_get_player_original_team_id(player);
+        row->original_league_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_LEAGUE_ID_OFFSET);
         row->current_league_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_LEAGUE_ID_OFFSET);
         row->draft_league_id = *(uint32_t*)(player + OOTP27_PLAYER_DRAFT_LEAGUE_ID_OFFSET);
         row->age = *(uint16_t*)(player + OOTP27_PLAYER_AGE_OFFSET);

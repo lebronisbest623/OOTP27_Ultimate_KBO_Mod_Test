@@ -7,6 +7,7 @@
 
 #include "../../../../core/dates/core_text_date.h"
 #include "../../../../core/files/save_paths/core_save_paths.h"
+#include "../../../../core/files/save_paths/core_save_paths_internal.h"
 #include "../../../../core/news/templates/core_news_templates.h"
 #include "../../../../core/sync/lock.h"
 #include "ui_language.h"
@@ -146,8 +147,7 @@ void kbo_hub_load_language_setting(void)
         return;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = kbo_create_file_read_utf8(path);
     if (file == INVALID_HANDLE_VALUE) {
         return;
     }
@@ -170,8 +170,12 @@ void kbo_hub_save_language_setting(void)
         return;
     }
 
-    HANDLE file = CreateFileA(path, GENERIC_WRITE, FILE_SHARE_READ,
-        NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = kbo_create_file_utf8(
+        path,
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL);
     if (file == INVALID_HANDLE_VALUE) {
         return;
     }

@@ -43,12 +43,14 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
 #include "../src/military_service/seed/parse/military_service_seed_parse.h"
 #include "../src/military_service/players/team_policy/military_service_team_policy_parse.h"
 #include "../src/team/classification/parse/team_classification_seed_parse.h"
+#include "../src/team/names/team_string.h"
 #include "../src/allstar/csv/allstar_csv_parse.h"
 #include "../src/allstar/allstar_native_events/schedule/schedule_dates.h"
 #include "../src/foreign/common/dates/foreign_waiver_date.h"
 #include "../src/core/core_flags/keys/flag_key.h"
 #include "../src/fa_filing/fa_filing_parts/fa_filing_csv_parse.h"
 #include "../src/fa_salary_snapshot/csv/salary_snapshot_csv_parse.h"
+#include "../src/fa_market_classification/internal/fa_market_policy_internal.h"
 #include "../src/core/logging/rule_audit.h"
 #include "../src/core/files/atomic/core_atomic_file.h"
 #include "../src/military_service/players/loans/military_native_loan.h"
@@ -71,6 +73,89 @@ int kbo_amateur_assignment_team_tier(uint32_t league_id, uint8_t reputation);
 int kbo_amateur_assignment_player_tier(uint32_t league_id, int32_t quality_score);
 int kbo_amateur_assignment_tier_allowed(int player_tier, int team_tier);
 int kbo_amateur_assignment_effective_player_tier(int player_tier, int max_team_tier);
+
+static uint32_t g_test_fa_market_team_leagues[512];
+static int g_test_fa_market_team_independent_kinds[512];
+
+const KboFaMarketPolicy* kbo_fa_market_policy(void)
+{
+    static const KboFaMarketPolicy policy = {
+        .undrafted_college_league_id = 201,
+        .undrafted_college_draft_subtype = 1,
+        .undrafted_college_age_max = 25,
+        .undrafted_high_school_league_id = 203,
+        .undrafted_high_school_age_max = 20,
+        .independent_league_id = 200,
+        .player_age_min = 16,
+        .player_age_max = 60
+    };
+    return &policy;
+}
+
+uint32_t kbo_fa_market_get_team_league_id(uint32_t team_id)
+{
+    return team_id < (uint32_t)(sizeof(g_test_fa_market_team_leagues) / sizeof(g_test_fa_market_team_leagues[0]))
+        ? g_test_fa_market_team_leagues[team_id]
+        : 0u;
+}
+
+int kbo_team_classification_independent_kind_for_team(uint32_t team_id)
+{
+    return team_id < (uint32_t)(sizeof(g_test_fa_market_team_independent_kinds) / sizeof(g_test_fa_market_team_independent_kinds[0]))
+        ? g_test_fa_market_team_independent_kinds[team_id]
+        : KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE;
+}
+
+int kbo_fa_rules_load(KboFaRules* rules)
+{
+    if (rules != NULL) {
+        memset(rules, 0, sizeof(*rules));
+    }
+    return 0;
+}
+
+int kbo_fa_rules_case_is_compensable(const KboFaRules* rules, const char* case_label)
+{
+    (void)rules;
+    (void)case_label;
+    return 0;
+}
+
+int kbo_fa_rules_grade_is_compensable(const KboFaRules* rules, const char* grade)
+{
+    (void)rules;
+    (void)grade;
+    return 0;
+}
+
+void kbo_fa_rules_calculate_compensation(
+    const KboFaRules* rules,
+    const char* grade,
+    int32_t previous_salary,
+    uint32_t* out_cash_with_player,
+    uint32_t* out_cash_only,
+    uint32_t* out_protect_count,
+    uint8_t* out_requires_player)
+{
+    (void)rules;
+    (void)grade;
+    (void)previous_salary;
+    if (out_cash_with_player != NULL) { *out_cash_with_player = 0u; }
+    if (out_cash_only != NULL) { *out_cash_only = 0u; }
+    if (out_protect_count != NULL) { *out_protect_count = 0u; }
+    if (out_requires_player != NULL) { *out_requires_player = 0u; }
+}
+
+const KboFaSalarySnapshotGrade* kbo_find_fa_salary_snapshot_grade(
+    const KboFaSalarySnapshotGrade* rows,
+    int row_count,
+    uint32_t player_id)
+{
+    (void)rows;
+    (void)row_count;
+    (void)player_id;
+    return NULL;
+}
 
 static void test_core_text_and_sql_helpers(void)
 {
@@ -97,6 +182,29 @@ static void test_core_text_and_sql_helpers(void)
     assert(strcmp(escaped, "") == 0);
     assert(!kbo_sql_escape_literal(NULL, sizeof(escaped), "x"));
     printf("test_core_text_and_sql_helpers: PASS\n");
+}
+
+static void test_ootp_display_string_decode(void)
+{
+    const char internal_allstar[] = "\x01,c62c,c2a4,d0c0\x01";
+    char out[96] = {0};
+
+    assert(copy_limited_ootp_display_string("KIA Tigers", out, sizeof(out)));
+    assert(strcmp(out, "KIA Tigers") == 0);
+
+    assert(copy_limited_ootp_display_string(internal_allstar, out, sizeof(out)));
+    assert(strcmp(out, "올스타") == 0);
+    assert(kbo_ootp_text_has_non_ascii(out));
+    assert(!kbo_ootp_text_has_non_ascii("KIA Tigers"));
+    assert(!kbo_ootp_text_has_non_ascii(NULL));
+
+    uint8_t team[OOTP27_KBO_TEAM_READABLE_BYTES] = {0};
+    *(const char**)(team + 0x70u + OOTP27_KBO_STRING_OBJECT_TEXT_OFFSET) = internal_allstar;
+    assert(team_contains_ootp_string_text(team, "올스타"));
+    assert(team_contains_ootp_string_text(team, "스타"));
+    assert(!team_contains_ootp_string_text(team, "Future Stars"));
+
+    printf("test_ootp_display_string_decode: PASS\n");
 }
 
 static void test_json_flags_parser(void)
@@ -407,20 +515,78 @@ static void test_team_classification_seed_parse(void)
     assert(strcmp(row.team_type, "independent") == 0);
     assert(strcmp(row.league_level, "futures") == 0);
     assert(strcmp(row.display_name, "Ulsan Whales") == 0);
+    assert(kbo_team_classification_seed_row_independent_kind(&row) == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES);
     assert(kbo_team_classification_seed_row_is_independent_futures(&row));
 
     assert(kbo_parse_team_classification_seed_line("\"ALT\", enabled, independent, minor, Alt Club", &row));
     assert(strcmp(row.team_csv_id, "ALT") == 0);
     assert(kbo_team_classification_seed_row_is_independent_futures(&row));
 
+    assert(kbo_parse_team_classification_seed_line("IND,1,independent,independent,Independent League Club", &row));
+    assert(kbo_team_classification_seed_row_independent_kind(&row) == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE);
+    assert(!kbo_team_classification_seed_row_is_independent_futures(&row));
+
+    assert(kbo_parse_team_classification_seed_line("IND2,1,independent,independent_league,Independent League Club 2", &row));
+    assert(kbo_team_classification_seed_row_independent_kind(&row) == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE);
+    assert(!kbo_team_classification_seed_row_is_independent_futures(&row));
+
     assert(kbo_parse_team_classification_seed_line("SANG,1,military,futures,Sangmu", &row));
+    assert(kbo_team_classification_seed_row_independent_kind(&row) == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE);
     assert(!kbo_team_classification_seed_row_is_independent_futures(&row));
 
     assert(kbo_parse_team_classification_seed_line("ULS,0,independent,futures,Ulsan Whales", &row));
+    assert(kbo_team_classification_seed_row_independent_kind(&row) == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_NONE);
     assert(!kbo_team_classification_seed_row_is_independent_futures(&row));
 
     assert(!kbo_parse_team_classification_seed_line("BAD,maybe,independent,futures,Bad", &row));
     printf("test_team_classification_seed_parse: PASS\n");
+}
+
+static void test_fa_market_independent_source_precedence(void)
+{
+    memset(g_test_fa_market_team_leagues, 0, sizeof(g_test_fa_market_team_leagues));
+    memset(g_test_fa_market_team_independent_kinds, 0, sizeof(g_test_fa_market_team_independent_kinds));
+
+    KboFaMarketClassification row = {0};
+    row.player_id = 30328u;
+    row.nation_id = OOTP27_KBO_KOREA_NATION_ID;
+    row.original_team_id = 41u;
+    row.original_league_id = 200u;
+    row.draft_league_id = 203u;
+    row.age = 19u;
+    row.generation_grade = 1u;
+    g_test_fa_market_team_leagues[41] = 200u;
+
+    assert(kbo_fa_market_row_is_undrafted_domestic(&row));
+    assert(kbo_fa_market_row_independent_source_kind(&row) == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_LEAGUE);
+
+    KboFaMarketHistoryCase history = {0};
+    history.found = 1;
+    history.became_free_agent = 1;
+    snprintf(history.history_date, sizeof(history.history_date), "20260910");
+    snprintf(history.history_text, sizeof(history.history_text), "[G]Became a free agent.");
+    assert(kbo_fa_market_apply_history_case(&row, &history));
+    assert(strcmp(row.case_label, "DOMESTIC_INDEPENDENT_LEAGUE_FA") == 0);
+    assert(strstr(row.reason, "true independent-league") != NULL);
+
+    memset(&row, 0, sizeof(row));
+    row.player_id = 30329u;
+    row.nation_id = OOTP27_KBO_KOREA_NATION_ID;
+    row.original_team_id = 28u;
+    row.original_league_id = 101u;
+    row.draft_league_id = 203u;
+    row.age = 19u;
+    row.generation_grade = 1u;
+    g_test_fa_market_team_leagues[28] = 101u;
+    g_test_fa_market_team_independent_kinds[28] = KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES;
+
+    assert(kbo_fa_market_row_is_undrafted_domestic(&row));
+    assert(kbo_fa_market_row_independent_source_kind(&row) == KBO_TEAM_CLASSIFICATION_INDEPENDENT_KIND_FUTURES);
+    assert(kbo_fa_market_apply_history_case(&row, &history));
+    assert(strcmp(row.case_label, "DOMESTIC_INDEPENDENT_FUTURES_FA") == 0);
+    assert(strstr(row.reason, "independent futures-team") != NULL);
+
+    printf("test_fa_market_independent_source_precedence: PASS\n");
 }
 
 static void test_allstar_csv_parse(void)
@@ -1434,6 +1600,10 @@ static void test_foreign_injury_inactive_roster_long_term_basis(void)
     assert(kbo_foreign_injury_expected_end_pending(20260419, 20260420));
     assert(!kbo_foreign_injury_expected_end_pending(20260420, 20260420));
     assert(!kbo_foreign_injury_expected_end_pending(20260421, 20260420));
+    assert(kbo_foreign_injury_expected_end_from_duration(20260602, 150) == 20261030u);
+    assert(kbo_foreign_injury_expected_end_from_duration(20260621, 150) == 20261118u);
+    assert(kbo_foreign_injury_expected_end_from_duration(0, 150) == 0u);
+    assert(kbo_foreign_injury_expected_end_from_duration(20260602, 0) == 0u);
 
     assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_OFFSEASON_RESET));
     assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_OFFSEASON_STARTED));
@@ -1751,6 +1921,7 @@ static void test_amateur_assignment_policy(void)
 int main(void)
 {
     test_core_text_and_sql_helpers();
+    test_ootp_display_string_decode();
     test_json_flags_parser();
     test_award_schedule_policy_parse_event_types();
     test_news_template_render();
@@ -1762,6 +1933,7 @@ int main(void)
     test_military_seed_line_parse();
     test_military_service_team_policy_parse();
     test_team_classification_seed_parse();
+    test_fa_market_independent_source_precedence();
     test_allstar_csv_parse();
     test_allstar_schedule_date_slots_ignore_serializer_callbacks();
     test_foreign_replacement_seed_parse();
@@ -1848,6 +2020,13 @@ int memory_range_readable(const void* ptr, size_t size)
         || protect == PAGE_EXECUTE_WRITECOPY;
     uintptr_t region_end = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
     return readable && end <= region_end;
+}
+
+void* kbo_resolve_build_specific_rva_ptr(HMODULE exe, uint32_t steam_rva)
+{
+    (void)exe;
+    (void)steam_rva;
+    return NULL;
 }
 
 int kbo_foreign_injury_player_on_inactive_replacement_roster(

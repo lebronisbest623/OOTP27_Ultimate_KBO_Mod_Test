@@ -65,8 +65,15 @@ void kbo_cbt_copy_team_name(uint32_t team_id, char* out, size_t out_size)
         static const uint32_t string_offsets[] = { 0x10u, 0x28u, 0x40u, 0x58u, 0x70u, 0x100u };
         char city[64] = {0};
         char nickname[64] = {0};
+        char full_name[96] = {0};
         copy_ootp_string_object_text(team, 0x10u, city, sizeof(city));
         copy_ootp_string_object_text(team, 0x28u, nickname, sizeof(nickname));
+        copy_ootp_string_object_text(team, 0x40u, full_name, sizeof(full_name));
+        if (full_name[0] != '\0'
+                && (strchr(full_name, ' ') != NULL || kbo_ootp_text_has_non_ascii(full_name))) {
+            snprintf(out, out_size, "%s", full_name);
+            return;
+        }
         if (city[0] != '\0' && nickname[0] != '\0' && !ascii_equals_ignore_case(city, nickname)) {
             snprintf(out, out_size, "%s %s", city, nickname);
             return;

@@ -374,7 +374,8 @@ uint32_t kbo_foreign_injury_resolve_replacement_for_record(const KboForeignInjur
                 || !kbo_player_is_foreign_for_kbo_rights(player)
                 || !kbo_foreign_replacement_player_seed_matches_loaded(player, NULL)
                 || !kbo_foreign_injury_player_matches_team(player, rec->team_id)
-                || !kbo_foreign_injury_candidate_matches_slot(player, rec->slot_type)) {
+                || !kbo_foreign_injury_candidate_matches_slot(player, rec->slot_type)
+                || kbo_foreign_injury_replacement_player_reserved_locked(player_id, rec)) {
             continue;
         }
 

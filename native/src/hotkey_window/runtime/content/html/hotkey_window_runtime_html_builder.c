@@ -109,6 +109,26 @@ WCHAR* kbo_build_webview_hub_html(void)
         team_bar_secondary,
         sizeof(team_bar_secondary));
     kbo_webview_build_scrollbar_skin_css(scrollbar_css, sizeof(scrollbar_css), kbo_hub_skin_scrollbar_width());
+    kbo_log_runtimef(
+        "KBO F2 hub html build start view=%d mod=%d foreign=%d military=%d fa=%d fa_comp=%d cbt=%d futures=%d league=%u team=%u year=%u has_sub_tabs=%d dashboard_panel=%d roster_dashboard=%d mod_dashboard=%d language=%d league_logo=%d team_logo=%d",
+        g_kbo_hub_selected_view,
+        g_kbo_hub_selected_mod_subview,
+        g_kbo_hub_selected_foreign_subview,
+        g_kbo_hub_selected_military_subview,
+        g_kbo_hub_selected_fa_subview,
+        g_kbo_hub_selected_fa_compensation_subview,
+        g_kbo_hub_selected_cbt_subview,
+        g_kbo_hub_selected_futures_subview,
+        g_kbo_hub_selected_league_id,
+        g_kbo_hub_selected_team_id,
+        current_year,
+        has_sub_tabs,
+        is_dashboard_panel,
+        is_roster_dashboard,
+        is_mod_dashboard,
+        kbo_hub_language(),
+        league_logo_path[0] != '\0',
+        team_logo_path[0] != '\0');
     KboWindowTextBuffer extra_css;
     extra_css.data = scrollbar_css;
     extra_css.capacity = sizeof(scrollbar_css);
@@ -292,7 +312,19 @@ WCHAR* kbo_build_webview_hub_html(void)
     kbo_window_text_appendf(&buffer, "</p></div><section class='content'>");
 
     KBO_PROFILE_BEGIN(profile_webview_selected_view);
+    size_t selected_view_start = buffer.length;
     kbo_webview_append_selected_view(&buffer, current_year, window_status);
+    size_t selected_view_bytes = buffer.length >= selected_view_start
+        ? buffer.length - selected_view_start
+        : 0u;
+    kbo_log_runtimef(
+        "KBO F2 hub selected view html appended view=%d mod=%d bytes=%llu total_bytes=%llu capacity=%llu truncated=%d",
+        g_kbo_hub_selected_view,
+        g_kbo_hub_selected_mod_subview,
+        (unsigned long long)selected_view_bytes,
+        (unsigned long long)buffer.length,
+        (unsigned long long)buffer.capacity,
+        buffer.length >= buffer.capacity - 1u ? 1 : 0);
     KBO_PROFILE_END(profile_webview_selected_view, "webview.build_html.selected_view");
     kbo_window_text_appendf(&buffer, "</section></main></div>");
     kbo_webview_append_roster_sort_script(&buffer);
@@ -307,6 +339,11 @@ WCHAR* kbo_build_webview_hub_html(void)
             MultiByteToWideChar(CP_UTF8, 0, html, -1, wide, wide_len);
         }
     }
+    kbo_log_runtimef(
+        "KBO F2 hub html build finish utf8_bytes=%llu wide_chars=%d wide_allocated=%d",
+        (unsigned long long)buffer.length,
+        wide_len,
+        wide != NULL ? 1 : 0);
     KBO_PROFILE_END(profile_webview_wide, "webview.build_html.utf8_to_wide");
     HeapFree(GetProcessHeap(), 0, html);
     KBO_PROFILE_END(profile_webview_build_html, "webview.build_html.total");
@@ -317,13 +354,26 @@ void kbo_webview_navigate_current_immediate(void)
 {
     InterlockedExchange(&g_kbo_webview_navigate_current_pending, 0);
     if (g_kbo_webview == NULL) {
+        kbo_log_runtime_line("WebView2 navigate_current_immediate skipped reason=core_unavailable");
         return;
     }
     KBO_PROFILE_BEGIN(profile_webview_navigate);
     WCHAR* html = kbo_build_webview_hub_html();
     if (html != NULL) {
-        ICoreWebView2_NavigateToString(g_kbo_webview, html);
+        int wide_chars = lstrlenW(html);
+        HRESULT hr = ICoreWebView2_NavigateToString(g_kbo_webview, html);
+        kbo_log_runtimef(
+            "WebView2 NavigateToString current view=%d mod=%d wide_chars=%d hr=0x%08lx",
+            g_kbo_hub_selected_view,
+            g_kbo_hub_selected_mod_subview,
+            wide_chars,
+            (unsigned long)hr);
         HeapFree(GetProcessHeap(), 0, html);
+    } else {
+        kbo_log_runtimef(
+            "WebView2 NavigateToString current skipped reason=html_build_failed view=%d mod=%d",
+            g_kbo_hub_selected_view,
+            g_kbo_hub_selected_mod_subview);
     }
     KBO_PROFILE_END(profile_webview_navigate, "webview.navigate_current");
 }
@@ -338,8 +388,17 @@ void kbo_webview_navigate_current(void)
 
     if (InterlockedCompareExchange(&g_kbo_webview_navigate_current_pending, 1, 0) != 0) {
         kbo_profiler_record_us("webview.navigate_current.coalesced", 0);
+        kbo_log_runtimef(
+            "WebView2 navigate_current coalesced view=%d mod=%d",
+            g_kbo_hub_selected_view,
+            g_kbo_hub_selected_mod_subview);
         return;
     }
+    kbo_log_runtimef(
+        "WebView2 navigate_current scheduled hwnd=%p view=%d mod=%d",
+        (void*)hwnd,
+        g_kbo_hub_selected_view,
+        g_kbo_hub_selected_mod_subview);
     kbo_webview_navigate_loading();
     PostMessageA(hwnd, KBO_WM_SHOW_HUB_CONTENT, 0, 0);
 }
@@ -366,6 +425,9 @@ void kbo_webview_navigate_loading(void)
         L"<div class='sub'>Preparing F2 hub data...</div></div>"
         L"</div></div></body></html>";
 
-    ICoreWebView2_NavigateToString(g_kbo_webview, loading_html);
+    HRESULT hr = ICoreWebView2_NavigateToString(g_kbo_webview, loading_html);
+    if (FAILED(hr)) {
+        kbo_log_runtimef("WebView2 NavigateToString loading failed hr=0x%08lx", (unsigned long)hr);
+    }
 }
 

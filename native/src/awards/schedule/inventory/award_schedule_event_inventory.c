@@ -12,7 +12,16 @@ static int kbo_award_schedule_title_is_relevant(const char* title)
         || strstr(title, "Golden") != NULL
         || strstr(title, "Glove") != NULL
         || strstr(title, "Voting") != NULL
-        || strstr(title, "vote") != NULL;
+        || strstr(title, "vote") != NULL
+        || strstr(title, "\xec\x83\x81") != NULL
+        || strstr(title, "\xec\x8b\x9c\xec\x83\x81") != NULL
+        || strstr(title, "\xec\x88\x98\xec\x83\x81") != NULL
+        || strstr(title, "\xec\x8b\xa0\xec\x9d\xb8") != NULL
+        || strstr(title, "\xea\xb3\xa8\xeb\x93\xa0") != NULL
+        || strstr(title, "\xea\xb8\x80\xeb\x9f\xac\xeb\xb8\x8c") != NULL
+        || strstr(title, "\xed\x88\xac\xed\x91\x9c") != NULL
+        || strstr(title, "\xeb\xb0\x9c\xed\x91\x9c") != NULL
+        || strstr(title, "\xec\xb5\x9c\xec\x9a\xb0\xec\x88\x98") != NULL;
 }
 
 void kbo_award_schedule_log_event_inventory(uint32_t league_id, uint32_t current_date)

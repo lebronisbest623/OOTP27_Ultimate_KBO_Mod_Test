@@ -7,13 +7,14 @@
 #include <stdio.h>
 
 #include "../../../core_flags/json/json_bool_parser.h"
+#include "../../../files/save_paths/core_save_paths_internal.h"
 
 int kbo_news_template_file_exists(const char* path)
 {
     if (path == NULL || path[0] == '\0') {
         return 0;
     }
-    DWORD attrs = GetFileAttributesA(path);
+    DWORD attrs = kbo_get_file_attributes_utf8(path);
     return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
@@ -24,14 +25,7 @@ char* kbo_news_template_read_json_file(const char* path, DWORD* out_size)
     }
     *out_size = 0u;
 
-    HANDLE file = CreateFileA(
-        path,
-        GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
+    HANDLE file = kbo_create_file_read_utf8(path);
     if (file == INVALID_HANDLE_VALUE) {
         return NULL;
     }
