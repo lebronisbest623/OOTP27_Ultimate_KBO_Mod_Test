@@ -14,7 +14,7 @@
 
 static volatile LONG g_kbo_ai_roster_foreign_apply_rescue_move_enabled_cached = -1;
 
-static int kbo_ai_roster_foreign_apply_rescue_enabled(void)
+int kbo_ai_roster_foreign_apply_rescue_enabled(void)
 {
     LONG enabled = g_kbo_ai_roster_foreign_apply_rescue_move_enabled_cached;
     if (enabled < 0) {

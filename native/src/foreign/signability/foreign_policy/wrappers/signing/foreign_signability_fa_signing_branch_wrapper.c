@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <stdint.h>
 
+#include "../../../../../bootstrap/profiling/profiler.h"
 #include "../../../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../../../core/core_flags/api/flags_api.h"
 #include "../../../../../core/core_league_context_parts/api/league_context_lookup.h"
@@ -53,15 +54,16 @@ static int kbo_fa_signing_team_ptr_is_kbo(
 
 __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr, uintptr_t team_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (!kbo_fix_enabled()) {
-        return 1;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_signing_branch", 1);
     }
     if (!kbo_player_pointer_plausible(player_ptr)) {
         LONG slot = InterlockedIncrement(&g_kbo_fa_signing_branch_skip_log_count);
         if (slot <= 20) {
             kbo_log_runtimef("KBO FA signing branch skipped reason=bad_player player_ptr=%p team_ptr=%p", (void*)player_ptr, (void*)team_ptr);
         }
-        return 1;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_signing_branch", 1);
     }
 
     uint32_t team_id = 0u;
@@ -74,7 +76,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
         if (slot <= 20) {
             kbo_log_runtimef("KBO FA signing branch skipped reason=bad_player_id player=%u team=%u league=%u", player_id, team_id, league_id);
         }
-        return 1;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_signing_branch", 1);
     }
 
     int is_kbo_team = kbo_fa_signing_team_ptr_is_kbo(team_ptr, &team_id, &league_id);
@@ -89,7 +91,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
                 team_id,
                 league_id);
         }
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_signing_branch", 0);
     }
 
     if (!is_kbo_team) {
@@ -97,7 +99,7 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
         if (slot <= 20) {
             kbo_log_runtimef("KBO FA signing branch skipped reason=non_kbo_team player=%u team_ptr=%p team=%u league=%u", player_id, (void*)team_ptr, team_id, league_id);
         }
-        return 1;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_signing_branch", 1);
     }
 
     if (kbo_custom_foreign_policy_enabled()
@@ -136,26 +138,27 @@ __declspec(noinline) int ootp_kbo_fa_signing_branch_wrapper(uintptr_t player_ptr
                     injured_player_id,
                     today);
             }
-            return 0;
+            KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_signing_branch", 0);
         }
     }
 
-    return 1;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_signing_branch", 1);
 }
 
 __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t player_ptr, uintptr_t team_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (!kbo_fix_enabled() || !kbo_player_pointer_plausible(player_ptr)) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_signing_success_post");
     }
 
     uint32_t team_id = 0u;
     uint32_t league_id = 0u;
     if (!kbo_fa_signing_team_ptr_is_kbo(team_ptr, &team_id, &league_id)) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_signing_success_post");
     }
     if (kbo_team_id_is_military_service_team(team_id)) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_signing_success_post");
     }
 
     uint8_t* player = (uint8_t*)player_ptr;
@@ -205,4 +208,5 @@ __declspec(noinline) void ootp_kbo_fa_signing_success_post_wrapper(uintptr_t pla
     }
 
     kbo_record_fa_compensation_signing(player_ptr, team_id, league_id, "fa_signing_success_post");
+    KBO_HOOK_PROFILE_END(profile_hook, "foreign.fa_signing_success_post");
 }

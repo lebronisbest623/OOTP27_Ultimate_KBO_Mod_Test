@@ -17,6 +17,20 @@ static int kbo_custom_event_calendar_cursor_path(char* out, size_t out_size)
     return kbo_get_save_scoped_data_file("custom_event_calendar_cursor.txt", out, out_size);
 }
 
+static volatile LONG g_kbo_custom_event_calendar_cursor_cached_initialized = 0;
+static volatile LONG g_kbo_custom_event_calendar_cursor_cached_value = 0;
+static char g_kbo_custom_event_calendar_cursor_cached_path[MAX_PATH] = {0};
+
+static void kbo_custom_event_calendar_cache_cursor(const char* path, uint32_t cursor)
+{
+    if (path == NULL) {
+        return;
+    }
+    snprintf(g_kbo_custom_event_calendar_cursor_cached_path, sizeof(g_kbo_custom_event_calendar_cursor_cached_path), "%s", path);
+    InterlockedExchange(&g_kbo_custom_event_calendar_cursor_cached_value, (LONG)cursor);
+    InterlockedExchange(&g_kbo_custom_event_calendar_cursor_cached_initialized, 1);
+}
+
 static uint32_t kbo_custom_event_calendar_read_cursor(void)
 {
     char path[MAX_PATH] = {0};
@@ -24,15 +38,23 @@ static uint32_t kbo_custom_event_calendar_read_cursor(void)
         return 0u;
     }
 
+    if (InterlockedCompareExchange(&g_kbo_custom_event_calendar_cursor_cached_initialized, 0, 0) != 0
+            && strcmp(g_kbo_custom_event_calendar_cursor_cached_path, path) == 0) {
+        return (uint32_t)InterlockedCompareExchange(&g_kbo_custom_event_calendar_cursor_cached_value, 0, 0);
+    }
+
     FILE* file = fopen(path, "r");
     if (file == NULL) {
+        kbo_custom_event_calendar_cache_cursor(path, 0u);
         return 0u;
     }
 
     unsigned int value = 0u;
     int matched = fscanf(file, "%u", &value);
     fclose(file);
-    return matched == 1 ? (uint32_t)value : 0u;
+    uint32_t cursor = matched == 1 ? (uint32_t)value : 0u;
+    kbo_custom_event_calendar_cache_cursor(path, cursor);
+    return cursor;
 }
 
 static void kbo_custom_event_calendar_write_cursor(uint32_t today_yyyymmdd, const char* source)
@@ -58,6 +80,20 @@ static void kbo_custom_event_calendar_write_cursor(uint32_t today_yyyymmdd, cons
 
     fprintf(file, "%u\n", today_yyyymmdd);
     fclose(file);
+    kbo_custom_event_calendar_cache_cursor(path, today_yyyymmdd);
+}
+
+static int kbo_custom_event_calendar_should_log_idle_due(
+    int changed,
+    int deferred,
+    int schedule_blocked)
+{
+    if (changed || deferred || schedule_blocked) {
+        return 1;
+    }
+    static volatile LONG idle_log_count = 0;
+    LONG slot = InterlockedIncrement(&idle_log_count);
+    return slot <= 20 || (slot % 200) == 0;
 }
 
 static int kbo_custom_event_calendar_scan_until_idle(const char* source)
@@ -89,11 +125,13 @@ int kbo_process_custom_events_due_through(uint32_t today_yyyymmdd, const char* s
 
     uint32_t previous_cursor = kbo_custom_event_calendar_read_cursor();
     if (previous_cursor >= today_yyyymmdd) {
-        kbo_log_runtimef(
-            "KBO custom event calendar due-through skipped source=%s previous_cursor=%u today=%u reason=cursor_current",
-            source != NULL ? source : "",
-            previous_cursor,
-            today_yyyymmdd);
+        if (kbo_custom_event_calendar_should_log_idle_due(0, 0, 0)) {
+            kbo_log_runtimef(
+                "KBO custom event calendar due-through skipped source=%s previous_cursor=%u today=%u reason=cursor_current",
+                source != NULL ? source : "",
+                previous_cursor,
+                today_yyyymmdd);
+        }
         return KBO_CUSTOM_EVENT_DUE_RESULT_NOOP;
     }
 
@@ -112,23 +150,37 @@ int kbo_process_custom_events_due_through(uint32_t today_yyyymmdd, const char* s
         kbo_custom_event_calendar_write_cursor(today_yyyymmdd, source);
     }
 
-    kbo_log_runtimef(
-        "KBO custom event calendar due-through source=%s previous_cursor=%u today=%u foreign=%d asian=%d cbt=%d independent=%d scanned=%d schedule_blocked=%d deferred=%d",
-        source != NULL ? source : "",
-        previous_cursor,
-        today_yyyymmdd,
-        foreign_schedule,
-        asian_schedule,
-        cbt_schedule,
-        independent_schedule,
-        scanned,
-        schedule_blocked,
-        deferred);
-
     if (deferred) {
+        kbo_log_runtimef(
+            "KBO custom event calendar due-through source=%s previous_cursor=%u today=%u foreign=%d asian=%d cbt=%d independent=%d scanned=%d schedule_blocked=%d deferred=%d",
+            source != NULL ? source : "",
+            previous_cursor,
+            today_yyyymmdd,
+            foreign_schedule,
+            asian_schedule,
+            cbt_schedule,
+            independent_schedule,
+            scanned,
+            schedule_blocked,
+            deferred);
         return -1;
     }
-    return (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0 || independent_schedule > 0 || scanned > 0)
+    int changed = foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0 || independent_schedule > 0 || scanned > 0;
+    if (kbo_custom_event_calendar_should_log_idle_due(changed, deferred, schedule_blocked)) {
+        kbo_log_runtimef(
+            "KBO custom event calendar due-through source=%s previous_cursor=%u today=%u foreign=%d asian=%d cbt=%d independent=%d scanned=%d schedule_blocked=%d deferred=%d",
+            source != NULL ? source : "",
+            previous_cursor,
+            today_yyyymmdd,
+            foreign_schedule,
+            asian_schedule,
+            cbt_schedule,
+            independent_schedule,
+            scanned,
+            schedule_blocked,
+            deferred);
+    }
+    return changed
         ? KBO_CUSTOM_EVENT_DUE_RESULT_CHANGED
         : KBO_CUSTOM_EVENT_DUE_RESULT_SCANNED_IDLE;
 }

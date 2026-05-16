@@ -76,6 +76,7 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
     uintptr_t value,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KBO_PROFILE_BEGIN(profile_no_minor_offer_callback);
     int result = 0;
     uint32_t player_id = 0;
@@ -113,7 +114,9 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
 
     OotpFaOfferScreenCallbackProbeFn original_func = (OotpFaOfferScreenCallbackProbeFn)original_func_ptr;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         result = original_func((void*)screen_ptr, (void*)sender_ptr, callback_id, value);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
 
     if (screen_ptr != 0 && memory_range_readable((void*)screen_ptr, 0x310)) {
@@ -134,7 +137,7 @@ __declspec(noinline) int ootp_kbo_fa_offer_screen_callback_probe_wrapper(
     }
 
     KBO_PROFILE_END(profile_no_minor_offer_callback, "no_minor.offer_callback.total");
-    return result;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_offer_screen_callback", result);
 }
 
 __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
@@ -144,6 +147,7 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
     uintptr_t value,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KBO_PROFILE_BEGIN(profile_no_minor_contract_callback);
     int result = 0;
     int32_t selected_player = -1;
@@ -175,7 +179,9 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
 
     OotpFaContractOfferCallbackProbeFn original_func = (OotpFaContractOfferCallbackProbeFn)original_func_ptr;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         result = original_func((void*)offer_ptr, (void*)sender_ptr, callback_id, value);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
 
     if (offer_ptr != 0 && memory_range_readable((void*)offer_ptr, 0xd0)) {
@@ -213,6 +219,6 @@ __declspec(noinline) int ootp_kbo_fa_contract_offer_callback_probe_wrapper(
     }
 
     KBO_PROFILE_END(profile_no_minor_contract_callback, "no_minor.contract_callback.total");
-    return result;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.fa_contract_offer_callback", result);
 }
 

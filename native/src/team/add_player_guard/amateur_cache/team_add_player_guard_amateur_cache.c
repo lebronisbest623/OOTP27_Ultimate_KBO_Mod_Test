@@ -4,6 +4,7 @@
 
 #include "../../../amateur_player_quality/api/amateur_player_quality.h"
 #include "../../../core/core_flags/api/flags_api.h"
+#include "../../../core/sync/lock.h"
 #include "../internal/team_add_player_guard_internal.h"
 
 #define KBO_TEAM_ADD_AMATEUR_LEAGUE_CACHE_MAX 512
@@ -19,7 +20,7 @@ static volatile LONG g_kbo_team_add_retry_rejected_cached = -1;
 static volatile LONG g_kbo_team_add_retry_rejected_tick = 0;
 static KboTeamAddAmateurLeagueCacheEntry g_kbo_team_add_amateur_league_cache[KBO_TEAM_ADD_AMATEUR_LEAGUE_CACHE_MAX];
 static volatile LONG g_kbo_team_add_amateur_league_cache_count = 0;
-static volatile LONG g_kbo_team_add_amateur_league_cache_lock = 0;
+static KboLock g_kbo_team_add_amateur_league_cache_lock = KBO_LOCK_INIT;
 
 static int kbo_team_add_cached_bool_flag(
     const char* file_name,
@@ -59,9 +60,7 @@ uint32_t kbo_team_add_cached_amateur_league_id(uint8_t* team)
 
     uint32_t league_id = kbo_resolve_amateur_assignment_league_id_for_team_ptr(team);
 
-    while (InterlockedCompareExchange(&g_kbo_team_add_amateur_league_cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_team_add_amateur_league_cache_lock);
     count = g_kbo_team_add_amateur_league_cache_count;
     if (count > KBO_TEAM_ADD_AMATEUR_LEAGUE_CACHE_MAX) {
         count = KBO_TEAM_ADD_AMATEUR_LEAGUE_CACHE_MAX;
@@ -69,7 +68,7 @@ uint32_t kbo_team_add_cached_amateur_league_id(uint8_t* team)
     for (LONG i = 0; i < count; i++) {
         if (g_kbo_team_add_amateur_league_cache[i].team_ptr == team_ptr) {
             uint32_t cached = g_kbo_team_add_amateur_league_cache[i].league_id;
-            InterlockedExchange(&g_kbo_team_add_amateur_league_cache_lock, 0);
+            kbo_lock_leave(&g_kbo_team_add_amateur_league_cache_lock);
             return cached;
         }
     }
@@ -81,7 +80,7 @@ uint32_t kbo_team_add_cached_amateur_league_id(uint8_t* team)
     }
     g_kbo_team_add_amateur_league_cache[slot].team_ptr = team_ptr;
     g_kbo_team_add_amateur_league_cache[slot].league_id = league_id;
-    InterlockedExchange(&g_kbo_team_add_amateur_league_cache_lock, 0);
+    kbo_lock_leave(&g_kbo_team_add_amateur_league_cache_lock);
     return league_id;
 }
 

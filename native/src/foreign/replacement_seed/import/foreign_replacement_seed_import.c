@@ -106,14 +106,12 @@ static void kbo_log_foreign_replacement_seed_unresolved(const char* key, const c
 
 void kbo_lock_foreign_replacement_player_seeds(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_foreign_replacement_player_seed_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_replacement_player_seed_lock);
 }
 
 void kbo_unlock_foreign_replacement_player_seeds(void)
 {
-    InterlockedExchange(&g_kbo_foreign_replacement_player_seed_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_replacement_player_seed_lock);
 }
 
 int kbo_player_memory_contains_ascii_seed_key(uint8_t* player, const char* key)

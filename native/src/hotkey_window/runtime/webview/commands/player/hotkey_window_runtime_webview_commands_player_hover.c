@@ -1,9 +1,87 @@
 #include "../../hotkey_window_webview_internal.h"
-#include "../../../content/hotkey_window_runtime_content_internal.h"
 #include "../../../player_hover/player_hover_manager_probe.h"
 #include "../../../../support/assets/paths/ui_image_sources.h"
+#include "../../../../support/text/buffer/ui_text_buffer.h"
+#include "../../../../support/text/js/ui_js_string.h"
 #include "../../../../../core/files/save_paths/core_save_paths.h"
 #include "../../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+
+static void kbo_webview_execute_utf8_script(const char* script)
+{
+    if (script == NULL || script[0] == '\0' || g_kbo_webview == NULL) {
+        return;
+    }
+
+    int wide_len = MultiByteToWideChar(CP_UTF8, 0, script, -1, NULL, 0);
+    if (wide_len <= 0) {
+        wide_len = MultiByteToWideChar(CP_ACP, 0, script, -1, NULL, 0);
+        if (wide_len <= 0) {
+            return;
+        }
+    }
+
+    WCHAR* wide = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)wide_len * sizeof(WCHAR));
+    if (wide == NULL) {
+        return;
+    }
+
+    int wrote = MultiByteToWideChar(CP_UTF8, 0, script, -1, wide, wide_len);
+    if (wrote <= 0) {
+        wrote = MultiByteToWideChar(CP_ACP, 0, script, -1, wide, wide_len);
+    }
+    if (wrote > 0) {
+        ICoreWebView2_ExecuteScript(g_kbo_webview, wide, NULL);
+    }
+    HeapFree(GetProcessHeap(), 0, wide);
+}
+
+static void kbo_show_webview_player_tooltip(
+    uint8_t* player,
+    uint32_t player_id,
+    uint32_t team_id,
+    uint32_t league_id,
+    const char* player_name,
+    int client_x,
+    int client_y,
+    uint32_t hover_seq)
+{
+    (void)player;
+    char payload[12000] = {0};
+    if (!kbo_capture_ootp_player_tooltip_payload(player_id, payload, sizeof(payload))) {
+        snprintf(
+            payload,
+            sizeof(payload),
+            "%s\nplayer_id: %u\nteam_id: %u\nleague_id: %u",
+            player_name != NULL && player_name[0] != '\0' ? player_name : "Unknown player",
+            player_id,
+            team_id,
+            league_id);
+    }
+
+    char script_data[20000] = {0};
+    KboWindowTextBuffer script = { script_data, sizeof(script_data), 0u };
+    kbo_window_text_appendf(
+        &script,
+        "(function(){"
+        "var tip=document.getElementById('kboPlayerTooltip');"
+        "if(!tip){tip=document.createElement('pre');tip.id='kboPlayerTooltip';document.body.appendChild(tip);}"
+        "tip.textContent=");
+    kbo_webview_append_js_string(&script, payload);
+    kbo_window_text_appendf(
+        &script,
+        ";tip.dataset.hoverSeq='%u';"
+        "tip.style.cssText='position:fixed;display:block;z-index:2147483647;max-width:520px;max-height:520px;overflow:auto;"
+        "white-space:pre-wrap;background:#16191d;color:#f5f1e8;border:1px solid rgba(255,255,255,.18);"
+        "box-shadow:0 12px 32px rgba(0,0,0,.45);border-radius:6px;padding:10px 12px;font:12px/1.45 Consolas,monospace;pointer-events:none;';"
+        "tip.style.left=Math.max(8,Math.min(window.innerWidth-80,%d+14))+'px';"
+        "tip.style.top=Math.max(8,Math.min(window.innerHeight-80,%d+14))+'px';"
+        "})();",
+        hover_seq,
+        client_x,
+        client_y);
+
+    kbo_webview_execute_utf8_script(script.data);
+}
 
 static void kbo_hide_webview_player_tooltip(void)
 {

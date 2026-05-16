@@ -341,7 +341,7 @@ processed-event marker가 멱등성의 경계다.
 ### 제27조 - 모든 네이티브 변경 후 빌드 확인
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File native\build.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File native\build.ps1
 dotnet build .\OOTP27-KBO-Launcher.sln
 ```
 
@@ -353,7 +353,7 @@ dotnet build .\OOTP27-KBO-Launcher.sln
 
 ```powershell
 dotnet test .\OOTP27-KBO-Launcher.sln
-powershell -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
 ```
 
 ### 제29조 - 마이그레이션 검증

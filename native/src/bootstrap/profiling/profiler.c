@@ -5,6 +5,7 @@
 
 #include "../../core/core_flags/localappdata/localappdata_reader.h"
 #include "../../core/files/save_paths/core_save_paths.h"
+#include "../../core/sync/lock.h"
 
 /* Aggregated runtime profiler for DLL hot paths.
  *
@@ -15,9 +16,17 @@
  *   LOCALAPPDATA\OOTP-KBO\perf\kbo_perf_<pid>.csv
  */
 
-#define KBO_PROFILER_MAX_ZONES 192
+#define KBO_PROFILER_MAX_ZONES 512
 #define KBO_PROFILER_NAME_BYTES 96
 #define KBO_PROFILER_FLUSH_INTERVAL_MS 1000u
+
+#if defined(_MSC_VER)
+#define KBO_PROFILER_THREAD_LOCAL __declspec(thread)
+#elif defined(__GNUC__)
+#define KBO_PROFILER_THREAD_LOCAL __thread
+#else
+#define KBO_PROFILER_THREAD_LOCAL
+#endif
 
 typedef struct KboProfilerZone {
     char name[KBO_PROFILER_NAME_BYTES];
@@ -33,29 +42,13 @@ typedef struct KboProfilerZone {
 
 static KboProfilerZone g_kbo_profiler_zones[KBO_PROFILER_MAX_ZONES];
 static volatile LONG g_kbo_profiler_zone_count = 0;
-static volatile LONG g_kbo_profiler_lock_state = 0;
-static CRITICAL_SECTION g_kbo_profiler_lock;
+static KboLock g_kbo_profiler_lock = KBO_LOCK_INIT;
 static volatile LONG g_kbo_profiler_enabled_cache = -1;
 static volatile LONG64 g_kbo_profiler_qpc_freq = 0;
 static volatile LONG g_kbo_profiler_last_flush_tick = 0;
 static volatile LONG g_kbo_profiler_header_written = 0;
 static volatile LONG g_kbo_profiler_dropped_zones = 0;
-
-static void kbo_profiler_ensure_lock(void)
-{
-    LONG state = g_kbo_profiler_lock_state;
-    if (state == 2) {
-        return;
-    }
-    if (state == 0 && InterlockedCompareExchange(&g_kbo_profiler_lock_state, 1, 0) == 0) {
-        InitializeCriticalSection(&g_kbo_profiler_lock);
-        InterlockedExchange(&g_kbo_profiler_lock_state, 2);
-        return;
-    }
-    while (g_kbo_profiler_lock_state != 2) {
-        Sleep(0);
-    }
-}
+static KBO_PROFILER_THREAD_LOCAL int g_kbo_profiler_thread_depth = 0;
 
 static LONG64 kbo_profiler_qpc_frequency(void)
 {
@@ -154,20 +147,19 @@ static KboProfilerZone* kbo_profiler_get_zone(const char* name)
         name = "unnamed";
     }
 
-    kbo_profiler_ensure_lock();
-    EnterCriticalSection(&g_kbo_profiler_lock);
+    kbo_lock_enter(&g_kbo_profiler_lock);
 
     LONG count = g_kbo_profiler_zone_count;
     for (LONG i = 0; i < count; i++) {
         if (strncmp(g_kbo_profiler_zones[i].name, name, KBO_PROFILER_NAME_BYTES) == 0) {
-            LeaveCriticalSection(&g_kbo_profiler_lock);
+            kbo_lock_leave(&g_kbo_profiler_lock);
             return &g_kbo_profiler_zones[i];
         }
     }
 
     if (count >= KBO_PROFILER_MAX_ZONES) {
         InterlockedIncrement(&g_kbo_profiler_dropped_zones);
-        LeaveCriticalSection(&g_kbo_profiler_lock);
+        kbo_lock_leave(&g_kbo_profiler_lock);
         return NULL;
     }
 
@@ -176,7 +168,7 @@ static KboProfilerZone* kbo_profiler_get_zone(const char* name)
     snprintf(zone->name, sizeof(zone->name), "%s", name);
     InterlockedExchange(&g_kbo_profiler_zone_count, count + 1);
 
-    LeaveCriticalSection(&g_kbo_profiler_lock);
+    kbo_lock_leave(&g_kbo_profiler_lock);
     return zone;
 }
 
@@ -187,6 +179,22 @@ static void kbo_profiler_update_max(volatile LONG64* target, LONG64 value)
             && InterlockedCompareExchange64(target, value, old_value) != old_value) {
         old_value = *target;
     }
+}
+
+static unsigned long long kbo_profiler_elapsed_us_between(
+    const LARGE_INTEGER* start,
+    const LARGE_INTEGER* stop)
+{
+    if (start == NULL || stop == NULL) {
+        return 0ULL;
+    }
+
+    LONG64 freq = kbo_profiler_qpc_frequency();
+    LONG64 ticks = stop->QuadPart - start->QuadPart;
+    if (ticks < 0) {
+        ticks = 0;
+    }
+    return (unsigned long long)((ticks * 1000000LL) / freq);
 }
 
 static void kbo_profiler_flush_if_due(void)
@@ -310,7 +318,75 @@ void kbo_profiler_record_us(const char* name, unsigned long long elapsed_us)
     }
     kbo_profiler_update_max(&zone->max_us, us);
     kbo_profiler_update_max(&zone->max_us_since_flush, us);
-    kbo_profiler_flush_if_due();
+    if (g_kbo_profiler_thread_depth <= 0) {
+        kbo_profiler_flush_if_due();
+    }
+}
+
+void kbo_hook_profile_begin(KboHookProfileScope* scope)
+{
+    if (scope == NULL) {
+        return;
+    }
+    memset(scope, 0, sizeof(*scope));
+    if (!kbo_profiler_is_enabled()) {
+        return;
+    }
+    if (!QueryPerformanceCounter(&scope->segment_start)) {
+        return;
+    }
+    scope->active = 1;
+    scope->segment_active = 1;
+    g_kbo_profiler_thread_depth++;
+}
+
+void kbo_hook_profile_pause(KboHookProfileScope* scope)
+{
+    if (scope == NULL || !scope->active || !scope->segment_active) {
+        return;
+    }
+
+    LARGE_INTEGER stop;
+    if (QueryPerformanceCounter(&stop)) {
+        scope->overhead_us += kbo_profiler_elapsed_us_between(&scope->segment_start, &stop);
+    }
+    scope->segment_active = 0;
+}
+
+void kbo_hook_profile_resume(KboHookProfileScope* scope)
+{
+    if (scope == NULL || !scope->active || scope->segment_active) {
+        return;
+    }
+    if (!QueryPerformanceCounter(&scope->segment_start)) {
+        return;
+    }
+    scope->segment_active = 1;
+}
+
+void kbo_hook_profile_end(const char* hook_name, KboHookProfileScope* scope)
+{
+    if (scope == NULL || !scope->active) {
+        return;
+    }
+
+    kbo_hook_profile_pause(scope);
+
+    char zone_name[KBO_PROFILER_NAME_BYTES] = {0};
+    snprintf(
+        zone_name,
+        sizeof(zone_name),
+        "hook.%s.overhead",
+        (hook_name != NULL && hook_name[0] != '\0') ? hook_name : "unnamed");
+    kbo_profiler_record_us(zone_name, scope->overhead_us);
+
+    scope->active = 0;
+    if (g_kbo_profiler_thread_depth > 0) {
+        g_kbo_profiler_thread_depth--;
+    }
+    if (g_kbo_profiler_thread_depth <= 0) {
+        kbo_profiler_flush_if_due();
+    }
 }
 
 int kbo_profiler_begin(LARGE_INTEGER* out_start)
@@ -318,26 +394,33 @@ int kbo_profiler_begin(LARGE_INTEGER* out_start)
     if (out_start == NULL || !kbo_profiler_is_enabled()) {
         return 0;
     }
-    return QueryPerformanceCounter(out_start) ? 1 : 0;
+    if (!QueryPerformanceCounter(out_start)) {
+        return 0;
+    }
+    g_kbo_profiler_thread_depth++;
+    return 1;
 }
 
 void kbo_profiler_end(const char* name, const LARGE_INTEGER* start)
 {
     if (start == NULL || !kbo_profiler_is_enabled()) {
+        if (g_kbo_profiler_thread_depth > 0) {
+            g_kbo_profiler_thread_depth--;
+        }
         return;
     }
 
     LARGE_INTEGER stop;
     if (!QueryPerformanceCounter(&stop)) {
+        if (g_kbo_profiler_thread_depth > 0) {
+            g_kbo_profiler_thread_depth--;
+        }
         return;
     }
 
-    LONG64 freq = kbo_profiler_qpc_frequency();
-    LONG64 ticks = stop.QuadPart - start->QuadPart;
-    if (ticks < 0) {
-        ticks = 0;
+    unsigned long long us = kbo_profiler_elapsed_us_between(start, &stop);
+    if (g_kbo_profiler_thread_depth > 0) {
+        g_kbo_profiler_thread_depth--;
     }
-
-    unsigned long long us = (unsigned long long)((ticks * 1000000LL) / freq);
     kbo_profiler_record_us(name, us);
 }

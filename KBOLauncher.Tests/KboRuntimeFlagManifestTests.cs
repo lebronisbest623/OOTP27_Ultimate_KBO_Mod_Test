@@ -54,6 +54,34 @@ public sealed class KboRuntimeFlagManifestTests
         generatedUiRows.Should().Equal(manifest.NativeUiRows);
     }
 
+    [Fact]
+    public void RuntimeFlagManifest_CoversNativeRuntimeFlagReads()
+    {
+        var manifestKeys = ReadManifest().Flags
+            .Select(flag => flag.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        var nativeRoot = Path.GetDirectoryName(RepoPath("native", "KBOFix.c"))!;
+        var nativeSourceFiles = Directory.EnumerateFiles(Path.Combine(nativeRoot, "src"), "*.*", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".c", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".h", StringComparison.OrdinalIgnoreCase))
+            .Concat(new[] { RepoPath("native", "KBOFix.c") });
+
+        var nativeFlagReads = nativeSourceFiles
+            .SelectMany(path => Regex.Matches(
+                    File.ReadAllText(path),
+                    "read_kbo_localappdata_flag_file\\(\"(?<key>[^\"]+)\"\\)")
+                .Select(match => NormalizeFlagKey(match.Groups["key"].Value)))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        var missingFlags = nativeFlagReads
+            .Where(key => !manifestKeys.Contains(key))
+            .ToArray();
+
+        missingFlags.Should().BeEmpty("every native runtime flag read should be declared in config/kbo-runtime-flags.json");
+    }
+
     private static RuntimeFlagManifest ReadManifest()
     {
         using var doc = JsonDocument.Parse(File.ReadAllText(RepoPath("config", "kbo-runtime-flags.json")));
@@ -107,6 +135,13 @@ public sealed class KboRuntimeFlagManifestTests
     private static string? UnquoteNativeNull(string value)
     {
         return value == "NULL" ? null : value[1..^1];
+    }
+
+    private static string NormalizeFlagKey(string fileName)
+    {
+        return fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)
+            ? fileName[..^4]
+            : fileName;
     }
 
     private static string RepoPath(params string[] parts)

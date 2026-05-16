@@ -8,6 +8,7 @@
 #include "../../../../core/dates/core_text_date.h"
 #include "../../../../core/files/save_paths/core_save_paths.h"
 #include "../../../../core/news/templates/core_news_templates.h"
+#include "../../../../core/sync/lock.h"
 #include "ui_language.h"
 
 static int g_kbo_hub_language = KBO_HUB_LANG_KO;
@@ -25,8 +26,7 @@ typedef struct KboHubTextCacheEntry {
 
 static char g_kbo_hub_text_ring[KBO_HUB_TEXT_RING_COUNT][KBO_HUB_TEXT_VALUE_MAX];
 static volatile LONG g_kbo_hub_text_ring_index = 0;
-static INIT_ONCE g_kbo_hub_text_cache_once = INIT_ONCE_STATIC_INIT;
-static CRITICAL_SECTION g_kbo_hub_text_cache_lock;
+static KboLock g_kbo_hub_text_cache_lock = KBO_LOCK_INIT;
 static KboHubTextCacheEntry g_kbo_hub_text_cache[KBO_HUB_TEXT_CACHE_COUNT];
 static int g_kbo_hub_text_cache_count = 0;
 
@@ -38,20 +38,6 @@ int kbo_hub_language(void)
 void kbo_hub_set_language(int language)
 {
     g_kbo_hub_language = language == KBO_HUB_LANG_EN ? KBO_HUB_LANG_EN : KBO_HUB_LANG_KO;
-}
-
-static BOOL CALLBACK kbo_hub_text_cache_init_once(PINIT_ONCE init_once, PVOID parameter, PVOID* context)
-{
-    (void)init_once;
-    (void)parameter;
-    (void)context;
-    InitializeCriticalSection(&g_kbo_hub_text_cache_lock);
-    return TRUE;
-}
-
-static void kbo_hub_text_cache_ensure(void)
-{
-    InitOnceExecuteOnce(&g_kbo_hub_text_cache_once, kbo_hub_text_cache_init_once, NULL, NULL);
 }
 
 static const char* kbo_hub_language_dir(void)
@@ -73,17 +59,16 @@ static int kbo_hub_text_cache_get(int language, const char* key, char* out, size
         return 0;
     }
 
-    kbo_hub_text_cache_ensure();
-    EnterCriticalSection(&g_kbo_hub_text_cache_lock);
+    kbo_lock_enter(&g_kbo_hub_text_cache_lock);
     for (int i = 0; i < g_kbo_hub_text_cache_count; i++) {
         KboHubTextCacheEntry* entry = &g_kbo_hub_text_cache[i];
         if (entry->language == language && strcmp(entry->key, key) == 0) {
             snprintf(out, out_size, "%s", entry->value);
-            LeaveCriticalSection(&g_kbo_hub_text_cache_lock);
+            kbo_lock_leave(&g_kbo_hub_text_cache_lock);
             return 1;
         }
     }
-    LeaveCriticalSection(&g_kbo_hub_text_cache_lock);
+    kbo_lock_leave(&g_kbo_hub_text_cache_lock);
     return 0;
 }
 
@@ -93,15 +78,14 @@ static void kbo_hub_text_cache_put(int language, const char* key, const char* va
         return;
     }
 
-    kbo_hub_text_cache_ensure();
-    EnterCriticalSection(&g_kbo_hub_text_cache_lock);
+    kbo_lock_enter(&g_kbo_hub_text_cache_lock);
     if (g_kbo_hub_text_cache_count < KBO_HUB_TEXT_CACHE_COUNT) {
         KboHubTextCacheEntry* entry = &g_kbo_hub_text_cache[g_kbo_hub_text_cache_count++];
         entry->language = language;
         snprintf(entry->key, sizeof(entry->key), "%s", key);
         snprintf(entry->value, sizeof(entry->value), "%s", value);
     }
-    LeaveCriticalSection(&g_kbo_hub_text_cache_lock);
+    kbo_lock_leave(&g_kbo_hub_text_cache_lock);
 }
 
 const char* kbo_hub_text_key(const char* key, const char* ko, const char* en)

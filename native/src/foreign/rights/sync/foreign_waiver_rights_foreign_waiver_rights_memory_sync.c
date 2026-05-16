@@ -15,9 +15,7 @@ int kbo_sync_active_foreign_waiver_right_to_memory(
     }
 
     uint32_t league_id = 0u;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
         if (rec->player_id == player_id
@@ -27,7 +25,7 @@ int kbo_sync_active_foreign_waiver_right_to_memory(
             break;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     uint8_t* holder_team = find_kbo_team_by_numeric_id_any_league(holder_team_id, 1);
     if (holder_team == NULL || !memory_range_readable(holder_team, OOTP27_KBO_TEAM_READABLE_BYTES)) {
@@ -215,16 +213,14 @@ void kbo_sync_active_foreign_waiver_rights_to_memory(
     KboForeignWaiverRetention records[KBO_FOREIGN_WAIVER_RIGHTS_MAX];
     int count = 0;
 
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count && count < KBO_FOREIGN_WAIVER_RIGHTS_MAX; i++) {
         KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
         if (kbo_is_foreign_waiver_right_active(rec, today_yyyymmdd)) {
             records[count++] = *rec;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     int checked = 0;
     int synced = 0;

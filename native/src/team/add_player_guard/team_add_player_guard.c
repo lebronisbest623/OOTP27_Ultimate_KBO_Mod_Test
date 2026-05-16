@@ -32,6 +32,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     uintptr_t arg7,
     uintptr_t arg8)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KBO_PROFILE_BEGIN(profile_team_add_guard_wrapper);
     uintptr_t caller_ptr = (uintptr_t)__builtin_return_address(0);
     HMODULE host_exe = GetModuleHandleA(NULL);
@@ -42,7 +43,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     KboTeamAddPlayerOriginalFn original = kbo_team_add_player_guard_get_original();
     if (original == NULL) {
         KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.no_original");
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", 0u);
     }
 
     int team_readable = team_ptr != 0
@@ -64,7 +65,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             player_ptr,
             team_ptr);
         KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.bad_args");
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", 0u);
     }
 
     uint32_t before_current_team_id = 0u;
@@ -107,7 +108,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             before_active_team_id,
             before_original_team_id);
         KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.blocked");
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", 0u);
     }
 
     if (amateur_generation_call && kbo_amateur_defer_team_add_if_generation(
@@ -136,7 +137,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             before_active_team_id,
             before_original_team_id);
         KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.amateur_deferred");
-        return 1;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", 1u);
     }
 
     if (!is_military_team
@@ -175,7 +176,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             before_active_team_id,
             before_original_team_id);
         KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.foreign_policy_blocked");
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", 0u);
     }
 
     if (!is_military_team
@@ -183,7 +184,9 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             && before_current_team_id != 0u
             && before_active_team_id != 0u) {
         KBO_PROFILE_BEGIN(profile_team_add_original);
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         uint8_t result = original(team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
         KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original.fast_success" : "team_add_guard.original.fast_rejected");
         kbo_log_foreign_team_add_trace(
             caller_rva,
@@ -201,7 +204,7 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             before_active_team_id,
             before_original_team_id);
         KBO_PROFILE_END(profile_team_add_guard_wrapper, result != 0u ? "team_add_guard.fast_success" : "team_add_guard.fast_rejected");
-        return result;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", result);
     }
 
     uint32_t amateur_league_id = amateur_generation_call && team_readable
@@ -246,9 +249,11 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
             team_ptr);
         KBO_PROFILE_END(profile_team_add_original, "team_add_guard.original.skipped_bad_args");
         KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.bad_effective_team");
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", 0u);
     }
+    KBO_HOOK_PROFILE_PAUSE(profile_hook);
     uint8_t result = original(effective_team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
+    KBO_HOOK_PROFILE_RESUME(profile_hook);
     KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original.success" : "team_add_guard.original.rejected");
     if (result != 0u) {
         kbo_team_add_normalize_foreign_retention_contract_success(
@@ -332,7 +337,9 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         }
         effective_team_ptr = retry_team_ptr;
         KBO_PROFILE_BEGIN(profile_team_add_original);
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         result = original(effective_team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
         KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original_retry.success" : "team_add_guard.original_retry.rejected");
     }
     if (result == 0u && amateur_pre_rerouted) {
@@ -344,10 +351,12 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
                 player_ptr,
                 effective_team_ptr);
             KBO_PROFILE_END(profile_team_add_guard_wrapper, "team_add_guard.fallback_bad_args");
-            return 0;
+            KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", 0u);
         }
         KBO_PROFILE_BEGIN(profile_team_add_original);
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         result = original(team_ptr, player_ptr, arg3, arg4, arg5, arg6, arg7, arg8);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
         KBO_PROFILE_END(profile_team_add_original, result != 0u ? "team_add_guard.original_fallback.success" : "team_add_guard.original_fallback.rejected");
         if (result != 0u) {
             effective_team_ptr = team_ptr;
@@ -394,5 +403,5 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         KBO_PROFILE_END(profile_team_add_fa_comp, "team_add_guard.fa_comp_probe");
     }
     KBO_PROFILE_END(profile_team_add_guard_wrapper, result != 0u ? "team_add_guard.success" : "team_add_guard.original_rejected");
-    return result;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "team.add_player_guard", result);
 }

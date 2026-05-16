@@ -10,7 +10,7 @@
 #include <windows.h>
 
 static volatile LONG g_kbo_runtime_threads_stop_requested = 0;
-static volatile LONG g_kbo_runtime_thread_registry_lock = 0;
+static KboSpinLock g_kbo_runtime_thread_registry_lock = KBO_SPIN_LOCK_INIT;
 
 #define KBO_RUNTIME_THREAD_MAX 64
 

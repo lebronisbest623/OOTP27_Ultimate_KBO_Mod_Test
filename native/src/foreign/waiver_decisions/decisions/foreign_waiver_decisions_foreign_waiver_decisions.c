@@ -100,15 +100,13 @@ int kbo_append_foreign_waiver_decision_record(
     uint32_t window_end = 0u;
     kbo_current_foreign_waiver_window_dates(&window_start, &window_end);
 
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_decision_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_decision_lock);
 
     DWORD attrs = GetFileAttributesA(path);
     int needs_header = (attrs == INVALID_FILE_ATTRIBUTES);
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
+        kbo_lock_leave(&g_kbo_foreign_waiver_decision_lock);
         kbo_audit_foreign_waiver_decision_record(
             "fail",
             "open_failed",
@@ -153,7 +151,7 @@ int kbo_append_foreign_waiver_decision_record(
     }
 
     CloseHandle(file);
-    InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_decision_lock);
     kbo_audit_foreign_waiver_decision_record(
         ok ? "write_record" : "fail",
         ok ? "decision_recorded" : "write_failed",

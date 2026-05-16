@@ -50,7 +50,7 @@ typedef struct KboForeignInjuryReplacement {
 
 KboForeignInjuryReplacement g_kbo_foreign_injury_replacements[KBO_FOREIGN_INJURY_REPLACEMENT_MAX] = {{0}};
 int  g_kbo_foreign_injury_replacement_count = 0;
-LONG g_kbo_foreign_injury_replacement_lock = 0;
+KboLock g_kbo_foreign_injury_replacement_lock = KBO_LOCK_INIT;
 char g_kbo_foreign_injury_replacement_loaded_path[MAX_PATH] = {0};
 
 int kbo_persist_foreign_injury_replacements_locked(void);
@@ -240,8 +240,12 @@ int kbo_foreign_injury_return_state_allows_close(
     int16_t days_left,
     uint8_t loan_active,
     int active_roster_present,
-    int inactive_roster_present)
+    int inactive_roster_present,
+    int close_decision_allowed)
 {
+    if (!close_decision_allowed) {
+        return 0;
+    }
     return injury_active == 0u
         && days_left <= 0
         && loan_active == 0u

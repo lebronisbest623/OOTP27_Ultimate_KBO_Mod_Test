@@ -15,12 +15,10 @@ int kbo_load_foreign_waiver_rights(void)
         return 0;
     }
 
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     g_kbo_foreign_waiver_rights_count = 0;
     InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     int deduped = 0;
     while (kbo_csv_reader_next_row(reader)) {
@@ -40,9 +38,7 @@ int kbo_load_foreign_waiver_rights(void)
         uint32_t retained_on = kbo_csv_parse_u32_text(fields[3], 10);
         uint32_t expires_on = kbo_csv_parse_u32_text(fields[4], 10);
         if (player_id != 0u && team_id != 0u && league_id != 0u) {
-            while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-                Sleep(0);
-            }
+            kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
             int existing_index = -1;
             for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
                 if (g_kbo_foreign_waiver_rights[i].player_id == player_id) {
@@ -71,7 +67,7 @@ int kbo_load_foreign_waiver_rights(void)
                     expires_on
                 };
             }
-            InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+            kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
         }
     }
     kbo_csv_reader_close(reader);

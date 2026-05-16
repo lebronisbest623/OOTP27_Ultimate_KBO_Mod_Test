@@ -2,6 +2,7 @@
 
 #include "../../bootstrap/abi/hook_entrypoints.h"
 #include "../../bootstrap/profiling/perf_probe.h"
+#include "../../bootstrap/profiling/profiler.h"
 
 #include <stdint.h>
 #include <windows.h>
@@ -37,18 +38,21 @@ __declspec(noinline) int ootp_kbo_allstar_candidate_push_filter(
     void* candidate_vector,
     uintptr_t vector_push_back_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     static volatile LONG skip_log_count = 0;
     static volatile LONG inspect_log_count = 0;
 
     OotpVectorPushBack push_back = (OotpVectorPushBack)vector_push_back_ptr;
     if (push_back == NULL || candidate_vector == NULL || player_ptr == 0) {
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_push_filter", 0);
     }
 
     if (!kbo_fix_enabled() || side_index > 1u
             || !memory_range_readable((void*)player_ptr, OOTP27_PLAYER_ID_OFFSET + sizeof(uint32_t))) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         push_back(candidate_vector, (void*)player_ptr);
-        return 1;
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_push_filter", 1);
     }
 
     uint32_t league_id = kbo_get_foreign_waiver_league_id();
@@ -110,11 +114,13 @@ __declspec(noinline) int ootp_kbo_allstar_candidate_push_filter(
         } else if (log_index == 41) {
             kbo_log_runtime_line("KBO all-star candidate player push skip log suppressed after 40 entries");
         }
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_push_filter", 0);
     }
 
+    KBO_HOOK_PROFILE_PAUSE(profile_hook);
     push_back(candidate_vector, (void*)player_ptr);
-    return 1;
+    KBO_HOOK_PROFILE_RESUME(profile_hook);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_push_filter", 1);
 }
 
 __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
@@ -123,6 +129,7 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
     void* right_team_vector,
     uintptr_t vector_push_back_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     static volatile LONG perf_total = 0;
     static volatile LONG perf_last = 0;
     static volatile LONG perf_ms = 0;
@@ -139,11 +146,11 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
         0);
 
     if (!kbo_fix_enabled()) {
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_team_seed", 0);
     }
     if (left_team_vector == NULL || right_team_vector == NULL || vector_push_back_ptr == 0) {
         kbo_log_runtimef("KBO allstar candidate seed: return=0 reason=null_vectors left=%p right=%p push=%p", left_team_vector, right_team_vector, (void*)vector_push_back_ptr);
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_team_seed", 0);
     }
 
     uint32_t league_id = kbo_get_foreign_waiver_league_id();
@@ -163,14 +170,14 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
     uintptr_t global = get_ootp_global_database();
     if (global == 0) {
         kbo_log_runtime_line("KBO allstar candidate seed: return=0 reason=no_global_db");
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_team_seed", 0);
     }
 
     uintptr_t team_vector = *(uintptr_t*)(global + OOTP27_KBO_TEAM_VECTOR_OFFSET);
     int32_t team_count = *(int32_t*)(global + OOTP27_KBO_TEAM_COUNT_OFFSET);
     if (team_vector == 0 || team_count <= 0 || team_count > 10000 || !memory_range_readable((void*)team_vector, (SIZE_T)team_count * sizeof(uintptr_t))) {
         kbo_log_runtimef("KBO allstar candidate seed: return=0 reason=no_team_vector league_id=%u year=%u", league_id, league_year);
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_team_seed", 0);
     }
 
     ensure_kbo_allstar_team_ids(league_ptr, "allstar_candidate_team_split");
@@ -260,13 +267,17 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
         }
 
         if (send_left) {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
             push_back(left_team_vector, (void*)eligible_team_ptrs[i]);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
             if (left_count < (int)(sizeof(left_ids) / sizeof(left_ids[0]))) {
                 left_ids[left_count] = eligible_team_ids[i];
             }
             left_count++;
         } else {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
             push_back(right_team_vector, (void*)eligible_team_ptrs[i]);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
             if (right_count < (int)(sizeof(right_ids) / sizeof(right_ids[0]))) {
                 right_ids[right_count] = eligible_team_ids[i];
             }
@@ -276,7 +287,7 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
 
     if (left_count <= 0 || right_count <= 0) {
         kbo_log_runtimef("KBO allstar candidate seed: return=0 reason=empty_side league_id=%u year=%u eligible=%d left=%d right=%d used_csv=%d", league_id, league_year, eligible_count, left_count, right_count, used_csv_split);
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_team_seed", 0);
     }
 
     /* Cache the league pointer so kbo_find_allstar_league_ptr can use it, and keep
@@ -333,5 +344,5 @@ __declspec(noinline) int ootp_kbo_seed_single_division_allstar_candidate_teams(
         &perf_success_tick,
         GetTickCount() - perf_start);
 
-    return 1;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.candidate_team_seed", 1);
 }

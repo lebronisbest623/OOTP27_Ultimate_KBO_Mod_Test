@@ -6,6 +6,7 @@
 
 #include "fa_compensation_protection_cache.h"
 #include "../../../bootstrap/profiling/profiler.h"
+#include "../../../core/sync/lock.h"
 
 #define KBO_FA_PROTECTION_TEAM_CACHE_SIZE 8
 #define KBO_FA_PROTECTION_TEAM_CACHE_TTL_MS 2000u
@@ -23,7 +24,7 @@ typedef struct KboFaProtectionTeamCandidateCacheEntry {
     int auto_count;
 } KboFaProtectionTeamCandidateCacheEntry;
 
-static SRWLOCK g_kbo_fa_protection_team_cache_lock = SRWLOCK_INIT;
+static KboRwLock g_kbo_fa_protection_team_cache_lock = KBO_RW_LOCK_INIT;
 static KboFaProtectionTeamCandidateCacheEntry g_kbo_fa_protection_team_cache[KBO_FA_PROTECTION_TEAM_CACHE_SIZE];
 static LONG g_kbo_fa_protection_team_cache_cursor = 0;
 
@@ -93,7 +94,7 @@ int kbo_fa_try_materialize_cached_protection_candidates(
     }
     DWORD now = GetTickCount();
     int result = -1;
-    AcquireSRWLockShared(&g_kbo_fa_protection_team_cache_lock);
+    kbo_rw_lock_enter_shared(&g_kbo_fa_protection_team_cache_lock);
     for (int i = 0; i < KBO_FA_PROTECTION_TEAM_CACHE_SIZE; i++) {
         const KboFaProtectionTeamCandidateCacheEntry* entry = &g_kbo_fa_protection_team_cache[i];
         if (!entry->valid
@@ -116,7 +117,7 @@ int kbo_fa_try_materialize_cached_protection_candidates(
             max_auto_protected);
         break;
     }
-    ReleaseSRWLockShared(&g_kbo_fa_protection_team_cache_lock);
+    kbo_rw_lock_leave_shared(&g_kbo_fa_protection_team_cache_lock);
     if (result >= 0) {
         kbo_profiler_record_us("fa_compensation.protection.team_cache_hit", 0);
     }
@@ -137,7 +138,7 @@ void kbo_fa_store_protection_candidate_cache(
     }
     LONG cursor = InterlockedIncrement(&g_kbo_fa_protection_team_cache_cursor);
     int slot = (int)((uint32_t)cursor % KBO_FA_PROTECTION_TEAM_CACHE_SIZE);
-    AcquireSRWLockExclusive(&g_kbo_fa_protection_team_cache_lock);
+    kbo_rw_lock_enter_exclusive(&g_kbo_fa_protection_team_cache_lock);
     KboFaProtectionTeamCandidateCacheEntry* entry = &g_kbo_fa_protection_team_cache[slot];
     memset(entry, 0, sizeof(*entry));
     entry->valid = 1u;
@@ -156,6 +157,6 @@ void kbo_fa_store_protection_candidate_cache(
             : auto_count;
         memcpy(entry->auto_protected, auto_protected, (SIZE_T)entry->auto_count * sizeof(entry->auto_protected[0]));
     }
-    ReleaseSRWLockExclusive(&g_kbo_fa_protection_team_cache_lock);
+    kbo_rw_lock_leave_exclusive(&g_kbo_fa_protection_team_cache_lock);
 }
 

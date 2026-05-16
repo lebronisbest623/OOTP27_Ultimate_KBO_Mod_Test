@@ -143,7 +143,7 @@ int kbo_load_asian_quota_nation_ids_once(void)
     LONG marker = InterlockedCompareExchange(&g_kbo_asian_quota_nation_count, -2, -1);
     if (marker != -1) {
         while ((cached = InterlockedCompareExchange(&g_kbo_asian_quota_nation_count, -2, -2)) == -2) {
-            Sleep(0);
+            SwitchToThread();
         }
         return cached > 0 ? (int)cached : 0;
     }

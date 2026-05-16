@@ -24,6 +24,7 @@ Before commercial use, redistribution, inclusion in another project, or public r
 
 - **OOTP27** (`ootp27.exe`, Steam layout supported)
 - **.NET 8** for the launcher
+- **PowerShell 7 or newer (`pwsh`)** for native build scripts
 - **GCC / MinGW-w64** for the native DLL
 - **Microsoft WebView2 NuGet package** for the in-game F2 hub UI
 
@@ -33,7 +34,7 @@ Before commercial use, redistribution, inclusion in another project, or public r
 
 ```powershell
 # Native DLL
-powershell -ExecutionPolicy Bypass -File native\build.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File native\build.ps1
 
 # C# launcher
 dotnet build .\OOTP27-KBO-Launcher.sln

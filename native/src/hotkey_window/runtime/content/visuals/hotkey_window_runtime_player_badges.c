@@ -1,8 +1,9 @@
 #include "../hotkey_window_runtime_content_internal.h"
 #include "../../hotkey_window_domain_contract.h"
 #include "../../../../core/runtime_tuning/runtime_tuning_policy.h"
+#include "../../../../core/sync/lock.h"
 
-static LONG g_kbo_hub_foreign_slot_cache_lock = 0;
+static KboLock g_kbo_hub_foreign_slot_cache_lock = KBO_LOCK_INIT;
 static ULONGLONG g_kbo_hub_foreign_slot_cache_tick = 0ull;
 static uint32_t g_kbo_hub_foreign_slot_cache_injured_ids[KBO_FOREIGN_INJURY_REPLACEMENT_MAX] = {0};
 static uint32_t g_kbo_hub_foreign_slot_cache_replacement_ids[KBO_FOREIGN_INJURY_REPLACEMENT_MAX] = {0};
@@ -19,15 +20,13 @@ static void kbo_hub_refresh_foreign_slot_cache(void)
         return;
     }
 
-    while (InterlockedCompareExchange(&g_kbo_hub_foreign_slot_cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_hub_foreign_slot_cache_lock);
 
     cached = g_kbo_hub_foreign_slot_cache_tick;
     if (cached != 0ull
             && now >= cached
             && now - cached < (ULONGLONG)kbo_runtime_tuning_policy()->hub_foreign_slot_cache_ttl_ms) {
-        InterlockedExchange(&g_kbo_hub_foreign_slot_cache_lock, 0);
+        kbo_lock_leave(&g_kbo_hub_foreign_slot_cache_lock);
         return;
     }
 
@@ -54,7 +53,7 @@ static void kbo_hub_refresh_foreign_slot_cache(void)
     g_kbo_hub_foreign_slot_cache_injured_count = injured_count;
     g_kbo_hub_foreign_slot_cache_replacement_count = replacement_count;
     g_kbo_hub_foreign_slot_cache_tick = now != 0ull ? now : 1ull;
-    InterlockedExchange(&g_kbo_hub_foreign_slot_cache_lock, 0);
+    kbo_lock_leave(&g_kbo_hub_foreign_slot_cache_lock);
 }
 
 const char* kbo_hub_foreign_slot_code_for_player(uint8_t* player)

@@ -8,21 +8,19 @@
 #include "../common/policy/foreign_player_policy.h"
 #include "../rights/query/foreign_waiver_rights_query.h"
 
-static volatile LONG g_kbo_foreign_retention_guard_lock = 0;
+static KboLock g_kbo_foreign_retention_guard_lock = KBO_LOCK_INIT;
 static KboForeignRetentionGuardRecord g_kbo_foreign_retention_guard[KBO_FOREIGN_RETENTION_GUARD_MAX] = {{0}};
 static volatile LONG g_kbo_foreign_retention_guard_record_log_count = 0;
 static volatile LONG g_kbo_foreign_retention_guard_skip_log_count = 0;
 
 static void kbo_foreign_retention_guard_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_foreign_retention_guard_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_retention_guard_lock);
 }
 
 static void kbo_foreign_retention_guard_unlock(void)
 {
-    InterlockedExchange(&g_kbo_foreign_retention_guard_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_retention_guard_lock);
 }
 
 static int kbo_foreign_retention_guard_record_expired(

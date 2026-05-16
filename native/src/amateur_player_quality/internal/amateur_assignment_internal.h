@@ -13,7 +13,7 @@ extern KboAmateurAssignmentProcessed g_kbo_amateur_assignment_rejected_targets[K
 extern int g_kbo_amateur_assignment_high_school_count;
 extern int g_kbo_amateur_assignment_college_count;
 extern LONG g_kbo_amateur_assignment_rejected_target_count;
-extern LONG g_kbo_amateur_assignment_candidate_lock;
+extern KboSpinLock g_kbo_amateur_assignment_candidate_lock;
 
 void kbo_lock_amateur_assignment_candidates(void);
 void kbo_unlock_amateur_assignment_candidates(void);

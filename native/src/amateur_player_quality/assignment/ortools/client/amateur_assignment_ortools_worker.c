@@ -3,7 +3,7 @@
 static PROCESS_INFORMATION g_kbo_amateur_ortools_worker_pi;
 static HANDLE g_kbo_amateur_ortools_worker_stdin = NULL;
 static HANDLE g_kbo_amateur_ortools_worker_stdout = NULL;
-static LONG g_kbo_amateur_ortools_worker_lock = 0;
+static KboLock g_kbo_amateur_ortools_worker_lock = KBO_LOCK_INIT;
 
 static void kbo_amateur_ortools_close_worker(void)
 {
@@ -116,9 +116,7 @@ static int kbo_amateur_ortools_start_worker(const char* tool_path)
 
 int kbo_amateur_ortools_run_worker(const char* tool_path, const char* request_path, const char* result_path)
 {
-    while (InterlockedCompareExchange(&g_kbo_amateur_ortools_worker_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_amateur_ortools_worker_lock);
 
     int ok = 0;
     do {
@@ -178,7 +176,7 @@ int kbo_amateur_ortools_run_worker(const char* tool_path, const char* request_pa
         }
     } while (0);
 
-    InterlockedExchange(&g_kbo_amateur_ortools_worker_lock, 0);
+    kbo_lock_leave(&g_kbo_amateur_ortools_worker_lock);
     return ok;
 }
 
@@ -281,4 +279,3 @@ int kbo_amateur_ortools_read_batch_result(const char* result_path, uint32_t leag
     kbo_amateur_batch_unlock();
     return count;
 }
-

@@ -79,6 +79,10 @@ int kbo_enforce_foreign_waiver_signability(
         return original_signability;
     }
 
+    if (!kbo_player_is_foreign_for_kbo_rights(player)) {
+        return kbo_no_minor_contract_signability_floor(original_signability);
+    }
+
     uint32_t holder_team_id = 0;
     if (kbo_foreign_waiver_ai_enabled()) {
         kbo_prune_expired_foreign_waiver_rights(today);

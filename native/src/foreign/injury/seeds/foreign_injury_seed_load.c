@@ -44,14 +44,12 @@ uint8_t kbo_foreign_injury_slot_type_for_player(uint8_t* player)
 
 void kbo_lock_foreign_injury_replacements(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_foreign_injury_replacement_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_injury_replacement_lock);
 }
 
 void kbo_unlock_foreign_injury_replacements(void)
 {
-    InterlockedExchange(&g_kbo_foreign_injury_replacement_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_injury_replacement_lock);
 }
 
 int kbo_load_foreign_injury_replacements_locked(const char* path)

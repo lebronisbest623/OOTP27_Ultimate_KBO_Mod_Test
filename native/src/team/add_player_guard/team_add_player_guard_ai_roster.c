@@ -5,6 +5,7 @@
 
 #include "../../bootstrap/abi/hook_entrypoints.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../bootstrap/profiling/profiler.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/logging/core_log.h"
 #include "../../foreign/common/policy/foreign_waiver_policy.h"
@@ -116,6 +117,7 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
     int32_t slot_index,
     int32_t depth_hint)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     uintptr_t caller_ptr = (uintptr_t)__builtin_return_address(0);
     HMODULE host_exe = GetModuleHandleA(NULL);
     uint32_t caller_rva = host_exe != NULL && caller_ptr >= (uintptr_t)host_exe
@@ -123,9 +125,12 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
         : 0u;
 
     OotpKboAiRosterSelectFn original = g_kbo_ai_roster_select_trace_trampoline;
-    uintptr_t result_ptr = original != NULL
-        ? original(context_ptr, slot_index, depth_hint)
-        : 0u;
+    uintptr_t result_ptr = 0u;
+    if (original != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
+        result_ptr = original(context_ptr, slot_index, depth_hint);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
+    }
 
     uintptr_t slot_block_ptr = 0u;
     uintptr_t source_vector_ptr = 0u;
@@ -151,7 +156,7 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
         &rescue_score,
         &rescue_summary);
     if (rescue_ptr == 0u || rescue_ptr == result_ptr) {
-        return result_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "team.ai_roster_select_trace", result_ptr);
     }
     uint32_t native_player_id = 0u;
     int native_foreign = 0;
@@ -206,19 +211,32 @@ __declspec(noinline) uintptr_t ootp_kbo_ai_roster_select_trace_wrapper(
         rescue_summary.overall,
         rescue_summary.talent,
         rescue_summary.ratings);
-    return rescue_ptr;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "team.ai_roster_select_trace", rescue_ptr);
 }
 
 __declspec(noinline) void ootp_kbo_ai_roster_primary_apply_flow_trace_wrapper(
     uintptr_t context_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
+    OotpKboAiRosterContextFlowFn original = g_kbo_ai_roster_primary_apply_flow_trace_trampoline;
+    if (!kbo_ai_roster_foreign_apply_rescue_enabled()) {
+        if (original != NULL) {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
+            original(context_ptr);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
+        }
+        KBO_HOOK_PROFILE_END(profile_hook, "team.ai_roster_primary_apply_flow");
+        return;
+    }
+
     KboAiRosterFlowContextSnapshot before;
     KboAiRosterFlowContextSnapshot after;
     kbo_ai_roster_flow_read_context(context_ptr, &before);
 
-    OotpKboAiRosterContextFlowFn original = g_kbo_ai_roster_primary_apply_flow_trace_trampoline;
     if (original != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         original(context_ptr);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
 
     kbo_ai_roster_flow_read_context(context_ptr, &after);
@@ -229,6 +247,7 @@ __declspec(noinline) void ootp_kbo_ai_roster_primary_apply_flow_trace_wrapper(
             g_kbo_ai_roster_apply_selection_trace_trampoline)) {
         kbo_ai_roster_flow_read_context(context_ptr, &after);
     }
+    KBO_HOOK_PROFILE_END(profile_hook, "team.ai_roster_primary_apply_flow");
 }
 
 __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
@@ -238,7 +257,17 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
     int32_t target_slot,
     int32_t roster_code)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     OotpKboAiRosterApplySelectionFn original = g_kbo_ai_roster_apply_selection_trace_trampoline;
+    if (!kbo_ai_roster_foreign_apply_rescue_enabled()) {
+        if (original != NULL) {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
+            original(context_ptr, slot_index, player_ptr, target_slot, roster_code);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
+        }
+        KBO_HOOK_PROFILE_END(profile_hook, "team.ai_roster_apply_selection");
+        return;
+    }
 
     uintptr_t slot_block_ptr = 0u;
     uint32_t slot_team_id = 0u;
@@ -336,7 +365,7 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
                 kbo_read_player_i16(player, OOTP27_PLAYER_OVERALL_VALUE_OFFSET),
                 kbo_read_player_i16(player, OOTP27_PLAYER_RATINGS_VALUE_OFFSET));
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "team.ai_roster_apply_selection");
     }
 
     if (release_pressure_allows_replace) {
@@ -359,6 +388,9 @@ __declspec(noinline) void ootp_kbo_ai_roster_apply_selection_trace_wrapper(
     }
 
     if (original != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         original(context_ptr, slot_index, player_ptr, target_slot, roster_code);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
+    KBO_HOOK_PROFILE_END(profile_hook, "team.ai_roster_apply_selection");
 }

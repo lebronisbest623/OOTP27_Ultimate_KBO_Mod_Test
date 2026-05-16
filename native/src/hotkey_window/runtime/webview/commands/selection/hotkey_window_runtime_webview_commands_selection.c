@@ -2,6 +2,9 @@
 
 int kbo_webview_handle_selection_dropdown_command(const char* cmd, HWND hwnd)
 {
+    if (cmd == NULL) {
+        return 0;
+    }
 
     if (strncmp(cmd, "setleague/", 10) == 0) {
         uint32_t league_id = (uint32_t)strtoul(cmd + 10, NULL, 10);
@@ -37,5 +40,5 @@ int kbo_webview_handle_selection_dropdown_command(const char* cmd, HWND hwnd)
         return 1;
     }
 
-    return 1;
+    return 0;
 }

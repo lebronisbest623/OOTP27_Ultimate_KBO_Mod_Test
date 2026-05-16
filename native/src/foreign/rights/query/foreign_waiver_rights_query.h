@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <windows.h>
 
+#include "../../../core/sync/lock.h"
+
 #define KBO_FOREIGN_WAIVER_RIGHTS_MAX 1024
 
 typedef struct KboForeignWaiverRetention {
@@ -14,7 +16,7 @@ typedef struct KboForeignWaiverRetention {
     uint32_t expires_on_yyyymmdd;
 } KboForeignWaiverRetention;
 
-extern LONG g_kbo_foreign_waiver_rights_lock;
+extern KboLock g_kbo_foreign_waiver_rights_lock;
 extern KboForeignWaiverRetention g_kbo_foreign_waiver_rights[KBO_FOREIGN_WAIVER_RIGHTS_MAX];
 extern int g_kbo_foreign_waiver_rights_count;
 extern volatile LONG g_kbo_foreign_waiver_rights_generation;

@@ -29,7 +29,7 @@ typedef struct KboPlayerTeamSeasonRow {
 extern KboPlayerTeamSeasonRow g_kbo_player_team_season_seed[KBO_PLAYER_TEAM_SEASON_SEED_MAX];
 extern int g_kbo_player_team_season_seed_count;
 extern volatile LONG g_kbo_player_team_season_seed_loaded;
-extern volatile LONG g_kbo_player_team_season_seed_lock;
+extern KboSpinLock g_kbo_player_team_season_seed_lock;
 
 void kbo_player_team_seasons_lock(void);
 void kbo_player_team_seasons_unlock(void);

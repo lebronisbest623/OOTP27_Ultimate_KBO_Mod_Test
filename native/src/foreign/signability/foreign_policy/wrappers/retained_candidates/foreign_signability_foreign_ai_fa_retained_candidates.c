@@ -46,16 +46,14 @@ int32_t kbo_ai_fa_status_force_retained_market_candidates(
 
     uint32_t player_ids[KBO_AI_FA_STATUS_FORCED_RETENTION_MAX] = {0};
     int player_count = 0;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count && player_count < KBO_AI_FA_STATUS_FORCED_RETENTION_MAX; i++) {
         const KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
         if (rec->team_id == requester_team_id && kbo_is_foreign_waiver_right_active(rec, today)) {
             player_ids[player_count++] = rec->player_id;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     if (player_count == 0) {
         return insert_index;

@@ -8,6 +8,7 @@ __declspec(noinline) int ootp_kbo_trade_check_foreign_policy_probe(
     uintptr_t trade_ptr,
     int32_t side)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (kbo_fix_enabled() && kbo_custom_foreign_policy_enabled()) {
         int blocked_side = -1;
         uint32_t team_id = 0u;
@@ -39,9 +40,9 @@ __declspec(noinline) int ootp_kbo_trade_check_foreign_policy_probe(
                     effective_after,
                     effective_limit);
             }
-            return 0;
+            KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.trade_check", 0);
         }
     }
-    return 1;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.trade_check", 1);
 }
 

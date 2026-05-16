@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "foreign_fa_block_state.h"
+#include "../../../core/sync/lock.h"
 #include "../../common/policy/foreign_player_policy.h"
 
 volatile LONG g_kbo_foreign_offer_block_player_id = 0;
@@ -29,27 +30,25 @@ enum {
 
 static KboRecentForeignFaAllow g_kbo_foreign_offer_allow_records[KBO_RECENT_FOREIGN_FA_ALLOW_MAX];
 static KboRecentForeignFaAllow g_kbo_custom_foreign_policy_allow_records[KBO_RECENT_FOREIGN_FA_ALLOW_MAX];
-static LONG g_kbo_foreign_offer_allow_lock = 0;
-static LONG g_kbo_custom_foreign_policy_allow_lock = 0;
+static KboLock g_kbo_foreign_offer_allow_lock = KBO_LOCK_INIT;
+static KboLock g_kbo_custom_foreign_policy_allow_lock = KBO_LOCK_INIT;
 static int g_kbo_foreign_offer_allow_next = 0;
 static int g_kbo_custom_foreign_policy_allow_next = 0;
 
-static void kbo_recent_foreign_allow_lock(LONG* lock)
+static void kbo_recent_foreign_allow_lock(KboLock* lock)
 {
-    while (InterlockedCompareExchange(lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(lock);
 }
 
-static void kbo_recent_foreign_allow_unlock(LONG* lock)
+static void kbo_recent_foreign_allow_unlock(KboLock* lock)
 {
-    InterlockedExchange(lock, 0);
+    kbo_lock_leave(lock);
 }
 
 static void kbo_record_recent_foreign_allow(
     KboRecentForeignFaAllow* records,
     int* next_index,
-    LONG* lock,
+    KboLock* lock,
     uint32_t player_id,
     uint32_t requester_team_id,
     uint32_t today)
@@ -89,7 +88,7 @@ static void kbo_record_recent_foreign_allow(
 
 static int kbo_recent_foreign_allow_matches(
     KboRecentForeignFaAllow* records,
-    LONG* lock,
+    KboLock* lock,
     uint32_t player_id,
     uint32_t today,
     uint32_t* out_requester_team_id)

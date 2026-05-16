@@ -286,14 +286,18 @@ __declspec(noinline) void ootp_kbo_foreign_ai_offer_attach_probe_wrapper(
     uintptr_t caller_return_ptr,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KboOotpForeignAiOfferAttachFn original_func = (KboOotpForeignAiOfferAttachFn)original_func_ptr;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         original_func(player_ptr, offer_slot_ptr);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
     if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_research_hooks.txt")
             || read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_attach_probe.txt")) {
         kbo_log_foreign_ai_offer_attach(player_ptr, offer_slot_ptr, caller_return_ptr);
     }
+    KBO_HOOK_PROFILE_END(profile_hook, "foreign.ai_offer_attach");
 }
 
 __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_build_probe_wrapper(
@@ -302,6 +306,7 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_build_probe_wrapper(
     uintptr_t zero_arg,
     uintptr_t flag_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KboOotpForeignAiOfferBuildFn original_func =
         (KboOotpForeignAiOfferBuildFn)kbo_offer_probe_resolve_rva(OOTP27_AI_FA_OFFER_BUILD_FUNC_RVA);
 
@@ -309,14 +314,16 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_build_probe_wrapper(
     if (original_func != NULL) {
         kbo_apply_foreign_reserve_demand_floor(player_ptr, "ai_offer_build");
         kbo_prepare_foreign_fa_offer_demand_baseline(player_ptr, "ai_offer_build");
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         offer_ptr = original_func(player_ptr, team_id, zero_arg, flag_ptr, 0u);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
         kbo_restore_foreign_fa_demand_salary_ladder("ai_offer_build");
     }
     if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_research_hooks.txt")
             || read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_attach_probe.txt")) {
         kbo_log_foreign_ai_offer_build(player_ptr, team_id, flag_ptr, offer_ptr);
     }
-    return offer_ptr;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_build", offer_ptr);
 }
 
 __declspec(noinline) uint8_t ootp_kbo_foreign_ai_offer_final_gate_probe_wrapper(
@@ -325,16 +332,19 @@ __declspec(noinline) uint8_t ootp_kbo_foreign_ai_offer_final_gate_probe_wrapper(
     int32_t salary,
     uintptr_t offer_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KboOotpForeignAiOfferFinalGateFn original_func =
         (KboOotpForeignAiOfferFinalGateFn)kbo_offer_probe_resolve_rva(OOTP27_AI_FA_OFFER_FINAL_GATE_FUNC_RVA);
 
     uint8_t result = 0u;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         result = original_func(team_ptr, player_ptr, salary);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
     if (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_research_hooks.txt")
             || read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_attach_probe.txt")) {
         kbo_log_foreign_ai_offer_final_gate(team_ptr, player_ptr, salary, offer_ptr, result);
     }
-    return result;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_final_gate", result);
 }

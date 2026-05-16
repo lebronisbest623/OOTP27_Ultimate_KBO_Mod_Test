@@ -1,38 +1,100 @@
 [
   {
+    "zone": "foreign_policy.fast_block.allowed",
+    "bench_case_prefix": "foreign.fast_block.allowed.",
+    "cost": "avg_us",
+    "fidelity": "ootp-state",
+    "note": "Early FA fast-block allowed path."
+  },
+  {
+    "zone": "foreign_policy.fast_block.custom_blocked",
+    "bench_case_prefix": "foreign.fast_block.custom_blocked.",
+    "cost": "avg_us",
+    "fidelity": "ootp-state",
+    "note": "Early FA fast-block custom foreign policy block path."
+  },
+  {
+    "zone": "foreign_policy.candidate.allowed",
+    "bench_case_prefix": "foreign.candidate.allowed.",
+    "cost": "avg_us",
+    "fidelity": "ootp-state",
+    "note": "Custom foreign policy candidate allowed cold path."
+  },
+  {
+    "zone": "foreign_policy.candidate.blocked",
+    "bench_case_prefix": "foreign.candidate.blocked.",
+    "cost": "avg_us",
+    "fidelity": "ootp-state",
+    "note": "Custom foreign policy candidate blocked cold path."
+  },
+  {
+    "zone": "foreign_policy.candidate.cache_allowed",
+    "bench_case_prefix": "foreign.candidate.cache_allowed.",
+    "cost": "avg_us",
+    "fidelity": "micro",
+    "note": "Custom foreign policy candidate allowed cache-hit path."
+  },
+  {
+    "zone": "foreign_policy.candidate.cache_blocked",
+    "bench_case_prefix": "foreign.candidate.cache_blocked.",
+    "cost": "avg_us",
+    "fidelity": "micro",
+    "note": "Custom foreign policy candidate blocked cache-hit path."
+  },
+  {
+    "zone": "foreign_policy.candidate.extra_slots",
+    "bench_case_prefix": "foreign.candidate.extra_slots.",
+    "cost": "avg_us",
+    "fidelity": "ootp-state",
+    "note": "Foreign injury replacement extra-slot candidate probe."
+  },
+  {
+    "zone": "foreign_policy.candidate.org_count",
+    "bench_case_prefix": "foreign.org_count.cache_hit.",
+    "cost": "avg_us",
+    "fidelity": "micro",
+    "note": "Candidate-policy org-count subcall. This is kept separate from the parent candidate zone because profiler totals are inclusive."
+  },
+  {
     "zone": "foreign_policy.org_count.cache_hit",
     "bench_case_prefix": "foreign.org_count.cache_hit.",
     "cost": "avg_us",
+    "fidelity": "micro",
     "note": "Top-level per-team org-count cache hit."
   },
   {
     "zone": "foreign_policy.org_count.snapshot_hit",
     "bench_case_prefix": "foreign.org_count.snapshot_hit_plus_invalidate.",
     "cost": "avg_us",
+    "fidelity": "ootp-state",
     "note": "Warm all-team snapshot reuse; benchmark includes per-team cache invalidation to force this branch."
   },
   {
     "zone": "foreign_policy.org_count.snapshot_rebuild",
     "bench_case_prefix": "foreign.org_count.snapshot_rebuild.",
     "cost": "avg_us",
+    "fidelity": "ootp-state",
     "note": "All-team snapshot rebuild after roster mutation or snapshot TTL expiry."
   },
   {
     "zone": "foreign_policy.org_count.scanned",
     "bench_case_prefix": "foreign.org_count.fresh_scan.",
     "cost": "avg_us",
+    "fidelity": "ootp-state",
     "note": "Fallback raw player-vector scan with caches bypassed."
   },
   {
     "zone": "fa_compensation.protection.build.cache_hit",
     "bench_case_prefix": "fa.protection_build.cache_hit.",
     "cost": "avg_us",
+    "fidelity": "micro",
     "note": "FA protected-list materialization from the team candidate cache."
   },
   {
     "zone": "fa_compensation.protection.build.scanned",
     "bench_case_prefix": "fa.protection_build.cold.",
     "cost": "avg_us",
+    "fidelity": "ootp-state",
     "note": "FA protected-list scan, score, sort, and cache-store path."
   }
 ]

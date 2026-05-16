@@ -10,15 +10,18 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     uint16_t year_hint,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     OotpPlayerTeamSignabilityFn original_func = (OotpPlayerTeamSignabilityFn)original_func_ptr;
 
     if (kbo_fast_block_fa_candidate_before_original(player_ptr, team_id, "signability", NULL)) {
-        return 0; /* OOTP signability enum: 0 = Impossible. */
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.signability", 0); /* OOTP signability enum: 0 = Impossible. */
     }
 
     int original_signability = 0;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         original_signability = original_func((void*)player_ptr, team_id, year_hint);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
     uintptr_t caller_rva = 0;
     HMODULE exe = GetModuleHandleA(NULL);
@@ -26,6 +29,12 @@ __declspec(noinline) int ootp_kbo_player_team_signability_wrapper(
     if (exe != NULL && caller > (uintptr_t)exe) {
         caller_rva = caller - (uintptr_t)exe;
     }
-    return kbo_enforce_foreign_waiver_signability(player_ptr, team_id, year_hint, original_signability, caller_rva);
+    int adjusted_signability = kbo_enforce_foreign_waiver_signability(
+        player_ptr,
+        team_id,
+        year_hint,
+        original_signability,
+        caller_rva);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.signability", adjusted_signability);
 }
 

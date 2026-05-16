@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../../../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../../../bootstrap/profiling/profiler.h"
 #include "../../../../../core/core_flags/api/flags_api.h"
 #include "../../../../../core/logging/core_log.h"
 #include "../../../../../runtime_memory/runtime_memory.h"
@@ -119,36 +120,37 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_candidate_priority_wrap
     uintptr_t frame_ptr,
     uintptr_t candidate_player_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (candidate_player_ptr == 0
             || !kbo_foreign_ai_offer_candidate_priority_enabled()
             || !memory_range_readable((void*)candidate_player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
 
     uint8_t* candidate = (uint8_t*)candidate_player_ptr;
     if (!kbo_player_is_foreign_for_kbo_rights(candidate)) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
 
     uint32_t team_id = kbo_offer_candidate_priority_team_id(frame_ptr);
     uint32_t today = 0u;
     if (team_id == 0u || !kbo_get_foreign_waiver_current_yyyymmdd(&today) || today == 0u) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
 
     uint32_t candidate_id = *(uint32_t*)(candidate + OOTP27_PLAYER_ID_OFFSET);
     if (candidate_id == 0u) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
     int candidate_retained_by_team = kbo_has_active_foreign_waiver_right(team_id, candidate_id, today);
 
     KboForeignRetentionOpportunitySummary opportunity = {0};
     if (!kbo_retention_opportunity_get_summary(team_id, today, &opportunity)
             || opportunity.best_player_id == 0u) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
     if (candidate_retained_by_team && candidate_id == opportunity.best_player_id) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
 
     uint8_t* retained = kbo_find_player_by_id(opportunity.best_player_id, NULL, NULL);
@@ -157,17 +159,17 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_candidate_priority_wrap
             opportunity.best_player_id,
             team_id,
             today)) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
 
     if ((uintptr_t)retained == candidate_player_ptr) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
 
     int32_t candidate_score = kbo_foreign_waiver_value_score(candidate);
     int32_t margin = kbo_retention_opportunity_score_margin_for_best(opportunity.best_score);
     if (candidate_retained_by_team && candidate_score >= opportunity.best_score) {
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
     if (!candidate_retained_by_team && candidate_score >= opportunity.best_score + margin) {
         kbo_offer_candidate_priority_log(
@@ -179,7 +181,7 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_candidate_priority_wrap
             candidate_score,
             opportunity.best_score,
             margin);
-        return candidate_player_ptr;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", candidate_player_ptr);
     }
 
     kbo_offer_candidate_priority_log(
@@ -191,5 +193,5 @@ __declspec(noinline) uintptr_t ootp_kbo_foreign_ai_offer_candidate_priority_wrap
         candidate_score,
         opportunity.best_score,
         margin);
-    return (uintptr_t)retained;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_offer_candidate_priority", (uintptr_t)retained);
 }

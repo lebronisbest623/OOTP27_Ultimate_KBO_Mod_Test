@@ -15,6 +15,7 @@
 #include "../../core/logging/core_log.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/core_flags/api/flags_api.h"
+#include "../../core/sync/spin_lock.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../../team/add_player_guard/team_add_player_guard.h"
 #include "../../team/lookup/team_lookup.h"
@@ -23,7 +24,7 @@
 
 extern KboAmateurReputationSeed g_kbo_amateur_reputation_seeds[KBO_AMATEUR_REPUTATION_SEED_MAX];
 extern int g_kbo_amateur_reputation_seed_count;
-extern LONG g_kbo_amateur_reputation_seed_lock;
+extern KboSpinLock g_kbo_amateur_reputation_seed_lock;
 extern LONG g_kbo_amateur_reputation_seed_loaded;
 extern char g_kbo_amateur_reputation_seed_loaded_path[MAX_PATH * 3];
 extern KboAmateurResolvedTeamReputation g_kbo_amateur_resolved_team_reputations[KBO_AMATEUR_ASSIGNMENT_TEAM_MAX];

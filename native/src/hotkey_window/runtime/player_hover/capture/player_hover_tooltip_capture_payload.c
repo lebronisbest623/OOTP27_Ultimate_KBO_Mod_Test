@@ -30,14 +30,14 @@ int kbo_capture_ootp_player_tooltip_payload(uint32_t player_id, char* out, size_
     }
     out[0] = '\0';
 
-    if (InterlockedCompareExchange(&g_kbo_player_tooltip_capture_lock, 1, 0) != 0) {
+    if (!kbo_lock_try_enter(&g_kbo_player_tooltip_capture_lock)) {
         kbo_log_runtimef("KBO player tooltip capture skipped reason=capture_busy player=%u", player_id);
         return 0;
     }
 
     HMODULE exe = GetModuleHandleA(NULL);
     if (exe == NULL) {
-        InterlockedExchange(&g_kbo_player_tooltip_capture_lock, 0);
+        kbo_lock_leave(&g_kbo_player_tooltip_capture_lock);
         return 0;
     }
 
@@ -57,13 +57,13 @@ int kbo_capture_ootp_player_tooltip_payload(uint32_t player_id, char* out, size_
             (void*)factory,
             (void*)render,
             (void*)current_tooltip);
-        InterlockedExchange(&g_kbo_player_tooltip_capture_lock, 0);
+        kbo_lock_leave(&g_kbo_player_tooltip_capture_lock);
         return 0;
     }
 
     void* raw = ootp_new(KBO_TOOLTIP_OBJECT_BYTES);
     if (raw == NULL) {
-        InterlockedExchange(&g_kbo_player_tooltip_capture_lock, 0);
+        kbo_lock_leave(&g_kbo_player_tooltip_capture_lock);
         return 0;
     }
 
@@ -87,7 +87,7 @@ int kbo_capture_ootp_player_tooltip_payload(uint32_t player_id, char* out, size_
     if (tooltip == NULL) {
         InterlockedExchange(&g_kbo_player_tooltip_text_capture_active, 0);
         kbo_log_runtimef("KBO player tooltip capture skipped reason=factory_failed player=%u raw=%p", player_id, raw);
-        InterlockedExchange(&g_kbo_player_tooltip_capture_lock, 0);
+        kbo_lock_leave(&g_kbo_player_tooltip_capture_lock);
         return 0;
     }
 
@@ -204,6 +204,6 @@ int kbo_capture_ootp_player_tooltip_payload(uint32_t player_id, char* out, size_
         (long long)(rating_panel_ctor_active_after - rating_panel_ctor_active_before),
         has_scan_overall_potential ? scan_overall : 0,
         has_scan_overall_potential ? scan_potential : 0);
-    InterlockedExchange(&g_kbo_player_tooltip_capture_lock, 0);
+    kbo_lock_leave(&g_kbo_player_tooltip_capture_lock);
     return pos > 0u;
 }

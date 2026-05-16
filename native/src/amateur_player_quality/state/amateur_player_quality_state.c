@@ -18,7 +18,7 @@
 
 KboAmateurReputationSeed g_kbo_amateur_reputation_seeds[KBO_AMATEUR_REPUTATION_SEED_MAX];
 int g_kbo_amateur_reputation_seed_count = 0;
-LONG g_kbo_amateur_reputation_seed_lock = 0;
+KboSpinLock g_kbo_amateur_reputation_seed_lock = KBO_SPIN_LOCK_INIT;
 LONG g_kbo_amateur_reputation_seed_loaded = 0;
 char g_kbo_amateur_reputation_seed_loaded_path[MAX_PATH * 3] = {0};
 KboAmateurAssignmentProcessed g_kbo_amateur_assignment_processed[KBO_AMATEUR_ASSIGNMENT_PROCESSED_MAX];
@@ -31,7 +31,7 @@ KboAmateurAssignmentProcessed g_kbo_amateur_assignment_rejected_targets[KBO_AMAT
 int g_kbo_amateur_assignment_high_school_count = -1;
 int g_kbo_amateur_assignment_college_count = -1;
 LONG g_kbo_amateur_assignment_rejected_target_count = 0;
-LONG g_kbo_amateur_assignment_candidate_lock = 0;
+KboSpinLock g_kbo_amateur_assignment_candidate_lock = KBO_SPIN_LOCK_INIT;
 KboAmateurResolvedTeamReputation g_kbo_amateur_resolved_team_reputations[KBO_AMATEUR_ASSIGNMENT_TEAM_MAX];
 int g_kbo_amateur_resolved_team_reputation_count = 0;
 uint32_t g_kbo_amateur_reputation_last_update_high_school_year = 0u;

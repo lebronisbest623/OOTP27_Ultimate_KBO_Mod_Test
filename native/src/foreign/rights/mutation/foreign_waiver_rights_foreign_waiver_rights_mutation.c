@@ -16,9 +16,7 @@ void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd)
     if (previous == today_long) {
         return;
     }
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     int w = 0;
     int removed = 0;
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
@@ -38,7 +36,7 @@ void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd)
     if (removed > 0) {
         InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
     if (removed > 0) {
         kbo_log_runtimef("foreign reserve rights: expired=%d today=%u", removed, today_yyyymmdd);
         kbo_persist_foreign_waiver_rights();
@@ -57,9 +55,7 @@ int kbo_set_foreign_waiver_right(
     }
 
     int upserted = 0;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         if (g_kbo_foreign_waiver_rights[i].player_id == player_id) {
             if (g_kbo_foreign_waiver_rights[i].team_id != team_id) {
@@ -90,7 +86,7 @@ int kbo_set_foreign_waiver_right(
     if (upserted) {
         InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     if (upserted) {
         kbo_persist_foreign_waiver_rights();
@@ -105,9 +101,7 @@ static int kbo_remove_foreign_waiver_right_record(uint32_t team_id, uint32_t pla
     }
 
     int removed = 0;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     int w = 0;
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
@@ -127,7 +121,7 @@ static int kbo_remove_foreign_waiver_right_record(uint32_t team_id, uint32_t pla
     if (removed > 0) {
         InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
     return removed;
 }
 

@@ -11,6 +11,7 @@
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/files/atomic/core_atomic_file.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/sync/lock.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
@@ -22,7 +23,7 @@
 extern KboForeignReplacementPlayerSeed g_kbo_foreign_replacement_player_seeds[KBO_FOREIGN_REPLACEMENT_PLAYER_SEED_MAX];
 extern int g_kbo_foreign_replacement_player_seed_count;
 extern char g_kbo_foreign_replacement_player_seed_loaded_path[MAX_PATH];
-extern LONG g_kbo_foreign_replacement_player_seed_lock;
+extern KboLock g_kbo_foreign_replacement_player_seed_lock;
 extern LONG64 g_kbo_foreign_replacement_player_seed_last_resolve_tick;
 
 void kbo_lock_foreign_replacement_player_seeds(void);

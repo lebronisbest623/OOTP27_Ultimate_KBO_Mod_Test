@@ -29,7 +29,7 @@ typedef struct KboAmateurDeferredTeamAdd {
 
 extern KboAmateurBatchAssignment g_kbo_amateur_batch_assignments[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
 extern LONG g_kbo_amateur_batch_assignment_count;
-extern LONG g_kbo_amateur_batch_assignment_lock;
+extern KboLock g_kbo_amateur_batch_assignment_lock;
 extern uintptr_t g_kbo_amateur_league_batch_players[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
 extern uintptr_t g_kbo_amateur_league_batch_source_teams[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
 extern uint32_t g_kbo_amateur_league_batch_team_ids[KBO_AMATEUR_LEAGUE_BATCH_TEAM_MAX];

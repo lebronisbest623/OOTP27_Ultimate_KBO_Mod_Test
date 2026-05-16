@@ -1,4 +1,5 @@
 #include "foreign_quota_candidate_limit_cache.h"
+#include "../../../rights/query/foreign_waiver_rights_query.h"
 
 typedef struct KboCustomForeignCandidateCacheEntry {
     uint32_t team_id;
@@ -9,7 +10,9 @@ typedef struct KboCustomForeignCandidateCacheEntry {
     uint32_t active_team_id;
     uint32_t original_team_id;
     uint32_t org_count_generation;
+    LONG waiver_rights_generation;
     LONG pending_generation;
+    int replacement_count;
     DWORD tick;
     uint32_t effective_before;
     uint32_t effective_after;
@@ -37,7 +40,7 @@ typedef struct KboCustomForeignExtraSlotCacheEntry {
 
 enum {
     KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_SIZE = 8192,
-    KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_TTL_MS = 5000u,
+    KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_TTL_MS = 30000u,
     KBO_CUSTOM_FOREIGN_EXTRA_SLOT_CACHE_SIZE = 4096,
     KBO_CUSTOM_FOREIGN_EXTRA_SLOT_CACHE_TTL_MS = 2000u
 };
@@ -96,7 +99,9 @@ void kbo_custom_foreign_candidate_cache_store(
     entry->active_team_id = active_team_id;
     entry->original_team_id = original_team_id;
     entry->org_count_generation = org_count_generation;
+    entry->waiver_rights_generation = InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_generation, 0, 0);
     entry->pending_generation = pending_generation;
+    entry->replacement_count = g_kbo_foreign_injury_replacement_count;
     entry->effective_before = effective_before;
     entry->effective_after = effective_after;
     entry->effective_limit = effective_limit;
@@ -194,7 +199,9 @@ int kbo_custom_foreign_candidate_cache_hit(
         &g_kbo_custom_foreign_candidate_cache[kbo_custom_foreign_candidate_cache_slot(team_id, candidate_id)];
     DWORD now = GetTickCount();
     LONG pending_generation = InterlockedCompareExchange(&g_kbo_custom_foreign_pending_offer_generation, 0, 0);
+    LONG waiver_rights_generation = InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_generation, 0, 0);
     uint32_t org_count_generation = kbo_foreign_org_count_cache_generation_for_team(team_id);
+    int replacement_count = g_kbo_foreign_injury_replacement_count;
     if (!entry->valid
             || entry->team_id != team_id
             || entry->player_id != candidate_id
@@ -204,7 +211,9 @@ int kbo_custom_foreign_candidate_cache_hit(
             || entry->active_team_id != active_team_id
             || entry->original_team_id != original_team_id
             || entry->org_count_generation != org_count_generation
+            || entry->waiver_rights_generation != waiver_rights_generation
             || entry->pending_generation != pending_generation
+            || entry->replacement_count != replacement_count
             || now - entry->tick > KBO_CUSTOM_FOREIGN_CANDIDATE_CACHE_TTL_MS) {
         return 0;
     }

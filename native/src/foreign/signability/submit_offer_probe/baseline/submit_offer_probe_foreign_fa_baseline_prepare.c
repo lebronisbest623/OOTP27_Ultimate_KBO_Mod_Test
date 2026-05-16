@@ -47,21 +47,22 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
     uintptr_t player_ptr,
     uint32_t source_rva)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     kbo_restore_foreign_fa_demand_salary_ladder("prepare_enter");
 
     if (financials_ptr == 0
             || !memory_range_readable(
                 (void*)(financials_ptr + OOTP27_FINANCIALS_AVERAGE_SALARY_OFFSET),
                 sizeof(int32_t))) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_demand_baseline_prepare");
     }
     if (!kbo_player_pointer_plausible(player_ptr)) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_demand_baseline_prepare");
     }
 
     uint8_t* player = (uint8_t*)player_ptr;
     if (!kbo_player_is_foreign_for_kbo_rights(player)) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_demand_baseline_prepare");
     }
     int asian_quota = kbo_player_is_asian_quota_candidate(player);
     uint32_t reserve_holder_team_id = 0u;
@@ -113,6 +114,7 @@ __declspec(noinline) void ootp_kbo_foreign_fa_demand_baseline_prepare_wrapper(
                 ? kbo_foreign_fa_reserve_right_baseline_value(8, asian_quota)
                 : kbo_get_foreign_fa_demand_baseline_value_for_player(8, asian_quota));
     }
+    KBO_HOOK_PROFILE_END(profile_hook, "foreign.fa_demand_baseline_prepare");
 }
 
 void kbo_prepare_foreign_fa_offer_demand_baseline(uintptr_t player_ptr, const char* source)

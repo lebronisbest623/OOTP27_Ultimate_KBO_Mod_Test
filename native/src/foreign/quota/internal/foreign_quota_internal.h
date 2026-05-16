@@ -14,6 +14,7 @@
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/sync/lock.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/assignment/org_query/team_org_assignment_query.h"
@@ -43,7 +44,7 @@ enum {
 #define KBO_CUSTOM_FOREIGN_TRADE_READABLE_BYTES       (KBO_CUSTOM_FOREIGN_TRADE_PLAYER_ID_OFFSET + (KBO_CUSTOM_FOREIGN_TRADE_SIDE_COUNT * KBO_CUSTOM_FOREIGN_TRADE_PLAYER_SLOTS * sizeof(uint32_t)))
 
 extern KboCustomForeignPendingOffer g_kbo_custom_foreign_pending_offers[KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX];
-extern LONG g_kbo_custom_foreign_pending_offer_lock;
+extern KboLock g_kbo_custom_foreign_pending_offer_lock;
 extern int g_kbo_custom_foreign_pending_offer_count;
 extern volatile LONG g_kbo_custom_foreign_pending_offer_generation;
 

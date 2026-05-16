@@ -12,7 +12,7 @@ typedef struct KboCaptainDisplayCache {
     char source[24];
 } KboCaptainDisplayCache;
 
-static volatile LONG g_kbo_captain_display_cache_lock = 0;
+static KboSpinLock g_kbo_captain_display_cache_lock = KBO_SPIN_LOCK_INIT;
 static KboCaptainDisplayCache g_kbo_captain_display_cache;
 
 static void kbo_lock_captain_display_cache(void)

@@ -65,8 +65,11 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
         "scan_open_slot");
     int scanned = 0;
     int opened = 0;
-    KBO_PROFILE_BEGIN(profile_foreign_injury_player_loop);
-    for (int32_t i = 0; i < player_count; i++) {
+    if (!slot_opening_allowed) {
+        kbo_profiler_record_us("foreign_injury.scan.player_loop_skipped_closed_window", 0);
+    } else {
+        KBO_PROFILE_BEGIN(profile_foreign_injury_player_loop);
+        for (int32_t i = 0; i < player_count; i++) {
         uintptr_t player_ptr = *(uintptr_t*)(player_vector + ((uintptr_t)i * sizeof(uintptr_t)));
         if (!kbo_player_pointer_plausible(player_ptr)) {
             continue;
@@ -334,8 +337,9 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
                 direct_injury_eligible ? "injury_fields" : (sql_injury_eligible ? "injury_sql" : (message_injury_eligible ? "injury_news" : "inactive_roster")),
                 kbo_foreign_injury_slot_label(created_rec.slot_type));
         }
+        }
+        KBO_PROFILE_END(profile_foreign_injury_player_loop, "foreign_injury.scan.player_loop");
     }
-    KBO_PROFILE_END(profile_foreign_injury_player_loop, "foreign_injury.scan.player_loop");
     int active_count = 0;
     int closed_count = 0;
     KBO_PROFILE_BEGIN(profile_foreign_injury_existing);

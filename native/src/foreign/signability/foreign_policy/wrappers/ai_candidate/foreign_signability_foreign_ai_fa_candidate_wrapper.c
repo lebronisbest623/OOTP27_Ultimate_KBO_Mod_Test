@@ -163,11 +163,12 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
     int32_t insert_index,
     uintptr_t candidate_array)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (frame_ptr == 0 || player_ptr == 0 || insert_index < 0) {
-        return insert_index;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_fa_status_candidate_insert", insert_index);
     }
     if (!memory_range_readable((void*)player_ptr, OOTP27_PLAYER_ID_OFFSET + sizeof(uint32_t))) {
-        return insert_index;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_fa_status_candidate_insert", insert_index);
     }
 
     uint32_t player_id = *(uint32_t*)(player_ptr + OOTP27_PLAYER_ID_OFFSET);
@@ -196,11 +197,12 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
             candidate_array,
             insert_index,
             today);
-        return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+        insert_index = kbo_ai_fa_status_force_closed_replacement_market_candidates(
             frame_ptr,
             requester_team_id,
             candidate_array,
             insert_index);
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_fa_status_candidate_insert", insert_index);
     }
 
     if (player_id != 0u
@@ -231,11 +233,12 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
             candidate_array,
             insert_index,
             today);
-        return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+        insert_index = kbo_ai_fa_status_force_closed_replacement_market_candidates(
             frame_ptr,
             requester_team_id,
             candidate_array,
             insert_index);
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_fa_status_candidate_insert", insert_index);
     }
 
     if (player_id != 0u
@@ -287,11 +290,12 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
                 candidate_array,
                 insert_index,
                 today);
-            return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+            insert_index = kbo_ai_fa_status_force_closed_replacement_market_candidates(
                 frame_ptr,
                 requester_team_id,
                 candidate_array,
                 insert_index);
+            KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_fa_status_candidate_insert", insert_index);
         }
     }
 
@@ -321,10 +325,11 @@ __declspec(noinline) int32_t ootp_kbo_ai_fa_status_candidate_insert_wrapper(
         before_insert_index,
         insert_index,
         today);
-    return kbo_ai_fa_status_force_closed_replacement_market_candidates(
+    insert_index = kbo_ai_fa_status_force_closed_replacement_market_candidates(
         frame_ptr,
         requester_team_id,
         candidate_array,
         insert_index);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.ai_fa_status_candidate_insert", insert_index);
 }
 

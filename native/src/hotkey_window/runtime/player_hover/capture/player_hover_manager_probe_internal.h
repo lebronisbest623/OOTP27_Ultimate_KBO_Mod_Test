@@ -7,6 +7,7 @@
 #include "../../../../bootstrap/abi/ootp_typedefs.h"
 #include "../../../../build_verify/build_verify.h"
 #include "../../../../core/logging/core_log.h"
+#include "../../../../core/sync/lock.h"
 #include "../../../../runtime_memory/runtime_memory.h"
 #include <ctype.h>
 #include <stdarg.h>
@@ -76,7 +77,7 @@ extern uintptr_t g_kbo_player_tooltip_text_append_original;
 extern uintptr_t g_kbo_player_tooltip_string_format_original;
 extern uintptr_t g_kbo_player_tooltip_rating_common_original;
 extern uintptr_t g_kbo_player_tooltip_rating_panel_ctor_original;
-extern volatile LONG g_kbo_player_tooltip_capture_lock;
+extern KboLock g_kbo_player_tooltip_capture_lock;
 extern volatile LONG g_kbo_player_tooltip_text_capture_active;
 extern char g_kbo_player_tooltip_text_capture[12000];
 extern volatile LONG g_kbo_player_tooltip_text_capture_pos;

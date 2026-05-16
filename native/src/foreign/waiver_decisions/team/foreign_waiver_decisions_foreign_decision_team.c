@@ -21,7 +21,7 @@
 #include "../internal/foreign_waiver_decisions_state_internal.h"
 #include "../internal/foreign_waiver_decisions_team_internal.h"
 
-LONG g_kbo_foreign_waiver_decision_lock = 0;
+KboLock g_kbo_foreign_waiver_decision_lock = KBO_LOCK_INIT;
 
 uint32_t kbo_get_player_original_team_id(uint8_t* player)
 {

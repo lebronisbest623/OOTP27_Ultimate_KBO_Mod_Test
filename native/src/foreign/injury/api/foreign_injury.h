@@ -65,7 +65,8 @@ int kbo_foreign_injury_return_state_allows_close(
     int16_t days_left,
     uint8_t loan_active,
     int active_roster_present,
-    int inactive_roster_present);
+    int inactive_roster_present,
+    int close_decision_allowed);
 int kbo_foreign_injury_player_excluded_from_foreign_count_locked(uint32_t team_id, uint32_t player_id);
 int kbo_foreign_injury_player_excluded_from_foreign_count(uint32_t team_id, uint32_t player_id);
 void kbo_lock_foreign_injury_replacements(void);

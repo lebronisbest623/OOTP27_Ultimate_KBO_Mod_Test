@@ -40,6 +40,12 @@ packaging to verify these source-shape checkpoints and the broader native
 ownership rules. Use `-WarnOnly` when reviewing existing debt without failing
 the command. The checker also supports `-Json`, `-Rule <rule-id>`,
 `-WriteBaselinePath <path>`, and `-BaselinePath <path>` for CI and debt ratchets.
+It also validates that local quoted includes still resolve under owned native
+roots (`native/src/` or vendored `native/third_party/`), that one translation
+unit does not define the same top-level function twice, and that code does not
+continue after an unconditional function-level return. Cross-module includes of
+`*_internal.h` are reported as architecture warnings so private contracts do not
+silently become public API.
 
 `native/KBOFix.c` should remain a thin shell. Its responsibilities are:
 
@@ -431,11 +437,11 @@ Docs-only commits may describe multiple known debts.
 After native or launcher changes, run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File native\build.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File native\build.ps1
 dotnet build .\OOTP27-KBO-Launcher.sln
 dotnet test .\OOTP27-KBO-Launcher.sln
-powershell -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
-powershell -ExecutionPolicy Bypass -File tools\check-native-architecture.ps1 -WarnOnly
+pwsh -NoProfile -ExecutionPolicy Bypass -File native\tests\run_tests.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools\check-native-architecture.ps1 -WarnOnly
 ```
 
 CI runs managed build/test, native build, and native helper tests on Windows.

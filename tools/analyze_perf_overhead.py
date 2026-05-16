@@ -63,6 +63,7 @@ class ZoneCoverage:
     bench_case: str = ""
     cost_field: str = ""
     cost_us: float = 0.0
+    fidelity: str = ""
 
 
 def parse_timestamp(text: str) -> datetime:
@@ -248,6 +249,7 @@ def build_zone_coverage(
                     bench_case=bench_case,
                     cost_field=cost_field,
                     cost_us=bench[bench_case].get(cost_field, 0.0),
+                    fidelity=rule.get("fidelity", ""),
                 )
                 break
 
@@ -255,6 +257,7 @@ def build_zone_coverage(
                 stats=stats,
                 status="matched_rule_missing_bench" if bench else "matched_rule_no_bench_csv",
                 rule_label=label,
+                fidelity=rule.get("fidelity", ""),
             )
             break
         coverage.append(row)
@@ -275,6 +278,43 @@ def markdown_table(headers: list[str], rows: list[list[str]]) -> list[str]:
     lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join("---" for _ in headers) + " |"]
     lines.extend("| " + " | ".join(row) + " |" for row in rows)
     return lines
+
+
+def estimate_ratio_status(estimated_us: float, profiled_us: int) -> str:
+    if profiled_us <= 0:
+        return "no-profile"
+    ratio = estimated_us / float(profiled_us)
+    if ratio < 0.1 or ratio > 10.0:
+        return "divergent"
+    if ratio < 0.5 or ratio > 2.0:
+        return "rough"
+    return "aligned"
+
+
+def estimate_ratio_label(estimated_us: float, profiled_us: int) -> tuple[str, str]:
+    if profiled_us <= 0:
+        return "", "no profiler time"
+    ratio = estimated_us / float(profiled_us)
+    status = estimate_ratio_status(estimated_us, profiled_us)
+    if status == "divergent":
+        return f"{ratio:.3g}x", "diverges; use profiler"
+    if status == "rough":
+        return f"{ratio:.3g}x", "rough"
+    return f"{ratio:.3g}x", "aligned"
+
+
+def accounting_for_row(row: ZoneCoverage) -> tuple[str, float, str]:
+    if row.status == "mapped" and row.cost_field:
+        estimated_us = row.stats.calls * row.cost_us
+        status = estimate_ratio_status(estimated_us, row.stats.total_us)
+        if status != "aligned":
+            return f"profile_fallback_{status}", float(row.stats.total_us), f"bench/profile {status}"
+        return "bench", estimated_us, status
+    if row.status == "matched_rule_missing_bench":
+        return "profile_fallback_missing_bench", float(row.stats.total_us), "mapping has no bench result"
+    if row.status == "matched_rule_no_bench_csv":
+        return "profile_fallback_no_bench_csv", float(row.stats.total_us), "no bench csv"
+    return "profile_fallback_unmapped", float(row.stats.total_us), "no bench mapping"
 
 
 def write_zone_csv(path: Path, zones: list[ZoneStats]) -> None:
@@ -303,6 +343,12 @@ def write_coverage_csv(path: Path, coverage: list[ZoneCoverage]) -> None:
             "bench_case",
             "bench_cost_field",
             "bench_cost_us",
+            "fidelity",
+            "estimated_ms",
+            "bench_profile_ratio",
+            "accounting_source",
+            "accounted_ms",
+            "accounting_read",
             "calls",
             "total_ms",
             "avg_us",
@@ -312,6 +358,9 @@ def write_coverage_csv(path: Path, coverage: list[ZoneCoverage]) -> None:
         ])
         for row in coverage:
             stats = row.stats
+            estimated_ms = stats.calls * row.cost_us / 1000.0 if row.cost_field else 0.0
+            ratio = estimated_ms / stats.total_ms if row.cost_field and stats.total_ms > 0 else 0.0
+            accounting_source, accounted_us, accounting_read = accounting_for_row(row)
             writer.writerow([
                 stats.zone,
                 row.status,
@@ -319,6 +368,12 @@ def write_coverage_csv(path: Path, coverage: list[ZoneCoverage]) -> None:
                 row.bench_case,
                 row.cost_field,
                 f"{row.cost_us:.6f}" if row.cost_field else "",
+                row.fidelity,
+                f"{estimated_ms:.3f}" if row.cost_field else "",
+                f"{ratio:.6f}" if row.cost_field and stats.total_ms > 0 else "",
+                accounting_source,
+                f"{accounted_us / 1000.0:.3f}",
+                accounting_read,
                 stats.calls,
                 f"{stats.total_ms:.3f}",
                 f"{stats.avg_us:.3f}",
@@ -406,9 +461,32 @@ def build_report(
     mapped_rules = {row.rule_label for row in mapped_rows if row.rule_label}
     mapped_calls = sum(row.stats.calls for row in mapped_rows)
     mapped_us = sum(row.stats.total_us for row in mapped_rows)
+    mapped_bench_us = sum(row.stats.calls * row.cost_us for row in mapped_rows)
+    unmapped_us = max(0.0, float(summary.total_us - mapped_us))
+    raw_bench_replacement_us = unmapped_us + mapped_bench_us
+    accounting_rows = [(row, *accounting_for_row(row)) for row in coverage]
+    bench_accounted = [item for item in accounting_rows if item[1] == "bench"]
+    profile_accounted = [item for item in accounting_rows if item[1].startswith("profile_fallback")]
+    divergent_rows = [item[0] for item in accounting_rows if item[1] == "profile_fallback_divergent"]
+    mapped_profile_fallback = [item for item in profile_accounted if item[0].status == "mapped"]
+    unmapped_profile_fallback = [item for item in profile_accounted if item[0].status != "mapped"]
+    accounted_calls = sum(item[0].stats.calls for item in accounting_rows)
+    accounted_profile_us = sum(item[0].stats.total_us for item in accounting_rows)
+    accounted_us = sum(item[2] for item in accounting_rows)
+    bench_accounted_profile_us = sum(item[0].stats.total_us for item in bench_accounted)
+    bench_accounted_us = sum(item[2] for item in bench_accounted)
+    profile_accounted_us = sum(item[2] for item in profile_accounted)
+    mapped_profile_fallback_us = sum(item[2] for item in mapped_profile_fallback)
+    unmapped_profile_fallback_us = sum(item[2] for item in unmapped_profile_fallback)
+    guarded_total_us = accounted_us
     mapped_zone_pct = (len(mapped_zones) * 100.0 / len(summary.zones)) if summary.zones else 0.0
     mapped_call_pct = (mapped_calls * 100.0 / summary.total_calls) if summary.total_calls else 0.0
     mapped_time_pct = (mapped_us * 100.0 / summary.total_us) if summary.total_us else 0.0
+    accounted_zone_pct = (len(accounting_rows) * 100.0 / len(summary.zones)) if summary.zones else 0.0
+    accounted_call_pct = (accounted_calls * 100.0 / summary.total_calls) if summary.total_calls else 0.0
+    accounted_time_pct = (accounted_profile_us * 100.0 / summary.total_us) if summary.total_us else 0.0
+    bench_accounted_time_pct = (bench_accounted_profile_us * 100.0 / summary.total_us) if summary.total_us else 0.0
+    profile_accounted_time_pct = (profile_accounted_us * 100.0 / summary.total_us) if summary.total_us else 0.0
 
     groups: dict[str, ZoneStats] = {}
     for stats in zones_by_time:
@@ -455,6 +533,89 @@ def build_report(
     if bench:
         coverage_rows.append(["bench cases used by profiler zones", f"{len(mapped_cases):,} / {len(bench):,}", ""])
     lines.extend(markdown_table(["metric", "value", "coverage"], coverage_rows))
+
+    lines.append("")
+    lines.append("## Mechanical 100% Accounting")
+    lines.append("")
+    accounting_summary_rows = [
+        ["accounted zones", f"{len(accounting_rows):,} / {len(summary.zones):,}", f"{accounted_zone_pct:.1f}%"],
+        ["accounted calls", f"{accounted_calls:,} / {summary.total_calls:,}", f"{accounted_call_pct:.1f}%"],
+        [
+            "accounted profiler time",
+            f"{accounted_profile_us / 1000.0:,.1f} / {summary.total_us / 1000.0:,.1f} ms",
+            f"{accounted_time_pct:.1f}%",
+        ],
+        [
+            "bench-substituted profiler time",
+            f"{bench_accounted_profile_us / 1000.0:,.1f} ms -> {bench_accounted_us / 1000.0:,.3f} ms",
+            f"{bench_accounted_time_pct:.1f}%",
+        ],
+        [
+            "profile fallback time",
+            f"{profile_accounted_us / 1000.0:,.1f} ms",
+            f"{profile_accounted_time_pct:.1f}%",
+        ],
+        ["profile fallback zones", f"{len(profile_accounted):,} / {len(summary.zones):,}", ""],
+    ]
+    lines.extend(markdown_table(["metric", "value", "coverage"], accounting_summary_rows))
+
+    lines.append("")
+    lines.append("## One-Year Whole-Code Time")
+    lines.append("")
+    whole_rows = [
+        [
+            "OOTP profiler inclusive total",
+            f"{summary.total_us / 1000.0:,.1f} ms",
+            format_seconds(summary.total_us / 1_000_000.0),
+            "all instrumented zones",
+        ],
+        [
+            "Bench-covered profiler portion",
+            f"{mapped_us / 1000.0:,.1f} ms",
+            format_seconds(mapped_us / 1_000_000.0),
+            f"{mapped_time_pct:.1f}% of profiler total",
+        ],
+    ]
+    if mapped_rows:
+        whole_rows.extend([
+            [
+                "Bench replay for covered calls",
+                f"{mapped_bench_us / 1000.0:,.3f} ms",
+                format_seconds(mapped_bench_us / 1_000_000.0),
+                "pure offline cost for mapped calls",
+            ],
+            [
+                "Profiler-only remainder",
+                f"{unmapped_us / 1000.0:,.1f} ms",
+                format_seconds(unmapped_us / 1_000_000.0),
+                "zones not replaced by bench",
+            ],
+            [
+                "Profile-guarded whole-code estimate",
+                f"{guarded_total_us / 1000.0:,.1f} ms",
+                format_seconds(guarded_total_us / 1_000_000.0),
+                "uses profiler when bench/profile is not aligned",
+            ],
+            [
+                "Mapped profile fallback",
+                f"{mapped_profile_fallback_us / 1000.0:,.1f} ms",
+                format_seconds(mapped_profile_fallback_us / 1_000_000.0),
+                f"{len(mapped_profile_fallback):,} mapped zones kept on profiler",
+            ],
+            [
+                "Unmapped profile fallback",
+                f"{unmapped_profile_fallback_us / 1000.0:,.1f} ms",
+                format_seconds(unmapped_profile_fallback_us / 1_000_000.0),
+                f"{len(unmapped_profile_fallback):,} zones have no bench mapping",
+            ],
+            [
+                "Raw bench replacement",
+                f"{raw_bench_replacement_us / 1000.0:,.1f} ms",
+                format_seconds(raw_bench_replacement_us / 1_000_000.0),
+                "untrusted if divergence table is non-empty",
+            ],
+        ])
+    lines.extend(markdown_table(["metric", "ms", "time", "meaning"], whole_rows))
 
     if args.baseline_seconds is not None and args.mod_seconds is not None:
         overhead = args.mod_seconds - args.baseline_seconds
@@ -517,6 +678,24 @@ def build_report(
         lines.append("")
         lines.extend(markdown_table(["zone", "status", "calls", "total_ms", "avg_us", "wall%"], unmapped_rows))
 
+    fallback_rows = []
+    for row, source, accounted, read in sorted(profile_accounted, key=lambda item: item[0].stats.total_us, reverse=True)[: args.unmapped_top]:
+        stats = row.stats
+        wall_pct = (stats.total_us / 10000.0 / summary.duration_seconds) if summary.duration_seconds > 0 else 0.0
+        fallback_rows.append([
+            stats.zone,
+            source,
+            read,
+            f"{stats.calls:,}",
+            f"{accounted / 1000.0:,.1f}",
+            f"{wall_pct:.1f}%",
+        ])
+    if fallback_rows:
+        lines.append("")
+        lines.append("## Top Profile Fallback Zones")
+        lines.append("")
+        lines.extend(markdown_table(["zone", "source", "read", "calls", "accounted_ms", "wall%"], fallback_rows))
+
     if bench:
         bench_total_ms = sum(values.get("total_ms", 0.0) for values in bench.values())
         bench_total_iterations = sum(values.get("iterations", 0.0) for values in bench.values())
@@ -542,6 +721,7 @@ def build_report(
         lines.extend(markdown_table(["case", "iterations", "avg_us", "p50_us", "p95_us", "max_us"], bench_rows))
 
     estimate_rows = []
+    divergent_rows = []
     if mapping and bench:
         for rule in mapping:
             bench_case = resolve_bench_case(bench, rule)
@@ -556,21 +736,42 @@ def build_report(
             profiled_us = sum(item.total_us for item in matched)
             estimated_us = calls * cost_us
             label = rule.get("zone") or rule.get("zone_prefix") or ""
+            ratio_label, interpretation = estimate_ratio_label(estimated_us, profiled_us)
+            fidelity = rule.get("fidelity", "")
             estimate_rows.append([
                 label,
                 bench_case,
+                fidelity,
                 cost_field,
                 f"{calls:,}",
                 f"{estimated_us / 1000.0:,.3f}",
                 f"{profiled_us / 1000.0:,.3f}",
+                ratio_label,
+                interpretation,
             ])
+            if interpretation == "diverges; use profiler":
+                divergent_rows.append([
+                    label,
+                    bench_case,
+                    f"{estimated_us / 1000.0:,.3f}",
+                    f"{profiled_us / 1000.0:,.3f}",
+                    ratio_label,
+                ])
     if estimate_rows:
         lines.append("")
         lines.append("## Offline Call Count Estimates")
         lines.append("")
         lines.extend(markdown_table(
-            ["zone/prefix", "bench_case", "cost", "calls", "estimated_ms", "profiled_ms"],
+            ["zone/prefix", "bench_case", "fidelity", "cost", "calls", "estimated_ms", "profiled_ms", "bench/profile", "read"],
             estimate_rows,
+        ))
+    if divergent_rows:
+        lines.append("")
+        lines.append("## Bench Divergence")
+        lines.append("")
+        lines.extend(markdown_table(
+            ["zone/prefix", "bench_case", "estimated_ms", "profiled_ms", "bench/profile"],
+            divergent_rows,
         ))
 
     lines.append("")
@@ -579,6 +780,8 @@ def build_report(
     lines.append("- Profiler zone times are inclusive and can be nested; do not treat the full sum as exclusive CPU time.")
     lines.append("- For one-season A/B, use the same save and sim conditions for baseline and mod-on runs.")
     lines.append("- Offline benchmark estimates are only as good as the zone-to-bench mapping and snapshot similarity.")
+    lines.append("- Mechanical accounting is intentionally 100% by falling back to profiler time for unmapped or non-aligned zones.")
+    lines.append("- When bench/profile is not aligned, use the OOTP profiler time for wall-clock judgment and the bench time only for pure-function regression checks.")
     lines.append("")
     return "\n".join(lines)
 

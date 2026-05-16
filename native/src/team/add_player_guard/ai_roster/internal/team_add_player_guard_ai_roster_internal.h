@@ -125,6 +125,7 @@ uint32_t kbo_ai_roster_slot_player_at(uintptr_t slot_block_ptr, uint16_t target_
 void kbo_ai_roster_flow_read_player(uintptr_t player_ptr, KboAiRosterFlowPlayerSnapshot* out);
 void kbo_ai_roster_flow_read_context(uintptr_t context_ptr, KboAiRosterFlowContextSnapshot* out);
 int32_t kbo_pointer_vector_count(uintptr_t vector_ptr);
+int kbo_ai_roster_foreign_apply_rescue_enabled(void);
 int kbo_ai_roster_minor_foreign_callup_allows(
     int32_t team_arg,
     uint8_t* player,

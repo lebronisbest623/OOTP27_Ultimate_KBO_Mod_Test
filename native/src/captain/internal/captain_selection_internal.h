@@ -17,6 +17,7 @@
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
 #include "../../core/season/phase/season_phase.h"
+#include "../../core/sync/spin_lock.h"
 #include "../../core/teams/core_team_collect.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../runtime_memory/runtime_memory.h"
@@ -65,7 +66,7 @@ extern volatile LONG g_kbo_captain_preseason_thread_started;
 extern volatile LONG g_kbo_captain_last_attempted_season;
 extern KboCaptainSeed g_kbo_captain_seeds[KBO_CAPTAIN_SEED_MAX];
 extern int g_kbo_captain_seed_count;
-extern volatile LONG g_kbo_captain_seed_lock;
+extern KboSpinLock g_kbo_captain_seed_lock;
 extern volatile LONG g_kbo_captain_seed_loaded;
 extern char g_kbo_captain_seed_loaded_key[MAX_PATH * 6];
 

@@ -1,4 +1,5 @@
 #include "../internal/foreign_injury_internal.h"
+#include "../../../core/season/phase/capture/season_phase_capture.h"
 #include "../../../core/season/phase/season_phase.h"
 
 static LONG g_kbo_foreign_injury_season_window_block_log_count = 0;
@@ -6,6 +7,7 @@ static LONG g_kbo_foreign_injury_season_window_block_log_count = 0;
 typedef struct KboForeignInjurySeasonWindowCacheEntry {
     uint32_t league_id;
     uint32_t today_yyyymmdd;
+    LONG phase_capture_sequence;
     DWORD tick;
     uint8_t result;
     uint8_t valid;
@@ -14,7 +16,7 @@ typedef struct KboForeignInjurySeasonWindowCacheEntry {
 
 enum {
     KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_SIZE = 32,
-    KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_TTL_MS = 1000u
+    KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_TTL_MS = 30000u
 };
 
 static KboForeignInjurySeasonWindowCacheEntry
@@ -41,12 +43,17 @@ static int kbo_foreign_injury_season_window_cache_get(
     }
 
     DWORD now = GetTickCount();
+    LONG phase_capture_sequence = InterlockedCompareExchange(
+        &g_kbo_season_phase_capture_event_published_sequence,
+        0,
+        0);
     KboForeignInjurySeasonWindowCacheEntry* entry =
         &g_kbo_foreign_injury_season_window_cache[
             kbo_foreign_injury_season_window_cache_slot(league_id, today_yyyymmdd)];
     if (!entry->valid
             || entry->league_id != league_id
             || entry->today_yyyymmdd != today_yyyymmdd
+            || entry->phase_capture_sequence != phase_capture_sequence
             || entry->tick == 0u
             || now - entry->tick > KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_TTL_MS) {
         return 0;
@@ -71,6 +78,10 @@ static void kbo_foreign_injury_season_window_cache_store(
     entry->valid = 0u;
     entry->league_id = league_id;
     entry->today_yyyymmdd = today_yyyymmdd;
+    entry->phase_capture_sequence = InterlockedCompareExchange(
+        &g_kbo_season_phase_capture_event_published_sequence,
+        0,
+        0);
     entry->tick = GetTickCount();
     entry->result = result ? 1u : 0u;
     if (phase_info != NULL) {

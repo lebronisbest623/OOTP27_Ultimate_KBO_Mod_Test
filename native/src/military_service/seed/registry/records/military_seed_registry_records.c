@@ -3,14 +3,12 @@
 
 void kbo_lock_military_service_seeds(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_military_service_seed_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_military_service_seed_lock);
 }
 
 void kbo_unlock_military_service_seeds(void)
 {
-    InterlockedExchange(&g_kbo_military_service_seed_lock, 0);
+    kbo_lock_leave(&g_kbo_military_service_seed_lock);
 }
 
 int kbo_add_military_service_seed_locked(const KboMilitaryServiceSeed* seed)

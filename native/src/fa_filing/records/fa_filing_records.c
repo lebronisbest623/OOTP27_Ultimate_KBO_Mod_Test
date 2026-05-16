@@ -41,14 +41,12 @@ int kbo_get_fa_filing_csv_path(char* out, size_t out_size)
 
 void kbo_fa_filing_enter_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_fa_filing_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_fa_filing_lock);
 }
 
 void kbo_fa_filing_leave_lock(void)
 {
-    InterlockedExchange(&g_kbo_fa_filing_lock, 0);
+    kbo_lock_leave(&g_kbo_fa_filing_lock);
 }
 
 int kbo_load_fa_filing_records_unlocked(

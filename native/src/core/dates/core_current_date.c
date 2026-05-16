@@ -7,6 +7,21 @@
 #include "core_text_date.h"
 /* Core current-date readers. */
 
+static int kbo_current_date_components_valid(uint32_t year, uint32_t month, uint32_t day)
+{
+    static const uint8_t month_days_common[12] = {
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+    };
+    if (year < 1800u || year > 2200u || month < 1u || month > 12u || day < 1u) {
+        return 0;
+    }
+    uint32_t max_day = month_days_common[month - 1u];
+    if (month == 2u && kbo_is_leap_year(year)) {
+        max_day = 29u;
+    }
+    return day <= max_day;
+}
+
 
 
 int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
@@ -35,8 +50,7 @@ int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t*
     uint32_t month = *(uint8_t*)(current_date  + OOTP27_CURRENT_DATE_MONTH_OFFSET);
     uint32_t day   = *(uint8_t*)(current_date  + OOTP27_CURRENT_DATE_DAY_OFFSET);
 
-    char scratch[16] = {0};
-    if (!kbo_format_history_date(scratch, sizeof(scratch), year, month, day)) {
+    if (!kbo_current_date_components_valid(year, month, day)) {
         return 0;
     }
 

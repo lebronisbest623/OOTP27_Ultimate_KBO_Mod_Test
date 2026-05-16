@@ -1,4 +1,5 @@
 #include "capture/player_hover_manager_probe_internal.h"
+#include "../../../bootstrap/profiling/profiler.h"
 
 uintptr_t kbo_player_hover_manager_ptr(void)
 {
@@ -141,8 +142,9 @@ __declspec(noinline) int ootp_kbo_player_hover_manager_probe_wrapper(
     uintptr_t manager_ptr,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (kbo_player_hover_active_now()) {
-        return 5;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.player_hover_manager", 5);
     }
 
     if (manager_ptr != 0u) {
@@ -159,7 +161,10 @@ __declspec(noinline) int ootp_kbo_player_hover_manager_probe_wrapper(
 
     OotpPlayerHoverManagerFn original = (OotpPlayerHoverManagerFn)original_func_ptr;
     if (original == NULL) {
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.player_hover_manager", 0);
     }
-    return original(manager_ptr);
+    KBO_HOOK_PROFILE_PAUSE(profile_hook);
+    int result = original(manager_ptr);
+    KBO_HOOK_PROFILE_RESUME(profile_hook);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.player_hover_manager", result);
 }

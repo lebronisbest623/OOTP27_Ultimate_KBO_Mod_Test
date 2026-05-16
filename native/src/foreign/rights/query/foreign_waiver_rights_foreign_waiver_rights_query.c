@@ -36,9 +36,7 @@ int kbo_has_active_foreign_waiver_right(uint32_t team_id, uint32_t player_id, ui
     }
     kbo_ensure_foreign_waiver_rights_loaded_for_lookup();
     int result = 0;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
         if (rec->team_id == team_id && rec->player_id == player_id && kbo_is_foreign_waiver_right_active(rec, today_yyyymmdd)) {
@@ -46,7 +44,7 @@ int kbo_has_active_foreign_waiver_right(uint32_t team_id, uint32_t player_id, ui
             break;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
     return result;
 }
 
@@ -70,9 +68,7 @@ int kbo_get_active_foreign_waiver_right_dates(
     kbo_ensure_foreign_waiver_rights_loaded_for_lookup();
 
     int result = 0;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
         if (rec->team_id == team_id
@@ -88,7 +84,7 @@ int kbo_get_active_foreign_waiver_right_dates(
             break;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
     return result;
 }
 
@@ -135,9 +131,7 @@ int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t today_yyy
 
     int found = 0;
     uint32_t holder_team_id = 0;
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
         if (rec->player_id == player_id && kbo_is_foreign_waiver_right_active(rec, today_yyyymmdd)) {
@@ -146,7 +140,7 @@ int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t today_yyy
             break;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     if (found && out_team_id != NULL) {
         *out_team_id = holder_team_id;

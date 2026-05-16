@@ -156,9 +156,7 @@ void kbo_foreign_org_count_cache_note_player_assignment_change(
     if (g_kbo_foreign_org_snapshot_tick == 0u) {
         return;
     }
-    while (InterlockedCompareExchange(&g_kbo_foreign_org_snapshot_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_org_snapshot_lock);
     if (g_kbo_foreign_org_snapshot_tick != 0u) {
         for (int i = 0; i < before_count; i++) {
             if (!kbo_foreign_org_list_contains(after_orgs, after_count, before_orgs[i])) {
@@ -171,8 +169,39 @@ void kbo_foreign_org_count_cache_note_player_assignment_change(
             }
         }
     }
-    InterlockedExchange(&g_kbo_foreign_org_snapshot_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_org_snapshot_lock);
 }
+
+#ifdef KBO_BENCHMARK_BUILD
+void kbo_foreign_org_count_seed_benchmark_snapshot(
+    uint32_t team_id,
+    uint32_t foreign_count,
+    uint32_t asian_count,
+    uint32_t non_asian_count)
+{
+    if (team_id == 0u) {
+        return;
+    }
+
+    DWORD now = GetTickCount();
+    kbo_foreign_org_count_cache_store(team_id, foreign_count, asian_count, non_asian_count, now);
+    kbo_lock_enter(&g_kbo_foreign_org_snapshot_lock);
+    g_kbo_foreign_org_snapshot_count = 1;
+    g_kbo_foreign_org_snapshot[0].team_id = team_id;
+    g_kbo_foreign_org_snapshot[0].foreign_count = foreign_count;
+    g_kbo_foreign_org_snapshot[0].asian_count = asian_count;
+    g_kbo_foreign_org_snapshot[0].non_asian_count = non_asian_count;
+    g_kbo_foreign_org_snapshot_tick = now;
+    kbo_lock_leave(&g_kbo_foreign_org_snapshot_lock);
+}
+
+void kbo_foreign_org_count_refresh_benchmark_snapshot_tick(void)
+{
+    if (g_kbo_foreign_org_snapshot_tick != 0u) {
+        g_kbo_foreign_org_snapshot_tick = GetTickCount();
+    }
+}
+#endif
 
 static int kbo_foreign_org_snapshot_rebuild(DWORD now)
 {
@@ -244,13 +273,11 @@ int kbo_foreign_org_snapshot_get(
         return 0;
     }
 
-    while (InterlockedCompareExchange(&g_kbo_foreign_org_snapshot_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_org_snapshot_lock);
     if (g_kbo_foreign_org_snapshot_tick == 0u
             || now - g_kbo_foreign_org_snapshot_tick > KBO_FOREIGN_ORG_COUNT_CACHE_TTL_MS) {
         if (!kbo_foreign_org_snapshot_rebuild(now)) {
-            InterlockedExchange(&g_kbo_foreign_org_snapshot_lock, 0);
+            kbo_lock_leave(&g_kbo_foreign_org_snapshot_lock);
             return 0;
         }
         if (out_rebuilt != NULL) {
@@ -269,7 +296,7 @@ int kbo_foreign_org_snapshot_get(
             break;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_org_snapshot_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_org_snapshot_lock);
 
     if (out_foreign_count != NULL) { *out_foreign_count = foreign_count; }
     if (out_asian_quota_count != NULL) { *out_asian_quota_count = asian_count; }

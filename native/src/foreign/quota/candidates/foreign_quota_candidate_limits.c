@@ -1,5 +1,6 @@
 #include "../internal/foreign_quota_internal.h"
 #include "cache/foreign_quota_candidate_limit_cache.h"
+#include "../../controller/foreign_ai_controller.h"
 #include "../../rights/query/foreign_waiver_rights_query.h"
 #include "foreign_quota_retention_opportunity_probe.h"
 #include <string.h>
@@ -212,7 +213,7 @@ int kbo_custom_foreign_policy_team_allows_candidate(
         || out_slot_type != NULL
         || out_injured_player_id != NULL;
     int need_extra_slots = details_requested || (!counts_as_existing_candidate && effective_after > KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT);
-    if (!need_extra_slots) {
+    if (!need_extra_slots && kbo_foreign_ai_controller_enabled()) {
         KboForeignRetentionOpportunitySummary opportunity;
         memset(&opportunity, 0, sizeof(opportunity));
         if (kbo_retention_opportunity_get_summary(team_id, today, &opportunity)) {

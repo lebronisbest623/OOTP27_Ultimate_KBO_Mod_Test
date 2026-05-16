@@ -8,6 +8,7 @@
 #include "../../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../../bootstrap/profiling/profiler.h"
 #include "../../../../core/logging/core_log.h"
+#include "../../../../core/sync/lock.h"
 #include "../../../../runtime_memory/runtime_memory.h"
 #include "../../../../team/lookup/team_lookup.h"
 #include "../../../../team/assignment/org_query/team_org_assignment_query.h"
@@ -42,7 +43,7 @@ extern KboForeignOrgCountCacheEntry g_kbo_foreign_org_count_cache[KBO_FOREIGN_OR
 extern KboForeignOrgSnapshotEntry g_kbo_foreign_org_snapshot[KBO_FOREIGN_ORG_SNAPSHOT_MAX_TEAMS];
 extern int g_kbo_foreign_org_snapshot_count;
 extern DWORD g_kbo_foreign_org_snapshot_tick;
-extern LONG g_kbo_foreign_org_snapshot_lock;
+extern KboLock g_kbo_foreign_org_snapshot_lock;
 extern volatile LONG g_kbo_foreign_org_count_cache_generation;
 extern uint32_t g_kbo_foreign_org_team_generation_team_ids[KBO_FOREIGN_ORG_TEAM_GENERATION_CACHE_SIZE];
 extern LONG g_kbo_foreign_org_team_generations[KBO_FOREIGN_ORG_TEAM_GENERATION_CACHE_SIZE];

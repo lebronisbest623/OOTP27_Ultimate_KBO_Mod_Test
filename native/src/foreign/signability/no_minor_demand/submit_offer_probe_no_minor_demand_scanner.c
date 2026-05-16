@@ -221,22 +221,23 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
     uint32_t source_rva,
     int32_t salary_floor_hint)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KBO_PROFILE_BEGIN(profile_no_minor_write_probe);
     if (kbo_runtime_save_in_progress()) {
         KBO_PROFILE_END(profile_no_minor_write_probe, "no_minor.write_probe.save_in_progress");
-        return proposed_demand;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.no_minor_demand_write_floor", proposed_demand);
     }
     kbo_restore_foreign_fa_demand_salary_ladder("demand_write");
     if (InterlockedCompareExchange(&g_kbo_no_minor_contract_demand_floor_enabled, 0, 0) == 0) {
         KBO_PROFILE_END(profile_no_minor_write_probe, "no_minor.write_probe.disabled");
-        return proposed_demand;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.no_minor_demand_write_floor", proposed_demand);
     }
     KBO_PROFILE_BEGIN(profile_no_minor_write_probe_baseline);
     kbo_log_financials_salary_baseline_probe("demand_write");
     KBO_PROFILE_END(profile_no_minor_write_probe_baseline, "no_minor.write_probe.log_baseline");
     if (!kbo_player_pointer_plausible(player_ptr)) {
         KBO_PROFILE_END(profile_no_minor_write_probe, "no_minor.write_probe.bad_player");
-        return proposed_demand;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.no_minor_demand_write_floor", proposed_demand);
     }
 
     uint8_t* player = (uint8_t*)player_ptr;
@@ -247,7 +248,7 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
     if (!kbo_no_minor_player_is_teamless_demand_floor_candidate(player, league_id)) {
         KBO_PROFILE_END(profile_no_minor_write_probe_candidate, "no_minor.write_probe.candidate_check");
         KBO_PROFILE_END(profile_no_minor_write_probe, "no_minor.write_probe.not_candidate");
-        return proposed_demand;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.no_minor_demand_write_floor", proposed_demand);
     }
     KBO_PROFILE_END(profile_no_minor_write_probe_candidate, "no_minor.write_probe.candidate_check");
 
@@ -259,7 +260,7 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
     }
     if (salary_floor <= 0) {
         KBO_PROFILE_END(profile_no_minor_write_probe, "no_minor.write_probe.no_floor");
-        return proposed_demand;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.no_minor_demand_write_floor", proposed_demand);
     }
 
     uint8_t scan[OOTP27_PLAYER_SCAN_BYTES] = {0};
@@ -312,7 +313,7 @@ __declspec(noinline) int32_t ootp_kbo_no_minor_demand_write_floor_probe(
     KBO_PROFILE_END(profile_no_minor_write_probe, adjusted_demand != proposed_demand
         ? "no_minor.write_probe.adjusted"
         : "no_minor.write_probe.unchanged");
-    return adjusted_demand;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.no_minor_demand_write_floor", adjusted_demand);
 }
 
 DWORD WINAPI kbo_no_minor_contract_demand_floor_scanner_thread(LPVOID param)

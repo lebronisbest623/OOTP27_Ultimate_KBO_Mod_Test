@@ -16,7 +16,7 @@
 #include "../fa_filing_parts/fa_filing_csv_parse.h"
 #include "../fa_filing_parts/fa_filing_csv_write_helpers.h"
 
-volatile LONG g_kbo_fa_filing_lock = 0;
+KboLock g_kbo_fa_filing_lock = KBO_LOCK_INIT;
 volatile LONG g_kbo_fa_filing_cache_dirty = 1;
 KboFaFilingRecord* g_kbo_fa_filing_cache_rows = NULL;
 int g_kbo_fa_filing_cache_count = 0;

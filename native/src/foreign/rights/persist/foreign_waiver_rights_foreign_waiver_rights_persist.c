@@ -18,14 +18,12 @@ int kbo_persist_foreign_waiver_rights(void)
         CreateDirectoryA(dir, NULL);
     }
 
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
 
     char tmp_path[MAX_PATH] = {0};
     HANDLE file = kbo_atomic_open_tmp(path, tmp_path, sizeof(tmp_path));
     if (file == INVALID_HANDLE_VALUE) {
-        InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+        kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
         kbo_log_runtimef("foreign reserve rights: persist failed reason=create_tmp gle=%lu path=%s", GetLastError(), path);
         return 0;
     }
@@ -50,7 +48,7 @@ int kbo_persist_foreign_waiver_rights(void)
         WriteFile(file, line, (DWORD)len, &written, NULL);
     }
     int ok = kbo_atomic_commit(file, tmp_path, path);
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
     if (!ok) {
         kbo_log_runtimef("foreign reserve rights: atomic commit failed path=%s", path);
         return 0;

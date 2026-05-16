@@ -8,6 +8,7 @@
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/sync/lock.h"
 #include "../../fa_market_classification/policy/fa_market_policy.h"
 #include "../../foreign/common/dates/foreign_waiver_date.h"
 #include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
@@ -18,20 +19,18 @@ static KboDomesticFaOrphanRescueCachedCandidate
     g_kbo_domestic_fa_orphan_rescue_cache[KBO_DOMESTIC_FA_ORPHAN_RESCUE_CACHE_MAX];
 static int g_kbo_domestic_fa_orphan_rescue_cache_count = 0;
 static uint32_t g_kbo_domestic_fa_orphan_rescue_cache_date = 0u;
-static volatile LONG g_kbo_domestic_fa_orphan_rescue_cache_lock = 0;
+static KboLock g_kbo_domestic_fa_orphan_rescue_cache_lock = KBO_LOCK_INIT;
 
 #define KBO_DOMESTIC_FA_ORPHAN_RESCUE_FORCE_PER_CALL_MAX 2
 
 static void kbo_domestic_fa_orphan_rescue_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_domestic_fa_orphan_rescue_cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_domestic_fa_orphan_rescue_cache_lock);
 }
 
 static void kbo_domestic_fa_orphan_rescue_unlock(void)
 {
-    InterlockedExchange(&g_kbo_domestic_fa_orphan_rescue_cache_lock, 0);
+    kbo_lock_leave(&g_kbo_domestic_fa_orphan_rescue_cache_lock);
 }
 
 int kbo_domestic_fa_orphan_rescue_enabled(void)

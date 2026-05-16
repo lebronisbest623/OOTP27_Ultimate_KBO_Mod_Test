@@ -32,18 +32,16 @@ typedef struct KboForeignInjuryMessageSignatureCacheEntry {
 static KboForeignInjuryMessageEvidenceCacheEntry
     g_kbo_foreign_injury_message_evidence_cache[KBO_FOREIGN_INJURY_MESSAGE_EVIDENCE_CACHE_SIZE];
 static KboForeignInjuryMessageSignatureCacheEntry g_kbo_foreign_injury_message_signature_cache;
-static volatile LONG g_kbo_foreign_injury_message_evidence_cache_lock = 0;
+static KboLock g_kbo_foreign_injury_message_evidence_cache_lock = KBO_LOCK_INIT;
 
 static void kbo_foreign_injury_message_cache_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_foreign_injury_message_evidence_cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_injury_message_evidence_cache_lock);
 }
 
 static void kbo_foreign_injury_message_cache_unlock(void)
 {
-    InterlockedExchange(&g_kbo_foreign_injury_message_evidence_cache_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_injury_message_evidence_cache_lock);
 }
 
 static uint32_t kbo_foreign_injury_message_cache_slot(uint32_t player_id, int min_days)

@@ -124,7 +124,7 @@ static void kbo_team_classification_load_once(void)
     }
     if (state != 0) {
         while (InterlockedCompareExchange(&g_kbo_team_classification_loaded_state, 0, 0) != 2) {
-            Sleep(0);
+            SwitchToThread();
         }
         return;
     }

@@ -24,6 +24,7 @@ English documentation: [`README.en.md`](README.en.md)
 
 - **OOTP27** (Steam 기준 `ootp27.exe`)
 - **.NET 8** — 런처 실행
+- **PowerShell 7 이상 (`pwsh`)** — 네이티브 빌드 스크립트 실행
 - **GCC (MinGW-w64)** — 네이티브 DLL 빌드
 - **WebView2 NuGet 패키지** — F2 허브 UI
 
@@ -33,7 +34,7 @@ English documentation: [`README.en.md`](README.en.md)
 
 ```powershell
 # 네이티브 DLL
-powershell -ExecutionPolicy Bypass -File native\build.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File native\build.ps1
 
 # C# 런처
 dotnet build .\OOTP27-KBO-Launcher.sln

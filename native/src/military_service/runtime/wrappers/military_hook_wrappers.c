@@ -5,6 +5,7 @@
 #include "../../../bootstrap/abi/hook_entrypoints.h"
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../bootstrap/profiling/perf_probe.h"
+#include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
@@ -23,6 +24,7 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
     uintptr_t player_ptr,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     static volatile LONG perf_total = 0;
     static volatile LONG perf_last = 0;
     static volatile LONG perf_ms = 0;
@@ -31,7 +33,9 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
     DWORD perf_start = GetTickCount();
     OotpMilitaryServiceEntryFn original_func = (OotpMilitaryServiceEntryFn)original_func_ptr;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         original_func((void*)player_ptr);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
 
     LONG log_index = InterlockedIncrement(&g_military_service_entry_log_count);
@@ -117,12 +121,14 @@ __declspec(noinline) void ootp_kbo_military_service_entry_wrapper(
         &perf_max,
         &perf_tick,
         GetTickCount() - perf_start);
+    KBO_HOOK_PROFILE_END(profile_hook, "military.service_entry");
 }
 
 __declspec(noinline) void ootp_kbo_military_status_update_wrapper(
     uintptr_t player_ptr,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     static volatile LONG perf_total = 0;
     static volatile LONG perf_last = 0;
     static volatile LONG perf_ms = 0;
@@ -131,7 +137,9 @@ __declspec(noinline) void ootp_kbo_military_status_update_wrapper(
     DWORD perf_start = GetTickCount();
     OotpMilitaryServiceEntryFn original_func = (OotpMilitaryServiceEntryFn)original_func_ptr;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         original_func((void*)player_ptr);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
 
     kbo_flush_pending_foreign_priority_events("military_status_update_wrapper");
@@ -145,7 +153,7 @@ __declspec(noinline) void ootp_kbo_military_status_update_wrapper(
             &perf_max,
             &perf_tick,
             GetTickCount() - perf_start);
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "military.status_update");
     }
 
     kbo_return_completed_military_loan_player(
@@ -158,4 +166,5 @@ __declspec(noinline) void ootp_kbo_military_status_update_wrapper(
         &perf_max,
         &perf_tick,
         GetTickCount() - perf_start);
+    KBO_HOOK_PROFILE_END(profile_hook, "military.status_update");
 }

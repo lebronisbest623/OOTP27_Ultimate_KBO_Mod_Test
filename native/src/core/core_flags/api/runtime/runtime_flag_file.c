@@ -22,7 +22,7 @@ int read_kbo_localappdata_flag_file(const char* file_name)
         int valid;
     } KboFlagCacheEntry;
     static KboFlagCacheEntry cache[128];
-    static volatile LONG cache_lock = 0;
+    static KboSpinLock cache_lock = KBO_SPIN_LOCK_INIT;
 
     DWORD now = GetTickCount();
     kbo_spin_lock(&cache_lock);

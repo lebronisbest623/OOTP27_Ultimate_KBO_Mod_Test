@@ -11,6 +11,7 @@
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../core/files/atomic/core_atomic_file.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/sync/lock.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../players/state/military_player_state.h"
@@ -20,7 +21,7 @@
 
 extern KboMilitaryServiceSeed g_kbo_military_service_seeds[KBO_MILITARY_SERVICE_SEED_MAX];
 extern int g_kbo_military_service_seed_count;
-extern LONG g_kbo_military_service_seed_lock;
+extern KboLock g_kbo_military_service_seed_lock;
 extern LONG g_kbo_military_service_seed_loaded;
 extern ULONGLONG g_kbo_military_service_seed_last_resolve_tick;
 extern char g_kbo_military_service_seed_loaded_key[MAX_PATH * 3];

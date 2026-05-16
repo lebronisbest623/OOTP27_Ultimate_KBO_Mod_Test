@@ -104,11 +104,20 @@ void kbo_foreign_injury_process_existing_replacements(
             continue;
         }
         int expected_end_pending = kbo_foreign_injury_expected_end_pending(today, rec->expected_end_yyyymmdd);
+        int close_decision_allowed = rec->league_id != 0u
+            && kbo_foreign_injury_replacement_in_season_window(
+                rec->league_id,
+                today,
+                source,
+                "existing_close_slot");
         if (uses_slot
                 && rec->replacement_player_id == 0u
                 && !inactive_roster_present
                 && !expected_end_pending
                 && !kbo_foreign_injury_record_has_minimum_injury_basis(rec)) {
+            if (!close_decision_allowed) {
+                continue;
+            }
             uint32_t replacement_player_id = kbo_foreign_injury_resolve_replacement_for_record(rec);
             if (replacement_player_id != 0u) {
                 rec->replacement_player_id = replacement_player_id;
@@ -171,17 +180,22 @@ void kbo_foreign_injury_process_existing_replacements(
                 changed = 1;
             }
         }
+        if (!close_decision_allowed) {
+            continue;
+        }
 
         int active_roster_present = top_team != NULL && memory_range_readable(top_team, OOTP27_KBO_TEAM_READABLE_BYTES)
             ? kbo_foreign_injury_team_active_roster_contains_player(top_team, rec->injured_player_id)
             : 0;
-        int returned_to_org_roster = kbo_foreign_injury_injured_player_returned_to_org_roster(rec, injured)
+        int returned_to_org_roster = (close_decision_allowed
+            && kbo_foreign_injury_injured_player_returned_to_org_roster(rec, injured))
             || kbo_foreign_injury_return_state_allows_close(
                 injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET],
                 *(int16_t*)(injured + OOTP27_PLAYER_INJURY_DAYS_LEFT_OFFSET),
                 injured[OOTP27_PLAYER_LOAN_ACTIVE_FLAG_OFFSET],
                 active_roster_present,
-                inactive_roster_present);
+                inactive_roster_present,
+                close_decision_allowed);
         if (!returned_to_org_roster && inactive_roster_present) {
             if (injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] == 0u) {
                 LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_return_wait_log_count);
@@ -207,7 +221,8 @@ void kbo_foreign_injury_process_existing_replacements(
             }
             continue;
         }
-        int expected_end_due = !returned_to_org_roster
+        int expected_end_due = close_decision_allowed
+            && !returned_to_org_roster
             && kbo_foreign_injury_expected_end_reached(today, rec->expected_end_yyyymmdd);
         if (!returned_to_org_roster && !expected_end_due) {
             if (injured[OOTP27_PLAYER_INJURY_ACTIVE_OFFSET] == 0u) {

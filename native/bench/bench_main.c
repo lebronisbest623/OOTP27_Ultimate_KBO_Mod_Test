@@ -12,24 +12,48 @@
 #include "../src/fa_compensation/protection/fa_compensation_protection_score.h"
 #include "../src/fa_compensation/protection/candidate_score/fa_compensation_candidate_score.h"
 #include "../src/foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../src/foreign/common/policy/foreign_waiver_policy.h"
+#include "../src/foreign/quota/candidates/foreign_quota_retention_opportunity_probe.h"
 #include "../src/foreign/quota/counts/foreign_quota_counts.h"
 #include "../src/perf_snapshot/perf_snapshot_format.h"
 
 enum {
-    BENCH_TEAM_ID_MAX = 64,
+    BENCH_TEAM_ID_MAX = 4096,
+    BENCH_READABLE_RANGE_MAX = 16,
     BENCH_PLAN_MAX = 128,
     BENCH_PLAN_SELECTOR_MAX = 128
 };
 
+typedef enum BenchReadabilityMode {
+    BENCH_READABILITY_FAST = 0,
+    BENCH_READABILITY_VIRTUAL_QUERY = 1
+} BenchReadabilityMode;
+
 static uint8_t* g_players = NULL;
 static uintptr_t* g_player_vector = NULL;
 static int32_t g_player_count = 0;
+static uint8_t* g_teams = NULL;
+static uintptr_t* g_team_vector = NULL;
+static int32_t g_team_count = 0;
 static uint32_t g_bench_team_ids[BENCH_TEAM_ID_MAX];
 static int g_bench_team_count = 0;
 static uint32_t g_bench_primary_team_id = 101u;
 static uint32_t g_bench_primary_team_player_id = 1u;
+static int32_t g_bench_allowed_candidate_index = -1;
+static int32_t g_bench_blocked_candidate_index = -1;
 static LARGE_INTEGER g_qpc_frequency;
 static volatile int64_t g_bench_sink = 0;
+static BenchReadabilityMode g_bench_readability_mode = BENCH_READABILITY_FAST;
+volatile LONG g_kbo_custom_foreign_pending_offer_generation = 0;
+int g_kbo_foreign_injury_replacement_count = 0;
+
+typedef struct BenchReadableRange {
+    uintptr_t start;
+    uintptr_t end;
+} BenchReadableRange;
+
+static BenchReadableRange g_bench_readable_ranges[BENCH_READABLE_RANGE_MAX];
+static int g_bench_readable_range_count = 0;
 
 static void bench_free_players(void);
 
@@ -65,7 +89,25 @@ typedef struct BenchFaProtectionContext {
     uint32_t cold_league_cursor;
 } BenchFaProtectionContext;
 
+typedef struct BenchForeignCandidateContext {
+    uint32_t index;
+    uint32_t team_id;
+    int32_t candidate_index;
+    int force_cold;
+} BenchForeignCandidateContext;
+
 typedef void (*BenchStep)(void* context);
+
+int kbo_fast_block_fa_candidate_before_original(
+    uintptr_t player_ptr,
+    int32_t requesting_team_id,
+    const char* context,
+    uint32_t* out_player_id);
+uint32_t kbo_custom_foreign_policy_extra_slots_for_candidate(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id);
 
 static int bench_double_compare(const void* left, const void* right)
 {
@@ -79,6 +121,40 @@ static int bench_double_compare(const void* left, const void* right)
 static double bench_ticks_to_us(LONGLONG ticks)
 {
     return ((double)ticks * 1000000.0) / (double)g_qpc_frequency.QuadPart;
+}
+
+static void bench_register_readable_range(const void* data, size_t size)
+{
+    if (data == NULL || size == 0u || g_bench_readable_range_count >= BENCH_READABLE_RANGE_MAX) {
+        return;
+    }
+    uintptr_t start = (uintptr_t)data;
+    uintptr_t end = start + (uintptr_t)size;
+    if (end <= start) {
+        return;
+    }
+    BenchReadableRange* range = &g_bench_readable_ranges[g_bench_readable_range_count++];
+    range->start = start;
+    range->end = end;
+}
+
+static int bench_range_readable(const void* data, SIZE_T size)
+{
+    if (data == NULL || size == 0u) {
+        return 0;
+    }
+    uintptr_t start = (uintptr_t)data;
+    uintptr_t end = start + (uintptr_t)size;
+    if (start < 0x10000u || end <= start) {
+        return 0;
+    }
+    for (int i = 0; i < g_bench_readable_range_count; i++) {
+        const BenchReadableRange* range = &g_bench_readable_ranges[i];
+        if (start >= range->start && end <= range->end) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static int bench_parse_int_arg(int argc, char** argv, const char* name, int fallback, int min_value, int max_value)
@@ -105,6 +181,19 @@ static const char* bench_parse_string_arg(int argc, char** argv, const char* nam
         }
     }
     return NULL;
+}
+
+static BenchReadabilityMode bench_parse_readability_mode(int argc, char** argv)
+{
+    const char* value = bench_parse_string_arg(argc, argv, "--readability");
+    if (value == NULL || value[0] == '\0' || strcmp(value, "fast") == 0) {
+        return BENCH_READABILITY_FAST;
+    }
+    if (strcmp(value, "virtual") == 0 || strcmp(value, "virtualquery") == 0) {
+        return BENCH_READABILITY_VIRTUAL_QUERY;
+    }
+    fprintf(stderr, "Unknown --readability value '%s'; using fast\n", value);
+    return BENCH_READABILITY_FAST;
 }
 
 static void bench_strip_line(char* text)
@@ -216,6 +305,7 @@ static void bench_run_case(
     const char* name,
     int samples,
     int inner_iterations,
+    int warmup_iterations,
     BenchStep step,
     void* context)
 {
@@ -228,7 +318,7 @@ static void bench_run_case(
         return;
     }
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < warmup_iterations; i++) {
         step(context);
     }
 
@@ -275,6 +365,7 @@ static void bench_run_case(
         sample_us[p50_index],
         sample_us[p95_index],
         max_per_iteration_us);
+    fflush(out);
 
     free(sample_us);
 }
@@ -284,6 +375,7 @@ static void bench_run_case_iterations(
     const char* name,
     long long total_iterations,
     int batch_iterations,
+    int warmup_iterations,
     BenchStep step,
     void* context)
 {
@@ -299,7 +391,7 @@ static void bench_run_case_iterations(
         return;
     }
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < warmup_iterations; i++) {
         step(context);
     }
 
@@ -355,6 +447,7 @@ static void bench_run_case_iterations(
         sample_us[p50_index],
         sample_us[p95_index],
         max_per_iteration_us);
+    fflush(out);
 
     free(sample_us);
 }
@@ -374,11 +467,11 @@ static void bench_run_case_from_plan_or_default(
             return;
         }
         entry->matched++;
-        bench_run_case_iterations(out, name, entry->iterations, default_inner_iterations, step, context);
+        bench_run_case_iterations(out, name, entry->iterations, default_inner_iterations, 0, step, context);
         return;
     }
 
-    bench_run_case(out, name, default_samples, default_inner_iterations, step, context);
+    bench_run_case(out, name, default_samples, default_inner_iterations, 8, step, context);
 }
 
 static void bench_fill_player(uint8_t* player, int index)
@@ -417,6 +510,9 @@ static void bench_add_team_id(uint32_t team_id)
     }
 }
 
+static int bench_player_is_foreign_index(int32_t index);
+static int bench_player_matches_team_index(int32_t index, uint32_t team_id);
+
 static void bench_collect_team_ids(void)
 {
     memset(g_bench_team_ids, 0, sizeof(g_bench_team_ids));
@@ -443,6 +539,17 @@ static void bench_collect_team_ids(void)
     }
 
     for (int32_t i = 0; i < g_player_count; i++) {
+        if (!bench_player_is_foreign_index(i)) {
+            continue;
+        }
+        uint32_t current_team_id = *(uint32_t*)(g_players + ((size_t)i * OOTP27_PLAYER_SCAN_BYTES) + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
+        if (current_team_id != 0u) {
+            g_bench_primary_team_id = current_team_id;
+            break;
+        }
+    }
+
+    for (int32_t i = 0; i < g_player_count; i++) {
         uint8_t* player = g_players + ((size_t)i * OOTP27_PLAYER_SCAN_BYTES);
         uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
         uint32_t current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
@@ -455,6 +562,90 @@ static void bench_collect_team_ids(void)
             break;
         }
     }
+}
+
+static int bench_player_is_foreign_index(int32_t index)
+{
+    if (index < 0 || index >= g_player_count || g_players == NULL) {
+        return 0;
+    }
+    uint8_t* player = g_players + ((size_t)index * OOTP27_PLAYER_SCAN_BYTES);
+    uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
+    uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+    return player_id != 0u && nation_id != 0u && nation_id != OOTP27_KBO_KOREA_NATION_ID;
+}
+
+static int bench_player_matches_team_index(int32_t index, uint32_t team_id)
+{
+    if (index < 0 || index >= g_player_count || team_id == 0u || g_players == NULL) {
+        return 0;
+    }
+    uint8_t* player = g_players + ((size_t)index * OOTP27_PLAYER_SCAN_BYTES);
+    return *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET) == team_id
+        || *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET) == team_id
+        || *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET) == team_id;
+}
+
+static void bench_select_foreign_candidates(void)
+{
+    g_bench_allowed_candidate_index = -1;
+    g_bench_blocked_candidate_index = -1;
+    for (int32_t i = 0; i < g_player_count; i++) {
+        if (!bench_player_is_foreign_index(i)) {
+            continue;
+        }
+        if (g_bench_allowed_candidate_index < 0
+                && bench_player_matches_team_index(i, g_bench_primary_team_id)) {
+            g_bench_allowed_candidate_index = i;
+        }
+        if (g_bench_blocked_candidate_index < 0
+                && !bench_player_matches_team_index(i, g_bench_primary_team_id)) {
+            g_bench_blocked_candidate_index = i;
+        }
+    }
+    for (int32_t i = 0; i < g_player_count; i++) {
+        if (!bench_player_is_foreign_index(i)) {
+            continue;
+        }
+        if (g_bench_allowed_candidate_index < 0) {
+            g_bench_allowed_candidate_index = i;
+        }
+        if (g_bench_blocked_candidate_index < 0) {
+            g_bench_blocked_candidate_index = i;
+        }
+    }
+}
+
+static int bench_init_teams_from_collected_ids(void)
+{
+    if (g_bench_team_count <= 0) {
+        return 1;
+    }
+
+    g_teams = (uint8_t*)calloc((size_t)g_bench_team_count, OOTP27_KBO_TEAM_READABLE_BYTES);
+    g_team_vector = (uintptr_t*)calloc((size_t)g_bench_team_count, sizeof(uintptr_t));
+    if (g_teams == NULL || g_team_vector == NULL) {
+        free(g_team_vector);
+        free(g_teams);
+        g_team_vector = NULL;
+        g_teams = NULL;
+        g_team_count = 0;
+        return 0;
+    }
+
+    for (int i = 0; i < g_bench_team_count; i++) {
+        uint8_t* team = g_teams + ((size_t)i * OOTP27_KBO_TEAM_READABLE_BYTES);
+        memset(team, 0, OOTP27_KBO_TEAM_READABLE_BYTES);
+        *(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET) = g_bench_team_ids[i];
+        *(uint32_t*)(team + OOTP27_KBO_TEAM_LEAGUE_ID_OFFSET) = 1u;
+        team[OOTP27_KBO_TEAM_ACTIVE_OFFSET] = 1u;
+        team[OOTP27_KBO_TEAM_DELETED_OFFSET] = 0u;
+        g_team_vector[i] = (uintptr_t)team;
+    }
+    g_team_count = g_bench_team_count;
+    bench_register_readable_range(g_teams, (size_t)g_team_count * OOTP27_KBO_TEAM_READABLE_BYTES);
+    bench_register_readable_range(g_team_vector, (size_t)g_team_count * sizeof(uintptr_t));
+    return 1;
 }
 
 static void bench_prepare_fa_protection_context(BenchFaProtectionContext* context)
@@ -481,6 +672,11 @@ static void bench_prepare_fa_protection_context(BenchFaProtectionContext* contex
     context->cold_league_cursor = 1000u;
 }
 
+static void bench_seed_replay_foreign_org_counts(uint32_t team_id)
+{
+    kbo_foreign_org_count_seed_benchmark_snapshot(team_id, 0u, 0u, 0u);
+}
+
 static int bench_init_players(int player_count)
 {
     if (player_count <= 0) {
@@ -503,6 +699,8 @@ static int bench_init_players(int player_count)
         g_player_vector[i] = (uintptr_t)player;
     }
     g_player_count = player_count;
+    bench_register_readable_range(g_players, (size_t)player_count * OOTP27_PLAYER_SCAN_BYTES);
+    bench_register_readable_range(g_player_vector, (size_t)player_count * sizeof(uintptr_t));
     return 1;
 }
 
@@ -571,6 +769,8 @@ static int bench_load_snapshot(const char* path)
 
     fclose(file);
     g_player_count = player_count;
+    bench_register_readable_range(g_players, (size_t)player_count * OOTP27_PLAYER_SCAN_BYTES);
+    bench_register_readable_range(g_player_vector, (size_t)player_count * sizeof(uintptr_t));
     fprintf(
         stderr,
         "Loaded snapshot players=%d source_count=%u skipped=%u date=%u path=%s\n",
@@ -584,11 +784,17 @@ static int bench_load_snapshot(const char* path)
 
 static void bench_free_players(void)
 {
+    free(g_team_vector);
+    free(g_teams);
     free(g_player_vector);
     free(g_players);
+    g_team_vector = NULL;
+    g_teams = NULL;
+    g_team_count = 0;
     g_player_vector = NULL;
     g_players = NULL;
     g_player_count = 0;
+    g_bench_readable_range_count = 0;
 }
 
 static void bench_step_date_serial(void* context)
@@ -662,6 +868,7 @@ static void bench_step_foreign_org_count_snapshot_hit(void* context)
     uint32_t asian_count = 0u;
     uint32_t non_asian_count = 0u;
     kbo_foreign_org_count_cache_note_player_assignment_change(0u, 0u, 0u, team_id, 0u, 0u, 0u, 0);
+    kbo_foreign_org_count_refresh_benchmark_snapshot_tick();
     kbo_count_team_asian_quota_probe(team_id, &foreign_count, &asian_count, &non_asian_count);
     g_bench_sink += (int64_t)foreign_count + (int64_t)asian_count + (int64_t)non_asian_count;
 }
@@ -687,6 +894,96 @@ static void bench_step_foreign_org_count_fresh_scan(void* context)
     uint32_t non_asian_count = 0u;
     kbo_count_team_asian_quota_probe_fresh(team_id, &foreign_count, &asian_count, &non_asian_count);
     g_bench_sink += (int64_t)foreign_count + (int64_t)asian_count + (int64_t)non_asian_count;
+}
+
+static uint8_t* bench_candidate_player(BenchForeignCandidateContext* context)
+{
+    if (context == NULL || context->candidate_index < 0 || context->candidate_index >= g_player_count) {
+        return NULL;
+    }
+    return g_players + ((size_t)context->candidate_index * OOTP27_PLAYER_SCAN_BYTES);
+}
+
+static void bench_step_foreign_candidate_policy(void* context)
+{
+    BenchForeignCandidateContext* candidate = (BenchForeignCandidateContext*)context;
+    uint8_t* player = bench_candidate_player(candidate);
+    if (candidate == NULL || player == NULL) {
+        return;
+    }
+    if (candidate->force_cold) {
+        InterlockedIncrement(&g_kbo_custom_foreign_pending_offer_generation);
+    }
+    uint32_t effective_before = 0u;
+    uint32_t effective_after = 0u;
+    uint32_t effective_limit = 0u;
+    uint8_t slot_type = 0u;
+    uint32_t injured_player_id = 0u;
+    int allowed = kbo_custom_foreign_policy_team_allows_candidate(
+        candidate->team_id,
+        player,
+        &effective_before,
+        &effective_after,
+        &effective_limit,
+        &slot_type,
+        &injured_player_id);
+    g_bench_sink += allowed
+        + (int64_t)effective_before
+        + (int64_t)effective_after
+        + (int64_t)effective_limit
+        + (int64_t)slot_type
+        + (int64_t)injured_player_id;
+}
+
+static void bench_step_foreign_fast_block(void* context)
+{
+    BenchForeignCandidateContext* candidate = (BenchForeignCandidateContext*)context;
+    uint8_t* player = bench_candidate_player(candidate);
+    if (candidate == NULL || player == NULL) {
+        return;
+    }
+    if (candidate->force_cold) {
+        InterlockedIncrement(&g_kbo_custom_foreign_pending_offer_generation);
+    }
+    uint32_t player_id = 0u;
+    int blocked = kbo_fast_block_fa_candidate_before_original(
+        (uintptr_t)player,
+        (int32_t)candidate->team_id,
+        "bench",
+        &player_id);
+    g_bench_sink += blocked + (int64_t)player_id;
+}
+
+static void bench_step_foreign_candidate_extra_slots(void* context)
+{
+    BenchForeignCandidateContext* candidate = (BenchForeignCandidateContext*)context;
+    uint8_t* player = bench_candidate_player(candidate);
+    if (candidate == NULL || player == NULL) {
+        return;
+    }
+    if (candidate->force_cold) {
+        InterlockedIncrement(&g_kbo_custom_foreign_pending_offer_generation);
+    }
+    uint8_t slot_type = 0u;
+    uint32_t injured_player_id = 0u;
+    uint32_t extra_slots = kbo_custom_foreign_policy_extra_slots_for_candidate(
+        candidate->team_id,
+        player,
+        &slot_type,
+        &injured_player_id);
+    g_bench_sink += (int64_t)extra_slots + (int64_t)slot_type + (int64_t)injured_player_id;
+}
+
+static void bench_seed_foreign_candidate_caches(
+    BenchForeignCandidateContext* allowed,
+    BenchForeignCandidateContext* blocked)
+{
+    BenchForeignCandidateContext seed_allowed = *allowed;
+    BenchForeignCandidateContext seed_blocked = *blocked;
+    seed_allowed.force_cold = 1;
+    seed_blocked.force_cold = 1;
+    bench_step_foreign_candidate_policy(&seed_allowed);
+    bench_step_foreign_candidate_policy(&seed_blocked);
 }
 
 static void bench_step_fa_protection_build_cache_hit(void* context)
@@ -724,6 +1021,7 @@ static void bench_step_fa_protection_build_cold(void* context)
 static void bench_print_header(FILE* out)
 {
     fputs("case,iterations,batch,total_ms,avg_us,p50_us,p95_us,max_us\n", out);
+    fflush(out);
 }
 
 int main(int argc, char** argv)
@@ -734,6 +1032,7 @@ int main(int argc, char** argv)
     const char* snapshot_path = bench_parse_string_arg(argc, argv, "--snapshot");
     const char* plan_path = bench_parse_string_arg(argc, argv, "--plan");
     const char* dataset_label = snapshot_path != NULL ? "snapshot" : "synthetic";
+    g_bench_readability_mode = bench_parse_readability_mode(argc, argv);
 
     if (!QueryPerformanceFrequency(&g_qpc_frequency) || g_qpc_frequency.QuadPart <= 0) {
         fprintf(stderr, "QueryPerformanceFrequency failed\n");
@@ -744,6 +1043,12 @@ int main(int argc, char** argv)
         return 1;
     }
     bench_collect_team_ids();
+    bench_select_foreign_candidates();
+    if (!bench_init_teams_from_collected_ids()) {
+        fprintf(stderr, "failed to initialize benchmark teams\n");
+        bench_free_players();
+        return 1;
+    }
 
     BenchCursor date_cursor = {0};
     BenchCursor csv_cursor = {0};
@@ -752,6 +1057,20 @@ int main(int argc, char** argv)
     BenchCursor candidate_cursor = {0};
     BenchTeamContext primary_team;
     primary_team.team_id = g_bench_primary_team_id;
+    BenchForeignCandidateContext candidate_allowed_cache;
+    candidate_allowed_cache.index = 0u;
+    candidate_allowed_cache.team_id = g_bench_primary_team_id;
+    candidate_allowed_cache.candidate_index = g_bench_allowed_candidate_index;
+    candidate_allowed_cache.force_cold = 0;
+    BenchForeignCandidateContext candidate_blocked_cache;
+    candidate_blocked_cache.index = 0u;
+    candidate_blocked_cache.team_id = g_bench_primary_team_id;
+    candidate_blocked_cache.candidate_index = g_bench_blocked_candidate_index;
+    candidate_blocked_cache.force_cold = 0;
+    BenchForeignCandidateContext candidate_allowed_cold = candidate_allowed_cache;
+    candidate_allowed_cold.force_cold = 1;
+    BenchForeignCandidateContext candidate_blocked_cold = candidate_blocked_cache;
+    candidate_blocked_cold.force_cold = 1;
     BenchFaProtectionContext fa_protection;
     bench_prepare_fa_protection_context(&fa_protection);
     BenchPlan replay_plan;
@@ -765,19 +1084,28 @@ int main(int argc, char** argv)
         active_plan = &replay_plan;
     }
 
-    kbo_fa_team_role_count(g_bench_primary_team_id, 0);
-    kbo_foreign_org_count_cache_note_roster_mutation();
-    bench_step_foreign_org_count_cache_hit(&primary_team);
-    bench_step_fa_protection_build_cache_hit(&fa_protection);
+    if (active_plan != NULL) {
+        bench_seed_replay_foreign_org_counts(g_bench_primary_team_id);
+        bench_seed_foreign_candidate_caches(&candidate_allowed_cache, &candidate_blocked_cache);
+    } else {
+        kbo_fa_team_role_count(g_bench_primary_team_id, 0);
+        kbo_foreign_org_count_cache_note_roster_mutation();
+        bench_step_foreign_org_count_cache_hit(&primary_team);
+        bench_seed_foreign_candidate_caches(&candidate_allowed_cache, &candidate_blocked_cache);
+        bench_step_fa_protection_build_cache_hit(&fa_protection);
+    }
 
     fprintf(
         stderr,
-        "Bench dataset=%s players=%d teams=%d primary_team=%u primary_player=%u\n",
+        "Bench dataset=%s players=%d teams=%d primary_team=%u primary_player=%u allowed_candidate=%d blocked_candidate=%d readability=%s\n",
         dataset_label,
         g_player_count,
-        g_bench_team_count,
+        g_team_count,
         g_bench_primary_team_id,
-        g_bench_primary_team_player_id);
+        g_bench_primary_team_player_id,
+        g_bench_allowed_candidate_index,
+        g_bench_blocked_candidate_index,
+        g_bench_readability_mode == BENCH_READABILITY_FAST ? "fast" : "virtual");
 
     char case_name[128] = {0};
     bench_print_header(stdout);
@@ -793,6 +1121,20 @@ int main(int argc, char** argv)
     bench_run_case_from_plan_or_default(stdout, case_name, config.samples < 20 ? config.samples : 20, 1, bench_step_foreign_org_count_snapshot_rebuild, &primary_team, active_plan);
     snprintf(case_name, sizeof(case_name), "foreign.org_count.fresh_scan.%s_vector", dataset_label);
     bench_run_case_from_plan_or_default(stdout, case_name, config.samples < 30 ? config.samples : 30, 1, bench_step_foreign_org_count_fresh_scan, &primary_team, active_plan);
+    snprintf(case_name, sizeof(case_name), "foreign.candidate.cache_allowed.%s_player", dataset_label);
+    bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 1000, bench_step_foreign_candidate_policy, &candidate_allowed_cache, active_plan);
+    snprintf(case_name, sizeof(case_name), "foreign.candidate.cache_blocked.%s_player", dataset_label);
+    bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 1000, bench_step_foreign_candidate_policy, &candidate_blocked_cache, active_plan);
+    snprintf(case_name, sizeof(case_name), "foreign.candidate.allowed.%s_player", dataset_label);
+    bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 100, bench_step_foreign_candidate_policy, &candidate_allowed_cold, active_plan);
+    snprintf(case_name, sizeof(case_name), "foreign.candidate.blocked.%s_player", dataset_label);
+    bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 100, bench_step_foreign_candidate_policy, &candidate_blocked_cold, active_plan);
+    snprintf(case_name, sizeof(case_name), "foreign.candidate.extra_slots.%s_player", dataset_label);
+    bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 100, bench_step_foreign_candidate_extra_slots, &candidate_blocked_cold, active_plan);
+    snprintf(case_name, sizeof(case_name), "foreign.fast_block.allowed.%s_player", dataset_label);
+    bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 1000, bench_step_foreign_fast_block, &candidate_allowed_cache, active_plan);
+    snprintf(case_name, sizeof(case_name), "foreign.fast_block.custom_blocked.%s_player", dataset_label);
+    bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 100, bench_step_foreign_fast_block, &candidate_blocked_cold, active_plan);
     snprintf(case_name, sizeof(case_name), "fa.role_count.cache_hit.%s_vector", dataset_label);
     bench_run_case_from_plan_or_default(stdout, case_name, config.samples, 2000, bench_step_fa_role_count_cache_hit, &primary_team, active_plan);
     snprintf(case_name, sizeof(case_name), "fa.candidate_score.cached_roles.%s_player", dataset_label);
@@ -839,6 +1181,9 @@ int memory_range_readable(const void* ptr, SIZE_T size)
     if (ptr == NULL || size == 0u) {
         return 0;
     }
+    if (g_bench_readability_mode == BENCH_READABILITY_FAST && bench_range_readable(ptr, size)) {
+        return 1;
+    }
 
     uintptr_t start = (uintptr_t)ptr;
     uintptr_t end = start + size;
@@ -883,8 +1228,22 @@ int find_kbo_global_player_vector(uintptr_t* out_vector, int32_t* out_count, uin
 
 uint8_t* find_kbo_team_by_numeric_id_any_league(uint32_t team_id, int allow_deleted)
 {
-    (void)team_id;
-    (void)allow_deleted;
+    if (team_id == 0u || g_team_vector == NULL || g_team_count <= 0) {
+        return NULL;
+    }
+    for (int32_t i = 0; i < g_team_count; i++) {
+        uintptr_t team_ptr = g_team_vector[i];
+        if (team_ptr == 0 || !memory_range_readable((void*)team_ptr, OOTP27_KBO_TEAM_READABLE_BYTES)) {
+            continue;
+        }
+        uint8_t* team = (uint8_t*)team_ptr;
+        if (!allow_deleted && team[OOTP27_KBO_TEAM_DELETED_OFFSET] != 0u) {
+            continue;
+        }
+        if (*(uint32_t*)(team + OOTP27_KBO_TEAM_ID_OFFSET) == team_id) {
+            return team;
+        }
+    }
     return NULL;
 }
 
@@ -964,6 +1323,216 @@ void kbo_profiler_record_us(const char* name, unsigned long long elapsed_us)
 
 void kbo_profiler_reset_enabled_cache(void)
 {
+}
+
+int kbo_fix_enabled(void)
+{
+    return 1;
+}
+
+uint32_t kbo_resolve_kbo_league_id(void)
+{
+    return 1u;
+}
+
+int kbo_foreign_waiver_ai_enabled(void)
+{
+    return 0;
+}
+
+int kbo_custom_foreign_policy_enabled(void)
+{
+    return 1;
+}
+
+uint32_t kbo_get_foreign_waiver_league_id(void)
+{
+    return 1u;
+}
+
+int kbo_get_foreign_waiver_current_yyyymmdd(uint32_t* out_today)
+{
+    if (out_today != NULL) {
+        *out_today = 20260310u;
+    }
+    return 1;
+}
+
+void kbo_custom_foreign_count_pending_offers(
+    uint32_t team_id,
+    uint32_t today,
+    uint32_t candidate_id,
+    uint32_t* out_asian_pending,
+    uint32_t* out_non_asian_pending,
+    int* out_candidate_pending)
+{
+    (void)team_id;
+    (void)today;
+    (void)candidate_id;
+    if (out_asian_pending != NULL) { *out_asian_pending = 0u; }
+    if (out_non_asian_pending != NULL) { *out_non_asian_pending = 0u; }
+    if (out_candidate_pending != NULL) { *out_candidate_pending = 0; }
+}
+
+int kbo_foreign_injury_replacement_enabled(void)
+{
+    return 1;
+}
+
+int kbo_foreign_injury_replacement_in_season_window(
+    uint32_t league_id,
+    uint32_t today_yyyymmdd,
+    const char* source,
+    const char* context)
+{
+    (void)league_id;
+    (void)today_yyyymmdd;
+    (void)source;
+    (void)context;
+    return 0;
+}
+
+int kbo_team_has_foreign_injury_slot_for_candidate_any(
+    uint32_t team_id,
+    int allow_asian_slot,
+    uint32_t candidate_player_id,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id,
+    uint32_t* out_replacement_player_id)
+{
+    (void)team_id;
+    (void)allow_asian_slot;
+    (void)candidate_player_id;
+    if (out_slot_type != NULL) { *out_slot_type = 0u; }
+    if (out_injured_player_id != NULL) { *out_injured_player_id = 0u; }
+    if (out_replacement_player_id != NULL) { *out_replacement_player_id = 0u; }
+    return 0;
+}
+
+const char* kbo_foreign_injury_slot_label(uint8_t slot_type)
+{
+    switch (slot_type) {
+        case 1u: return "Regular";
+        case 2u: return "Asian quota";
+        default: return "none";
+    }
+}
+
+int kbo_retention_opportunity_get_summary(
+    uint32_t team_id,
+    uint32_t today,
+    KboForeignRetentionOpportunitySummary* out_summary)
+{
+    (void)team_id;
+    (void)today;
+    if (out_summary != NULL) {
+        memset(out_summary, 0, sizeof(*out_summary));
+    }
+    return 0;
+}
+
+int32_t kbo_retention_opportunity_score_margin_for_best(int32_t best_score)
+{
+    return best_score / 10;
+}
+
+int kbo_retention_opportunity_probe_should_block(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t today,
+    uint32_t asian_count,
+    uint32_t non_asian_count,
+    uint32_t pending_asian_count,
+    uint32_t pending_non_asian_count,
+    uint32_t asian_after,
+    uint32_t non_asian_after,
+    uint32_t effective_before,
+    uint32_t effective_after,
+    uint32_t effective_limit,
+    int candidate_pending,
+    int already_in_org,
+    int allowed)
+{
+    (void)team_id;
+    (void)candidate;
+    (void)today;
+    (void)asian_count;
+    (void)non_asian_count;
+    (void)pending_asian_count;
+    (void)pending_non_asian_count;
+    (void)asian_after;
+    (void)non_asian_after;
+    (void)effective_before;
+    (void)effective_after;
+    (void)effective_limit;
+    (void)candidate_pending;
+    (void)already_in_org;
+    (void)allowed;
+    return 0;
+}
+
+int kbo_find_active_foreign_waiver_holder(
+    uint32_t player_id,
+    uint32_t today_yyyymmdd,
+    uint32_t* out_team_id)
+{
+    (void)player_id;
+    (void)today_yyyymmdd;
+    if (out_team_id != NULL) {
+        *out_team_id = 0u;
+    }
+    return 0;
+}
+
+void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd)
+{
+    (void)today_yyyymmdd;
+}
+
+int kbo_has_active_foreign_waiver_right(
+    uint32_t team_id,
+    uint32_t player_id,
+    uint32_t today_yyyymmdd)
+{
+    (void)team_id;
+    (void)player_id;
+    (void)today_yyyymmdd;
+    return 0;
+}
+
+int kbo_sync_active_foreign_waiver_right_to_memory(
+    uint8_t* player,
+    uint32_t player_id,
+    uint32_t holder_team_id,
+    uint32_t today_yyyymmdd)
+{
+    (void)player;
+    (void)player_id;
+    (void)holder_team_id;
+    (void)today_yyyymmdd;
+    return 0;
+}
+
+void kbo_record_recent_foreign_offer_block(
+    uint32_t player_id,
+    uint32_t requester_team_id,
+    uint32_t holder_team_id,
+    uint32_t today)
+{
+    (void)player_id;
+    (void)requester_team_id;
+    (void)holder_team_id;
+    (void)today;
+}
+
+void kbo_record_recent_custom_foreign_policy_block(
+    uint32_t player_id,
+    uint32_t requester_team_id,
+    uint32_t today)
+{
+    (void)player_id;
+    (void)requester_team_id;
+    (void)today;
 }
 
 int32_t kbo_read_clamped_policy_int(

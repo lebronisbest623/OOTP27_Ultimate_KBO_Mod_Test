@@ -34,13 +34,28 @@ int kbo_fast_block_fa_candidate_before_original(
     }
 
     uint32_t requester_team_id = (uint32_t)requesting_team_id;
+    uint32_t nation_id = *(uint32_t*)(player + OOTP27_PLAYER_NATION_ID_OFFSET);
+    int candidate_is_foreign = nation_id != 0u && nation_id != OOTP27_KBO_KOREA_NATION_ID;
+    if (!candidate_is_foreign) {
+        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.allowed");
+        return 0;
+    }
+
+    int waiver_ai_enabled = kbo_foreign_waiver_ai_enabled();
+    int custom_policy_enabled = kbo_custom_foreign_policy_enabled();
+
+    if (!waiver_ai_enabled && !custom_policy_enabled) {
+        KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.allowed");
+        return 0;
+    }
+
     uint32_t today = 0u;
     if (!kbo_get_foreign_waiver_current_yyyymmdd(&today)) {
         KBO_PROFILE_END(profile_fa_fast_block, "foreign_policy.fast_block.no_date");
         return 0;
     }
 
-    if (kbo_foreign_waiver_ai_enabled()) {
+    if (waiver_ai_enabled) {
         kbo_prune_expired_foreign_waiver_rights(today);
 
         uint32_t holder_team_id = 0u;
@@ -68,7 +83,7 @@ int kbo_fast_block_fa_candidate_before_original(
         }
     }
 
-    if (kbo_custom_foreign_policy_enabled() && kbo_player_is_foreign_for_kbo_rights(player)) {
+    if (custom_policy_enabled) {
         int allowed = kbo_custom_foreign_policy_team_allows_candidate(
             requester_team_id,
             player,

@@ -29,18 +29,16 @@ typedef struct KboForeignRetentionOpportunityCacheEntry {
 
 static KboForeignRetentionOpportunityCacheEntry
     g_kbo_retention_opportunity_cache[KBO_RETENTION_OPPORTUNITY_CACHE_SIZE];
-static volatile LONG g_kbo_retention_opportunity_cache_lock = 0;
+static KboLock g_kbo_retention_opportunity_cache_lock = KBO_LOCK_INIT;
 
 static void kbo_retention_opportunity_cache_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_retention_opportunity_cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_retention_opportunity_cache_lock);
 }
 
 static void kbo_retention_opportunity_cache_unlock(void)
 {
-    InterlockedExchange(&g_kbo_retention_opportunity_cache_lock, 0);
+    kbo_lock_leave(&g_kbo_retention_opportunity_cache_lock);
 }
 
 static int kbo_retention_opportunity_player_protectable(
@@ -114,9 +112,7 @@ static int kbo_retention_opportunity_cache_get(
     };
 
     kbo_ensure_foreign_waiver_rights_loaded_for_lookup();
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count
             && player_count < KBO_RETENTION_OPPORTUNITY_SCAN_MAX; i++) {
         const KboForeignWaiverRetention* rec = &g_kbo_foreign_waiver_rights[i];
@@ -125,7 +121,7 @@ static int kbo_retention_opportunity_cache_get(
             opportunity.active_rights++;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     for (int i = 0; i < player_count; i++) {
         uint32_t player_id = player_ids[i];

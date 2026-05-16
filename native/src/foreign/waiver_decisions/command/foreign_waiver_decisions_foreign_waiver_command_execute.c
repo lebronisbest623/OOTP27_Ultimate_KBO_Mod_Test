@@ -205,12 +205,10 @@ static int kbo_append_foreign_waiver_cmd_line(const char* line)
     if (!get_kbo_foreign_waiver_cmd_path(path, sizeof(path))) {
         return 0;
     }
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_decision_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_decision_lock);
     HANDLE file = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
-        InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
+        kbo_lock_leave(&g_kbo_foreign_waiver_decision_lock);
         return 0;
     }
     DWORD wrote = 0;
@@ -218,7 +216,7 @@ static int kbo_append_foreign_waiver_cmd_line(const char* line)
     int len = snprintf(out, sizeof(out), "%s\r\n", line);
     WriteFile(file, out, (DWORD)len, &wrote, NULL);
     CloseHandle(file);
-    InterlockedExchange(&g_kbo_foreign_waiver_decision_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_decision_lock);
     return wrote == (DWORD)len;
 }
 

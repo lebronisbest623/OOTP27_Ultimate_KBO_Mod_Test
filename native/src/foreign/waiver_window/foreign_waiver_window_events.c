@@ -26,9 +26,7 @@ void kbo_queue_foreign_priority_league_event(
     const char* title,
     const char* source)
 {
-    while (InterlockedCompareExchange(&g_kbo_foreign_priority_pending_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_priority_pending_lock);
 
     g_kbo_foreign_priority_pending_yyyymmdd = event_yyyymmdd;
     snprintf(
@@ -42,7 +40,7 @@ void kbo_queue_foreign_priority_league_event(
         "%s",
         source != NULL ? source : "foreign_priority_negotiation");
 
-    InterlockedExchange(&g_kbo_foreign_priority_pending_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_priority_pending_lock);
     kbo_log_runtimef(
         "foreign priority negotiation: league event queued source=%s title=%s date=%u",
         g_kbo_foreign_priority_pending_source,
@@ -56,9 +54,7 @@ void kbo_flush_pending_foreign_priority_events(const char* source)
     char title[96] = {0};
     char queued_source[48] = {0};
 
-    while (InterlockedCompareExchange(&g_kbo_foreign_priority_pending_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_priority_pending_lock);
 
     event_yyyymmdd = g_kbo_foreign_priority_pending_yyyymmdd;
     if (event_yyyymmdd != 0u) {
@@ -69,7 +65,7 @@ void kbo_flush_pending_foreign_priority_events(const char* source)
         g_kbo_foreign_priority_pending_source[0] = '\0';
     }
 
-    InterlockedExchange(&g_kbo_foreign_priority_pending_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_priority_pending_lock);
 
     if (event_yyyymmdd == 0u || title[0] == '\0') {
         return;

@@ -202,18 +202,24 @@ uint8_t kbo_callup_foreign_limit_allows_with_asian_quota(
 __declspec(noinline) uint8_t ootp_kbo_callup_foreign_hitter_limit_allows_wrapper(
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit)
 {
-    return kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 1);
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
+    uint8_t result = kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 1);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.callup_hitter_limit", result);
 }
 
 __declspec(noinline) uint8_t ootp_kbo_callup_foreign_pitcher_limit_allows_wrapper(
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit)
 {
-    return kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 2);
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
+    uint8_t result = kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 2);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.callup_pitcher_limit", result);
 }
 
 __declspec(noinline) uint8_t ootp_kbo_callup_foreign_total_limit_allows_wrapper(
     uintptr_t team_ptr, uintptr_t player_ptr, int32_t active_count, int32_t limit)
 {
-    return kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 3);
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
+    uint8_t result = kbo_callup_foreign_limit_allows_with_asian_quota(team_ptr, player_ptr, active_count, limit, 3);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.callup_total_limit", result);
 }
 

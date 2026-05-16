@@ -10,8 +10,8 @@
 
 #define KBO_LOG_RUNTIME_FILE_NAME "runtime.ndjson"
 
-static volatile LONG g_kbo_log_event_file_lock = 0;
-static volatile LONG g_kbo_log_event_run_id_lock = 0;
+static KboSpinLock g_kbo_log_event_file_lock = KBO_SPIN_LOCK_INIT;
+static KboSpinLock g_kbo_log_event_run_id_lock = KBO_SPIN_LOCK_INIT;
 static volatile LONG g_kbo_log_event_sequence = 0;
 static char g_kbo_log_event_run_id[64] = {0};
 

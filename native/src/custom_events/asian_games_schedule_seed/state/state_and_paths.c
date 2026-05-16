@@ -8,23 +8,22 @@
 
 #include "state_and_paths.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
+#include "../../../core/sync/lock.h"
 
 KboAsianGamesScheduleSeed g_kbo_asian_games_schedule_seeds[KBO_ASIAN_GAMES_SCHEDULE_SEED_MAX];
 int g_kbo_asian_games_schedule_seed_count = 0;
-static LONG g_kbo_asian_games_schedule_seed_lock = 0;
+static KboLock g_kbo_asian_games_schedule_seed_lock = KBO_LOCK_INIT;
 LONG g_kbo_asian_games_schedule_seed_loaded = 0;
 char g_kbo_asian_games_schedule_seed_loaded_key[MAX_PATH * 3] = {0};
 
 void kbo_lock_asian_games_schedule_seeds(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_asian_games_schedule_seed_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_asian_games_schedule_seed_lock);
 }
 
 void kbo_unlock_asian_games_schedule_seeds(void)
 {
-    InterlockedExchange(&g_kbo_asian_games_schedule_seed_lock, 0);
+    kbo_lock_leave(&g_kbo_asian_games_schedule_seed_lock);
 }
 
 int kbo_get_save_asian_games_schedule_seed_path(char* out, size_t out_size)

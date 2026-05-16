@@ -36,15 +36,13 @@ static int kbo_build_foreign_waiver_result_body(char* out, size_t out_size, uint
     int active_rights = 0;
     int decision_breakdown_available = 0;
 
-    while (InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_waiver_rights_lock);
     for (int i = 0; i < g_kbo_foreign_waiver_rights_count; i++) {
         if (kbo_is_foreign_waiver_right_active(&g_kbo_foreign_waiver_rights[i], today_yyyymmdd)) {
             active_rights++;
         }
     }
-    InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_waiver_rights_lock);
 
     char decision_path[MAX_PATH] = {0};
     if (get_kbo_foreign_waiver_decisions_path(decision_path, sizeof(decision_path))) {

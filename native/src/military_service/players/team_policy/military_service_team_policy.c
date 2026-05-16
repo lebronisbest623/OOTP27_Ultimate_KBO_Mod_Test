@@ -128,7 +128,7 @@ void kbo_load_military_service_team_policy_override_once(void)
     }
     if (state != 0) {
         while (InterlockedCompareExchange(&g_kbo_military_policy_loaded_state, 0, 0) != 2) {
-            Sleep(0);
+            SwitchToThread();
         }
         return;
     }

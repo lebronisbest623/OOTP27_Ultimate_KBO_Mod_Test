@@ -14,7 +14,7 @@
 #include "../../common/player_eval/foreign_waiver_player_eval.h"
 #include "../query/foreign_waiver_rights_query.h"
 
-LONG g_kbo_foreign_waiver_rights_lock = 0;
+KboLock g_kbo_foreign_waiver_rights_lock = KBO_LOCK_INIT;
 KboForeignWaiverRetention g_kbo_foreign_waiver_rights[KBO_FOREIGN_WAIVER_RIGHTS_MAX] = {{0}};
 int g_kbo_foreign_waiver_rights_count = 0;
 volatile LONG g_kbo_foreign_waiver_rights_generation = 1;

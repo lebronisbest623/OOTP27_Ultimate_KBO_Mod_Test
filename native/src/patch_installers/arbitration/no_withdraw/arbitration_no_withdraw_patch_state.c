@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
+#include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../fa_declaration/fa_declaration.h"
@@ -29,18 +30,23 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
     uint8_t notify,
     OotpArbitrationNonTenderFn original_func)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (kbo_runtime_save_in_progress()) {
         if (original_func != NULL) {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
             original_func(team_ptr, player_ptr, notify);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "arbitration.non_tender");
     }
 
     if (player_ptr == NULL || !memory_range_readable(player_ptr, OOTP27_PLAYER_SCAN_BYTES)) {
         if (original_func != NULL) {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
             original_func(team_ptr, player_ptr, notify);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "arbitration.non_tender");
     }
 
     void* return_address = __builtin_return_address(0);
@@ -69,9 +75,11 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
         || player_draft_league_id == OOTP27_KBO_MAIN_LEAGUE_ID;
     if (!kbo_context) {
         if (original_func != NULL) {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
             original_func(team_ptr, player_ptr, notify);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "arbitration.non_tender");
     }
 
     uint8_t contract_level = *(uint8_t*)(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET);
@@ -139,7 +147,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
                     retained_repaired,
                     (unsigned long long)caller_rva);
             }
-            return;
+            KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "arbitration.non_tender");
         }
         if (fa_declaration_decision_found && decision.declared != 0u) {
             static LONG fa_declaration_pass_log_count = 0;
@@ -159,7 +167,9 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
                     (unsigned long long)caller_rva);
             }
             if (original_func != NULL) {
+                KBO_HOOK_PROFILE_PAUSE(profile_hook);
                 original_func(team_ptr, player_ptr, notify);
+                KBO_HOOK_PROFILE_RESUME(profile_hook);
             }
             if (memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
                 uint32_t post_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
@@ -176,7 +186,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
                         "fa_declaration_declared_transition");
                 }
             }
-            return;
+            KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "arbitration.non_tender");
         }
     }
     int direct_block_candidate = contract_level != 0u
@@ -214,7 +224,9 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
                 official_zero_offer_transition ? 1 : 0);
         }
         if (original_func != NULL) {
+            KBO_HOOK_PROFILE_PAUSE(profile_hook);
             original_func(team_ptr, player_ptr, notify);
+            KBO_HOOK_PROFILE_RESUME(profile_hook);
         }
         if (fa_filing_candidate && memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
             uint32_t post_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
@@ -234,7 +246,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
                 }
             }
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "arbitration.non_tender");
     }
 
     uint32_t floor_league_id = team_league_id != 0u
@@ -265,6 +277,7 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
             official_zero_offer_transition ? 1 : 0,
             declaration_season);
     }
+    KBO_HOOK_PROFILE_END(profile_hook, "arbitration.non_tender");
 }
 
 

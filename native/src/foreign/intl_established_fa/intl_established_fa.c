@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "../../bootstrap/abi/ootp_offsets.h"
+#include "../../bootstrap/profiling/profiler.h"
 #include "../../core/core_flags/api/flags_api.h"
 #include "../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../core/logging/core_log.h"
@@ -47,14 +48,15 @@ static int kbo_intl_established_fa_league_matches(uintptr_t league_ptr, uint32_t
 
 __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(int32_t original_count, uintptr_t league_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (original_count <= 0) {
-        return original_count;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_established_count", original_count);
     }
 
     uint32_t primary_id = 0u;
     uint32_t fallback_id = 0u;
     if (!kbo_intl_established_fa_league_matches(league_ptr, &primary_id, &fallback_id)) {
-        return original_count;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_established_count", original_count);
     }
 
     InterlockedExchange(&g_kbo_intl_established_fa_quality_probe_log_count, 0);
@@ -62,7 +64,7 @@ __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(int32_t 
 
     int multiplier = kbo_get_intl_established_fa_multiplier();
     if (multiplier <= 1) {
-        return original_count;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_established_count", original_count);
     }
     const KboIntlEstablishedFaPolicy* policy = kbo_intl_established_fa_policy();
 
@@ -85,7 +87,7 @@ __declspec(noinline) int32_t ootp_kbo_intl_established_fa_count_wrapper(int32_t 
         multiplier,
         primary_id,
         fallback_id);
-    return (int32_t)scaled;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_established_count", (int32_t)scaled);
 }
 
 /* Generation-time filter for international established free agents. */
@@ -122,25 +124,26 @@ __declspec(noinline) uint8_t ootp_kbo_intl_established_fa_generation_filter_allo
     uintptr_t player_ptr,
     uintptr_t league_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (!kbo_intl_established_fa_generation_filter_enabled()) {
-        return 1u;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_generation_filter", 1u);
     }
     if (player_ptr == 0 || league_ptr == 0) {
-        return 1u;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_generation_filter", 1u);
     }
 
     uint32_t primary_id = 0u;
     uint32_t fallback_id = 0u;
     if (!kbo_intl_established_fa_league_matches(league_ptr, &primary_id, &fallback_id)) {
-        return 1u;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_generation_filter", 1u);
     }
 
     uint8_t* player = (uint8_t*)player_ptr;
     if (!memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)) {
-        return 1u;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_generation_filter", 1u);
     }
     if (!kbo_player_is_foreign_for_kbo_rights(player)) {
-        return 1u;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_generation_filter", 1u);
     }
 
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
@@ -169,7 +172,7 @@ __declspec(noinline) uint8_t ootp_kbo_intl_established_fa_generation_filter_allo
             position_role);
     }
     if (reject_reason == NULL) {
-        return 1u;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_generation_filter", 1u);
     }
 
     LONG slot = InterlockedIncrement(&g_kbo_intl_established_fa_generation_filter_block_count);
@@ -193,21 +196,22 @@ __declspec(noinline) uint8_t ootp_kbo_intl_established_fa_generation_filter_allo
         kbo_log_runtime_line("international established FA generation filter rejected log suppressed after 160 players");
     }
 
-    return 0u;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "foreign.intl_generation_filter", 0u);
 }
 
 __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
     uintptr_t player_ptr,
     uintptr_t league_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (player_ptr == 0 || league_ptr == 0) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.intl_player_probe");
     }
 
     uint32_t primary_id = 0u;
     uint32_t fallback_id = 0u;
     if (!kbo_intl_established_fa_league_matches(league_ptr, &primary_id, &fallback_id)) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.intl_player_probe");
     }
 
     uint8_t* player = (uint8_t*)player_ptr;
@@ -218,7 +222,7 @@ __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
             (void*)league_ptr,
             primary_id,
             fallback_id);
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.intl_player_probe");
     }
 
     LONG slot = InterlockedIncrement(&g_kbo_intl_established_fa_quality_probe_log_count);
@@ -226,7 +230,7 @@ __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
         if (slot == 513) {
             kbo_log_runtime_line("international established FA quality probe suppressed after 512 generated players");
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.intl_player_probe");
     }
 
     uint32_t player_id = *(uint32_t*)(player + OOTP27_PLAYER_ID_OFFSET);
@@ -275,4 +279,5 @@ __declspec(noinline) void ootp_kbo_intl_established_fa_player_probe_wrapper(
         ratings,
         career,
         value_score);
+    KBO_HOOK_PROFILE_END(profile_hook, "foreign.intl_player_probe");
 }

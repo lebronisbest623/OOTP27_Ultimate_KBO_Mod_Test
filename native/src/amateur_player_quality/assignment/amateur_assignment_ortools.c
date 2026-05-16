@@ -2,7 +2,7 @@
 
 KboAmateurBatchAssignment g_kbo_amateur_batch_assignments[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
 LONG g_kbo_amateur_batch_assignment_count = 0;
-LONG g_kbo_amateur_batch_assignment_lock = 0;
+KboLock g_kbo_amateur_batch_assignment_lock = KBO_LOCK_INIT;
 uintptr_t g_kbo_amateur_league_batch_players[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
 uintptr_t g_kbo_amateur_league_batch_source_teams[KBO_AMATEUR_LEAGUE_BATCH_PLAYER_MAX];
 uint32_t g_kbo_amateur_league_batch_team_ids[KBO_AMATEUR_LEAGUE_BATCH_TEAM_MAX];
@@ -68,14 +68,12 @@ int kbo_amateur_verbose_log_enabled_cached(void)
 
 void kbo_amateur_batch_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_amateur_batch_assignment_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_amateur_batch_assignment_lock);
 }
 
 void kbo_amateur_batch_unlock(void)
 {
-    InterlockedExchange(&g_kbo_amateur_batch_assignment_lock, 0);
+    kbo_lock_leave(&g_kbo_amateur_batch_assignment_lock);
 }
 
 uint32_t kbo_amateur_batch_lookup(uint32_t league_id, uint32_t player_id)

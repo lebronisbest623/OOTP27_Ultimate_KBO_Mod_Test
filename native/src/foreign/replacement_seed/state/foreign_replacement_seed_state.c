@@ -23,7 +23,7 @@
 KboForeignReplacementPlayerSeed g_kbo_foreign_replacement_player_seeds[KBO_FOREIGN_REPLACEMENT_PLAYER_SEED_MAX];
 int g_kbo_foreign_replacement_player_seed_count = 0;
 char g_kbo_foreign_replacement_player_seed_loaded_path[MAX_PATH] = {0};
-LONG g_kbo_foreign_replacement_player_seed_lock = 0;
+KboLock g_kbo_foreign_replacement_player_seed_lock = KBO_LOCK_INIT;
 LONG64 g_kbo_foreign_replacement_player_seed_last_resolve_tick = 0;
 
 int kbo_persist_foreign_replacement_player_resolved_cache_locked(void);

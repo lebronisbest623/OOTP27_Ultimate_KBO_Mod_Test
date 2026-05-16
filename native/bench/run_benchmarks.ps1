@@ -11,6 +11,8 @@ param(
     [int] $AnalyzeTop = 25,
     [int] $AnalyzeUnmappedTop = 25,
     [int] $AnalyzeGroupDepth = 2,
+    [ValidateSet("fast", "virtual", "virtualquery")]
+    [string] $Readability = "fast",
     [switch] $BuildOnly
 )
 
@@ -119,7 +121,7 @@ function Resolve-PerfPath {
 $Gcc = Resolve-Gcc
 Write-Host "GCC: $Gcc"
 
-& $Gcc -O2 -DNDEBUG -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
+& $Gcc -O2 -DNDEBUG -DKBO_BENCHMARK_BUILD -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
     -I $Root `
     -I (Join-Path $Root "src") `
     -o $BenchExe `
@@ -132,6 +134,9 @@ Write-Host "GCC: $Gcc"
     (Join-Path $Root "src\foreign\quota\counts\org\foreign_quota_count_cache.c") `
     (Join-Path $Root "src\foreign\quota\counts\org\foreign_quota_count_snapshot.c") `
     (Join-Path $Root "src\foreign\quota\counts\foreign_quota_counts.c") `
+    (Join-Path $Root "src\foreign\quota\candidates\cache\foreign_quota_candidate_limit_cache.c") `
+    (Join-Path $Root "src\foreign\quota\candidates\foreign_quota_candidate_limits.c") `
+    (Join-Path $Root "src\foreign\signability\foreign_policy\policy\foreign_signability_foreign_fa_fast_block_policy.c") `
     (Join-Path $Root "src\fa_compensation\protection\cache\fa_compensation_protection_cache.c") `
     (Join-Path $Root "src\fa_compensation\protection\policy\fa_compensation_protection_policy.c") `
     (Join-Path $Root "src\fa_compensation\protection\candidate_score\fa_compensation_candidate_score.c") `
@@ -187,7 +192,7 @@ if ($UseReplay) {
     }
 }
 
-$BenchArgs = @("--samples", "$Samples", "--players", "$Players")
+$BenchArgs = @("--samples", "$Samples", "--players", "$Players", "--readability", $Readability)
 if (-not [string]::IsNullOrWhiteSpace($ResolvedSnapshotPath)) {
     Write-Host "Snapshot: $ResolvedSnapshotPath"
     $BenchArgs += @("--snapshot", $ResolvedSnapshotPath)
@@ -198,12 +203,13 @@ if ($UseReplay) {
     $BenchArgs += @("--plan", $ResolvedReplayPlanPath)
 }
 
-$Output = & $BenchExe @BenchArgs
-if ($LASTEXITCODE -ne 0) {
+$ResultPathParent = Split-Path -Parent $ResultPath
+New-Item -ItemType Directory -Force -Path $ResultPathParent | Out-Null
+& $BenchExe @BenchArgs | Tee-Object -FilePath $ResultPath
+$BenchExitCode = $LASTEXITCODE
+if ($BenchExitCode -ne 0) {
     throw "Benchmark run failed"
 }
-
-$Output | Tee-Object -FilePath $ResultPath
 Write-Host "Wrote $ResultPath"
 
 if ($UseReplay) {

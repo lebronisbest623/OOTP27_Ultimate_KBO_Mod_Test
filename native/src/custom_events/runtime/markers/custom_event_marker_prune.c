@@ -10,6 +10,7 @@
 #include "../../../core/dates/core_current_date.h"
 #include "../../../core/files/save_paths/core_save_paths.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/sync/lock.h"
 
 uint32_t kbo_custom_event_marker_parse_date(const char* line, size_t line_len)
 {
@@ -30,7 +31,7 @@ uint32_t kbo_custom_event_marker_parse_date(const char* line, size_t line_len)
 void kbo_prune_rewound_custom_event_markers(const char* source)
 {
     static uint32_t last_pruned_current_date = 0u;
-    static volatile LONG prune_lock = 0;
+    static KboLock prune_lock = KBO_LOCK_INIT;
 
     uint32_t year = 0u;
     uint32_t month = 0u;
@@ -42,13 +43,13 @@ void kbo_prune_rewound_custom_event_markers(const char* source)
     if (current_date == 0u || current_date == last_pruned_current_date) {
         return;
     }
-    if (InterlockedCompareExchange(&prune_lock, 1, 0) != 0) {
+    if (!kbo_lock_try_enter(&prune_lock)) {
         return;
     }
 
     char path[MAX_PATH] = {0};
     if (!kbo_get_custom_event_processed_marker_path(path, sizeof(path))) {
-        InterlockedExchange(&prune_lock, 0);
+        kbo_lock_leave(&prune_lock);
         return;
     }
 
@@ -62,7 +63,7 @@ void kbo_prune_rewound_custom_event_markers(const char* source)
         NULL);
     if (file == INVALID_HANDLE_VALUE) {
         last_pruned_current_date = current_date;
-        InterlockedExchange(&prune_lock, 0);
+        kbo_lock_leave(&prune_lock);
         return;
     }
 
@@ -71,7 +72,7 @@ void kbo_prune_rewound_custom_event_markers(const char* source)
     if (size == INVALID_FILE_SIZE || high != 0 || size == 0u || size > (256u * 1024u)) {
         CloseHandle(file);
         last_pruned_current_date = current_date;
-        InterlockedExchange(&prune_lock, 0);
+        kbo_lock_leave(&prune_lock);
         return;
     }
 
@@ -82,7 +83,7 @@ void kbo_prune_rewound_custom_event_markers(const char* source)
         if (rewritten != NULL) { HeapFree(GetProcessHeap(), 0, rewritten); }
         CloseHandle(file);
         last_pruned_current_date = current_date;
-        InterlockedExchange(&prune_lock, 0);
+        kbo_lock_leave(&prune_lock);
         return;
     }
 
@@ -170,5 +171,5 @@ void kbo_prune_rewound_custom_event_markers(const char* source)
     HeapFree(GetProcessHeap(), 0, buffer);
     HeapFree(GetProcessHeap(), 0, rewritten);
     last_pruned_current_date = current_date;
-    InterlockedExchange(&prune_lock, 0);
+    kbo_lock_leave(&prune_lock);
 }

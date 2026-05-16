@@ -54,12 +54,10 @@ void kbo_foreign_org_count_cache_note_roster_mutation(void)
     for (int i = 0; i < KBO_FOREIGN_ORG_COUNT_CACHE_SIZE; i++) {
         g_kbo_foreign_org_count_cache[i].tick = 0u;
     }
-    while (InterlockedCompareExchange(&g_kbo_foreign_org_snapshot_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_foreign_org_snapshot_lock);
     g_kbo_foreign_org_snapshot_tick = 0u;
     g_kbo_foreign_org_snapshot_count = 0;
-    InterlockedExchange(&g_kbo_foreign_org_snapshot_lock, 0);
+    kbo_lock_leave(&g_kbo_foreign_org_snapshot_lock);
 }
 
 static uint32_t kbo_foreign_org_count_cache_slot(uint32_t team_id)

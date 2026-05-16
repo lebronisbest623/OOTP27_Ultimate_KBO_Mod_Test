@@ -30,9 +30,10 @@ __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     uint32_t value,
     uint32_t site_rva)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     if (league_ptr == 0 || !memory_range_readable((void*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET), sizeof(uint8_t))) {
         kbo_log_runtimef("KBO season phase write probe site=0x%x league=%p value=%u reason=bad_league", site_rva, (void*)league_ptr, value);
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "season.phase_write");
     }
     uint8_t old_value = *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET);
     *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET) = (uint8_t)value;
@@ -72,6 +73,7 @@ __declspec(noinline) void ootp_kbo_season_phase_write_probe(
         (unsigned)old_value,
         (unsigned)new_value,
         kbo_league_phase_label(new_value));
+    KBO_HOOK_PROFILE_END(profile_hook, "season.phase_write");
 }
 
 static void kbo_log_season_phase_league_candidates(uint32_t league_id)

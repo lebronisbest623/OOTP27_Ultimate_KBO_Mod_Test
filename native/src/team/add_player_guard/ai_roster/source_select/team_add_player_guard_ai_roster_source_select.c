@@ -5,6 +5,7 @@
 
 #include "../../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../../core/core_flags/api/flags_api.h"
+#include "../../../../core/sync/lock.h"
 #include "../../../../foreign/common/policy/foreign_waiver_policy.h"
 #include "../../../../foreign/common/player_eval/foreign_waiver_player_eval.h"
 #include "../../../../runtime_memory/runtime_memory.h"
@@ -353,24 +354,22 @@ uintptr_t kbo_ai_roster_choose_source_select_rescue_candidate(
         return 0u;
     }
 
-    static volatile LONG recent_lock = 0;
+    static KboLock recent_lock = KBO_LOCK_INIT;
     static uint32_t recent_player_id = 0u;
     static DWORD recent_tick = 0u;
     DWORD now = GetTickCount();
-    while (InterlockedCompareExchange(&recent_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&recent_lock);
     DWORD recent_age_ms = now - recent_tick;
     if (best_summary.player_id != 0u
             && best_summary.player_id == recent_player_id
             && recent_age_ms <= 5000u) {
         recent_tick = now;
-        InterlockedExchange(&recent_lock, 0);
+        kbo_lock_leave(&recent_lock);
         return 0u;
     }
     recent_player_id = best_summary.player_id;
     recent_tick = now;
-    InterlockedExchange(&recent_lock, 0);
+    kbo_lock_leave(&recent_lock);
 
     if (out_source_index != NULL) {
         *out_source_index = best_index;

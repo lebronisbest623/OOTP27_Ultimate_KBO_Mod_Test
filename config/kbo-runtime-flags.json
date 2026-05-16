@@ -373,6 +373,171 @@
       "lifecycle": "Recovery"
     },
     {
+      "key": "disable_ai_roster_apply_selection_trace",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "disable_ai_roster_foreign_apply_rescue",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_ai_roster_foreign_apply_rescue_move",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_ai_roster_foreign_apply_rescue_team_add",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_ai_roster_foreign_daily_callup",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_ai_roster_foreign_source_select_rescue",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_ai_roster_primary_apply_flow_trace",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "disable_ai_roster_select_trace",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "disable_asian_games_ortools",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_fa_compensation_ortools",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_independent_acquisition_ai",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_intl_established_fa_quality_shaping",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_ai_fa_status_candidate_insert_hook",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_cbt_draft_order_penalty",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_cbt_draft_order_penalty_hook",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_foreign_former_org_market_block",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_player_hover_manager_probe",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_player_tooltip_rating_common_probe",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_player_tooltip_rating_panel_ctor_probe",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_player_tooltip_string_format_probe",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_player_tooltip_text_append_probe",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_kbo_season_phase_capture_hooks",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "disable_military_ortools",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_ai_roster_foreign_apply_rescue_move",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_ai_roster_foreign_apply_rescue_team_add",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_ai_roster_foreign_source_select_rescue",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_amateur_assignment_debug_csv",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_foreign_ai_roster_research_hooks",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_financials_salary_baseline_probe_log",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_foreign_ai_offer_attach_probe",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_foreign_ai_offer_candidate_priority_hook",
+      "defaultValue": null,
+      "lifecycle": "Recovery"
+    },
+    {
+      "key": "enable_kbo_hot_reinject_roster_flow_trace",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
+      "key": "enable_kbo_retention_opportunity_probe_logs",
+      "defaultValue": null,
+      "lifecycle": "Diagnostic"
+    },
+    {
       "key": "enable_launcher_injection",
       "defaultValue": true,
       "lifecycle": "User"

@@ -1,24 +1,20 @@
 #ifndef KBOFIX_SRC_CORE_SYNC_SPIN_LOCK_H_
 #define KBOFIX_SRC_CORE_SYNC_SPIN_LOCK_H_
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include "lock.h"
 
-static inline void kbo_spin_lock(volatile LONG* lock)
+typedef KboLock KboSpinLock;
+
+#define KBO_SPIN_LOCK_INIT KBO_LOCK_INIT
+
+static inline void kbo_spin_lock(KboSpinLock* lock)
 {
-    if (lock == NULL) {
-        return;
-    }
-    while (InterlockedCompareExchange(lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(lock);
 }
 
-static inline void kbo_spin_unlock(volatile LONG* lock)
+static inline void kbo_spin_unlock(KboSpinLock* lock)
 {
-    if (lock != NULL) {
-        InterlockedExchange(lock, 0);
-    }
+    kbo_lock_leave(lock);
 }
 
 #endif

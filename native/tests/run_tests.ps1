@@ -3,6 +3,8 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $TestSrc = Join-Path $PSScriptRoot "test_main.c"
 $TestExe = Join-Path $PSScriptRoot "tests.exe"
+$WebViewCommandRouterTestSrc = Join-Path $PSScriptRoot "test_webview_command_router.c"
+$WebViewCommandRouterTestExe = Join-Path $PSScriptRoot "test_webview_command_router.exe"
 
 function Resolve-Gcc {
     $Candidates = @()
@@ -50,10 +52,25 @@ Write-Host "GCC: $Gcc"
 & $Gcc -O0 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
     -I $Root `
     -I (Join-Path $Root "src") `
+    -o $WebViewCommandRouterTestExe `
+    $WebViewCommandRouterTestSrc
+if ($LASTEXITCODE -ne 0) {
+    throw "WebView command router test build failed"
+}
+
+& $WebViewCommandRouterTestExe
+if ($LASTEXITCODE -ne 0) {
+    throw "WebView command router tests failed"
+}
+
+& $Gcc -O0 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 `
+    -I $Root `
+    -I (Join-Path $Root "src") `
     -o $TestExe `
     $TestSrc `
     (Join-Path $Root "src\allstar\csv\allstar_csv_parse.c") `
     (Join-Path $Root "src\allstar\allstar_native_events\schedule\schedule_dates.c") `
+    (Join-Path $Root "src\allstar\allstar_native_events\schedule\file\schedule_dates_file.c") `
     (Join-Path $Root "src\core\csv\core_csv.c") `
     (Join-Path $Root "src\foreign\common\dates\foreign_waiver_date.c") `
     (Join-Path $Root "src\foreign\replacement_seed\parse\foreign_replacement_seed_parse.c") `

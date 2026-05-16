@@ -8,6 +8,7 @@
 #include "../../../core_league_context_parts/api/league_context_lookup.h"
 #include "../../../dates/core_text_date.h"
 #include "../../../logging/core_log.h"
+#include "../../../sync/lock.h"
 
 volatile LONG g_kbo_season_phase_capture_event_write_cursor = 0;
 volatile LONG g_kbo_season_phase_capture_event_published_sequence = 0;
@@ -16,7 +17,7 @@ uintptr_t g_kbo_season_phase_capture_event_league_ptrs[KBO_SEASON_PHASE_CAPTURE_
 uint32_t g_kbo_season_phase_capture_event_values[KBO_SEASON_PHASE_CAPTURE_EVENT_RING_SIZE];
 uint32_t g_kbo_season_phase_capture_event_site_rvas[KBO_SEASON_PHASE_CAPTURE_EVENT_RING_SIZE];
 
-static SRWLOCK g_kbo_season_phase_capture_lock = SRWLOCK_INIT;
+static KboRwLock g_kbo_season_phase_capture_lock = KBO_RW_LOCK_INIT;
 static KboSeasonPhaseCaptureSnapshot g_kbo_season_phase_latest_capture;
 static int g_kbo_season_phase_latest_capture_valid = 0;
 
@@ -149,7 +150,7 @@ void kbo_season_phase_capture_drain(uint32_t league_id, uint32_t today_yyyymmdd)
         snapshot.phase_year = phase_year;
         snapshot.site_rva = site_rva;
 
-        AcquireSRWLockExclusive(&g_kbo_season_phase_capture_lock);
+        kbo_rw_lock_enter_exclusive(&g_kbo_season_phase_capture_lock);
         int log_change = !g_kbo_season_phase_latest_capture_valid
             || g_kbo_season_phase_latest_capture.league_ptr != snapshot.league_ptr
             || g_kbo_season_phase_latest_capture.phase != snapshot.phase
@@ -157,7 +158,7 @@ void kbo_season_phase_capture_drain(uint32_t league_id, uint32_t today_yyyymmdd)
             || g_kbo_season_phase_latest_capture.date != snapshot.date;
         g_kbo_season_phase_latest_capture = snapshot;
         g_kbo_season_phase_latest_capture_valid = 1;
-        ReleaseSRWLockExclusive(&g_kbo_season_phase_capture_lock);
+        kbo_rw_lock_leave_exclusive(&g_kbo_season_phase_capture_lock);
 
         if (log_change) {
             kbo_log_runtimef(
@@ -193,12 +194,12 @@ int kbo_season_phase_capture_latest(
 
     KboSeasonPhaseCaptureSnapshot snapshot = {0};
     int valid = 0;
-    AcquireSRWLockShared(&g_kbo_season_phase_capture_lock);
+    kbo_rw_lock_enter_shared(&g_kbo_season_phase_capture_lock);
     if (g_kbo_season_phase_latest_capture_valid) {
         snapshot = g_kbo_season_phase_latest_capture;
         valid = 1;
     }
-    ReleaseSRWLockShared(&g_kbo_season_phase_capture_lock);
+    kbo_rw_lock_leave_shared(&g_kbo_season_phase_capture_lock);
 
     if (!valid || !kbo_season_phase_capture_snapshot_still_usable(&snapshot, league_id, today_yyyymmdd)) {
         return 0;

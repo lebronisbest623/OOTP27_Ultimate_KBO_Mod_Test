@@ -19,7 +19,7 @@
 #include "../military_seed_registry_internal.h"
 KboMilitaryServiceSeed g_kbo_military_service_seeds[KBO_MILITARY_SERVICE_SEED_MAX];
 int g_kbo_military_service_seed_count = 0;
-LONG g_kbo_military_service_seed_lock = 0;
+KboLock g_kbo_military_service_seed_lock = KBO_LOCK_INIT;
 LONG g_kbo_military_service_seed_loaded = 0;
 ULONGLONG g_kbo_military_service_seed_last_resolve_tick = 0;
 char g_kbo_military_service_seed_loaded_key[MAX_PATH * 3];

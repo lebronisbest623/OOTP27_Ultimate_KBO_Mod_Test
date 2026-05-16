@@ -9,6 +9,7 @@
 #include "../bootstrap/profiling/profiler.h"
 #include "../core/logging/core_log.h"
 #include "../core/files/save_paths/core_save_paths.h"
+#include "../core/sync/lock.h"
 #include "../runtime_memory/runtime_memory.h"
 #include "../team/lookup/team_lookup.h"
 #include "../team/names/team_name_cache.h"
@@ -17,7 +18,7 @@
 #include "fa_filing_parts/fa_filing_csv_write_helpers.h"
 #define KBO_FA_FILING_NEGATIVE_CACHE_MAX 512
 
-extern volatile LONG g_kbo_fa_filing_lock;
+extern KboLock g_kbo_fa_filing_lock;
 extern volatile LONG g_kbo_fa_filing_cache_dirty;
 extern KboFaFilingRecord* g_kbo_fa_filing_cache_rows;
 extern int g_kbo_fa_filing_cache_count;

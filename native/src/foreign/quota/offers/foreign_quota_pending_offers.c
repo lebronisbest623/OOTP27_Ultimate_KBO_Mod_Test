@@ -12,6 +12,7 @@
 #include "../../../core/core_league_context_parts/api/league_context_lookup.h"
 #include "../../../core/core_flags/api/flags_api.h"
 #include "../../../core/logging/core_log.h"
+#include "../../../core/sync/lock.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/lookup/team_lookup.h"
 #include "../../../team/assignment/org_query/team_org_assignment_query.h"
@@ -50,37 +51,33 @@ typedef struct KboCustomForeignPendingOfferSummaryCacheEntry {
 } KboCustomForeignPendingOfferSummaryCacheEntry;
 
 KboCustomForeignPendingOffer g_kbo_custom_foreign_pending_offers[KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX];
-LONG g_kbo_custom_foreign_pending_offer_lock = 0;
+KboLock g_kbo_custom_foreign_pending_offer_lock = KBO_LOCK_INIT;
 int g_kbo_custom_foreign_pending_offer_count = 0;
 volatile LONG g_kbo_custom_foreign_pending_offer_generation = 0;
 static DWORD g_kbo_custom_foreign_pending_offer_last_prune_tick = 0u;
 static uint32_t g_kbo_custom_foreign_pending_offer_last_prune_date = 0u;
 static KboCustomForeignPendingOfferSummaryCacheEntry
     g_kbo_custom_foreign_pending_summary_cache[KBO_CUSTOM_FOREIGN_PENDING_SUMMARY_CACHE_SIZE];
-static volatile LONG g_kbo_custom_foreign_pending_summary_cache_lock = 0;
+static KboLock g_kbo_custom_foreign_pending_summary_cache_lock = KBO_LOCK_INIT;
 
 void kbo_custom_foreign_pending_offer_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_custom_foreign_pending_offer_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_custom_foreign_pending_offer_lock);
 }
 
 void kbo_custom_foreign_pending_offer_unlock(void)
 {
-    InterlockedExchange(&g_kbo_custom_foreign_pending_offer_lock, 0);
+    kbo_lock_leave(&g_kbo_custom_foreign_pending_offer_lock);
 }
 
 static void kbo_custom_foreign_pending_summary_cache_lock(void)
 {
-    while (InterlockedCompareExchange(&g_kbo_custom_foreign_pending_summary_cache_lock, 1, 0) != 0) {
-        Sleep(0);
-    }
+    kbo_lock_enter(&g_kbo_custom_foreign_pending_summary_cache_lock);
 }
 
 static void kbo_custom_foreign_pending_summary_cache_unlock(void)
 {
-    InterlockedExchange(&g_kbo_custom_foreign_pending_summary_cache_lock, 0);
+    kbo_lock_leave(&g_kbo_custom_foreign_pending_summary_cache_lock);
 }
 
 static uint32_t kbo_custom_foreign_pending_summary_cache_slot(uint32_t team_id, uint32_t today)

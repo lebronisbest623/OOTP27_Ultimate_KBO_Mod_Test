@@ -4,6 +4,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
     uintptr_t screen_ptr,
     uintptr_t original_func_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     uint8_t* custom_policy_player = NULL;
     uint32_t custom_policy_team_id = 0u;
     uint32_t custom_policy_today = 0u;
@@ -47,7 +48,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                     requester_team_id,
                     today);
             }
-            return;
+            KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_submit_offer");
         }
         if (player_id != 0u
                 && kbo_recent_custom_foreign_policy_allow_matches(player_id, today, &allowed_team_id)) {
@@ -87,7 +88,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                             injured_player_id,
                             today);
                     }
-                    return;
+                    KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_submit_offer");
                 }
                 custom_policy_player = player;
                 custom_policy_team_id = allowed_team_id;
@@ -137,7 +138,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                         today,
                         recent_block ? "recent_block" : "active_right");
                 }
-                return;
+                KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_submit_offer");
             }
             if (custom_policy_team_id == 0u && recent_allow && allowed_team_id == holder_team_id) {
                 uint8_t* player = kbo_find_player_by_id(player_id, NULL, NULL);
@@ -175,7 +176,7 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
                                 injured_player_id,
                                 today);
                         }
-                        return;
+                        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "foreign.fa_submit_offer");
                     }
                     custom_policy_player = player;
                     custom_policy_team_id = holder_team_id;
@@ -187,11 +188,14 @@ __declspec(noinline) void ootp_kbo_fa_submit_offer_probe_wrapper(
 
     OotpFaSubmitOfferProbeFn original_func = (OotpFaSubmitOfferProbeFn)original_func_ptr;
     if (original_func != NULL) {
+        KBO_HOOK_PROFILE_PAUSE(profile_hook);
         original_func((void*)screen_ptr);
+        KBO_HOOK_PROFILE_RESUME(profile_hook);
     }
     if (custom_policy_player != NULL && custom_policy_team_id != 0u && custom_policy_today != 0u) {
         kbo_record_custom_foreign_pending_offer(custom_policy_team_id, custom_policy_player, custom_policy_today);
     }
+    KBO_HOOK_PROFILE_END(profile_hook, "foreign.fa_submit_offer");
 }
 
 __declspec(noinline) void ootp_kbo_fa_offer_player_demand_floor_probe(
@@ -199,6 +203,7 @@ __declspec(noinline) void ootp_kbo_fa_offer_player_demand_floor_probe(
     uintptr_t screen_ptr,
     uint32_t source_rva)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     const char* source = "offer_build";
     if (source_rva == OOTP27_NO_MINOR_CONTRACT_FA_OFFER_DEMAND_FLOOR_17A79BB_RVA) {
         source = "offer_build_17A79BB";
@@ -206,5 +211,6 @@ __declspec(noinline) void ootp_kbo_fa_offer_player_demand_floor_probe(
         source = "offer_build_17B50B4";
     }
     kbo_no_minor_clamp_player_demand_salary(player_ptr, screen_ptr, source);
+    KBO_HOOK_PROFILE_END(profile_hook, "foreign.fa_offer_demand_floor");
 }
 

@@ -19,6 +19,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $NativeRoot = Join-Path $RepoRoot "native"
 $NativeSrc = Join-Path $NativeRoot "src"
 $NativeShell = Join-Path $NativeRoot "KBOFix.c"
+$NativeThirdParty = Join-Path $NativeRoot "third_party"
 
 if (-not (Test-Path -LiteralPath $NativeSrc)) {
     throw "Could not find native source directory: $NativeSrc"
@@ -26,7 +27,81 @@ if (-not (Test-Path -LiteralPath $NativeSrc)) {
 
 $NativeRootFull = (Resolve-Path -LiteralPath $NativeRoot).Path.TrimEnd("\")
 $NativeSrcFull = (Resolve-Path -LiteralPath $NativeSrc).Path.TrimEnd("\")
+$NativeThirdPartyFull = $null
+if (Test-Path -LiteralPath $NativeThirdParty) {
+    $NativeThirdPartyFull = (Resolve-Path -LiteralPath $NativeThirdParty).Path.TrimEnd("\")
+}
+$AllowedNativeIncludeRoots = @($NativeSrcFull)
+if ($NativeThirdPartyFull) {
+    $AllowedNativeIncludeRoots += $NativeThirdPartyFull
+}
 $Findings = New-Object System.Collections.Generic.List[object]
+
+function Test-PathUnderRoot {
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $Root
+    )
+
+    return $Path.Equals($Root, [StringComparison]::OrdinalIgnoreCase) `
+        -or $Path.StartsWith($Root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Get-RelativePathUnderNativeSrc {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    $Resolved = [IO.Path]::GetFullPath($Path)
+    if (-not (Test-PathUnderRoot -Path $Resolved -Root $NativeSrcFull)) {
+        return $null
+    }
+
+    return $Resolved.Substring($NativeSrcFull.Length + 1).Replace("\", "/")
+}
+
+function Get-NativeInternalHeaderOwnerRoot {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    $RelativePath = Get-RelativePathUnderNativeSrc -Path $Path
+    if ($null -eq $RelativePath) {
+        return $null
+    }
+
+    $FileName = [IO.Path]::GetFileName($Path)
+    if ($FileName -notmatch '(^|_)internal\.h$') {
+        return $null
+    }
+
+    $HeaderStem = $FileName -replace '_internal\.h$', ''
+    if ($HeaderStem -ne $FileName) {
+        $Directory = (Resolve-Path -LiteralPath (Split-Path -Parent $Path)).Path
+        while (Test-PathUnderRoot -Path $Directory -Root $NativeSrcFull) {
+            $PublicHeader = Join-Path $Directory "$HeaderStem.h"
+            if (Test-Path -LiteralPath $PublicHeader -PathType Leaf) {
+                return Get-RelativePathUnderNativeSrc -Path $Directory
+            }
+            if ($Directory.Equals($NativeSrcFull, [StringComparison]::OrdinalIgnoreCase)) {
+                break
+            }
+            $Directory = Split-Path -Parent $Directory
+        }
+    }
+
+    if ($RelativePath -match '^(.*)/internal/[^/]+$') {
+        return $Matches[1]
+    }
+
+    return (Split-Path -Parent $RelativePath).Replace("\", "/")
+}
+
+function Test-NativeRelativePathUnderRoot {
+    param(
+        [Parameter(Mandatory = $true)][string] $RelativePath,
+        [Parameter(Mandatory = $true)][string] $Root
+    )
+
+    return $RelativePath.Equals($Root, [StringComparison]::OrdinalIgnoreCase) `
+        -or $RelativePath.StartsWith($Root + "/", [StringComparison]::OrdinalIgnoreCase)
+}
 
 function Get-RelativeNativePath {
     param([Parameter(Mandatory = $true)][string] $Path)
@@ -91,6 +166,208 @@ function Test-IncludeOnlyCFile {
         Where-Object { $_ -ne "" -and $_ -notmatch '^#\s*include\b' })
 
     return $MeaningfulLines.Count -eq 0
+}
+
+function Remove-CCodeNoise {
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string] $Text)
+
+    # Preserve line numbers while hiding comments and literals from heuristic C scans.
+    $Chars = $Text.ToCharArray()
+    $InString = $false
+    $InChar = $false
+    $InLineComment = $false
+    $InBlockComment = $false
+    $Escaped = $false
+
+    for ($Index = 0; $Index -lt $Chars.Length; $Index++) {
+        $Ch = $Chars[$Index]
+        $Next = [char]0
+        if ($Index + 1 -lt $Chars.Length) {
+            $Next = $Chars[$Index + 1]
+        }
+
+        if ($InLineComment) {
+            if ($Ch -eq "`r" -or $Ch -eq "`n") {
+                $InLineComment = $false
+            }
+            else {
+                $Chars[$Index] = ' '
+            }
+            continue
+        }
+
+        if ($InBlockComment) {
+            if ($Ch -eq '*' -and $Next -eq '/') {
+                $Chars[$Index] = ' '
+                $Chars[$Index + 1] = ' '
+                $Index++
+                $InBlockComment = $false
+            }
+            elseif ($Ch -ne "`r" -and $Ch -ne "`n") {
+                $Chars[$Index] = ' '
+            }
+            continue
+        }
+
+        if ($InString) {
+            if ($Escaped) {
+                $Escaped = $false
+            }
+            elseif ($Ch -eq '\') {
+                $Escaped = $true
+            }
+            elseif ($Ch -eq '"') {
+                $InString = $false
+            }
+
+            if ($Ch -ne "`r" -and $Ch -ne "`n") {
+                $Chars[$Index] = ' '
+            }
+            continue
+        }
+
+        if ($InChar) {
+            if ($Escaped) {
+                $Escaped = $false
+            }
+            elseif ($Ch -eq '\') {
+                $Escaped = $true
+            }
+            elseif ($Ch -eq "'") {
+                $InChar = $false
+            }
+
+            if ($Ch -ne "`r" -and $Ch -ne "`n") {
+                $Chars[$Index] = ' '
+            }
+            continue
+        }
+
+        if ($Ch -eq '/' -and $Next -eq '/') {
+            $Chars[$Index] = ' '
+            $Chars[$Index + 1] = ' '
+            $Index++
+            $InLineComment = $true
+        }
+        elseif ($Ch -eq '/' -and $Next -eq '*') {
+            $Chars[$Index] = ' '
+            $Chars[$Index + 1] = ' '
+            $Index++
+            $InBlockComment = $true
+        }
+        elseif ($Ch -eq '"') {
+            $InString = $true
+            $Chars[$Index] = ' '
+        }
+        elseif ($Ch -eq "'") {
+            $InChar = $true
+            $Chars[$Index] = ' '
+        }
+    }
+
+    return -join $Chars
+}
+
+function Get-CFunctionDefinitions {
+    param([Parameter(Mandatory = $true)][string] $Text)
+
+    $Definitions = New-Object System.Collections.Generic.List[object]
+    $Lines = @($Text -split "`r?`n")
+    $NamePattern = [regex]'(?s)^\s*(?:__declspec\([^)]+\)\s+)?(?:static\s+)?(?:const\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\s+|[A-Za-z_][A-Za-z0-9_]*\s*\*\s*|\*\s*)+([A-Za-z_][A-Za-z0-9_]*)\s*\('
+    $ControlNames = @{
+        "if" = $true
+        "for" = $true
+        "while" = $true
+        "switch" = $true
+        "return" = $true
+        "sizeof" = $true
+    }
+
+    for ($Index = 0; $Index -lt $Lines.Count; $Index++) {
+        $Line = $Lines[$Index]
+        if ($Line -match '^\s*#' -or $Line -match '\btypedef\b' -or $Line -notmatch '\(') {
+            continue
+        }
+
+        $Signature = $Line
+        $Lookahead = $Index
+        while ($Signature -notmatch '[{;]' -and $Lookahead + 1 -lt $Lines.Count -and $Lookahead -lt $Index + 8) {
+            $Lookahead++
+            $Signature += "`n" + $Lines[$Lookahead]
+        }
+
+        $SignatureText = [string]$Signature
+        $OpenIndex = $SignatureText.IndexOf("{")
+        $SemicolonIndex = $SignatureText.IndexOf(";")
+        if ($OpenIndex -lt 0 -or ($SemicolonIndex -ge 0 -and $SemicolonIndex -lt $OpenIndex)) {
+            continue
+        }
+
+        $Match = $NamePattern.Match($SignatureText)
+        if (-not $Match.Success) {
+            continue
+        }
+
+        $Name = $Match.Groups[1].Value
+        if ($ControlNames.ContainsKey($Name)) {
+            continue
+        }
+
+        $Definitions.Add([pscustomobject]@{
+            Name = $Name
+            Line = $Index + 1
+        }) | Out-Null
+    }
+
+    return $Definitions.ToArray()
+}
+
+function Get-TopLevelReturnDeadCode {
+    param([Parameter(Mandatory = $true)][string] $Text)
+
+    $Findings = New-Object System.Collections.Generic.List[object]
+    $Lines = @($Text -split "`r?`n")
+    $Depth = 0
+    $ReturnLine = 0
+    $AfterTopLevelReturn = $false
+
+    for ($Index = 0; $Index -lt $Lines.Count; $Index++) {
+        $Code = $Lines[$Index]
+        $Trimmed = $Code.Trim()
+
+        if ($AfterTopLevelReturn -and $Trimmed -ne "" -and $Trimmed -notmatch '^\s*#') {
+            if ($Depth -eq 1 -and $Trimmed -notmatch '^\}') {
+                $Findings.Add([pscustomobject]@{
+                    ReturnLine = $ReturnLine
+                    FirstDeadLine = $Index + 1
+                }) | Out-Null
+                $AfterTopLevelReturn = $false
+            }
+            elseif ($Depth -gt 1) {
+                $Findings.Add([pscustomobject]@{
+                    ReturnLine = $ReturnLine
+                    FirstDeadLine = $Index + 1
+                }) | Out-Null
+                $AfterTopLevelReturn = $false
+            }
+        }
+
+        if ($Depth -eq 1 -and $Trimmed -match '^return(?:\s+[^;]+)?;\s*$') {
+            $AfterTopLevelReturn = $true
+            $ReturnLine = $Index + 1
+        }
+
+        $OpenCount = ([regex]::Matches($Code, '\{')).Count
+        $CloseCount = ([regex]::Matches($Code, '\}')).Count
+        $Depth += $OpenCount - $CloseCount
+        if ($Depth -le 0) {
+            $Depth = 0
+            $AfterTopLevelReturn = $false
+            $ReturnLine = 0
+        }
+    }
+
+    return $Findings.ToArray()
 }
 
 function Get-BaselineKeys {
@@ -171,6 +448,91 @@ foreach ($Fact in $SourceFacts) {
             -Message "This .c file only includes headers and does not own behavior." `
             -Suggestion "Remove the shim or move the owned behavior into this translation unit." `
             -Data @{ file = $Fact.Name }
+    }
+
+    $IncludeMatches = [regex]::Matches($Fact.Text, '(?m)^\s*#\s*include\s*"([^"]+)"')
+    foreach ($IncludeMatch in $IncludeMatches) {
+        $IncludeText = $IncludeMatch.Groups[1].Value
+        $Line = 1 + (($Fact.Text.Substring(0, $IncludeMatch.Index) -split "`r?`n").Count - 1)
+        if ([IO.Path]::IsPathRooted($IncludeText)) {
+            Add-Finding `
+                -Rule "native.include.no-absolute-local-include" `
+                -Severity "error" `
+                -Path $Fact.Path `
+                -Message "Local include at line $Line uses an absolute path: $IncludeText." `
+                -Suggestion "Use a repo-relative relationship from the including file's folder." `
+                -Data @{ include = $IncludeText; line = $Line }
+            continue
+        }
+
+        $IncludeCandidate = [IO.Path]::GetFullPath((Join-Path $Fact.Directory ($IncludeText -replace '/', [IO.Path]::DirectorySeparatorChar)))
+        $InsideAllowedIncludeRoot = $false
+        foreach ($AllowedRoot in $AllowedNativeIncludeRoots) {
+            if (Test-PathUnderRoot -Path $IncludeCandidate -Root $AllowedRoot) {
+                $InsideAllowedIncludeRoot = $true
+                break
+            }
+        }
+
+        if (-not $InsideAllowedIncludeRoot) {
+            Add-Finding `
+                -Rule "native.include.outside-owned-root" `
+                -Severity "error" `
+                -Path $Fact.Path `
+                -Message "Local include at line $Line resolves outside native/src or native/third_party: $IncludeText." `
+                -Suggestion "Keep native module includes inside owned native source roots or switch to a documented external include path." `
+                -Data @{ include = $IncludeText; line = $Line; resolved = $IncludeCandidate; allowedRoots = $AllowedNativeIncludeRoots }
+            continue
+        }
+
+        if (-not (Test-Path -LiteralPath $IncludeCandidate -PathType Leaf)) {
+            Add-Finding `
+                -Rule "native.include.local-path-exists" `
+                -Severity "error" `
+                -Path $Fact.Path `
+                -Message "Local include at line $Line does not resolve to a file: $IncludeText." `
+                -Suggestion "Update the relative path after moving files, or include the owner header from the correct folder." `
+                -Data @{ include = $IncludeText; line = $Line; resolved = $IncludeCandidate }
+            continue
+        }
+
+        $InternalHeaderOwnerRoot = Get-NativeInternalHeaderOwnerRoot -Path $IncludeCandidate
+        if ($null -ne $InternalHeaderOwnerRoot `
+                -and -not (Test-NativeRelativePathUnderRoot -RelativePath $Fact.Path -Root $InternalHeaderOwnerRoot)) {
+            Add-Finding `
+                -Rule "native.include.no-cross-module-internal-header" `
+                -Severity "warn" `
+                -Path $Fact.Path `
+                -Message "Local include at line $Line reaches private header '$IncludeText' owned by '$InternalHeaderOwnerRoot'." `
+                -Suggestion "Include the owner module's public header or move the needed declaration behind a narrow public API." `
+                -Data @{ include = $IncludeText; line = $Line; ownerRoot = $InternalHeaderOwnerRoot; resolved = $IncludeCandidate }
+        }
+    }
+
+    if ($Fact.Extension -eq ".c") {
+        $CodeWithoutNoise = Remove-CCodeNoise -Text $Fact.Text
+
+        $Definitions = @(Get-CFunctionDefinitions -Text $CodeWithoutNoise)
+        foreach ($DefinitionGroup in @($Definitions | Group-Object Name | Where-Object Count -gt 1)) {
+            $Lines = @($DefinitionGroup.Group | ForEach-Object { $_.Line }) -join ", "
+            Add-Finding `
+                -Rule "native.source.no-duplicate-function-definition" `
+                -Severity "error" `
+                -Path $Fact.Path `
+                -Message "Function '$($DefinitionGroup.Name)' appears to be defined more than once in this translation unit (lines $Lines)." `
+                -Suggestion "Remove the duplicated block or split the owned behavior into one responsibility-named file." `
+                -Data @{ function = $DefinitionGroup.Name; lines = @($DefinitionGroup.Group | ForEach-Object { $_.Line }) }
+        }
+
+        foreach ($DeadCode in @(Get-TopLevelReturnDeadCode -Text $CodeWithoutNoise)) {
+            Add-Finding `
+                -Rule "native.source.no-dead-code-after-top-level-return" `
+                -Severity "error" `
+                -Path $Fact.Path `
+                -Message "Code continues at line $($DeadCode.FirstDeadLine) after an unconditional function-level return at line $($DeadCode.ReturnLine)." `
+                -Suggestion "Remove the unreachable block or move it behind an explicit conditional path." `
+                -Data @{ returnLine = $DeadCode.ReturnLine; firstDeadLine = $DeadCode.FirstDeadLine }
+        }
     }
 
     if ($Fact.Path -match '^core/' -and $Fact.Text -match '\b(foreign|military|asian_games|allstar|fa_compensation|fa_market|amateur)\b') {

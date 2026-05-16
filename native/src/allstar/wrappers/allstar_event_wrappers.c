@@ -11,12 +11,14 @@
 #include "../team_patch/allstar_team_patch.h"
 #include "../../bootstrap/abi/ootp_offsets.h"
 #include "../../bootstrap/profiling/perf_probe.h"
+#include "../../bootstrap/profiling/profiler.h"
 #include "../../build_verify/build_verify.h"
 #include "../../core/logging/core_log.h"
 #include "../../runtime_memory/runtime_memory.h"
 
 __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     static volatile LONG perf_total = 0;
     static volatile LONG perf_last = 0;
     static volatile LONG perf_ms = 0;
@@ -41,6 +43,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_events(uintptr_t league_ptr)
         &perf_max,
         &perf_tick,
         GetTickCount() - perf_start);
+    KBO_HOOK_PROFILE_END(profile_hook, "allstar.prepare_events");
 }
 
 static int force_kbo_allstar_candidate_rebuild_once(uintptr_t league_ptr, uint32_t league_id, uint32_t fallback_league_id)
@@ -92,9 +95,10 @@ static int force_kbo_allstar_candidate_rebuild_once(uintptr_t league_ptr, uint32
 
 __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league_ptr, uintptr_t allstar_team_setup_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     KboAllstarLayout layout = kbo_get_allstar_layout();
     if (league_ptr == 0 || !memory_range_readable((void*)league_ptr, layout.team_b_offset + sizeof(uint32_t))) {
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "allstar.voting_begin");
     }
 
     uint8_t* league = (uint8_t*)league_ptr;
@@ -128,7 +132,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
                 fallback_league_id,
                 configured_league_id,
                 league_year);
-            return;
+            KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "allstar.voting_begin");
         }
 
         uint32_t max_off = layout.game_flag_offset > layout.auto_schedule_offset
@@ -139,10 +143,10 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
                 "KBO all-star voting begin skipped league=%p reason=flag_offsets_unreadable max_off=0x%x",
                 league,
                 max_off);
-            return;
+            KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "allstar.voting_begin");
         }
         if (!enable_kbo_allstar_raw_flags_if_kbo_context(league_ptr, "allstar_voting_begin_raw")) {
-            return;
+            KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "allstar.voting_begin");
         }
         ensure_kbo_allstar_team_ids(league_ptr, "allstar_voting_begin_fallback");
         kbo_log_runtimef(
@@ -184,6 +188,7 @@ __declspec(noinline) void ootp_kbo_prepare_allstar_voting_begin(uintptr_t league
             setup_called,
             rebuild_called);
     }
+    KBO_HOOK_PROFILE_END(profile_hook, "allstar.voting_begin");
 }
 
 static int ootp_kbo_allow_single_division_allstar_native_gate(uintptr_t league_ptr, const char* source)
@@ -236,20 +241,25 @@ static int ootp_kbo_allow_single_division_allstar_native_gate(uintptr_t league_p
 
 __declspec(noinline) int ootp_kbo_allow_single_division_allstar_prep(uintptr_t league_ptr)
 {
-    return ootp_kbo_allow_single_division_allstar_native_gate(
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
+    int result = ootp_kbo_allow_single_division_allstar_native_gate(
         league_ptr,
         "allstar_prep_single_division_gate");
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.single_division_prep", result);
 }
 
 __declspec(noinline) int ootp_kbo_allow_single_division_allstar_roster(uintptr_t league_ptr)
 {
-    return ootp_kbo_allow_single_division_allstar_native_gate(
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
+    int result = ootp_kbo_allow_single_division_allstar_native_gate(
         league_ptr,
         "allstar_roster_single_division_gate");
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.single_division_roster", result);
 }
 
 __declspec(noinline) int ootp_kbo_allow_single_division_allstar_team_setup(uintptr_t league_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     int enabled = enable_kbo_allstar_raw_flags_if_kbo_context(
         league_ptr,
         "allstar_team_setup_single_division_gate_raw");
@@ -258,7 +268,7 @@ __declspec(noinline) int ootp_kbo_allow_single_division_allstar_team_setup(uintp
         enabled = 1;
     }
     if (!enabled) {
-        return 0;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.single_division_team_setup", 0);
     }
 
     InterlockedExchangePointer(
@@ -287,5 +297,5 @@ __declspec(noinline) int ootp_kbo_allow_single_division_allstar_team_setup(uintp
             layout.game_flag_offset,
             game_flag);
     }
-    return 1;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "allstar.single_division_team_setup", 1);
 }

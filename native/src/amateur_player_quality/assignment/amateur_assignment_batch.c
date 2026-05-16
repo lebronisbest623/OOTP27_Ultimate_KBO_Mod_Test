@@ -1,10 +1,12 @@
 #include "../internal/amateur_assignment_internal.h"
+#include "../../bootstrap/profiling/profiler.h"
 
 __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
     uintptr_t player_list_ptr,
     int32_t player_count,
     uintptr_t context_ptr)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     static volatile LONG entry_log_count = 0;
     LONG entry_slot = InterlockedIncrement(&entry_log_count);
     if (entry_slot <= 20) {
@@ -23,7 +25,7 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
                 player_count,
                 (void*)context_ptr);
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "amateur.assignment_batch");
     }
 
     if (!memory_range_readable((void*)player_list_ptr, (SIZE_T)player_count * sizeof(uintptr_t))) {
@@ -35,7 +37,7 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
                 player_count,
                 (void*)context_ptr);
         }
-        return;
+        KBO_HOOK_PROFILE_RETURN_VOID(profile_hook, "amateur.assignment_batch");
     }
 
     uintptr_t* players = (uintptr_t*)player_list_ptr;
@@ -80,4 +82,5 @@ __declspec(noinline) void ootp_kbo_amateur_assignment_batch_probe(
         (void*)player_list_ptr,
         (void*)context_ptr);
     kbo_prepare_amateur_assignment_batch_ortools(player_list_ptr, player_count, context_ptr);
+    KBO_HOOK_PROFILE_END(profile_hook, "amateur.assignment_batch");
 }

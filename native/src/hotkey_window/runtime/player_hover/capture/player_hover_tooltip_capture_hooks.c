@@ -1,4 +1,5 @@
 #include "player_hover_manager_probe_internal.h"
+#include "../../../../bootstrap/profiling/profiler.h"
 
 void kbo_tooltip_text_capture_reset(void)
 {
@@ -53,14 +54,18 @@ __declspec(noinline) void* ootp_kbo_player_tooltip_text_append_probe_wrapper(
     uintptr_t arg9,
     uintptr_t arg10)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     kbo_tooltip_text_capture_append_line(text);
 
     OotpPlayerTooltipTextAppendFn original =
         (OotpPlayerTooltipTextAppendFn)g_kbo_player_tooltip_text_append_original;
     if (original == NULL) {
-        return out;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_text_append", out);
     }
-    return original(text, mode, out, flags, arg5, arg6, arg7, arg8, arg9, arg10);
+    KBO_HOOK_PROFILE_PAUSE(profile_hook);
+    void* result = original(text, mode, out, flags, arg5, arg6, arg7, arg8, arg9, arg10);
+    KBO_HOOK_PROFILE_RESUME(profile_hook);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_text_append", result);
 }
 
 static int kbo_tooltip_copy_safe_c_string(const char* text, char* out, size_t out_size)
@@ -206,18 +211,21 @@ __declspec(noinline) void* ootp_kbo_player_tooltip_string_format_probe_wrapper(
     uintptr_t arg9,
     uintptr_t arg10)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     InterlockedIncrement64(&g_kbo_player_tooltip_string_format_call_count);
     OotpPlayerTooltipStringFormatFn original =
         (OotpPlayerTooltipStringFormatFn)g_kbo_player_tooltip_string_format_original;
     if (original == NULL) {
-        return text_object;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_string_format", text_object);
     }
+    KBO_HOOK_PROFILE_PAUSE(profile_hook);
     void* result = original(text_object, format, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+    KBO_HOOK_PROFILE_RESUME(profile_hook);
     if (InterlockedCompareExchange(&g_kbo_player_tooltip_text_capture_active, 0, 0) != 0) {
         InterlockedIncrement64(&g_kbo_player_tooltip_string_format_active_call_count);
         kbo_tooltip_rating_capture_append(format, result, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     }
-    return result;
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_string_format", result);
 }
 
 static uint32_t kbo_tooltip_return_rva(void* return_address)
@@ -262,6 +270,7 @@ __declspec(noinline) uint8_t ootp_kbo_player_tooltip_rating_common_probe_wrapper
     uint8_t is_potential,
     uint8_t mirror_flag)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     InterlockedIncrement64(&g_kbo_player_tooltip_rating_common_call_count);
     if (InterlockedCompareExchange(&g_kbo_player_tooltip_text_capture_active, 0, 0) != 0) {
         char line[256] = {0};
@@ -283,9 +292,12 @@ __declspec(noinline) uint8_t ootp_kbo_player_tooltip_rating_common_probe_wrapper
     OotpPlayerTooltipRatingCommonFn original =
         (OotpPlayerTooltipRatingCommonFn)g_kbo_player_tooltip_rating_common_original;
     if (original == NULL) {
-        return 0u;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_rating_common", 0u);
     }
-    return original(container, column, row, displayed_rating, is_potential, mirror_flag);
+    KBO_HOOK_PROFILE_PAUSE(profile_hook);
+    uint8_t result = original(container, column, row, displayed_rating, is_potential, mirror_flag);
+    KBO_HOOK_PROFILE_RESUME(profile_hook);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_rating_common", result);
 }
 
 __declspec(noinline) void* ootp_kbo_player_tooltip_rating_panel_ctor_probe_wrapper(
@@ -294,6 +306,7 @@ __declspec(noinline) void* ootp_kbo_player_tooltip_rating_panel_ctor_probe_wrapp
     uint16_t potential_rating,
     uint8_t potential_only)
 {
+    KBO_HOOK_PROFILE_BEGIN(profile_hook);
     InterlockedIncrement64(&g_kbo_player_tooltip_rating_panel_ctor_call_count);
     if (InterlockedCompareExchange(&g_kbo_player_tooltip_text_capture_active, 0, 0) != 0) {
         char line[256] = {0};
@@ -313,7 +326,10 @@ __declspec(noinline) void* ootp_kbo_player_tooltip_rating_panel_ctor_probe_wrapp
     OotpPlayerTooltipRatingPanelCtorFn original =
         (OotpPlayerTooltipRatingPanelCtorFn)g_kbo_player_tooltip_rating_panel_ctor_original;
     if (original == NULL) {
-        return panel_object;
+        KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_rating_panel_ctor", panel_object);
     }
-    return original(panel_object, current_rating, potential_rating, potential_only);
+    KBO_HOOK_PROFILE_PAUSE(profile_hook);
+    void* result = original(panel_object, current_rating, potential_rating, potential_only);
+    KBO_HOOK_PROFILE_RESUME(profile_hook);
+    KBO_HOOK_PROFILE_RETURN(profile_hook, "ui.tooltip_rating_panel_ctor", result);
 }

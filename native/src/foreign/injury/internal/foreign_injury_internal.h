@@ -17,6 +17,7 @@
 #include "../../../core/news/live/core_live_news.h"
 #include "../../../core/logging/core_log.h"
 #include "../../../core/logging/rule_audit.h"
+#include "../../../core/sync/lock.h"
 #include "../../../runtime_memory/runtime_memory.h"
 #include "../../../team/assignment/roster_arrays/team_roster_arrays.h"
 #include "../../../team/lookup/team_lookup.h"
@@ -52,7 +53,7 @@ typedef struct KboForeignInjuryReplacement {
 
 extern KboForeignInjuryReplacement g_kbo_foreign_injury_replacements[KBO_FOREIGN_INJURY_REPLACEMENT_MAX];
 extern int g_kbo_foreign_injury_replacement_count;
-extern LONG g_kbo_foreign_injury_replacement_lock;
+extern KboLock g_kbo_foreign_injury_replacement_lock;
 extern char g_kbo_foreign_injury_replacement_loaded_path[MAX_PATH];
 extern LONG g_kbo_foreign_injury_replacement_thread_started;
 
@@ -93,7 +94,8 @@ int kbo_foreign_injury_return_state_allows_close(
     int16_t days_left,
     uint8_t loan_active,
     int active_roster_present,
-    int inactive_roster_present);
+    int inactive_roster_present,
+    int close_decision_allowed);
 int kbo_foreign_injury_player_on_inactive_replacement_roster(
     uint8_t* player,
     uint32_t player_id,
