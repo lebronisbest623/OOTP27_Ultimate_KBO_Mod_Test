@@ -7,6 +7,10 @@ int kbo_webview_handle_command_uri(const char* uri, HWND hwnd)
     }
     const char* cmd = uri + 6;
 
+    if (strncmp(cmd, "render/", 7) == 0) {
+        kbo_log_runtimef("WebView2 render diagnostic %s", cmd + 7);
+        return 1;
+    }
     if (kbo_webview_handle_external_or_foreign_command(cmd, hwnd)) { return 1; }
     if (kbo_webview_handle_view_navigation_command(cmd)) { return 1; }
     if (kbo_webview_handle_mod_settings_command(cmd)) { return 1; }

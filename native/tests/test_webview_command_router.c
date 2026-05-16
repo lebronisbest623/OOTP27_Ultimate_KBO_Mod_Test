@@ -27,6 +27,11 @@ void kbo_hub_ensure_valid_selection(void)
     g_ensure_valid_selection_count++;
 }
 
+void kbo_log_runtimef(const char* format, ...)
+{
+    (void)format;
+}
+
 int kbo_webview_handle_external_or_foreign_command(const char* cmd, HWND hwnd)
 {
     (void)cmd;
@@ -87,6 +92,7 @@ static void test_unknown_commands_are_not_handled(void)
     assert(!kbo_webview_handle_selection_dropdown_command(NULL, NULL));
     assert(!kbo_webview_handle_selection_dropdown_command("unknown", NULL));
     assert(!kbo_webview_handle_command_uri("kbo://unknown", NULL));
+    assert(kbo_webview_handle_command_uri("kbo://render/ready/app=1280x720", NULL));
     assert(g_navigate_current_count == 0);
     assert(g_ensure_valid_selection_count == 0);
 
