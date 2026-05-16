@@ -16,6 +16,7 @@
 #include "../../core/dates/core_current_date.h"
 #include "../../core/files/save_paths/core_save_paths.h"
 #include "../../core/logging/core_log.h"
+#include "../../core/text/ootp_text_encoding.h"
 #include "../../runtime_memory/runtime_memory.h"
 #include "../../team/names/team_string.h"
 
@@ -33,6 +34,7 @@
 #define KBO_AWARD_SCHEDULE_MAX_RULES 16u
 #define KBO_AWARD_SCHEDULE_MAX_TITLES 8u
 #define KBO_AWARD_SCHEDULE_MAX_OVERRIDES 16u
+#define KBO_AWARD_SCHEDULE_MAX_EVENT_TYPES 8u
 #define KBO_AWARD_VOTING_EVENT_TYPE 0x10u
 
 typedef struct KboAwardScheduleOverride {
@@ -44,8 +46,12 @@ typedef struct KboAwardScheduleOverride {
 typedef struct KboAwardScheduleRule {
     char id[48];
     char label[96];
+    char label_en[96];
+    char label_ko[96];
     char titles[KBO_AWARD_SCHEDULE_MAX_TITLES][96];
     uint32_t title_count;
+    uint16_t event_types[KBO_AWARD_SCHEDULE_MAX_EVENT_TYPES];
+    uint32_t event_type_count;
     uint32_t default_month;
     uint32_t default_day;
     KboAwardScheduleOverride overrides[KBO_AWARD_SCHEDULE_MAX_OVERRIDES];

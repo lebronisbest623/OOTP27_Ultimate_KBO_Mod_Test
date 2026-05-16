@@ -125,6 +125,56 @@ static void kbo_independent_acquisition_copy_team_name(
     snprintf(out, out_size, "Team #%u", team_id);
 }
 
+static void kbo_independent_acquisition_format_cash_cost(
+    int32_t cash_cost,
+    char* out,
+    size_t out_size)
+{
+    if (out == NULL || out_size == 0u) {
+        return;
+    }
+    out[0] = '\0';
+
+    char raw[32] = {0};
+    snprintf(raw, sizeof(raw), "%d", cash_cost);
+
+    const char* digits = raw;
+    int negative = 0;
+    if (digits[0] == '-') {
+        negative = 1;
+        digits++;
+    }
+
+    size_t digit_count = strlen(digits);
+    if (digit_count == 0u) {
+        snprintf(out, out_size, "%d", cash_cost);
+        return;
+    }
+
+    size_t comma_count = (digit_count - 1u) / 3u;
+    size_t needed = digit_count + comma_count + (negative ? 1u : 0u) + 1u;
+    if (needed > out_size) {
+        snprintf(out, out_size, "%d", cash_cost);
+        return;
+    }
+
+    char* p = out;
+    if (negative) {
+        *p++ = '-';
+    }
+    size_t leading = digit_count % 3u;
+    if (leading == 0u) {
+        leading = 3u;
+    }
+    for (size_t i = 0u; i < digit_count; i++) {
+        if (i != 0u && (i == leading || (i > leading && ((i - leading) % 3u) == 0u))) {
+            *p++ = ',';
+        }
+        *p++ = digits[i];
+    }
+    *p = '\0';
+}
+
 int kbo_emit_independent_acquisition_transfer_news(
     uint32_t today,
     uint8_t* player,
@@ -173,7 +223,7 @@ int kbo_emit_independent_acquisition_transfer_news(
     } else {
         snprintf(seller_link, sizeof(seller_link), "%s", seller_name);
     }
-    snprintf(cash_cost_text, sizeof(cash_cost_text), "%d", cash_cost);
+    kbo_independent_acquisition_format_cash_cost(cash_cost, cash_cost_text, sizeof(cash_cost_text));
 
     char title[180] = {0};
     char body[1024] = {0};

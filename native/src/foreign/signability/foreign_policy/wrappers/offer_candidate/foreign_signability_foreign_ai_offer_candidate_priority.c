@@ -16,10 +16,24 @@
 
 static int kbo_foreign_ai_offer_candidate_priority_enabled(void)
 {
-    return (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")
+    enum { KBO_FOREIGN_AI_OFFER_PRIORITY_FLAG_CACHE_MS = 500u };
+    static volatile LONG s_cached_tick = 0;
+    static volatile LONG s_cached_enabled = 0;
+
+    DWORD now = GetTickCount();
+    LONG cached_tick = InterlockedCompareExchange(&s_cached_tick, 0, 0);
+    if (cached_tick != 0
+            && (DWORD)(now - (DWORD)cached_tick) <= KBO_FOREIGN_AI_OFFER_PRIORITY_FLAG_CACHE_MS) {
+        return InterlockedCompareExchange(&s_cached_enabled, 0, 0) != 0;
+    }
+
+    int enabled = (read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")
             || kbo_foreign_ai_controller_enabled()
             || read_kbo_localappdata_flag_file("enable_kbo_foreign_ai_offer_candidate_priority_hook.txt"))
         && !read_kbo_localappdata_flag_file("disable_kbo_foreign_ai_offer_candidate_priority_hook.txt");
+    InterlockedExchange(&s_cached_enabled, enabled ? 1 : 0);
+    InterlockedExchange(&s_cached_tick, (LONG)now);
+    return enabled;
 }
 
 static uint32_t kbo_offer_candidate_priority_team_id(uintptr_t frame_ptr)

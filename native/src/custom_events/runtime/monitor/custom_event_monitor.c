@@ -18,6 +18,8 @@
 
 static volatile LONG64 g_kbo_custom_event_schedule_deferred_log_ms = 0;
 static volatile LONG64 g_kbo_custom_event_scan_deferred_log_ms = 0;
+static volatile LONG g_kbo_custom_event_global_scheduled_yyyymmdd = 0;
+static volatile LONG g_kbo_custom_event_global_scheduled_processing_yyyymmdd = 0;
 static volatile LONG g_kbo_custom_event_global_scanned_yyyymmdd = 0;
 static volatile LONG g_kbo_custom_event_global_fa_comp_yyyymmdd = 0;
 static volatile LONG g_kbo_custom_event_global_fa_comp_processing_yyyymmdd = 0;
@@ -66,23 +68,45 @@ void kbo_custom_event_monitor_tick(
     }
 
     if (last_scheduled_yyyymmdd != NULL && today_yyyymmdd != *last_scheduled_yyyymmdd) {
-        KBO_PROFILE_BEGIN(profile_custom_event_monitor_due);
-        int due_result = kbo_process_custom_events_due_through(today_yyyymmdd, source);
-        KBO_PROFILE_END(profile_custom_event_monitor_due, "custom_event.monitor.process_due");
-        if (due_result >= 0) {
+        LONG global_scheduled = InterlockedCompareExchange(
+            &g_kbo_custom_event_global_scheduled_yyyymmdd,
+            0,
+            0);
+        LONG processing_date = 0;
+        if ((uint32_t)global_scheduled != today_yyyymmdd) {
+            processing_date = InterlockedCompareExchange(
+                &g_kbo_custom_event_global_scheduled_processing_yyyymmdd,
+                (LONG)today_yyyymmdd,
+                0);
+        }
+        if ((uint32_t)global_scheduled == today_yyyymmdd) {
             *last_scheduled_yyyymmdd = today_yyyymmdd;
-            if (due_result == KBO_CUSTOM_EVENT_DUE_RESULT_CHANGED
-                    || due_result == KBO_CUSTOM_EVENT_DUE_RESULT_SCANNED_IDLE) {
-                if (last_scanned_yyyymmdd != NULL) {
-                    *last_scanned_yyyymmdd = today_yyyymmdd;
+            KBO_PROFILE_BEGIN(profile_custom_event_monitor_due_skip);
+            KBO_PROFILE_END(profile_custom_event_monitor_due_skip, "custom_event.monitor.process_due_cached");
+        } else if (processing_date == 0) {
+            KBO_PROFILE_BEGIN(profile_custom_event_monitor_due);
+            int due_result = kbo_process_custom_events_due_through(today_yyyymmdd, source);
+            KBO_PROFILE_END(profile_custom_event_monitor_due, "custom_event.monitor.process_due");
+            InterlockedExchange(&g_kbo_custom_event_global_scheduled_processing_yyyymmdd, 0);
+            if (due_result >= 0) {
+                *last_scheduled_yyyymmdd = today_yyyymmdd;
+                InterlockedExchange(&g_kbo_custom_event_global_scheduled_yyyymmdd, (LONG)today_yyyymmdd);
+                if (due_result == KBO_CUSTOM_EVENT_DUE_RESULT_CHANGED
+                        || due_result == KBO_CUSTOM_EVENT_DUE_RESULT_SCANNED_IDLE) {
+                    if (last_scanned_yyyymmdd != NULL) {
+                        *last_scanned_yyyymmdd = today_yyyymmdd;
+                    }
+                    InterlockedExchange(&g_kbo_custom_event_global_scanned_yyyymmdd, (LONG)today_yyyymmdd);
                 }
-                InterlockedExchange(&g_kbo_custom_event_global_scanned_yyyymmdd, (LONG)today_yyyymmdd);
+            } else if (kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_schedule_deferred_log_ms)) {
+                kbo_log_runtimef(
+                    "KBO custom event schedule deferred reason=state_not_ready today=%u due_result=%d",
+                    today_yyyymmdd,
+                    due_result);
             }
-        } else if (kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_schedule_deferred_log_ms)) {
-            kbo_log_runtimef(
-                "KBO custom event schedule deferred reason=state_not_ready today=%u due_result=%d",
-                today_yyyymmdd,
-            due_result);
+        } else {
+            KBO_PROFILE_BEGIN(profile_custom_event_monitor_due_busy);
+            KBO_PROFILE_END(profile_custom_event_monitor_due_busy, "custom_event.monitor.process_due_busy");
         }
     }
     LONG global_scanned = InterlockedCompareExchange(&g_kbo_custom_event_global_scanned_yyyymmdd, 0, 0);

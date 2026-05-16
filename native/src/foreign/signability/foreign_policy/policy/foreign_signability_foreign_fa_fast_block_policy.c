@@ -1,4 +1,5 @@
 #include "../internal/foreign_signability_internal.h"
+#include "../../../quota/candidates/cache/foreign_quota_candidate_limit_cache.h"
 
 /* Early FA candidate block policy. */
 
@@ -98,14 +99,32 @@ int kbo_fast_block_fa_candidate_before_original(
             uint32_t effective_limit = KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT;
             uint8_t slot_type = 0u;
             uint32_t injured_player_id = 0u;
-            kbo_custom_foreign_policy_team_allows_candidate(
-                requester_team_id,
-                player,
-                &effective_before,
-                &effective_after,
-                &effective_limit,
-                &slot_type,
-                &injured_player_id);
+            int cached_allowed = 1;
+            if (!memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
+                    || !kbo_custom_foreign_candidate_cache_hit(
+                        requester_team_id,
+                        player,
+                        player_id,
+                        today,
+                        *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET),
+                        *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET),
+                        *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET),
+                        &effective_before,
+                        &effective_after,
+                        &effective_limit,
+                        &slot_type,
+                        &injured_player_id,
+                        &cached_allowed)
+                    || cached_allowed) {
+                kbo_custom_foreign_policy_team_allows_candidate(
+                    requester_team_id,
+                    player,
+                    &effective_before,
+                    &effective_after,
+                    &effective_limit,
+                    &slot_type,
+                    &injured_player_id);
+            }
             kbo_record_recent_custom_foreign_policy_block(player_id, requester_team_id, today);
             static volatile LONG custom_fast_block_log_count = 0;
             LONG slot = InterlockedIncrement(&custom_fast_block_log_count);

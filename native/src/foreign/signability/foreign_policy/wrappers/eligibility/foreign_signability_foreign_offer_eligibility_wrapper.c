@@ -11,6 +11,25 @@ static uint8_t kbo_foreign_reserve_holder_offer_eligibility(uint8_t original_res
     return adjusted;
 }
 
+static int kbo_foreign_ai_roster_management_enabled_cached(void)
+{
+    enum { KBO_FOREIGN_AI_ROSTER_FLAG_CACHE_MS = 500u };
+    static volatile LONG s_cached_tick = 0;
+    static volatile LONG s_cached_enabled = 0;
+
+    DWORD now = GetTickCount();
+    LONG cached_tick = InterlockedCompareExchange(&s_cached_tick, 0, 0);
+    if (cached_tick != 0
+            && (DWORD)(now - (DWORD)cached_tick) <= KBO_FOREIGN_AI_ROSTER_FLAG_CACHE_MS) {
+        return InterlockedCompareExchange(&s_cached_enabled, 0, 0) != 0;
+    }
+
+    int enabled = read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt") ? 1 : 0;
+    InterlockedExchange(&s_cached_enabled, enabled);
+    InterlockedExchange(&s_cached_tick, (LONG)now);
+    return enabled;
+}
+
 static int kbo_foreign_reserve_high_value_offer_visible_to_ai(
     uint8_t* player,
     int32_t* out_score,
@@ -21,7 +40,7 @@ static int kbo_foreign_reserve_high_value_offer_visible_to_ai(
     if (out_score != NULL) { *out_score = score; }
     if (out_threshold != NULL) { *out_threshold = threshold; }
 
-    if (!read_kbo_localappdata_flag_file("enable_foreign_ai_roster_management.txt")
+    if (!kbo_foreign_ai_roster_management_enabled_cached()
             || player == NULL
             || !memory_range_readable(player, OOTP27_PLAYER_SCAN_BYTES)
             || !kbo_player_is_foreign_for_kbo_rights(player)) {

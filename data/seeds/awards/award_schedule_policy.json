@@ -4,7 +4,10 @@
     {
       "id": "most_valuable_player",
       "label": "KBO Most Valuable Player Award",
-      "match_titles": [ "Most Valuable Player Award", "MVP Award", "KBO MVP Award" ],
+      "label_en": "Most Valuable Player Award announced",
+      "label_ko": "KBO 최우수선수상 발표",
+      "event_types": [ 22 ],
+      "match_titles": [ "Most Valuable Player Award", "Most Valuable Player Award announced", "MVP Award", "KBO MVP Award" ],
       "default_month": 11,
       "default_day": 26,
       "year_overrides": [
@@ -21,7 +24,10 @@
     {
       "id": "rookie_of_the_year",
       "label": "KBO Rookie of the Year Award",
-      "match_titles": [ "Rookie of the Year Award", "Rookie Award", "KBO Rookie of the Year Award" ],
+      "label_en": "Rookie of the Year Award announced",
+      "label_ko": "KBO 신인상 발표",
+      "event_types": [ 24 ],
+      "match_titles": [ "Rookie of the Year Award", "Rookie of the Year Award announced", "Rookie Award", "KBO Rookie of the Year Award" ],
       "default_month": 11,
       "default_day": 26,
       "year_overrides": [
@@ -38,7 +44,10 @@
     {
       "id": "defense",
       "label": "KBO Fielding Award",
-      "match_titles": [ "Fielding Award", "Defensive Award", "Defense Award", "KBO Fielding Award", "KBO Defensive Award" ],
+      "label_en": "Defensive Award announced",
+      "label_ko": "KBO 수비상 발표",
+      "event_types": [ 25 ],
+      "match_titles": [ "Fielding Award", "Defensive Award", "Defensive Award announced", "Defense Award", "KBO Fielding Award", "KBO Defensive Award" ],
       "default_month": 11,
       "default_day": 26,
       "year_overrides": [
@@ -55,6 +64,8 @@
     {
       "id": "regular_season_title_holders",
       "label": "KBO Regular Season Title Awards",
+      "label_en": "KBO Regular Season Title Awards",
+      "label_ko": "KBO 정규시즌 개인 타이틀 시상",
       "match_titles": [ "Best Pitcher Award", "Best Hitter Award", "Pitching Award", "Hitting Award", "Regular Season Award", "Individual Award" ],
       "default_month": 11,
       "default_day": 26,
@@ -72,7 +83,10 @@
     {
       "id": "choi_dong_won",
       "label": "Choi Dong-Won Award",
-      "match_titles": [ "Choi Dong-Won Award", "Pitcher of the Year Award", "Outstanding Pitcher Award" ],
+      "label_en": "Choi Dong-Won Award announced",
+      "label_ko": "최동원상 발표",
+      "event_types": [ 23 ],
+      "match_titles": [ "Choi Dong-Won Award", "Choi Dong-Won Award announced", "Pitcher of the Year Award", "Outstanding Pitcher Award" ],
       "default_month": 11,
       "default_day": 11,
       "year_overrides": [
@@ -87,7 +101,10 @@
     {
       "id": "golden_glove",
       "label": "KBO Golden Glove Award",
-      "match_titles": [ "Golden Glove Award", "Gold Glove Award", "KBO Golden Glove Award" ],
+      "label_en": "Golden Glove Award announced",
+      "label_ko": "KBO 골든글러브 발표",
+      "event_types": [ 31 ],
+      "match_titles": [ "Golden Glove Award", "Golden Glove Award announced", "Gold Glove Award", "KBO Golden Glove Award" ],
       "default_month": 12,
       "default_day": 11,
       "year_overrides": [

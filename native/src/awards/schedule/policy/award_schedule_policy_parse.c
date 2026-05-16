@@ -245,6 +245,38 @@ static void kbo_award_parse_titles(const char* start, const char* end, KboAwardS
     }
 }
 
+static void kbo_award_parse_event_types(const char* start, const char* end, KboAwardScheduleRule* rule)
+{
+    const char* p = kbo_award_json_key_in_range(start, end, "event_types");
+    if (p == NULL) {
+        return;
+    }
+    while (p < end && *p != '[') {
+        p++;
+    }
+    const char* array_end = kbo_award_find_matching_bracket(p);
+    if (array_end == NULL || array_end > end) {
+        return;
+    }
+    p++;
+    while (p < array_end && rule->event_type_count < KBO_AWARD_SCHEDULE_MAX_EVENT_TYPES) {
+        while (p < array_end && (*p < '0' || *p > '9')) {
+            p++;
+        }
+        if (p >= array_end) {
+            break;
+        }
+        uint32_t value = 0u;
+        while (p < array_end && *p >= '0' && *p <= '9') {
+            value = value * 10u + (uint32_t)(*p - '0');
+            p++;
+        }
+        if (value <= 0xffffu) {
+            rule->event_types[rule->event_type_count++] = (uint16_t)value;
+        }
+    }
+}
+
 static void kbo_award_parse_overrides(const char* start, const char* end, KboAwardScheduleRule* rule)
 {
     const char* p = kbo_award_json_key_in_range(start, end, "year_overrides");
@@ -316,11 +348,14 @@ int kbo_award_schedule_parse_policy(const char* json, KboAwardSchedulePolicy* ou
         KboAwardScheduleRule rule = {0};
         kbo_award_json_string_in_range(p, object_end, "id", rule.id, sizeof(rule.id));
         kbo_award_json_string_in_range(p, object_end, "label", rule.label, sizeof(rule.label));
+        kbo_award_json_string_in_range(p, object_end, "label_en", rule.label_en, sizeof(rule.label_en));
+        kbo_award_json_string_in_range(p, object_end, "label_ko", rule.label_ko, sizeof(rule.label_ko));
         kbo_award_json_uint_in_range(p, object_end, "default_month", &rule.default_month);
         kbo_award_json_uint_in_range(p, object_end, "default_day", &rule.default_day);
         kbo_award_parse_titles(p, object_end, &rule);
+        kbo_award_parse_event_types(p, object_end, &rule);
         kbo_award_parse_overrides(p, object_end, &rule);
-        if (rule.title_count > 0u
+        if ((rule.title_count > 0u || rule.event_type_count > 0u)
                 && rule.default_month >= 1u && rule.default_month <= 12u
                 && rule.default_day >= 1u && rule.default_day <= 31u) {
             out->rules[out->rule_count++] = rule;

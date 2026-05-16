@@ -105,7 +105,7 @@ void kbo_foreign_injury_process_existing_replacements(
         }
         int expected_end_pending = kbo_foreign_injury_expected_end_pending(today, rec->expected_end_yyyymmdd);
         int close_decision_allowed = rec->league_id != 0u
-            && kbo_foreign_injury_replacement_in_season_window(
+            && kbo_foreign_injury_replacement_close_decision_allowed(
                 rec->league_id,
                 today,
                 source,

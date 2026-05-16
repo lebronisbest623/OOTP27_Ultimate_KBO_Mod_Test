@@ -17,7 +17,7 @@
 #include "../../../replacement_seed/api/foreign_replacement_seed.h"
 
 enum {
-    KBO_FOREIGN_ORG_COUNT_CACHE_SIZE = 128,
+    KBO_FOREIGN_ORG_COUNT_CACHE_SIZE = 512,
     KBO_FOREIGN_ORG_COUNT_CACHE_TTL_MS = 5000u,
     KBO_FOREIGN_ORG_SNAPSHOT_MAX_TEAMS = 256,
     KBO_FOREIGN_ORG_PARENT_CACHE_SIZE = 512,

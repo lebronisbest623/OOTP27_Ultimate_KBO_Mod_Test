@@ -51,7 +51,13 @@ int kbo_foreign_injury_expected_end_pending(
     uint32_t today_yyyymmdd,
     uint32_t expected_end_yyyymmdd);
 int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase);
+int kbo_foreign_injury_replacement_phase_allows_close(uint8_t effective_phase);
 int kbo_foreign_injury_replacement_in_season_window(
+    uint32_t league_id,
+    uint32_t today_yyyymmdd,
+    const char* source,
+    const char* context);
+int kbo_foreign_injury_replacement_close_decision_allowed(
     uint32_t league_id,
     uint32_t today_yyyymmdd,
     const char* source,

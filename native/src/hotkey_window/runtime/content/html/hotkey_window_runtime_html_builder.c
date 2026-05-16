@@ -2,6 +2,8 @@
 #include "../../hotkey_window_domain_contract.h"
 #include "../../../../captain/api/captain_selection.h"
 
+static volatile LONG g_kbo_webview_navigate_current_pending = 0;
+
 WCHAR* kbo_build_webview_hub_html(void)
 {
     const size_t html_cap = 8388608;
@@ -313,6 +315,7 @@ WCHAR* kbo_build_webview_hub_html(void)
 
 void kbo_webview_navigate_current_immediate(void)
 {
+    InterlockedExchange(&g_kbo_webview_navigate_current_pending, 0);
     if (g_kbo_webview == NULL) {
         return;
     }
@@ -333,6 +336,10 @@ void kbo_webview_navigate_current(void)
         return;
     }
 
+    if (InterlockedCompareExchange(&g_kbo_webview_navigate_current_pending, 1, 0) != 0) {
+        kbo_profiler_record_us("webview.navigate_current.coalesced", 0);
+        return;
+    }
     kbo_webview_navigate_loading();
     PostMessageA(hwnd, KBO_WM_SHOW_HUB_CONTENT, 0, 0);
 }

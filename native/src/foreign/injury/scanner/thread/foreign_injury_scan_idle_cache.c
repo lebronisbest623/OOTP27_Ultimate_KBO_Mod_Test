@@ -19,9 +19,15 @@ int kbo_foreign_injury_replacement_scan_source_is_periodic_thread(const char* so
     return source != NULL && strcmp(source, "foreign_injury_replacement_thread") == 0;
 }
 
+static int kbo_foreign_injury_replacement_scan_source_uses_idle_cache(const char* source)
+{
+    return kbo_foreign_injury_replacement_scan_source_is_periodic_thread(source)
+        || (source != NULL && strcmp(source, "foreign_roster_daily_date_change") == 0);
+}
+
 int kbo_foreign_injury_same_date_idle_scan_cached(uint32_t today, const char* source)
 {
-    if (!kbo_foreign_injury_replacement_scan_source_is_periodic_thread(source) || today == 0u) {
+    if (!kbo_foreign_injury_replacement_scan_source_uses_idle_cache(source) || today == 0u) {
         return 0;
     }
     LONG cached_date = InterlockedCompareExchange(&g_kbo_foreign_injury_idle_scan_yyyymmdd, 0, 0);
@@ -37,7 +43,7 @@ int kbo_foreign_injury_same_date_idle_scan_cached(uint32_t today, const char* so
 
 void kbo_foreign_injury_note_same_date_idle_scan(uint32_t today, const char* source, int idle)
 {
-    if (!kbo_foreign_injury_replacement_scan_source_is_periodic_thread(source)) {
+    if (!kbo_foreign_injury_replacement_scan_source_uses_idle_cache(source)) {
         return;
     }
     if (!idle || today == 0u) {

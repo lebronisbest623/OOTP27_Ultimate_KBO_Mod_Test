@@ -225,6 +225,12 @@ int kbo_foreign_injury_replacement_phase_allows_signing(uint8_t effective_phase)
     return effective_phase == KBO_SEASON_PHASE_REGULAR_SEASON;
 }
 
+int kbo_foreign_injury_replacement_phase_allows_close(uint8_t effective_phase)
+{
+    return effective_phase != KBO_SEASON_PHASE_PRESEASON
+        && effective_phase != KBO_SEASON_PHASE_UNKNOWN;
+}
+
 int kbo_foreign_injury_active_record_has_roster_basis(
     uint8_t status,
     uint32_t replacement_player_id,

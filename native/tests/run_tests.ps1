@@ -87,6 +87,7 @@ if ($LASTEXITCODE -ne 0) {
     (Join-Path $Root "src\core\core_flags\keys\flag_key.c") `
     (Join-Path $Root "src\core\core_flags\json\json_bool_parser.c") `
     (Join-Path $Root "src\core\core_flags\json\json_string_decode.c") `
+    (Join-Path $Root "src\awards\schedule\policy\award_schedule_policy_parse.c") `
     (Join-Path $Root "src\core\news\templates\render\core_news_template_render.c") `
     (Join-Path $Root "src\core\news\links\core_news_links.c") `
     (Join-Path $Root "src\core\core_flags\api\settings\custom_news_language.c") `

@@ -23,6 +23,7 @@
 #include "../src/captain/season/captain_season.h"
 #include "../src/captain/seed/parse/captain_seed_parse.h"
 #include "../src/patch_helpers/patch_helpers.h"
+#include "../src/awards/schedule/award_schedule_probe_internal.h"
 
 int kbo_current_date_is_valid(uint32_t* out_year, uint32_t* out_month, uint32_t* out_day)
 {
@@ -156,6 +157,47 @@ static void test_json_flags_parser(void)
 
     assert(!kbo_find_flag_value_in_json("{ nope", 6u, "enable_foreign_waiver_ai", &value));
     printf("test_json_flags_parser: PASS\n");
+}
+
+static void test_award_schedule_policy_parse_event_types(void)
+{
+    const char json[] =
+        "{\n"
+        "  \"awards\": [\n"
+        "    {\n"
+        "      \"id\": \"mvp\",\n"
+        "      \"label\": \"KBO Most Valuable Player Award\",\n"
+        "      \"label_en\": \"Most Valuable Player Award announced\",\n"
+        "      \"label_ko\": \"KBO 최우수선수상 발표\",\n"
+        "      \"event_types\": [22, 31],\n"
+        "      \"match_titles\": [],\n"
+        "      \"default_month\": 11,\n"
+        "      \"default_day\": 26,\n"
+        "      \"year_overrides\": [{ \"year\": 2027, \"month\": 12, \"day\": 1 }]\n"
+        "    }\n"
+        "  ]\n"
+        "}\n";
+
+    KboAwardSchedulePolicy policy;
+    memset(&policy, 0, sizeof(policy));
+
+    assert(kbo_award_schedule_parse_policy(json, &policy));
+    assert(policy.rule_count == 1u);
+    assert(strcmp(policy.rules[0].id, "mvp") == 0);
+    assert(strcmp(policy.rules[0].label_en, "Most Valuable Player Award announced") == 0);
+    assert(strcmp(policy.rules[0].label_ko, "KBO 최우수선수상 발표") == 0);
+    assert(policy.rules[0].title_count == 0u);
+    assert(policy.rules[0].event_type_count == 2u);
+    assert(policy.rules[0].event_types[0] == 22u);
+    assert(policy.rules[0].event_types[1] == 31u);
+    assert(policy.rules[0].default_month == 11u);
+    assert(policy.rules[0].default_day == 26u);
+    assert(policy.rules[0].override_count == 1u);
+    assert(policy.rules[0].overrides[0].year == 2027u);
+    assert(policy.rules[0].overrides[0].month == 12u);
+    assert(policy.rules[0].overrides[0].day == 1u);
+
+    printf("test_award_schedule_policy_parse_event_types: PASS\n");
 }
 
 static void test_news_template_render(void)
@@ -1399,6 +1441,12 @@ static void test_foreign_injury_inactive_roster_long_term_basis(void)
     assert(kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_REGULAR_SEASON));
     assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_POSTSEASON));
     assert(!kbo_foreign_injury_replacement_phase_allows_signing(KBO_SEASON_PHASE_UNKNOWN));
+    assert(kbo_foreign_injury_replacement_phase_allows_close(KBO_SEASON_PHASE_OFFSEASON_RESET));
+    assert(kbo_foreign_injury_replacement_phase_allows_close(KBO_SEASON_PHASE_OFFSEASON_STARTED));
+    assert(!kbo_foreign_injury_replacement_phase_allows_close(KBO_SEASON_PHASE_PRESEASON));
+    assert(kbo_foreign_injury_replacement_phase_allows_close(KBO_SEASON_PHASE_REGULAR_SEASON));
+    assert(kbo_foreign_injury_replacement_phase_allows_close(KBO_SEASON_PHASE_POSTSEASON));
+    assert(!kbo_foreign_injury_replacement_phase_allows_close(KBO_SEASON_PHASE_UNKNOWN));
 
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(0u, 0, min_days, 1));
     assert(!kbo_foreign_injury_inactive_roster_has_long_term_injury_basis(1u, 8, min_days, 1));
@@ -1704,6 +1752,7 @@ int main(void)
 {
     test_core_text_and_sql_helpers();
     test_json_flags_parser();
+    test_award_schedule_policy_parse_event_types();
     test_news_template_render();
     test_news_related_link_parse();
     test_date_serial();

@@ -9,7 +9,6 @@
 #include "../../../../foreign/retention_guard/foreign_retention_guard.h"
 #include "../../../../foreign/rights/query/foreign_waiver_rights_query.h"
 #include "../../../../runtime_memory/runtime_memory.h"
-#include "../../../assignment/assignment/team_assignment.h"
 #include "../../../assignment/roster_arrays/team_roster_arrays.h"
 #include "../../../lookup/team_lookup.h"
 #include "team_add_player_guard_foreign_purchase_restore.h"
@@ -180,44 +179,15 @@ int kbo_team_add_restore_source_team_after_blocked_foreign_purchase(
         }
     }
 
-    int called_pre_change = 0;
-    int called_register = 0;
-    int called_attach = 0;
-    kbo_assign_player_to_team_internal(
-        player,
-        source_team,
-        source_league_id,
-        1,
-        &called_pre_change,
-        &called_register,
-        &called_attach);
-
-    uint32_t restored_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
-    uint32_t restored_active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
-    if (restored_current_team_id != source_team_id) {
-        kbo_log_runtimef(
-            "custom foreign policy blocked purchase source restore failed player=%u blocked_team=%u source_team=%u source_league=%u caller_rva=0x%x restored_current=%u restored_active=%u",
-            player_id,
-            blocked_team_id,
-            source_team_id,
-            source_league_id,
-            caller_rva,
-            restored_current_team_id,
-            restored_active_team_id);
-        return 0;
-    }
-
     kbo_log_runtimef(
-        "custom foreign policy blocked purchase restored source player=%u blocked_team=%u source_team=%u source_league=%u caller_rva=0x%x restored_current=%u restored_active=%u pre=%d register=%d attach=%d",
+        "custom foreign policy blocked purchase source restore skipped player=%u blocked_team=%u source_team=%u source_league=%u caller_rva=0x%x reason=no_recorded_holder_or_active_right current=%u active=%u original=%u",
         player_id,
         blocked_team_id,
         source_team_id,
         source_league_id,
         caller_rva,
-        restored_current_team_id,
-        restored_active_team_id,
-        called_pre_change,
-        called_register,
-        called_attach);
-    return 1;
+        *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET),
+        *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET),
+        *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET));
+    return 0;
 }
