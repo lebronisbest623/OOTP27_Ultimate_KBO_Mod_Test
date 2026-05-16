@@ -19,6 +19,8 @@
 #include "../selection/fa_compensation_selection.h"
 #include "../state/fa_compensation_state.h"
 
+static volatile LONG g_kbo_fa_compensation_due_processing = 0;
+
 static int kbo_submit_fa_compensation_protected_list_record(
     KboFaCompensationRecord* rec,
     uint32_t today,
@@ -179,6 +181,9 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
     if (!kbo_get_current_yyyymmdd(&today) || today == 0u) {
         return 0;
     }
+    if (InterlockedCompareExchange(&g_kbo_fa_compensation_due_processing, 1, 0) != 0) {
+        return 0;
+    }
 
     KboFaRules rules;
     kbo_fa_rules_load(&rules);
@@ -196,6 +201,7 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
         if (candidates != NULL) { HeapFree(GetProcessHeap(), 0, candidates); }
         if (auto_protected != NULL) { HeapFree(GetProcessHeap(), 0, auto_protected); }
         if (tasks != NULL) { HeapFree(GetProcessHeap(), 0, tasks); }
+        InterlockedExchange(&g_kbo_fa_compensation_due_processing, 0);
         return 0;
     }
 
@@ -335,5 +341,6 @@ int kbo_process_due_fa_compensation_protected_lists(const char* source)
     HeapFree(GetProcessHeap(), 0, auto_protected);
     HeapFree(GetProcessHeap(), 0, candidates);
     HeapFree(GetProcessHeap(), 0, records);
+    InterlockedExchange(&g_kbo_fa_compensation_due_processing, 0);
     return generated;
 }

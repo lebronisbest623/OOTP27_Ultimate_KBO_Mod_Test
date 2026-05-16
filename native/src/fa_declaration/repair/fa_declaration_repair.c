@@ -88,6 +88,7 @@ int kbo_fa_declaration_repair_retained_contract_salary(
             || !memory_range_readable(
                 player + OOTP27_PLAYER_CONTRACT_SALARY_Y1_OFFSET,
                 OOTP27_PLAYER_CONTRACT_SALARY_YEARS * sizeof(int32_t))
+            || !memory_range_readable(player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET, sizeof(uint8_t))
             || !memory_range_readable(player + OOTP27_PLAYER_ARBITRATION_OFFER_OFFSET, sizeof(int32_t))) {
         return 0;
     }
@@ -132,12 +133,21 @@ int kbo_fa_declaration_repair_retained_contract_salary(
 
     int32_t before_y1 = salaries[0];
     int32_t before_season_salary = salaries[season_index];
+    uint8_t* contract_level_ptr = player + OOTP27_PLAYER_CONTRACT_LEVEL_FLAG_OFFSET;
+    uint8_t before_contract_level = *contract_level_ptr;
     if (salaries[season_index] <= 0) {
         salaries[season_index] = repair_salary;
         changed = 1;
     }
-    if (salaries[0] <= 0) {
+    if (season_index == 0u && salaries[0] <= 0) {
         salaries[0] = repair_salary;
+        changed = 1;
+    }
+    if (*contract_level_ptr == 0u) {
+        uint8_t retained_level = decision != NULL && decision->contract_level != 0u
+            ? decision->contract_level
+            : 1u;
+        *contract_level_ptr = retained_level;
         changed = 1;
     }
 
@@ -153,7 +163,7 @@ int kbo_fa_declaration_repair_retained_contract_salary(
         LONG slot = InterlockedIncrement(&repair_log_count);
         if (slot <= 160) {
             kbo_log_runtimef(
-                "KBO FA declaration retained contract salary repaired source=%s player=%u season=%u team=%u decision_date=%u start_year=%d->%d slot=%u salary_slot=%d->%d y1=%d->%d offer=%d->%d repair_salary=%d decision_salary=%d demand=%d minimum=%d",
+                "KBO FA declaration retained contract salary repaired source=%s player=%u season=%u team=%u decision_date=%u start_year=%d->%d slot=%u salary_slot=%d->%d y1=%d->%d contract_level=%u->%u offer=%d->%d repair_salary=%d decision_salary=%d demand=%d minimum=%d",
                 source != NULL ? source : "",
                 player_id,
                 season,
@@ -166,6 +176,8 @@ int kbo_fa_declaration_repair_retained_contract_salary(
                 salaries[season_index],
                 before_y1,
                 salaries[0],
+                (unsigned)before_contract_level,
+                (unsigned)*contract_level_ptr,
                 before_offer,
                 *offer,
                 repair_salary,
@@ -263,9 +275,13 @@ int kbo_fa_declaration_repair_retained_contracts_for_season(
             skipped_team++;
             continue;
         }
+        uint32_t repair_season = kbo_fa_declaration_retained_contract_season(decisions[i].season);
+        if (repair_season == 0u) {
+            repair_season = season;
+        }
         repaired += kbo_fa_declaration_repair_retained_contract_salary(
             player,
-            season,
+            repair_season,
             &decisions[i],
             0,
             source != NULL ? source : "fa_declaration_retained_repair");

@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+enum {
+    KBO_CUSTOM_EVENT_DUE_RESULT_NOOP = 0,
+    KBO_CUSTOM_EVENT_DUE_RESULT_CHANGED = 1,
+    KBO_CUSTOM_EVENT_DUE_RESULT_SCANNED_IDLE = 2
+};
+
 int kbo_process_custom_events_due_through(uint32_t today_yyyymmdd, const char* source);
 
 #endif

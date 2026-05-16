@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <windows.h>
 
+#include "../../asian_games/state/asian_games_state.h"
+
 int kbo_asian_games_append_player_blurb(char* out, size_t out_size, size_t* used, KboAsianGamesRosterEntry* entry, LONG display_index, LONG display_count);
 int kbo_asian_games_append_roster_line(char* out, size_t out_size, size_t* used, LONG index, KboAsianGamesRosterEntry* entry);
 KboAsianGamesRosterEntry* kbo_asian_games_choose_captain(void);

@@ -2,6 +2,29 @@
 
 volatile LONG g_kbo_no_minor_contract_demand_floor_scanner_started = 0;
 
+int kbo_no_minor_copy_player_scan_prefix(uintptr_t player_ptr, uint8_t* out, SIZE_T out_size)
+{
+    if (player_ptr == 0 || out == NULL || out_size < KBO_NO_MINOR_SCAN_PREFILTER_BYTES) {
+        return 0;
+    }
+
+    SIZE_T bytes_read = 0;
+    if (!ReadProcessMemory(
+            GetCurrentProcess(),
+            (LPCVOID)player_ptr,
+            out,
+            KBO_NO_MINOR_SCAN_PREFILTER_BYTES,
+            &bytes_read)
+            || bytes_read != KBO_NO_MINOR_SCAN_PREFILTER_BYTES) {
+        return 0;
+    }
+
+    uint32_t player_id = *(uint32_t*)(out + OOTP27_PLAYER_ID_OFFSET);
+    uint16_t age = *(uint16_t*)(out + OOTP27_PLAYER_AGE_OFFSET);
+    return kbo_foreign_policy_player_id_plausible(player_id)
+        && kbo_foreign_policy_player_copy_age_plausible(age);
+}
+
 int kbo_no_minor_copy_player_scan(uintptr_t player_ptr, uint8_t* out)
 {
     if (player_ptr == 0 || out == NULL) {

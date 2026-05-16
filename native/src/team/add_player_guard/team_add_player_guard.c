@@ -12,6 +12,8 @@
 #include "../../military_service/players/guards/military_team_add_guard.h"
 #include "../../military_service/players/team_policy/military_service_team_policy.h"
 #include "../../runtime_memory/runtime_memory.h"
+#include "../../foreign/common/player_eval/foreign_waiver_player_eval.h"
+#include "../../foreign/quota/counts/foreign_quota_counts.h"
 #include "../assignment/org_query/team_org_assignment_query.h"
 #include "../lookup/team_lookup.h"
 #include "foreign_policy/purchase_restore/team_add_player_guard_foreign_purchase_restore.h"
@@ -68,9 +70,11 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
     uint32_t before_current_team_id = 0u;
     uint32_t before_active_team_id = 0u;
     uint32_t before_original_team_id = 0u;
+    uint32_t before_loan_team_id = 0u;
     if (player_plausible) {
         before_current_team_id = *(uint32_t*)(player + OOTP27_PLAYER_CURRENT_TEAM_ID_OFFSET);
         before_active_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ACTIVE_TEAM_ID_OFFSET);
+        before_loan_team_id = *(uint32_t*)(player + OOTP27_PLAYER_LOAN_TEAM_ID_OFFSET);
         if (memory_range_readable(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET, sizeof(uint32_t))) {
             before_original_team_id = *(uint32_t*)(player + OOTP27_PLAYER_ORIGINAL_TEAM_ID_OFFSET);
         }
@@ -368,6 +372,11 @@ __declspec(noinline) uint8_t ootp_kbo_team_add_player_guard_wrapper(
         KBO_PROFILE_END(profile_team_add_amateur_assignment, "team_add_guard.amateur_assignment_after_original");
     }
     if (result != 0u) {
+        kbo_team_add_note_foreign_assignment_success(
+            player,
+            before_current_team_id,
+            before_active_team_id,
+            before_loan_team_id);
         KBO_PROFILE_BEGIN(profile_team_add_foreign_injury_attach);
         kbo_team_add_attach_foreign_injury_replacement_success(
             effective_team_ptr,

@@ -13,9 +13,7 @@
 #include "../runtime_memory/runtime_memory.h"
 #include "season_phase_monitor.h"
 /* League season-phase diagnostics. Included from native/KBOFix.c. */
-
 static volatile LONG g_kbo_season_phase_monitor_started = 0;
-
 static const char* kbo_league_phase_label(uint8_t phase)
 {
     switch (phase) {
@@ -27,7 +25,6 @@ static const char* kbo_league_phase_label(uint8_t phase)
     default: return "phase_unknown";
     }
 }
-
 __declspec(noinline) void ootp_kbo_season_phase_write_probe(
     uintptr_t league_ptr,
     uint32_t value,
@@ -37,7 +34,6 @@ __declspec(noinline) void ootp_kbo_season_phase_write_probe(
         kbo_log_runtimef("KBO season phase write probe site=0x%x league=%p value=%u reason=bad_league", site_rva, (void*)league_ptr, value);
         return;
     }
-
     uint8_t old_value = *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET);
     *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET) = (uint8_t)value;
     uint8_t new_value = *(uint8_t*)(league_ptr + OOTP27_KBO_LEAGUE_PHASE_OFFSET);

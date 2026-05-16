@@ -132,14 +132,27 @@ int kbo_no_minor_scan_and_floor_teamless_fa_demands(const char* source)
     KBO_PROFILE_BEGIN(profile_no_minor_scan_loop);
     for (int32_t i = 0; i < player_count; i++) {
         uintptr_t player_ptr = player_snapshot[i];
-        uint8_t player_scan[OOTP27_PLAYER_SCAN_BYTES] = {0};
-        if (!kbo_no_minor_copy_player_scan(player_ptr, player_scan)) {
+        uint8_t player_prefilter[KBO_NO_MINOR_SCAN_PREFILTER_BYTES] = {0};
+        if (!kbo_no_minor_copy_player_scan_prefix(
+                player_ptr,
+                player_prefilter,
+                sizeof(player_prefilter))) {
             continue;
         }
         scanned++;
 
-        int no_minor_candidate = kbo_no_minor_scan_is_teamless_demand_floor_candidate(player_scan, league_id);
-        int foreign_candidate = kbo_no_minor_scan_is_foreign_demand_remap_candidate(player_scan);
+        int no_minor_candidate = kbo_no_minor_scan_is_teamless_demand_floor_candidate(player_prefilter, league_id);
+        int foreign_candidate = kbo_no_minor_scan_is_foreign_demand_remap_candidate(player_prefilter);
+        if (!no_minor_candidate && !foreign_candidate) {
+            continue;
+        }
+
+        uint8_t player_scan[OOTP27_PLAYER_SCAN_BYTES] = {0};
+        if (!kbo_no_minor_copy_player_scan(player_ptr, player_scan)) {
+            continue;
+        }
+        no_minor_candidate = kbo_no_minor_scan_is_teamless_demand_floor_candidate(player_scan, league_id);
+        foreign_candidate = kbo_no_minor_scan_is_foreign_demand_remap_candidate(player_scan);
         if (!no_minor_candidate && !foreign_candidate) {
             continue;
         }

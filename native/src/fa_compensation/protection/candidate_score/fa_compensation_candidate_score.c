@@ -11,6 +11,23 @@
 #include "../../../team/lookup/team_lookup.h"
 #include "../policy/fa_compensation_protection_policy.h"
 
+enum {
+    KBO_FA_TEAM_ROLE_COUNT_CACHE_SIZE = 64,
+    KBO_FA_TEAM_ROLE_COUNT_CACHE_TTL_MS = 10000u,
+    KBO_FA_ROLE_BUCKET_COUNT = 5
+};
+
+typedef struct KboFaTeamRoleCountCacheEntry {
+    uint32_t team_id;
+    uintptr_t player_vector;
+    int32_t player_count;
+    DWORD tick;
+    int counts[KBO_FA_ROLE_BUCKET_COUNT];
+    uint8_t valid;
+} KboFaTeamRoleCountCacheEntry;
+
+static KboFaTeamRoleCountCacheEntry g_kbo_fa_team_role_count_cache[KBO_FA_TEAM_ROLE_COUNT_CACHE_SIZE];
+
 static int kbo_fa_score_player_vector_readable(uintptr_t player_vector, int32_t player_count)
 {
     return player_vector != 0 && player_count > 0 && player_count <= 200000
@@ -40,6 +57,9 @@ int kbo_fa_team_role_count(uint32_t team_id, int role_bucket)
     if (team_id == 0u || role_bucket < 0) {
         return 0;
     }
+    if (role_bucket >= KBO_FA_ROLE_BUCKET_COUNT) {
+        role_bucket = KBO_FA_ROLE_BUCKET_COUNT - 1;
+    }
 
     uintptr_t player_vector = 0;
     int32_t player_count = 0;
@@ -48,7 +68,19 @@ int kbo_fa_team_role_count(uint32_t team_id, int role_bucket)
         return 0;
     }
 
-    int count = 0;
+    DWORD now = GetTickCount();
+    uint32_t slot_index = ((team_id * 2654435761u) ^ ((uint32_t)player_count << 3))
+        & (KBO_FA_TEAM_ROLE_COUNT_CACHE_SIZE - 1u);
+    KboFaTeamRoleCountCacheEntry* cached = &g_kbo_fa_team_role_count_cache[slot_index];
+    if (cached->valid
+            && cached->team_id == team_id
+            && cached->player_vector == player_vector
+            && cached->player_count == player_count
+            && now - cached->tick <= KBO_FA_TEAM_ROLE_COUNT_CACHE_TTL_MS) {
+        return cached->counts[role_bucket];
+    }
+
+    int counts[KBO_FA_ROLE_BUCKET_COUNT] = {0, 0, 0, 0, 0};
     for (int32_t i = 0; i < player_count; i++) {
         uintptr_t slot = player_vector + ((uintptr_t)i * sizeof(uintptr_t));
         if (!memory_range_readable((void*)slot, sizeof(uintptr_t))) { break; }
@@ -66,11 +98,23 @@ int kbo_fa_team_role_count(uint32_t team_id, int role_bucket)
         if (current_team_id != team_id && active_team_id != team_id) {
             continue;
         }
-        if (kbo_fa_role_bucket(player[OOTP27_PLAYER_POSITION_ROLE_OFFSET]) == role_bucket) {
-            count++;
+        int bucket = kbo_fa_role_bucket(player[OOTP27_PLAYER_POSITION_ROLE_OFFSET]);
+        if (bucket < 0 || bucket >= KBO_FA_ROLE_BUCKET_COUNT) {
+            bucket = KBO_FA_ROLE_BUCKET_COUNT - 1;
         }
+        counts[bucket]++;
     }
-    return count;
+
+    cached->valid = 0u;
+    cached->team_id = team_id;
+    cached->player_vector = player_vector;
+    cached->player_count = player_count;
+    for (int i = 0; i < KBO_FA_ROLE_BUCKET_COUNT; i++) {
+        cached->counts[i] = counts[i];
+    }
+    cached->tick = now;
+    cached->valid = 1u;
+    return counts[role_bucket];
 }
 
 int32_t kbo_fa_protection_candidate_score(

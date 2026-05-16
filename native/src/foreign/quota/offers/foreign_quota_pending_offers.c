@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "../../../bootstrap/abi/ootp_offsets.h"
 #include "../../../bootstrap/abi/hook_entrypoints.h"
@@ -31,8 +32,22 @@ typedef struct KboCustomForeignPendingOffer {
 } KboCustomForeignPendingOffer;
 
 enum {
-    KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX = 1024
+    KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX = 1024,
+    KBO_CUSTOM_FOREIGN_PENDING_SUMMARY_CACHE_SIZE = 128,
+    KBO_CUSTOM_FOREIGN_PENDING_SUMMARY_PLAYER_MAX = 128
 };
+
+typedef struct KboCustomForeignPendingOfferSummaryCacheEntry {
+    uint32_t team_id;
+    uint32_t today;
+    LONG generation;
+    uint32_t asian_pending;
+    uint32_t non_asian_pending;
+    uint32_t player_ids[KBO_CUSTOM_FOREIGN_PENDING_SUMMARY_PLAYER_MAX];
+    uint16_t player_count;
+    uint8_t overflow;
+    uint8_t valid;
+} KboCustomForeignPendingOfferSummaryCacheEntry;
 
 KboCustomForeignPendingOffer g_kbo_custom_foreign_pending_offers[KBO_CUSTOM_FOREIGN_PENDING_OFFER_MAX];
 LONG g_kbo_custom_foreign_pending_offer_lock = 0;
@@ -40,6 +55,9 @@ int g_kbo_custom_foreign_pending_offer_count = 0;
 volatile LONG g_kbo_custom_foreign_pending_offer_generation = 0;
 static DWORD g_kbo_custom_foreign_pending_offer_last_prune_tick = 0u;
 static uint32_t g_kbo_custom_foreign_pending_offer_last_prune_date = 0u;
+static KboCustomForeignPendingOfferSummaryCacheEntry
+    g_kbo_custom_foreign_pending_summary_cache[KBO_CUSTOM_FOREIGN_PENDING_SUMMARY_CACHE_SIZE];
+static volatile LONG g_kbo_custom_foreign_pending_summary_cache_lock = 0;
 
 void kbo_custom_foreign_pending_offer_lock(void)
 {
@@ -51,6 +69,87 @@ void kbo_custom_foreign_pending_offer_lock(void)
 void kbo_custom_foreign_pending_offer_unlock(void)
 {
     InterlockedExchange(&g_kbo_custom_foreign_pending_offer_lock, 0);
+}
+
+static void kbo_custom_foreign_pending_summary_cache_lock(void)
+{
+    while (InterlockedCompareExchange(&g_kbo_custom_foreign_pending_summary_cache_lock, 1, 0) != 0) {
+        Sleep(0);
+    }
+}
+
+static void kbo_custom_foreign_pending_summary_cache_unlock(void)
+{
+    InterlockedExchange(&g_kbo_custom_foreign_pending_summary_cache_lock, 0);
+}
+
+static uint32_t kbo_custom_foreign_pending_summary_cache_slot(uint32_t team_id, uint32_t today)
+{
+    uint32_t h = team_id * 2654435761u;
+    h ^= today * 2246822519u;
+    h ^= h >> 16;
+    return h & (KBO_CUSTOM_FOREIGN_PENDING_SUMMARY_CACHE_SIZE - 1u);
+}
+
+static int kbo_custom_foreign_pending_summary_has_player(
+    const KboCustomForeignPendingOfferSummaryCacheEntry* entry,
+    uint32_t candidate_id)
+{
+    if (entry == NULL || candidate_id == 0u) {
+        return 0;
+    }
+    for (uint16_t i = 0; i < entry->player_count; i++) {
+        if (entry->player_ids[i] == candidate_id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int kbo_custom_foreign_pending_summary_cache_get(
+    uint32_t team_id,
+    uint32_t today,
+    uint32_t candidate_id,
+    uint32_t* out_asian_pending,
+    uint32_t* out_non_asian_pending,
+    int* out_candidate_pending)
+{
+    LONG generation = InterlockedCompareExchange(&g_kbo_custom_foreign_pending_offer_generation, 0, 0);
+    uint32_t slot = kbo_custom_foreign_pending_summary_cache_slot(team_id, today);
+    kbo_custom_foreign_pending_summary_cache_lock();
+    KboCustomForeignPendingOfferSummaryCacheEntry cached =
+        g_kbo_custom_foreign_pending_summary_cache[slot];
+    kbo_custom_foreign_pending_summary_cache_unlock();
+
+    if (!cached.valid
+            || cached.team_id != team_id
+            || cached.today != today
+            || cached.generation != generation) {
+        return 0;
+    }
+
+    int candidate_pending = kbo_custom_foreign_pending_summary_has_player(&cached, candidate_id);
+    if (cached.overflow && candidate_id != 0u && !candidate_pending) {
+        return 0;
+    }
+
+    if (out_asian_pending != NULL) { *out_asian_pending = cached.asian_pending; }
+    if (out_non_asian_pending != NULL) { *out_non_asian_pending = cached.non_asian_pending; }
+    if (out_candidate_pending != NULL) { *out_candidate_pending = candidate_pending; }
+    return 1;
+}
+
+static void kbo_custom_foreign_pending_summary_cache_store(
+    const KboCustomForeignPendingOfferSummaryCacheEntry* summary)
+{
+    if (summary == NULL || summary->team_id == 0u) {
+        return;
+    }
+    uint32_t slot = kbo_custom_foreign_pending_summary_cache_slot(summary->team_id, summary->today);
+    kbo_custom_foreign_pending_summary_cache_lock();
+    g_kbo_custom_foreign_pending_summary_cache[slot] = *summary;
+    g_kbo_custom_foreign_pending_summary_cache[slot].valid = 1u;
+    kbo_custom_foreign_pending_summary_cache_unlock();
 }
 
 int kbo_custom_foreign_pending_offer_is_stale(uint32_t offer_date, uint32_t today)
@@ -111,6 +210,17 @@ void kbo_custom_foreign_count_pending_offers(
     }
 
     KBO_PROFILE_BEGIN(profile_foreign_pending_offers);
+    if (kbo_custom_foreign_pending_summary_cache_get(
+            team_id,
+            today,
+            candidate_id,
+            out_asian_pending,
+            out_non_asian_pending,
+            out_candidate_pending)) {
+        KBO_PROFILE_END(profile_foreign_pending_offers, "foreign_policy.pending_offers.cache_hit");
+        return;
+    }
+
     kbo_custom_foreign_pending_offer_lock();
 
     DWORD now = GetTickCount();
@@ -122,6 +232,11 @@ void kbo_custom_foreign_count_pending_offers(
     uint32_t asian_pending = 0u;
     uint32_t non_asian_pending = 0u;
     int candidate_pending = 0;
+    KboCustomForeignPendingOfferSummaryCacheEntry summary;
+    memset(&summary, 0, sizeof(summary));
+    summary.team_id = team_id;
+    summary.today = today;
+    summary.generation = InterlockedCompareExchange(&g_kbo_custom_foreign_pending_offer_generation, 0, 0);
     for (int i = 0; i < g_kbo_custom_foreign_pending_offer_count; i++) {
         KboCustomForeignPendingOffer rec = g_kbo_custom_foreign_pending_offers[i];
         if (rec.team_id != team_id) {
@@ -135,9 +250,17 @@ void kbo_custom_foreign_count_pending_offers(
         } else {
             non_asian_pending++;
         }
+        if (summary.player_count < KBO_CUSTOM_FOREIGN_PENDING_SUMMARY_PLAYER_MAX) {
+            summary.player_ids[summary.player_count++] = rec.player_id;
+        } else {
+            summary.overflow = 1u;
+        }
     }
 
     kbo_custom_foreign_pending_offer_unlock();
+    summary.asian_pending = asian_pending;
+    summary.non_asian_pending = non_asian_pending;
+    kbo_custom_foreign_pending_summary_cache_store(&summary);
     KBO_PROFILE_END(profile_foreign_pending_offers, "foreign_policy.pending_offers.count");
 
     if (out_asian_pending != NULL) { *out_asian_pending = asian_pending; }

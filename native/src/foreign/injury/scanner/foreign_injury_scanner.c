@@ -4,13 +4,6 @@
 
 static LONG g_kbo_foreign_injury_non_roster_log_count = 0;
 static LONG g_kbo_foreign_injury_below_min_log_count = 0;
-
-static int kbo_foreign_injury_replacement_scan_source_is_read_only(const char* source)
-{
-    return source != NULL && (strcmp(source, "foreign_policy_webview") == 0
-        || strcmp(source, "foreign_policy_text") == 0 || strcmp(source, "hotkey_text") == 0
-        || strcmp(source, "foreign_slot_cache") == 0);
-}
 void kbo_foreign_injury_replacement_scan_once(const char* source)
 {
     KBO_PROFILE_BEGIN(profile_foreign_injury_scan);
@@ -34,6 +27,11 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
     if (!kbo_get_current_yyyymmdd(&today)) {
         kbo_rule_audit_emit_fields("foreign_injury.replacement.scan", "skip", "date_unavailable", source, NULL);
         KBO_PROFILE_END(profile_foreign_injury_scan, "foreign_injury.scan.no_date");
+        return;
+    }
+    if (kbo_foreign_injury_same_date_idle_scan_cached(today, source)) {
+        kbo_profiler_record_us("foreign_injury.scan.same_date_idle_cached", 0);
+        KBO_PROFILE_END(profile_foreign_injury_scan, "foreign_injury.scan.same_date_idle_cached");
         return;
     }
     KBO_PROFILE_BEGIN(profile_foreign_injury_load);
@@ -368,5 +366,9 @@ void kbo_foreign_injury_replacement_scan_once(const char* source)
             0,
             closed_count);
     }
+    kbo_foreign_injury_note_same_date_idle_scan(
+        today,
+        source,
+        opened == 0 && active_count == 0 && closed_count == 0);
     KBO_PROFILE_END(profile_foreign_injury_scan, "foreign_injury.scan.total");
 }

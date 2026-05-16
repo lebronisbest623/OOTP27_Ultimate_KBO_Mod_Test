@@ -103,10 +103,14 @@ int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t today_yyy
 
     kbo_ensure_foreign_waiver_rights_loaded_for_lookup();
 
-    enum { KBO_FOREIGN_WAIVER_HOLDER_CACHE_SIZE = 256 };
+    enum {
+        KBO_FOREIGN_WAIVER_HOLDER_CACHE_SIZE = 8192,
+        KBO_FOREIGN_WAIVER_HOLDER_CACHE_TTL_MS = 5000u
+    };
     typedef struct KboForeignWaiverHolderCacheEntry {
         uint32_t player_id;
         uint32_t today_yyyymmdd;
+        LONG generation;
         uint32_t holder_team_id;
         uint8_t found;
         DWORD tick;
@@ -114,12 +118,15 @@ int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t today_yyy
     static KboForeignWaiverHolderCacheEntry holder_cache[KBO_FOREIGN_WAIVER_HOLDER_CACHE_SIZE] = {{0}};
 
     DWORD now = GetTickCount();
-    uint32_t slot_index = (player_id ^ (player_id >> 8) ^ today_yyyymmdd) % KBO_FOREIGN_WAIVER_HOLDER_CACHE_SIZE;
+    LONG generation = InterlockedCompareExchange(&g_kbo_foreign_waiver_rights_generation, 0, 0);
+    uint32_t slot_index = ((player_id * 2654435761u) ^ (today_yyyymmdd * 2246822519u))
+        & (KBO_FOREIGN_WAIVER_HOLDER_CACHE_SIZE - 1u);
     KboForeignWaiverHolderCacheEntry* cached = &holder_cache[slot_index];
     if (cached->player_id == player_id
             && cached->today_yyyymmdd == today_yyyymmdd
+            && cached->generation == generation
             && cached->tick != 0u
-            && now - cached->tick <= 500u) {
+            && now - cached->tick <= KBO_FOREIGN_WAIVER_HOLDER_CACHE_TTL_MS) {
         if (cached->found && out_team_id != NULL) {
             *out_team_id = cached->holder_team_id;
         }
@@ -146,6 +153,7 @@ int kbo_find_active_foreign_waiver_holder(uint32_t player_id, uint32_t today_yyy
     }
     cached->player_id = player_id;
     cached->today_yyyymmdd = today_yyyymmdd;
+    cached->generation = generation;
     cached->holder_team_id = holder_team_id;
     cached->found = found ? 1u : 0u;
     cached->tick = now;

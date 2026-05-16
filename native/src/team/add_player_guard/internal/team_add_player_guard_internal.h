@@ -4,6 +4,11 @@
 #include <windows.h>
 #include <stdint.h>
 
+void kbo_team_add_note_foreign_assignment_success(
+    uint8_t* player,
+    uint32_t before_current_team_id,
+    uint32_t before_active_team_id,
+    uint32_t before_loan_team_id);
 void kbo_team_add_player_record_fa_compensation_success(
     uintptr_t team_ptr,
     uintptr_t player_ptr,

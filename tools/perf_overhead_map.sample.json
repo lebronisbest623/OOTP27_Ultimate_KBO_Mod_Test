@@ -1,0 +1,38 @@
+[
+  {
+    "zone": "foreign_policy.org_count.cache_hit",
+    "bench_case_prefix": "foreign.org_count.cache_hit.",
+    "cost": "avg_us",
+    "note": "Top-level per-team org-count cache hit."
+  },
+  {
+    "zone": "foreign_policy.org_count.snapshot_hit",
+    "bench_case_prefix": "foreign.org_count.snapshot_hit_plus_invalidate.",
+    "cost": "avg_us",
+    "note": "Warm all-team snapshot reuse; benchmark includes per-team cache invalidation to force this branch."
+  },
+  {
+    "zone": "foreign_policy.org_count.snapshot_rebuild",
+    "bench_case_prefix": "foreign.org_count.snapshot_rebuild.",
+    "cost": "avg_us",
+    "note": "All-team snapshot rebuild after roster mutation or snapshot TTL expiry."
+  },
+  {
+    "zone": "foreign_policy.org_count.scanned",
+    "bench_case_prefix": "foreign.org_count.fresh_scan.",
+    "cost": "avg_us",
+    "note": "Fallback raw player-vector scan with caches bypassed."
+  },
+  {
+    "zone": "fa_compensation.protection.build.cache_hit",
+    "bench_case_prefix": "fa.protection_build.cache_hit.",
+    "cost": "avg_us",
+    "note": "FA protected-list materialization from the team candidate cache."
+  },
+  {
+    "zone": "fa_compensation.protection.build.scanned",
+    "bench_case_prefix": "fa.protection_build.cold.",
+    "cost": "avg_us",
+    "note": "FA protected-list scan, score, sort, and cache-store path."
+  }
+]

@@ -35,6 +35,9 @@ void kbo_prune_expired_foreign_waiver_rights(uint32_t today_yyyymmdd)
         memset(&g_kbo_foreign_waiver_rights[i], 0, sizeof(KboForeignWaiverRetention));
     }
     g_kbo_foreign_waiver_rights_count = w;
+    if (removed > 0) {
+        InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
+    }
     InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
     if (removed > 0) {
         kbo_log_runtimef("foreign reserve rights: expired=%d today=%u", removed, today_yyyymmdd);
@@ -84,6 +87,9 @@ int kbo_set_foreign_waiver_right(
         };
         upserted = 1;
     }
+    if (upserted) {
+        InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
+    }
     InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
 
     if (upserted) {
@@ -118,6 +124,9 @@ static int kbo_remove_foreign_waiver_right_record(uint32_t team_id, uint32_t pla
         memset(&g_kbo_foreign_waiver_rights[i], 0, sizeof(KboForeignWaiverRetention));
     }
     g_kbo_foreign_waiver_rights_count = w;
+    if (removed > 0) {
+        InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
+    }
     InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
     return removed;
 }

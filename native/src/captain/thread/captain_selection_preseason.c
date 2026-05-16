@@ -1,66 +1,5 @@
 #include "../internal/captain_selection_internal.h"
 #include "../audit/captain_rule_audit.h"
-static const char* kbo_captain_phase_label(uint8_t phase)
-{
-    return kbo_season_phase_label(phase);
-}
-void kbo_captain_log_phase_observed(
-    const char* source,
-    uint32_t date,
-    uint32_t league_id,
-    uintptr_t league_ptr,
-    uint32_t league_season,
-    uint32_t effective_season,
-    uint8_t phase,
-    int csv_exists,
-    int calendar_recovery,
-    int calendar_preseason)
-{
-    static uintptr_t last_league_ptr = 0u;
-    static uint32_t last_date = 0xffffffffu;
-    static uint32_t last_league_id = 0xffffffffu;
-    static uint32_t last_league_season = 0xffffffffu;
-    static uint32_t last_effective_season = 0xffffffffu;
-    static uint8_t last_phase = 0xffu;
-    static int last_csv_exists = -1;
-    static int last_calendar_recovery = -1;
-    static int last_calendar_preseason = -1;
-    if (league_ptr == last_league_ptr
-            && date == last_date
-            && league_id == last_league_id
-            && league_season == last_league_season
-            && effective_season == last_effective_season
-            && phase == last_phase
-            && csv_exists == last_csv_exists
-            && calendar_recovery == last_calendar_recovery
-            && calendar_preseason == last_calendar_preseason) {
-        return;
-    }
-    kbo_log_runtimef(
-        "KBO captain phase observed source=%s date=%u league_id=%u league=%p league_season=%u effective_season=%u phase=%u label=%s csv_exists=%d calendar_recovery=%d calendar_preseason=%d",
-        source != NULL ? source : "",
-        date,
-        league_id,
-        (void*)league_ptr,
-        league_season,
-        effective_season,
-        (unsigned)phase,
-        kbo_captain_phase_label(phase),
-        csv_exists,
-        calendar_recovery,
-        calendar_preseason);
-
-    last_league_ptr = league_ptr;
-    last_date = date;
-    last_league_id = league_id;
-    last_league_season = league_season;
-    last_effective_season = effective_season;
-    last_phase = phase;
-    last_csv_exists = csv_exists;
-    last_calendar_recovery = calendar_recovery;
-    last_calendar_preseason = calendar_preseason;
-}
-
 int kbo_captain_current_yyyymmdd(uint32_t* out_date)
 {
     if (out_date != NULL) {
@@ -183,6 +122,28 @@ int kbo_captain_existing_row_still_with_team(const KboCaptainSelectionRow* row)
     return kbo_player_current_assignment_matches_team_or_affiliate(player, row->team_id);
 }
 
+static int kbo_captain_row_is_resolved_empty_exhibition_team(const KboCaptainSelectionRow* row)
+{
+    if (row == NULL
+            || row->team_id == 0u
+            || row->player_id != 0u
+            || strcmp(row->reason, "no_eligible_candidate") != 0) {
+        return 0;
+    }
+
+    uint8_t* team = find_kbo_team_by_numeric_id_any_league(row->team_id, 0);
+    if (team == NULL) {
+        return 0;
+    }
+
+    return team_has_ootp_string_text(team, "All-Stars")
+        || team_has_ootp_string_text(team, "Future Stars")
+        || team_has_ootp_string_text(team, "AS1")
+        || team_has_ootp_string_text(team, "AS2")
+        || team_has_ootp_string_text(team, "FS1")
+        || team_has_ootp_string_text(team, "FS2");
+}
+
 int kbo_captain_current_rows_need_inseason_repair(
     uint32_t league_id,
     const KboCaptainSelectionRow* current_rows,
@@ -220,6 +181,9 @@ int kbo_captain_current_rows_need_inseason_repair(
         int index = kbo_captain_find_row_index_by_team(current_rows, current_count, out_team_ids[i]);
         if (index < 0) {
             missing_count++;
+            continue;
+        }
+        if (kbo_captain_row_is_resolved_empty_exhibition_team(&current_rows[index])) {
             continue;
         }
         if (!kbo_captain_existing_row_still_with_team(&current_rows[index])) {

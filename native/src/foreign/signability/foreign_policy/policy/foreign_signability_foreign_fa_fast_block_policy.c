@@ -69,20 +69,28 @@ int kbo_fast_block_fa_candidate_before_original(
     }
 
     if (kbo_custom_foreign_policy_enabled() && kbo_player_is_foreign_for_kbo_rights(player)) {
-        uint32_t effective_before = 0u;
-        uint32_t effective_after = 0u;
-        uint32_t effective_limit = KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT;
-        uint8_t slot_type = 0u;
-        uint32_t injured_player_id = 0u;
         int allowed = kbo_custom_foreign_policy_team_allows_candidate(
             requester_team_id,
             player,
-            &effective_before,
-            &effective_after,
-            &effective_limit,
-            &slot_type,
-            &injured_player_id);
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            NULL);
         if (!allowed) {
+            uint32_t effective_before = 0u;
+            uint32_t effective_after = 0u;
+            uint32_t effective_limit = KBO_CUSTOM_FOREIGN_BASE_EFFECTIVE_LIMIT;
+            uint8_t slot_type = 0u;
+            uint32_t injured_player_id = 0u;
+            kbo_custom_foreign_policy_team_allows_candidate(
+                requester_team_id,
+                player,
+                &effective_before,
+                &effective_after,
+                &effective_limit,
+                &slot_type,
+                &injured_player_id);
             kbo_record_recent_custom_foreign_policy_block(player_id, requester_team_id, today);
             static volatile LONG custom_fast_block_log_count = 0;
             LONG slot = InterlockedIncrement(&custom_fast_block_log_count);

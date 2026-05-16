@@ -280,6 +280,62 @@ int kbo_team_has_foreign_injury_slot_for_candidate(
     return result;
 }
 
+int kbo_team_has_foreign_injury_slot_for_candidate_any(
+    uint32_t team_id,
+    int allow_asian_slot,
+    uint32_t candidate_player_id,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id,
+    uint32_t* out_replacement_player_id)
+{
+    if (out_slot_type != NULL) { *out_slot_type = 0u; }
+    if (out_injured_player_id != NULL) { *out_injured_player_id = 0u; }
+    if (out_replacement_player_id != NULL) { *out_replacement_player_id = 0u; }
+    if (team_id == 0u || candidate_player_id == 0u) {
+        return 0;
+    }
+
+    KBO_PROFILE_BEGIN(profile_foreign_injury_slot_candidate_any);
+    int result = 0;
+    uint8_t slot_type = 0u;
+    uint32_t injured_player_id = 0u;
+    uint32_t replacement_player_id = 0u;
+
+    kbo_ensure_foreign_injury_replacements_loaded();
+    kbo_lock_foreign_injury_replacements();
+    if (allow_asian_slot
+            && kbo_team_has_foreign_injury_slot_for_candidate_locked(
+                team_id,
+                KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA,
+                candidate_player_id,
+                &injured_player_id,
+                &replacement_player_id)) {
+        slot_type = KBO_FOREIGN_INJURY_SLOT_ASIAN_QUOTA;
+        result = 1;
+    }
+    if (!result
+            && kbo_team_has_foreign_injury_slot_for_candidate_locked(
+                team_id,
+                KBO_FOREIGN_INJURY_SLOT_REGULAR,
+                candidate_player_id,
+                &injured_player_id,
+                &replacement_player_id)) {
+        slot_type = KBO_FOREIGN_INJURY_SLOT_REGULAR;
+        result = 1;
+    }
+    kbo_unlock_foreign_injury_replacements();
+
+    if (result) {
+        if (out_slot_type != NULL) { *out_slot_type = slot_type; }
+        if (out_injured_player_id != NULL) { *out_injured_player_id = injured_player_id; }
+        if (out_replacement_player_id != NULL) { *out_replacement_player_id = replacement_player_id; }
+    }
+    KBO_PROFILE_END(profile_foreign_injury_slot_candidate_any, result
+        ? "foreign_injury.slot_candidate_any.hit"
+        : "foreign_injury.slot_candidate_any.miss");
+    return result;
+}
+
 void kbo_count_foreign_injury_replacements_for_team(
     uint32_t team_id,
     int* out_open,

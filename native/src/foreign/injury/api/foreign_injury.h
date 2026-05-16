@@ -80,6 +80,13 @@ int kbo_team_has_foreign_injury_slot_for_candidate(
     uint32_t candidate_player_id,
     uint32_t* out_injured_player_id,
     uint32_t* out_replacement_player_id);
+int kbo_team_has_foreign_injury_slot_for_candidate_any(
+    uint32_t team_id,
+    int allow_asian_slot,
+    uint32_t candidate_player_id,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id,
+    uint32_t* out_replacement_player_id);
 int kbo_foreign_injury_replacement_signing_exception_available(
     uint32_t team_id,
     uint8_t* candidate,

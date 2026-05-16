@@ -18,6 +18,9 @@
 
 static volatile LONG64 g_kbo_custom_event_schedule_deferred_log_ms = 0;
 static volatile LONG64 g_kbo_custom_event_scan_deferred_log_ms = 0;
+static volatile LONG g_kbo_custom_event_global_scanned_yyyymmdd = 0;
+static volatile LONG g_kbo_custom_event_global_fa_comp_yyyymmdd = 0;
+static volatile LONG g_kbo_custom_event_global_fa_comp_processing_yyyymmdd = 0;
 
 #define KBO_CUSTOM_EVENT_MONITOR_PULSE_MS 100u
 #define KBO_CUSTOM_EVENT_MONITOR_FAST_STABLE_TICKS 2
@@ -59,6 +62,7 @@ void kbo_custom_event_monitor_tick(
         if (last_scanned_yyyymmdd != NULL) {
             *last_scanned_yyyymmdd = 0u;
         }
+        InterlockedExchange(&g_kbo_custom_event_global_scanned_yyyymmdd, 0);
     }
 
     if (last_scheduled_yyyymmdd != NULL && today_yyyymmdd != *last_scheduled_yyyymmdd) {
@@ -67,8 +71,12 @@ void kbo_custom_event_monitor_tick(
         KBO_PROFILE_END(profile_custom_event_monitor_due, "custom_event.monitor.process_due");
         if (due_result >= 0) {
             *last_scheduled_yyyymmdd = today_yyyymmdd;
-            if (last_scanned_yyyymmdd != NULL && due_result > 0) {
-                *last_scanned_yyyymmdd = 0u;
+            if (due_result == KBO_CUSTOM_EVENT_DUE_RESULT_CHANGED
+                    || due_result == KBO_CUSTOM_EVENT_DUE_RESULT_SCANNED_IDLE) {
+                if (last_scanned_yyyymmdd != NULL) {
+                    *last_scanned_yyyymmdd = today_yyyymmdd;
+                }
+                InterlockedExchange(&g_kbo_custom_event_global_scanned_yyyymmdd, (LONG)today_yyyymmdd);
             }
         } else if (kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_schedule_deferred_log_ms)) {
             kbo_log_runtimef(
@@ -77,21 +85,52 @@ void kbo_custom_event_monitor_tick(
             due_result);
         }
     }
-    KBO_PROFILE_BEGIN(profile_custom_event_monitor_scan);
-    int triggered = scan_kbo_custom_events_once(source);
-    KBO_PROFILE_END(profile_custom_event_monitor_scan, "custom_event.monitor.scan_once");
-    if (triggered >= 0 && last_scanned_yyyymmdd != NULL) {
-        *last_scanned_yyyymmdd = today_yyyymmdd;
-    } else if (triggered < 0 && kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_scan_deferred_log_ms)) {
-        kbo_log_runtimef(
-            "KBO custom event monitor scan deferred reason=state_not_ready today=%u",
-            today_yyyymmdd);
+    LONG global_scanned = InterlockedCompareExchange(&g_kbo_custom_event_global_scanned_yyyymmdd, 0, 0);
+    int should_scan = last_scanned_yyyymmdd == NULL || today_yyyymmdd != *last_scanned_yyyymmdd;
+    if ((uint32_t)global_scanned == today_yyyymmdd) {
+        should_scan = 0;
+        if (last_scanned_yyyymmdd != NULL) {
+            *last_scanned_yyyymmdd = today_yyyymmdd;
+        }
+    }
+    if (should_scan) {
+        KBO_PROFILE_BEGIN(profile_custom_event_monitor_scan);
+        int triggered = scan_kbo_custom_events_once(source);
+        KBO_PROFILE_END(profile_custom_event_monitor_scan, "custom_event.monitor.scan_once");
+        if (triggered >= 0) {
+            if (last_scanned_yyyymmdd != NULL) {
+                *last_scanned_yyyymmdd = today_yyyymmdd;
+            }
+            InterlockedExchange(&g_kbo_custom_event_global_scanned_yyyymmdd, (LONG)today_yyyymmdd);
+        } else if (kbo_custom_event_monitor_should_log_throttled(&g_kbo_custom_event_scan_deferred_log_ms)) {
+            kbo_log_runtimef(
+                "KBO custom event monitor scan deferred reason=state_not_ready today=%u",
+                today_yyyymmdd);
+        }
+    } else {
+        KBO_PROFILE_BEGIN(profile_custom_event_monitor_scan_skip);
+        KBO_PROFILE_END(profile_custom_event_monitor_scan_skip, "custom_event.monitor.scan_once_cached");
     }
 
     if (last_fa_comp_yyyymmdd != NULL && today_yyyymmdd != *last_fa_comp_yyyymmdd) {
-        KBO_PROFILE_BEGIN(profile_custom_event_monitor_fa_comp);
-        kbo_process_due_fa_compensation_protected_lists(source);
-        KBO_PROFILE_END(profile_custom_event_monitor_fa_comp, "custom_event.monitor.fa_comp_protected_lists");
+        LONG global_fa_comp = InterlockedCompareExchange(&g_kbo_custom_event_global_fa_comp_yyyymmdd, 0, 0);
+        LONG processing_date = 0;
+        if ((uint32_t)global_fa_comp != today_yyyymmdd) {
+            processing_date = InterlockedCompareExchange(
+                &g_kbo_custom_event_global_fa_comp_processing_yyyymmdd,
+                (LONG)today_yyyymmdd,
+                0);
+        }
+        if ((uint32_t)global_fa_comp != today_yyyymmdd && processing_date == 0) {
+            KBO_PROFILE_BEGIN(profile_custom_event_monitor_fa_comp);
+            kbo_process_due_fa_compensation_protected_lists(source);
+            KBO_PROFILE_END(profile_custom_event_monitor_fa_comp, "custom_event.monitor.fa_comp_protected_lists");
+            InterlockedExchange(&g_kbo_custom_event_global_fa_comp_yyyymmdd, (LONG)today_yyyymmdd);
+            InterlockedExchange(&g_kbo_custom_event_global_fa_comp_processing_yyyymmdd, 0);
+        } else {
+            KBO_PROFILE_BEGIN(profile_custom_event_monitor_fa_comp_skip);
+            KBO_PROFILE_END(profile_custom_event_monitor_fa_comp_skip, "custom_event.monitor.fa_comp_protected_lists_cached");
+        }
         *last_fa_comp_yyyymmdd = today_yyyymmdd;
     }
     KBO_PROFILE_END(profile_custom_event_monitor_tick, "custom_event.monitor.tick");

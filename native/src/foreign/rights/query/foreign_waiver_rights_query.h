@@ -17,6 +17,7 @@ typedef struct KboForeignWaiverRetention {
 extern LONG g_kbo_foreign_waiver_rights_lock;
 extern KboForeignWaiverRetention g_kbo_foreign_waiver_rights[KBO_FOREIGN_WAIVER_RIGHTS_MAX];
 extern int g_kbo_foreign_waiver_rights_count;
+extern volatile LONG g_kbo_foreign_waiver_rights_generation;
 
 int kbo_find_active_foreign_waiver_holder(
     uint32_t player_id,

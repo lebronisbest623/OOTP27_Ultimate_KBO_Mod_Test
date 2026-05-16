@@ -3,19 +3,108 @@
 
 static LONG g_kbo_foreign_injury_season_window_block_log_count = 0;
 
+typedef struct KboForeignInjurySeasonWindowCacheEntry {
+    uint32_t league_id;
+    uint32_t today_yyyymmdd;
+    DWORD tick;
+    uint8_t result;
+    uint8_t valid;
+    KboSeasonPhaseInfo phase_info;
+} KboForeignInjurySeasonWindowCacheEntry;
+
+enum {
+    KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_SIZE = 32,
+    KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_TTL_MS = 1000u
+};
+
+static KboForeignInjurySeasonWindowCacheEntry
+    g_kbo_foreign_injury_season_window_cache[KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_SIZE];
+
+static uint32_t kbo_foreign_injury_season_window_cache_slot(uint32_t league_id, uint32_t today_yyyymmdd)
+{
+    uint32_t h = league_id * 2654435761u;
+    h ^= today_yyyymmdd * 2246822519u;
+    h ^= h >> 16;
+    return h & (KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_SIZE - 1u);
+}
+
+static int kbo_foreign_injury_season_window_cache_get(
+    uint32_t league_id,
+    uint32_t today_yyyymmdd,
+    int* out_result)
+{
+    if (out_result != NULL) {
+        *out_result = 0;
+    }
+    if (league_id == 0u || today_yyyymmdd == 0u || out_result == NULL) {
+        return 0;
+    }
+
+    DWORD now = GetTickCount();
+    KboForeignInjurySeasonWindowCacheEntry* entry =
+        &g_kbo_foreign_injury_season_window_cache[
+            kbo_foreign_injury_season_window_cache_slot(league_id, today_yyyymmdd)];
+    if (!entry->valid
+            || entry->league_id != league_id
+            || entry->today_yyyymmdd != today_yyyymmdd
+            || entry->tick == 0u
+            || now - entry->tick > KBO_FOREIGN_INJURY_SEASON_WINDOW_CACHE_TTL_MS) {
+        return 0;
+    }
+    *out_result = entry->result ? 1 : 0;
+    return 1;
+}
+
+static void kbo_foreign_injury_season_window_cache_store(
+    uint32_t league_id,
+    uint32_t today_yyyymmdd,
+    int result,
+    const KboSeasonPhaseInfo* phase_info)
+{
+    if (league_id == 0u || today_yyyymmdd == 0u) {
+        return;
+    }
+
+    KboForeignInjurySeasonWindowCacheEntry* entry =
+        &g_kbo_foreign_injury_season_window_cache[
+            kbo_foreign_injury_season_window_cache_slot(league_id, today_yyyymmdd)];
+    entry->valid = 0u;
+    entry->league_id = league_id;
+    entry->today_yyyymmdd = today_yyyymmdd;
+    entry->tick = GetTickCount();
+    entry->result = result ? 1u : 0u;
+    if (phase_info != NULL) {
+        entry->phase_info = *phase_info;
+    } else {
+        memset(&entry->phase_info, 0, sizeof(entry->phase_info));
+    }
+    entry->valid = 1u;
+}
+
 int kbo_foreign_injury_replacement_in_season_window(
     uint32_t league_id,
     uint32_t today_yyyymmdd,
     const char* source,
     const char* context)
 {
+    KBO_PROFILE_BEGIN(profile_foreign_injury_season_window);
     if (league_id == 0u || today_yyyymmdd == 0u) {
+        KBO_PROFILE_END(profile_foreign_injury_season_window, "foreign_injury.season_window.invalid");
         return 0;
+    }
+
+    int cached_result = 0;
+    if (kbo_foreign_injury_season_window_cache_get(league_id, today_yyyymmdd, &cached_result)) {
+        KBO_PROFILE_END(profile_foreign_injury_season_window, cached_result
+            ? "foreign_injury.season_window.cache_hit_allowed"
+            : "foreign_injury.season_window.cache_hit_blocked");
+        return cached_result;
     }
 
     KboSeasonPhaseInfo phase_info;
     memset(&phase_info, 0, sizeof(phase_info));
     if (!kbo_season_phase_resolve(league_id, today_yyyymmdd, 0u, &phase_info)) {
+        kbo_foreign_injury_season_window_cache_store(league_id, today_yyyymmdd, 0, &phase_info);
         LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_season_window_block_log_count);
         if (log_slot <= 40 || (log_slot % 200) == 0) {
             KboLogFields audit_fields;
@@ -35,13 +124,17 @@ int kbo_foreign_injury_replacement_in_season_window(
                 league_id,
                 today_yyyymmdd);
         }
+        KBO_PROFILE_END(profile_foreign_injury_season_window, "foreign_injury.season_window.unavailable");
         return 0;
     }
 
     if (kbo_foreign_injury_replacement_phase_allows_signing(phase_info.effective_phase)) {
+        kbo_foreign_injury_season_window_cache_store(league_id, today_yyyymmdd, 1, &phase_info);
+        KBO_PROFILE_END(profile_foreign_injury_season_window, "foreign_injury.season_window.allowed");
         return 1;
     }
 
+    kbo_foreign_injury_season_window_cache_store(league_id, today_yyyymmdd, 0, &phase_info);
     LONG log_slot = InterlockedIncrement(&g_kbo_foreign_injury_season_window_block_log_count);
     if (log_slot <= 40 || (log_slot % 200) == 0) {
         KboLogFields audit_fields;
@@ -67,5 +160,6 @@ int kbo_foreign_injury_replacement_in_season_window(
             (uint32_t)phase_info.raw_phase,
             phase_info.opening_day);
     }
+    KBO_PROFILE_END(profile_foreign_injury_season_window, "foreign_injury.season_window.blocked");
     return 0;
 }

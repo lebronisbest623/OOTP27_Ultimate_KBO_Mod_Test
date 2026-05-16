@@ -12,6 +12,7 @@ native/tests/tests.exe
 native/tests/*.exe
 native/tests/*.obj
 native/tests/*.o
+native/bench/results/
 native/bin/
 *.dll
 *.exe

@@ -1,4 +1,5 @@
 #include "../../hotkey_window_webview_internal.h"
+#include "../../../../../perf_snapshot/perf_snapshot.h"
 
 int kbo_webview_handle_mod_settings_command(const char* cmd)
 {
@@ -45,6 +46,22 @@ int kbo_webview_handle_mod_settings_command(const char* cmd)
         } else {
             kbo_log_runtimef("mod settings webview: failed to write profiler enabled=%d", enabled ? 1 : 0);
         }
+        g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
+        g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_SETTINGS;
+        g_kbo_hub_open_dropdown = 0;
+        kbo_webview_navigate_current();
+        return 1;
+    }
+    if (strcmp(cmd, "mod/settings/perf-snapshot/dump") == 0) {
+        char snapshot_path[MAX_PATH] = {0};
+        int ok = kbo_dump_perf_player_snapshot(
+            "hub_perf_snapshot_dump",
+            snapshot_path,
+            sizeof(snapshot_path));
+        kbo_log_runtimef(
+            "mod settings webview: perf snapshot dump ok=%d path=%s",
+            ok ? 1 : 0,
+            snapshot_path);
         g_kbo_hub_selected_view = KBO_HUB_VIEW_MOD_INFO;
         g_kbo_hub_selected_mod_subview = KBO_HUB_MOD_SUBVIEW_SETTINGS;
         g_kbo_hub_open_dropdown = 0;

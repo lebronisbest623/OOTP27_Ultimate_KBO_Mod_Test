@@ -9,6 +9,11 @@
 #include "../../../bootstrap/profiling/profiler.h"
 #include "../../../core/runtime_tuning/runtime_tuning_policy.h"
 
+enum {
+    KBO_FOREIGN_ROSTER_DAILY_FA_REPAIR_CURRENT_MIN_WALL_MS = 30000u,
+    KBO_FOREIGN_ROSTER_DAILY_FA_REPAIR_PREVIOUS_MIN_WALL_MS = 120000u
+};
+
 static int kbo_foreign_roster_daily_abort_if_save(const char* stage, uint32_t today)
 {
     if (!kbo_runtime_save_in_progress()) {
@@ -33,6 +38,10 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
     uint32_t last_custom_event_fa_comp_date = 0u;
     uint32_t observed_date = 0u;
     int stable_date_ticks = 0;
+    uint32_t last_fa_repair_current_season = 0u;
+    uint32_t last_fa_repair_previous_season = 0u;
+    DWORD last_fa_repair_current_tick = 0u;
+    DWORD last_fa_repair_previous_tick = 0u;
     while (kbo_runtime_threads_should_continue()) {
         if (!kbo_runtime_sleep_should_continue((uint32_t)kbo_runtime_tuning_policy()->foreign_roster_daily_audit_sleep_ms)) {
             break;
@@ -118,21 +127,43 @@ DWORD WINAPI kbo_foreign_roster_daily_audit_thread(LPVOID parameter)
             continue;
         }
         uint32_t season = today / 10000u;
-        KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_current);
-        kbo_fa_declaration_repair_retained_contracts_for_season(
-            season,
-            "foreign_roster_daily_date_change");
-        KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_current, "foreign_roster.daily.fa_repair_current");
+        DWORD now = GetTickCount();
+        int run_current_fa_repair = season != last_fa_repair_current_season
+            || last_fa_repair_current_tick == 0u
+            || now - last_fa_repair_current_tick >= KBO_FOREIGN_ROSTER_DAILY_FA_REPAIR_CURRENT_MIN_WALL_MS;
+        if (run_current_fa_repair) {
+            KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_current);
+            kbo_fa_declaration_repair_retained_contracts_for_season(
+                season,
+                "foreign_roster_daily_date_change");
+            KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_current, "foreign_roster.daily.fa_repair_current");
+            last_fa_repair_current_season = season;
+            last_fa_repair_current_tick = now;
+        } else {
+            KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_current_cached);
+            KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_current_cached, "foreign_roster.daily.fa_repair_current_cached");
+        }
         if (kbo_foreign_roster_daily_abort_if_save("after_fa_repair_current", today)) {
             KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_fa_repair_current");
             continue;
         }
         if (season > 1982u) {
-            KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_previous);
-            kbo_fa_declaration_repair_retained_contracts_for_season(
-                season - 1u,
-                "foreign_roster_daily_date_change_previous_season");
-            KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_previous, "foreign_roster.daily.fa_repair_previous");
+            uint32_t previous_season = season - 1u;
+            int run_previous_fa_repair = previous_season != last_fa_repair_previous_season
+                || last_fa_repair_previous_tick == 0u
+                || now - last_fa_repair_previous_tick >= KBO_FOREIGN_ROSTER_DAILY_FA_REPAIR_PREVIOUS_MIN_WALL_MS;
+            if (run_previous_fa_repair) {
+                KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_previous);
+                kbo_fa_declaration_repair_retained_contracts_for_season(
+                    previous_season,
+                    "foreign_roster_daily_date_change_previous_season");
+                KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_previous, "foreign_roster.daily.fa_repair_previous");
+                last_fa_repair_previous_season = previous_season;
+                last_fa_repair_previous_tick = now;
+            } else {
+                KBO_PROFILE_BEGIN(profile_foreign_roster_daily_fa_repair_previous_cached);
+                KBO_PROFILE_END(profile_foreign_roster_daily_fa_repair_previous_cached, "foreign_roster.daily.fa_repair_previous_cached");
+            }
         }
         if (kbo_foreign_roster_daily_abort_if_save("after_fa_repair_previous", today)) {
             KBO_PROFILE_END(profile_foreign_roster_daily_tick, "foreign_roster.daily.save_abort.after_fa_repair_previous");

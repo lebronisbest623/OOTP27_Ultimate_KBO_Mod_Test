@@ -18,6 +18,96 @@ typedef struct KboForeignInjurySqlScan {
     int rows_seen;
 } KboForeignInjurySqlScan;
 
+#define KBO_FOREIGN_INJURY_SQL_EVIDENCE_CACHE_SIZE 512
+#define KBO_FOREIGN_INJURY_SQL_EVIDENCE_CACHE_TTL_MS 10000u
+
+typedef struct KboForeignInjurySqlEvidenceCacheEntry {
+    uintptr_t database;
+    uint32_t player_id;
+    int min_days;
+    DWORD tick;
+    int found;
+    int days;
+    uint8_t valid;
+} KboForeignInjurySqlEvidenceCacheEntry;
+
+static KboForeignInjurySqlEvidenceCacheEntry
+    g_kbo_foreign_injury_sql_evidence_cache[KBO_FOREIGN_INJURY_SQL_EVIDENCE_CACHE_SIZE];
+static volatile LONG g_kbo_foreign_injury_sql_evidence_cache_lock = 0;
+
+static void kbo_foreign_injury_sql_cache_lock(void)
+{
+    while (InterlockedCompareExchange(&g_kbo_foreign_injury_sql_evidence_cache_lock, 1, 0) != 0) {
+        Sleep(0);
+    }
+}
+
+static void kbo_foreign_injury_sql_cache_unlock(void)
+{
+    InterlockedExchange(&g_kbo_foreign_injury_sql_evidence_cache_lock, 0);
+}
+
+static uint32_t kbo_foreign_injury_sql_cache_slot(uint32_t player_id, int min_days)
+{
+    uint32_t h = player_id * 2654435761u;
+    h ^= (uint32_t)min_days * 2246822519u;
+    h ^= h >> 16;
+    return h & (KBO_FOREIGN_INJURY_SQL_EVIDENCE_CACHE_SIZE - 1u);
+}
+
+static int kbo_foreign_injury_sql_cache_get(
+    uintptr_t database,
+    uint32_t player_id,
+    int min_days,
+    int* out_days)
+{
+    if (out_days != NULL) {
+        *out_days = 0;
+    }
+
+    DWORD now = GetTickCount();
+    uint32_t slot = kbo_foreign_injury_sql_cache_slot(player_id, min_days);
+    kbo_foreign_injury_sql_cache_lock();
+    KboForeignInjurySqlEvidenceCacheEntry cached =
+        g_kbo_foreign_injury_sql_evidence_cache[slot];
+    kbo_foreign_injury_sql_cache_unlock();
+
+    if (!cached.valid
+            || cached.database != database
+            || cached.player_id != player_id
+            || cached.min_days != min_days
+            || now - cached.tick > KBO_FOREIGN_INJURY_SQL_EVIDENCE_CACHE_TTL_MS) {
+        return 0;
+    }
+
+    if (out_days != NULL) {
+        *out_days = cached.days;
+    }
+    return cached.found ? 1 : -1;
+}
+
+static void kbo_foreign_injury_sql_cache_store(
+    uintptr_t database,
+    uint32_t player_id,
+    int min_days,
+    int found,
+    int days)
+{
+    uint32_t slot = kbo_foreign_injury_sql_cache_slot(player_id, min_days);
+    kbo_foreign_injury_sql_cache_lock();
+    KboForeignInjurySqlEvidenceCacheEntry* entry =
+        &g_kbo_foreign_injury_sql_evidence_cache[slot];
+    entry->valid = 0u;
+    entry->database = database;
+    entry->player_id = player_id;
+    entry->min_days = min_days;
+    entry->tick = GetTickCount();
+    entry->found = found ? 1 : 0;
+    entry->days = days;
+    entry->valid = 1u;
+    kbo_foreign_injury_sql_cache_unlock();
+}
+
 static int __cdecl kbo_foreign_injury_sql_scan_callback(void* arg, int column_count, char** values, char** names)
 {
     (void)names;
@@ -60,6 +150,15 @@ int kbo_foreign_injury_recent_sql_has_long_term_injury(
         return 0;
     }
 
+    int cached_days = 0;
+    int cached = kbo_foreign_injury_sql_cache_get(database, player_id, min_days, &cached_days);
+    if (cached != 0) {
+        if (out_days != NULL) {
+            *out_days = cached_days;
+        }
+        return cached > 0;
+    }
+
     char player_href[64] = {0};
     snprintf(player_href, sizeof(player_href), "%%/player_%u.html%%", player_id);
 
@@ -96,5 +195,7 @@ int kbo_foreign_injury_recent_sql_has_long_term_injury(
             min_days,
             result);
     }
-    return result == 0 && scan.found;
+    int found = result == 0 && scan.found;
+    kbo_foreign_injury_sql_cache_store(database, player_id, min_days, found, scan.best_days);
+    return found;
 }

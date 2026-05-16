@@ -88,6 +88,15 @@ int kbo_process_custom_events_due_through(uint32_t today_yyyymmdd, const char* s
     }
 
     uint32_t previous_cursor = kbo_custom_event_calendar_read_cursor();
+    if (previous_cursor >= today_yyyymmdd) {
+        kbo_log_runtimef(
+            "KBO custom event calendar due-through skipped source=%s previous_cursor=%u today=%u reason=cursor_current",
+            source != NULL ? source : "",
+            previous_cursor,
+            today_yyyymmdd);
+        return KBO_CUSTOM_EVENT_DUE_RESULT_NOOP;
+    }
+
     int foreign_schedule = kbo_schedule_foreign_priority_custom_events(source);
     int asian_schedule = kbo_schedule_asian_games_custom_events(source);
     int cbt_schedule = kbo_schedule_cbt_custom_events(source);
@@ -119,5 +128,7 @@ int kbo_process_custom_events_due_through(uint32_t today_yyyymmdd, const char* s
     if (deferred) {
         return -1;
     }
-    return (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0 || independent_schedule > 0 || scanned > 0) ? 1 : 0;
+    return (foreign_schedule > 0 || asian_schedule > 0 || cbt_schedule > 0 || independent_schedule > 0 || scanned > 0)
+        ? KBO_CUSTOM_EVENT_DUE_RESULT_CHANGED
+        : KBO_CUSTOM_EVENT_DUE_RESULT_SCANNED_IDLE;
 }

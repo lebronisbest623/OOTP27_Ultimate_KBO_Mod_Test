@@ -1,24 +1,7 @@
 #include "../../internal/foreign_signability_internal.h"
+#include "foreign_signability_offer_attach_probe_utils.h"
 #include "../../../../../build_verify/build_verify.h"
 #include "../../../../../fa_market_investigation/probe/domestic_fa_offer_probe.h"
-
-#define KBO_OFFER_READABLE_BYTES 0xE0u
-#define KBO_OFFER_MAJOR_FLAG_OFFSET 0x08u
-#define KBO_OFFER_MINOR_FLAG_OFFSET 0x0Au
-#define KBO_OFFER_SALARY_PRIMARY_OFFSET 0x24u
-#define KBO_OFFER_TEAM_ID_OFFSET 0x28u
-#define KBO_OFFER_TEAM_ORG_ID_OFFSET 0x30u
-#define KBO_OFFER_SALARY_FIRST_YEAR_OFFSET 0x38u
-#define KBO_OFFER_YEAR_COUNT_OFFSET 0x74u
-#define KBO_OFFER_FLAG_AA_OFFSET 0xAAu
-#define KBO_OFFER_FLAG_AB_OFFSET 0xABu
-#define KBO_OFFER_FLAG_AC_OFFSET 0xACu
-#define KBO_OFFER_TYPE_AE_OFFSET 0xAEu
-#define KBO_OFFER_TYPE_B0_OFFSET 0xB0u
-#define KBO_OFFER_FLAG_D0_OFFSET 0xD0u
-#define KBO_OFFER_FLAG_D8_OFFSET 0xD8u
-
-#define KBO_PLAYER_SELECTED_OFFER_ID_OFFSET 0x1750u
 
 typedef void (__fastcall *KboOotpForeignAiOfferAttachFn)(uintptr_t player_ptr, uintptr_t offer_slot_ptr);
 typedef uintptr_t (__fastcall *KboOotpForeignAiOfferBuildFn)(
@@ -35,60 +18,6 @@ typedef uint8_t (__fastcall *KboOotpForeignAiOfferFinalGateFn)(
 int kbo_apply_foreign_reserve_demand_floor(uintptr_t player_ptr, const char* source);
 void kbo_prepare_foreign_fa_offer_demand_baseline(uintptr_t player_ptr, const char* source);
 void kbo_restore_foreign_fa_demand_salary_ladder(const char* source);
-
-static uint32_t kbo_foreign_ai_offer_attach_caller_rva(uintptr_t caller_return_ptr)
-{
-    HMODULE exe = GetModuleHandleA(NULL);
-    if (exe == NULL || caller_return_ptr < (uintptr_t)exe) {
-        return 0u;
-    }
-    return (uint32_t)(caller_return_ptr - (uintptr_t)exe);
-}
-
-static uint8_t kbo_offer_read_u8(uintptr_t offer_ptr, uint32_t offset)
-{
-    if (offer_ptr == 0 || offset + sizeof(uint8_t) > KBO_OFFER_READABLE_BYTES
-            || !memory_range_readable((void*)(offer_ptr + offset), sizeof(uint8_t))) {
-        return 0u;
-    }
-    return *(uint8_t*)(offer_ptr + offset);
-}
-
-static uint16_t kbo_offer_read_u16(uintptr_t offer_ptr, uint32_t offset)
-{
-    if (offer_ptr == 0 || offset + sizeof(uint16_t) > KBO_OFFER_READABLE_BYTES
-            || !memory_range_readable((void*)(offer_ptr + offset), sizeof(uint16_t))) {
-        return 0u;
-    }
-    return *(uint16_t*)(offer_ptr + offset);
-}
-
-static int32_t kbo_offer_read_i32(uintptr_t offer_ptr, uint32_t offset)
-{
-    if (offer_ptr == 0 || offset + sizeof(int32_t) > KBO_OFFER_READABLE_BYTES
-            || !memory_range_readable((void*)(offer_ptr + offset), sizeof(int32_t))) {
-        return 0;
-    }
-    return *(int32_t*)(offer_ptr + offset);
-}
-
-static uint32_t kbo_offer_probe_team_id_from_ptr(uintptr_t team_ptr)
-{
-    if (team_ptr == 0
-            || !memory_range_readable((void*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET), sizeof(uint32_t))) {
-        return 0u;
-    }
-    return *(uint32_t*)(team_ptr + OOTP27_KBO_TEAM_ID_OFFSET);
-}
-
-static void* kbo_offer_probe_resolve_rva(uint32_t rva)
-{
-    HMODULE exe = GetModuleHandleA(NULL);
-    if (exe == NULL) {
-        return NULL;
-    }
-    return kbo_resolve_build_specific_rva_ptr(exe, rva);
-}
 
 static int kbo_foreign_ai_offer_attach_should_log(
     uint8_t* player,

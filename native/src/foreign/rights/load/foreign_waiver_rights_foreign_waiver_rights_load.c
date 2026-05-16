@@ -19,6 +19,7 @@ int kbo_load_foreign_waiver_rights(void)
         Sleep(0);
     }
     g_kbo_foreign_waiver_rights_count = 0;
+    InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
     InterlockedExchange(&g_kbo_foreign_waiver_rights_lock, 0);
 
     int deduped = 0;
@@ -75,6 +76,7 @@ int kbo_load_foreign_waiver_rights(void)
     }
     kbo_csv_reader_close(reader);
     kbo_log_runtimef("foreign reserve rights: loaded=%d deduped=%d path=%s", g_kbo_foreign_waiver_rights_count, deduped, path);
+    InterlockedIncrement(&g_kbo_foreign_waiver_rights_generation);
     if (deduped > 0) {
         kbo_persist_foreign_waiver_rights();
     }

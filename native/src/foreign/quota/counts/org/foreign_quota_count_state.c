@@ -1,0 +1,12 @@
+#include "foreign_quota_counts_internal.h"
+
+KboForeignOrgCountCacheEntry g_kbo_foreign_org_count_cache[KBO_FOREIGN_ORG_COUNT_CACHE_SIZE];
+KboForeignOrgSnapshotEntry g_kbo_foreign_org_snapshot[KBO_FOREIGN_ORG_SNAPSHOT_MAX_TEAMS];
+int g_kbo_foreign_org_snapshot_count = 0;
+DWORD g_kbo_foreign_org_snapshot_tick = 0u;
+LONG g_kbo_foreign_org_snapshot_lock = 0;
+volatile LONG g_kbo_foreign_org_count_cache_generation = 1;
+uint32_t g_kbo_foreign_org_team_generation_team_ids[KBO_FOREIGN_ORG_TEAM_GENERATION_CACHE_SIZE];
+LONG g_kbo_foreign_org_team_generations[KBO_FOREIGN_ORG_TEAM_GENERATION_CACHE_SIZE];
+uint32_t g_kbo_foreign_org_parent_cache_team_ids[KBO_FOREIGN_ORG_PARENT_CACHE_SIZE];
+uint32_t g_kbo_foreign_org_parent_cache_org_ids[KBO_FOREIGN_ORG_PARENT_CACHE_SIZE];

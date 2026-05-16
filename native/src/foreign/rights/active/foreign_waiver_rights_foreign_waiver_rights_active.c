@@ -17,6 +17,7 @@
 LONG g_kbo_foreign_waiver_rights_lock = 0;
 KboForeignWaiverRetention g_kbo_foreign_waiver_rights[KBO_FOREIGN_WAIVER_RIGHTS_MAX] = {{0}};
 int g_kbo_foreign_waiver_rights_count = 0;
+volatile LONG g_kbo_foreign_waiver_rights_generation = 1;
 
 /* Foreign reserve-right active-state helpers. */
 

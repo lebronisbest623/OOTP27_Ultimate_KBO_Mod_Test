@@ -63,6 +63,15 @@ void kbo_webview_append_mod_info_view(KboWindowTextBuffer* buffer, int selected_
         kbo_window_text_appendf(buffer, "</div>");
         kbo_window_text_appendf(
             buffer,
+            "<div class='settingRow'><span class='settingLabel'>");
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xec\x84\xb1\xeb\x8a\xa5 \xec\x8a\xa4\xeb\x83\x85\xec\x83\xb7", "성능 스냅샷"));
+        kbo_window_text_appendf(
+            buffer,
+            "</span><a class='action' href='kbo://mod/settings/perf-snapshot/dump'>");
+        kbo_html_append_escaped(buffer, kbo_hub_text("\xeb\x8d\xa4\xed\x94\x84", "덤프"));
+        kbo_window_text_appendf(buffer, "</a></div>");
+        kbo_window_text_appendf(
+            buffer,
             "<div class='settingRow'><label class='settingLabel' for='uiTeamActionsSelect'>");
         kbo_html_append_escaped(buffer, kbo_hub_text("UI \xed\x8c\x80 \xec\x95\xa1\xec\x85\x98", "UI 구단 액션"));
         const char* all_teams_label =

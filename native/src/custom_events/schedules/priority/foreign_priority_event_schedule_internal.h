@@ -1,0 +1,9 @@
+#ifndef KBOFIX_SRC_CUSTOM_EVENTS_FOREIGN_PRIORITY_EVENT_SCHEDULE_INTERNAL_H_
+#define KBOFIX_SRC_CUSTOM_EVENTS_FOREIGN_PRIORITY_EVENT_SCHEDULE_INTERNAL_H_
+
+#include "foreign_priority_event_schedule.h"
+
+uint32_t kbo_recent_foreign_waiver_marker_anchor(uint32_t today_yyyymmdd, const char* source);
+uint32_t kbo_custom_event_add_months_yyyymmdd(uint32_t yyyymmdd, uint32_t months);
+
+#endif

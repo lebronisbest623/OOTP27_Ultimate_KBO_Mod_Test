@@ -107,9 +107,11 @@ __declspec(noinline) void ootp_kbo_salary_arbitration_non_tender_wrapper(
                 : (player_league_id != 0u ? player_league_id : player_draft_league_id);
             int32_t salary_floor = kbo_salary_arbitration_resolve_minimum_salary(floor_league_id);
             int32_t repair_floor = old_offer > salary_floor ? old_offer : salary_floor;
+            uint32_t repair_season = kbo_fa_declaration_retained_contract_season(
+                decision.season != 0u ? decision.season : declaration_season);
             int retained_repaired = kbo_fa_declaration_repair_retained_contract_salary(
                 player,
-                decision.season != 0u ? decision.season : declaration_season,
+                repair_season,
                 &decision,
                 repair_floor,
                 "arbitration_non_tender_transition_skip");

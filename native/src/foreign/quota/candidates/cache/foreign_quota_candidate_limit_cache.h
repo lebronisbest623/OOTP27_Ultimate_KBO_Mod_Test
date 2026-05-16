@@ -1,0 +1,57 @@
+#ifndef KBOFIX_SRC_FOREIGN_QUOTA_CANDIDATE_LIMIT_CACHE_H_
+#define KBOFIX_SRC_FOREIGN_QUOTA_CANDIDATE_LIMIT_CACHE_H_
+
+#include "../../internal/foreign_quota_internal.h"
+
+void kbo_custom_foreign_candidate_cache_store(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t candidate_id,
+    uint32_t today,
+    uint32_t current_team_id,
+    uint32_t active_team_id,
+    uint32_t original_team_id,
+    uint32_t org_count_generation,
+    LONG pending_generation,
+    uint32_t effective_before,
+    uint32_t effective_after,
+    uint32_t effective_limit,
+    uint8_t slot_type,
+    uint32_t injured_player_id,
+    int allowed);
+int kbo_custom_foreign_extra_slot_cache_hit(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t candidate_id,
+    uint32_t today,
+    uint32_t league_id,
+    uint8_t candidate_asian,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id,
+    uint32_t* out_extra_slots);
+void kbo_custom_foreign_extra_slot_cache_store(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t candidate_id,
+    uint32_t today,
+    uint32_t league_id,
+    uint8_t candidate_asian,
+    uint32_t extra_slots,
+    uint8_t slot_type,
+    uint32_t injured_player_id);
+int kbo_custom_foreign_candidate_cache_hit(
+    uint32_t team_id,
+    uint8_t* candidate,
+    uint32_t candidate_id,
+    uint32_t today,
+    uint32_t current_team_id,
+    uint32_t active_team_id,
+    uint32_t original_team_id,
+    uint32_t* out_effective_before,
+    uint32_t* out_effective_after,
+    uint32_t* out_effective_limit,
+    uint8_t* out_slot_type,
+    uint32_t* out_injured_player_id,
+    int* out_allowed);
+
+#endif
