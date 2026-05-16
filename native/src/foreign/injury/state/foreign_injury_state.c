@@ -112,6 +112,20 @@ static int kbo_foreign_injury_ascii_starts_with_nocase(const char* text, const c
     return 1;
 }
 
+static int kbo_foreign_injury_ascii_contains_nocase(const char* text, const char* needle)
+{
+    if (text == NULL || needle == NULL || needle[0] == '\0') {
+        return 0;
+    }
+
+    for (const char* p = text; *p != '\0'; ++p) {
+        if (kbo_foreign_injury_ascii_starts_with_nocase(p, needle)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static const char* kbo_foreign_injury_ascii_match_unit(const char* text, const char* unit)
 {
     if (text == NULL || unit == NULL) {
@@ -156,6 +170,14 @@ int kbo_foreign_injury_duration_text_meets_minimum(
     }
 
     int best_days = 0;
+    if (kbo_foreign_injury_ascii_contains_nocase(text, "season is officially over")
+            || kbo_foreign_injury_ascii_contains_nocase(text, "season is over")
+            || kbo_foreign_injury_ascii_contains_nocase(text, "out for the season")
+            || kbo_foreign_injury_ascii_contains_nocase(text, "miss the rest of the season")
+            || kbo_foreign_injury_ascii_contains_nocase(text, "misses the rest of the season")
+            || kbo_foreign_injury_ascii_contains_nocase(text, "season-ending")) {
+        best_days = min_days > 180 ? min_days : 180;
+    }
     for (const char* p = text; *p != '\0'; ++p) {
         if (*p < '0' || *p > '9') {
             continue;

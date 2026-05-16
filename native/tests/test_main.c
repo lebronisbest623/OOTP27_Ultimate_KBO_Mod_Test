@@ -1586,6 +1586,16 @@ static void test_foreign_injury_inactive_roster_long_term_basis(void)
         min_days,
         &evidence_days));
     assert(evidence_days == 42);
+    assert(kbo_foreign_injury_duration_text_meets_minimum(
+        "Jack confirmed today that his season is officially over after suffering a torn flexor tendon.",
+        min_days,
+        &evidence_days));
+    assert(evidence_days == 180);
+    assert(kbo_foreign_injury_duration_text_meets_minimum(
+        "The pitcher suffered a season-ending elbow injury.",
+        min_days,
+        &evidence_days));
+    assert(evidence_days == 180);
     assert(!kbo_foreign_injury_duration_text_meets_minimum(
         "He is expected to miss 2 weeks.",
         min_days,
